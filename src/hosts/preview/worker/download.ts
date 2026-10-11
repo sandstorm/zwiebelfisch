@@ -1,4 +1,4 @@
-// See startEngineWorker in worker.ts.
+// See EngineWorker in worker.ts.
 
 /**
  * Fetches the wasm at `url` and returns a response whose body is the download as it arrives, counted for `onProgress`,

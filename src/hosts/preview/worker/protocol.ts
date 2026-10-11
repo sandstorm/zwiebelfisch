@@ -1,4 +1,4 @@
-// The messages between the preview and the engine worker. See startEngineWorker in worker.ts.
+// The messages between the preview and the engine worker. See EngineWorker in worker.ts.
 import type { PageRect, CompileResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';
@@ -53,4 +53,5 @@ export type EngineResponse =
   | { id: number; type: 'cursor'; positions: Position[] }
   | { id: number; type: 'boxes'; boxes: PageRect[] }
   | { id: number; type: 'pdf'; result: PdfResult }
-  | { id: number; type: 'error'; message: string };
+  /** The request failed; `crashed`: the engine crashed (`TypstEngineCrash`), and this worker answers no request any more. */
+  | { id: number; type: 'error'; message: string; crashed: boolean };

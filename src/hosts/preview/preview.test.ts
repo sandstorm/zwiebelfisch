@@ -1,33 +1,44 @@
 // @vitest-environment jsdom
-// Tests for preview.ts: the PDF export options registry, the view options, the click outline, the selection shading and the loader (the
-// engine worker is replaced by a stub that answers what `engine.answer` returns; `engine.tell` sends its load events).
+// Tests for preview.ts: the PDF export options registry, the view options, the click outline, the selection shading, the loader and
+// restarting a crashed engine (the engine worker is replaced by a stub that answers what `engine.answer` returns;
+// `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Preview, type PageClick, type PdfExportOption, type PreviewProgress, type PreviewViewOption } from './preview';
 import type { EngineRequest, LoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 
-const engine = vi.hoisted(() => ({
+const engine = {
   answer: (_request: { type: string }): object | null => null,
   /** Sends a load event from the worker started last. */
   tell: (_event: unknown): void => {},
-}));
+  /** The workers started, in order. */
+  workers: [] as FakeWorker[],
+};
 
-vi.mock('./worker/worker', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./worker/worker')>()),
-  startEngineWorker: () => {
-    const worker = {
-      onmessage: null as ((event: { data: unknown }) => void) | null,
-      postMessage(request: EngineRequest) {
-        const body = engine.answer(request);
-        if (body) queueMicrotask(() => worker.onmessage?.({ data: { ...body, id: request.id } }));
-      },
-      terminate() {},
-    };
-    engine.tell = (event) => worker.onmessage?.({ data: { type: 'progress', event } });
-    return worker;
-  },
-}));
+/** Stands in for the engine worker (jsdom has none): answers each request with what `engine.answer` returns, until terminated. */
+class FakeWorker {
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  onerror: ((event: { message: string; preventDefault(): void }) => void) | null = null;
+  onmessageerror: (() => void) | null = null;
+  terminated = false;
+
+  constructor() {
+    engine.workers.push(this);
+    engine.tell = (event) => this.onmessage?.({ data: { type: 'progress', event } });
+  }
+
+  postMessage(request: EngineRequest | { type: 'init' }) {
+    if (request.type === 'init') return;
+    const body = engine.answer(request);
+    if (body) queueMicrotask(() => !this.terminated && this.onmessage?.({ data: { ...body, id: request.id } }));
+  }
+
+  terminate() {
+    this.terminated = true;
+  }
+}
+vi.stubGlobal('Worker', FakeWorker);
 
 const option = (id: string): PdfExportOption => ({ id, label: id, default: false, apply: (entry) => entry });
 
@@ -368,5 +379,88 @@ describe('Preview loader', () => {
     engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
     await vi.waitFor(() => expect(loader.hidden).toBe(true));
+  });
+});
+
+describe('Preview after the engine crashed', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+    engine.workers = [];
+  });
+
+  const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
+  const pages = { type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } };
+  const crash = { type: 'error', message: 'capacity overflow (at ecow-0.2.6/src/vec.rs:1227)', crashed: true };
+
+  /** A preview whose engine answers compiles with `answer(text of /main.typ, worker number)`; `reported`: its progress. */
+  function setup(answer: (text: unknown, worker: number) => object | null) {
+    engine.workers = [];
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      return request.type === 'compile' ? answer(request.files['/main.typ'], engine.workers.length) : null;
+    };
+    const container = document.createElement('div');
+    const reported: (PreviewProgress | null)[] = [];
+    preview = new Preview(container, { onDidChangeProgress: (progress) => reported.push(progress) });
+    const failures = () => reported.filter((progress) => progress?.kind === 'failed').map((progress) => `${progress!.title} ${progress!.detail}`);
+    return { container, reported, failures };
+  }
+
+  it('starts a new engine, sends it the files again and compiles the newest ones, and tells', async () => {
+    const compiled: unknown[] = [];
+    const { container, failures } = setup((text, worker) => (compiled.push(text), worker === 1 ? crash : pages));
+    preview.update({ '/main.typ': 'Hi', '/logo.png': new Uint8Array([1]) }, '/main.typ');
+    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    expect(engine.workers.map((worker) => worker.terminated)).toEqual([true, false]);
+    expect(compiled).toEqual(['Hi', 'Hi']);
+    expect(failures()).toEqual(['The Typst compiler crashed and was restarted. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)']);
+  });
+
+  it('sends the new engine every file, also the bytes the crashed one had', async () => {
+    const sent: unknown[] = [];
+    engine.workers = [];
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      if (request.type !== 'compile') return null;
+      sent.push(request.files['/logo.png']);
+      return sent.length === 2 ? crash : pages;
+    };
+    preview = new Preview(document.createElement('div'));
+    const logo = new Uint8Array([1]);
+    preview.update({ '/main.typ': 'Hi', '/logo.png': logo }, '/main.typ');
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    preview.update({ '/main.typ': 'Hi!', '/logo.png': logo }, '/main.typ');
+    await vi.waitFor(() => expect(sent).toHaveLength(3));
+    expect(sent).toEqual([logo, null, logo]);
+  });
+
+  it('answers the requests waiting for the crashed engine', async () => {
+    const { container } = setup(() => pages);
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    // the engine never answers these
+    const snippet = preview.snippet(ProjectPath.of('/main.typ'), SourceRange.of({ from: 0, to: 2 }), 'Hi');
+    const pdf = preview.exportPdf({ main: '/main.typ', sources: {} });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    engine.workers[0].onerror!({ message: 'Uncaught RuntimeError: unreachable', preventDefault: () => {} });
+    await expect(snippet).resolves.toBeNull();
+    await expect(pdf).rejects.toThrow('Uncaught RuntimeError: unreachable');
+    expect(engine.workers).toHaveLength(2);
+  });
+
+  it('stays off when the same files crash it again, until the next update', async () => {
+    const { container, failures } = setup((text) => (text === 'boom' ? crash : pages));
+    preview.update({ '/main.typ': 'boom' }, '/main.typ');
+    await vi.waitFor(() => expect(failures()).toHaveLength(2));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(engine.workers).toHaveLength(2);
+    expect(failures()[1]).toBe('The Typst compiler crashed again; it starts again with the next edit. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)');
+    expect(container.querySelector('[data-testid="typst-preview-loader"]')!.textContent).toContain('crashed again');
+
+    preview.update({ '/main.typ': 'fine' }, '/main.typ');
+    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    expect(engine.workers).toHaveLength(3);
   });
 });

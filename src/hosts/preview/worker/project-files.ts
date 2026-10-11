@@ -1,5 +1,5 @@
 // FileSender / FileReceiver: the project's file map across the worker boundary, bytes sent only once. See
-// startEngineWorker in worker.ts.
+// EngineWorker in worker.ts.
 import type { FileContent } from '../../../core/project/project';
 import type { TypstEngine } from '../../../core/typst-engine/typst-engine';
 

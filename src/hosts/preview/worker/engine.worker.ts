@@ -1,5 +1,5 @@
-// The engine worker's own thread: answers the preview's requests. See startEngineWorker in worker.ts.
-import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst-engine';
+// The engine worker's own thread: answers the preview's requests. See EngineWorker in worker.ts.
+import { createEngine, type TypstEngine, TypstEngineCrash } from '../../../core/typst-engine/typst-engine';
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
 import { downloadWasm } from './download';
 import { FileReceiver } from './project-files';
@@ -33,7 +33,8 @@ self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
     const transfer = response.type === 'pdf' && response.result.pdf ? [response.result.pdf.buffer] : [];
     self.postMessage(response, { transfer });
   } catch (error) {
-    self.postMessage({ id: request.id, type: 'error', message: String(error) } satisfies EngineResponse);
+    const crashed = error instanceof TypstEngineCrash;
+    self.postMessage({ id: request.id, type: 'error', message: crashed ? error.message : String(error), crashed } satisfies EngineResponse);
   }
 };
 

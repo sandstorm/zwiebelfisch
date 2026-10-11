@@ -556,14 +556,14 @@ export class WorkbenchHost implements Workbench {
    */
   #createPreview(): Preview {
     const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
-    return new Preview(panel.body, { onDidChangeProgress: (progress) => this.#reportLoadFailure(progress) });
+    return new Preview(panel.body, { onDidChangeProgress: (progress) => this.#reportFailure(progress) });
   }
 
   /**
-   * A compiler that cannot be loaded, as an error message (once per failure). What the preview loads shows in its pane
-   * only (its loader).
+   * A compiler that cannot be loaded or crashed, as an error message (once per failure). What the preview loads shows in
+   * its pane only (its loader).
    */
-  #reportLoadFailure(progress: PreviewProgress | null): void {
+  #reportFailure(progress: PreviewProgress | null): void {
     const failed = progress?.kind === 'failed';
     if (failed && !this.#previewFailed) void this.window.showErrorMessage(`${progress.title} ${progress.detail ?? ''}`.trim());
     this.#previewFailed = failed;

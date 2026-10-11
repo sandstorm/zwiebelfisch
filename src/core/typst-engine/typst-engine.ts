@@ -1,6 +1,6 @@
 import { ProjectPath } from '../paths/paths';
 import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
-import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
+import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm/typst_engine';
 
 /**
  * The Typst compiler, SVG renderer, PDF export and preview hit-testing (Rust → wasm).
@@ -9,6 +9,10 @@ import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine'
  * the project's files; it keeps the last compiled document, so clicks and cursors can be mapped between source and
  * pages. Paths are project paths like `/main.typ`, or package paths like `@preview/name:0.1.0/lib.typ`. Offsets are
  * UTF-16 code units, pages are 0-based, and coordinates are points from the page's top-left.
+ *
+ * A bug in Typst or in the engine (a panic) or memory running out stops the wasm in the middle of a call, and what it
+ * left half done makes every later call fail: from then on, every call throws the `TypstEngineCrash` of the first. Only
+ * a new wasm instance (a new worker) compiles again.
  *
  * Left to others: the URLs of the wasm and the default fonts (core/engine-assets, so the worker bundle does not copy
  * them) and downloading packages (core/typst-packages). See docs/30_architecture/02_core.typ, "The Typst engine".
@@ -52,6 +56,15 @@ export interface TypstEngine {
    * nothing yield nothing.
    */
   boxesForRanges(path: string, ranges: readonly SourceRange[]): PageRect[];
+}
+
+/**
+ * What every call of a `TypstEngine` throws once the engine crashed (and all others of this wasm instance with it).
+ * `message` says why: the panic's message and where it was raised (`capacity overflow (at ecow-0.2.6/src/vec.rs:1227)`),
+ * else the error of the call and the memory in use.
+ */
+export class TypstEngineCrash extends Error {
+  override readonly name = 'TypstEngineCrash';
 }
 
 /** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
@@ -176,8 +189,20 @@ export interface LazyFont {
  * with `addLazyFont` (the default fonts: `DEFAULT_FONTS`, see core/engine-assets) or `addFont`.
  */
 export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<TypstEngine> {
-  await init({ module_or_path: wasm });
-  const engine = new WasmEngine();
+  const { memory } = await init({ module_or_path: wasm });
+  /** Calls the wasm; a call that fails crashed the instance: it and every later one throw the same `TypstEngineCrash`. */
+  const call = <R>(task: () => R): R => {
+    if (crash) throw crash;
+    try {
+      return task();
+    } catch (error) {
+      crash = new TypstEngineCrash(panic ?? `${String(error)} (${megabytes(memory.buffer.byteLength)} MB of memory in use)`);
+      console.error(`The Typst compiler crashed: ${crash.message}`);
+      throw crash;
+    }
+  };
+  call(() => onPanic({ panicked: (message: string) => (panic = message) }));
+  const engine = call(() => new WasmEngine());
   /** Lazy font files that failed to load since the last report: the next compile or export reports them. */
   let unloadedFonts: string[] = [];
   const report = <R extends { diagnostics: TypstDiagnostic[] }>(json: string): R => {
@@ -188,7 +213,7 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
   };
   return {
     addFont: (data) => {
-      if (engine.addFont(data) === 0) throw new Error('no font found in the given data');
+      if (call(() => engine.addFont(data)) === 0) throw new Error('no font found in the given data');
     },
     addLazyFont: (font) => {
       const load = () => {
@@ -196,28 +221,40 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
         if (data === null) unloadedFonts.push(font.name);
         return data;
       };
-      if (engine.addLazyFont(JSON.stringify(font.faces), { load }) === 0) throw new Error('a lazy font needs faces');
+      if (call(() => engine.addLazyFont(JSON.stringify(font.faces), { load })) === 0) throw new Error('a lazy font needs faces');
     },
-    setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
-    setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
-    remove: (path) => engine.remove(path),
-    compile: (main) => report<CompileResult>(engine.compile(main)),
+    setSource: (path, text) => assertValidPath(call(() => engine.setSource(path, text)), path),
+    setBinary: (path, data) => assertValidPath(call(() => engine.setBinary(path, data)), path),
+    remove: (path) => call(() => engine.remove(path)),
+    compile: (main) => report<CompileResult>(call(() => engine.compile(main))),
     exportPdf: (main) => {
-      const exported = engine.exportPdf(main);
-      try {
-        return { pdf: exported.pdf() ?? null, ...report<Omit<PdfResult, 'pdf'>>(exported.report()) };
-      } finally {
-        exported.free();
-      }
+      const { pdf, json } = call(() => {
+        const exported = engine.exportPdf(main);
+        try {
+          return { pdf: exported.pdf() ?? null, json: exported.report() };
+        } finally {
+          exported.free();
+        }
+      });
+      return { pdf, ...report<Omit<PdfResult, 'pdf'>>(json) };
     },
     jumpFromClick: (page, x, y) => {
-      const json = engine.jumpFromClick(page, x, y);
+      const json = call(() => engine.jumpFromClick(page, x, y));
       return json === undefined ? null : JSON.parse(json);
     },
-    jumpFromCursor: (path, offset) => JSON.parse(engine.jumpFromCursor(path, offset)),
+    jumpFromCursor: (path, offset) => JSON.parse(call(() => engine.jumpFromCursor(path, offset))),
     boxesForRanges: (path, ranges) =>
-      JSON.parse(engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to])))),
+      JSON.parse(call(() => engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to]))))),
   };
+}
+
+/** The panic message the wasm told last; null while it never panicked. One wasm instance serves every engine. */
+let panic: string | null = null;
+/** What every call throws once a call failed: the instance is broken for every engine. */
+let crash: TypstEngineCrash | null = null;
+
+function megabytes(bytes: number): string {
+  return (bytes / 1e6).toFixed(0);
 }
 
 /** A report of the wasm (JSON) with its diagnostics' paths parsed: a package file has no project path. */

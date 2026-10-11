@@ -7,12 +7,8 @@ import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometr
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
-import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
-import { FileSender } from './worker/project-files';
-import { PageReceiver } from './worker/page-svgs';
-import type { Init, EngineRequest, EngineResponse, WorkerProgress } from './worker/protocol';
-import { startEngineWorker } from './worker/worker';
+import { EngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
 import { LoadState } from './progress/load-state';
 import { Loader } from './progress/loader';
@@ -30,12 +26,17 @@ import css from './preview.css?inline';
  * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
  * page number, "Follow cursor", "Download PDF"), the PDF export options, the view options (Typst run before the main
  * file in the preview only: page guides, box outlines), and when to reveal or shade what (preview-sync). While the
- * engine loads, the pane shows what it waits for. See docs/30_architecture/06_preview.typ.
+ * engine loads, the pane shows what it waits for.
+ *
+ * When the engine crashes (a bug in Typst, memory running out), the preview starts a new one and compiles the newest
+ * files again, and tells (`PreviewProgress` `failed`). If that crashes again before the next `update()`, it stays off
+ * until then: the same files would crash it again. See docs/30_architecture/06_preview.typ.
  */
 export class Preview implements PreviewContributions {
-  private readonly worker = startEngineWorker();
-  private readonly pending = new Map<number, (response: EngineResponse) => void>();
+  private readonly engine: EngineWorker;
   private readonly loading = new LoadState();
+  /** Whether the engine was restarted after a crash since the last `update()`. */
+  private restarted = false;
   private readonly loader: Loader;
   private readonly pane: HTMLElement;
   private readonly toolbar: HTMLElement;
@@ -64,9 +65,6 @@ export class Preview implements PreviewContributions {
   private readonly selectionHighlight: OverlayLayer;
   private selection: Highlight | null = null;
   private zoom: Zoom = 'fit';
-  private nextId = 0;
-  private readonly sender = new FileSender();
-  private readonly receiver = new PageReceiver();
   private frame = 0;
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
@@ -111,17 +109,13 @@ export class Preview implements PreviewContributions {
     });
     this.highlights = new LatestOnly((highlight, superseded) => this.shade(highlight, superseded));
 
-    this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONTS } satisfies Init);
-    this.worker.onmessage = (event: MessageEvent<EngineResponse | WorkerProgress>) => {
-      const message = event.data;
-      if (message.type === 'progress') {
-        this.loading.apply(message.event);
+    this.engine = new EngineWorker({
+      onDidLoad: (event) => {
+        this.loading.apply(event);
         this.progressChanged();
-        return;
-      }
-      this.pending.get(message.id)?.(message);
-      this.pending.delete(message.id);
-    };
+      },
+      onDidCrash: (message) => this.crashed(message),
+    });
     this.progressChanged();
   }
 
@@ -135,6 +129,9 @@ export class Preview implements PreviewContributions {
    */
   update(files: Record<string, FileContent>, main: string): void {
     this.latest = { files, main };
+    this.restarted = false;
+    // off after crashing twice: new files may not crash it
+    this.startEngine();
     this.compiles.push(this.latest);
   }
 
@@ -165,7 +162,7 @@ export class Preview implements PreviewContributions {
     const { files, pages } = this.compiled;
     const compiled = files[path];
     if (typeof compiled !== 'string' || compiled.slice(range.from, range.to) !== text) return null;
-    const response = await this.request({ type: 'boxes', path, ranges: [range] });
+    const response = await this.engine.request({ type: 'boxes', path, ranges: [range] });
     return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
   }
 
@@ -177,7 +174,7 @@ export class Preview implements PreviewContributions {
    */
   async exportPdf(entry: PdfEntry): Promise<PdfResult> {
     await this.compiles.idle();
-    const response = await this.request({ type: 'pdf', main: entry.main, sources: { ...entry.sources } });
+    const response = await this.engine.request({ type: 'pdf', main: entry.main, sources: { ...entry.sources } });
     if (response.type === 'pdf') return response.result;
     throw new Error(response.type === 'error' ? response.message : 'unexpected answer from the engine');
   }
@@ -239,7 +236,7 @@ export class Preview implements PreviewContributions {
     this.clicked.dispose();
     this.viewOptionsChanged.dispose();
     for (const { made } of [...this.items]) this.removeItem(made);
-    this.worker.terminate();
+    this.engine.dispose();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
     this.list.dispose();
@@ -274,10 +271,10 @@ export class Preview implements PreviewContributions {
     const entry = viewEntry(this.viewOptions(), this.viewOptionValues);
     // with no prelude, the main file itself, as an export compiles it
     const compiled = entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
-    const response = await this.request({ type: 'compile', files: this.sender.encode(compiled.files), main: compiled.main });
+    const response = await this.engine.request({ type: 'compile', files: compiled.files, main: compiled.main });
     if (response.type !== 'compile') return;
     this.loading.compiled();
-    const pages = this.receiver.decode(response.result.pages);
+    const { pages } = response.result;
     // Keep showing the last good pages while the document has errors, dimmed as stale.
     const failed = pages.length === 0;
     if (!failed) {
@@ -297,6 +294,24 @@ export class Preview implements PreviewContributions {
     if (!superseded()) this.diagnosed.fire(response.result.diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d)));
   }
 
+  /** Starts the engine again and compiles the newest files, once per `update()`; after that, stays off until the next. */
+  private crashed(message: string): void {
+    const restart = !this.restarted;
+    this.loading.crashed(message, restart);
+    this.progressChanged();
+    if (!restart) return;
+    this.restarted = true;
+    this.startEngine();
+    if (this.latest) this.compiles.push(this.latest);
+  }
+
+  /** Starts the engine unless it runs: the pane shows it loading. */
+  private startEngine(): void {
+    if (!this.engine.start()) return;
+    this.loading.started();
+    this.progressChanged();
+  }
+
   /** Shows what the preview waits for: in the pane while it has no pages, and to whoever listens. */
   private progressChanged(): void {
     const progress = this.loading.current();
@@ -305,7 +320,7 @@ export class Preview implements PreviewContributions {
   }
 
   private async lookUp({ path, from }: Reveal, superseded: () => boolean): Promise<void> {
-    const response = await this.request({ type: 'cursor', path, offset: from });
+    const response = await this.engine.request({ type: 'cursor', path, offset: from });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.follow(response.positions[0]);
   }
@@ -314,7 +329,7 @@ export class Preview implements PreviewContributions {
   private async shade(highlight: Highlight, superseded: () => boolean): Promise<void> {
     await this.compiles.idle();
     const compiled = this.compiled.files[highlight.path];
-    const response = compiled === highlight.text ? await this.request({ type: 'boxes', path: highlight.path, ranges: [...highlight.ranges] }) : null;
+    const response = compiled === highlight.text ? await this.engine.request({ type: 'boxes', path: highlight.path, ranges: [...highlight.ranges] }) : null;
     // a newer highlight (or none) was set meanwhile
     if (superseded() || this.selection !== highlight) return;
     this.selectionHighlight.set(response?.type === 'boxes' ? response.boxes : []);
@@ -348,7 +363,7 @@ export class Preview implements PreviewContributions {
     const hit = this.list.pageAt(target);
     if (!hit) return;
     const { x, y } = pointOnPage(hit.page, measure(hit.element), Px.of(event.clientX), Px.of(event.clientY));
-    const response = await this.request({ type: 'click', page: hit.index, x, y });
+    const response = await this.engine.request({ type: 'click', page: hit.index, x, y });
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
     // where the clicked source node is drawn (every line/page)
     this.clickHighlight.set(response.jump.boxes);
@@ -380,14 +395,6 @@ export class Preview implements PreviewContributions {
       top: rect.top + rect.height / 2 - (viewport.top + viewport.height / 2),
       left: rect.left - (viewport.left + viewport.width / 2),
       behavior: 'smooth',
-    });
-  }
-
-  private request(body: RequestBody): Promise<EngineResponse> {
-    const id = this.nextId++;
-    return new Promise((resolve) => {
-      this.pending.set(id, resolve);
-      this.worker.postMessage({ ...body, id });
     });
   }
 }
@@ -569,8 +576,8 @@ export interface RenderedSnippet {
 
 /**
  * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
- * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded (`failed`).
- * The pane shows it while it has no pages; the workbench turns `failed` into an error message.
+ * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded or crashed
+ * (`failed`). The pane shows it while it has no pages; the workbench turns `failed` into an error message.
  */
 export interface PreviewProgress {
   readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
@@ -629,5 +636,3 @@ function byPlacement(a: { group: string; order: number }, b: { group: string; or
   }
   return a.order - b.order;
 }
-
-type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;
