@@ -1,4 +1,4 @@
-// HelpPanel. See ../help.ts.
+// The help panel's view. See help in ../help.ts.
 import type { HelpLink, HelpRow, HelpSheet } from '../../../hosts/languages/languages';
 import type { MenuAnchor } from '../../../hosts/window/window';
 

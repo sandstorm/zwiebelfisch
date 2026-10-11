@@ -1,4 +1,4 @@
-// Help snippets dropped on the Visual editor. See ../help.ts.
+// Help snippets dropped on the Visual editor. See help in ../help.ts.
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { insertTypst } from '../../../hosts/visual-editor/visual-editor';
