@@ -6,6 +6,8 @@ import { test, fileRow, openFile } from './fixtures';
 type Editor = HTMLElement & { value: string };
 
 const visual = (page: Page) => page.locator('[data-testid="typst-visual"]:visible');
+/** The hover hint of the link under the pointer: the same in every editor. */
+const hint = (page: Page) => page.getByRole('tooltip');
 
 test.describe('in the advanced example', () => {
   test.beforeEach(async ({ page }) => {
@@ -14,21 +16,28 @@ test.describe('in the advanced example', () => {
     await openFile(page, 'chapters/introduction.typ');
   });
 
-  test('a reference chip says where it leads; ⌘/Ctrl+click opens the chapter with the figure, a plain click does not', async ({ page }) => {
+  test('a reference chip says where it leads (the hint of every link); ⌘/Ctrl+click opens the chapter with the figure, a plain click does not', async ({ page }) => {
     const chip = visual(page).locator('.typst-labels__ref[data-target="fig:compile-times"]');
+    await chip.hover();
+    await expect(hint(page)).toHaveClass('typst-link-hint');
+    await expect(hint(page)).toHaveText(/^Go to Figure · Cold \(dark\) and incremental \(light\)… in chapters\/results\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await expect(chip).toHaveAttribute('aria-describedby', (await hint(page).getAttribute('id'))!);
+    await expect(chip).not.toHaveAttribute('title');
     await chip.click();
     await expect(fileRow(page, 'chapters/introduction.typ')).toHaveAttribute('aria-selected', 'true');
-    await chip.hover();
-    await expect(visual(page)).toHaveAttribute('title', /^Go to Figure · Cold \(dark\) and incremental \(light\)… in chapters\/results\.typ \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     await chip.click({ modifiers: ['ControlOrMeta'] });
     await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
     await expect(visual(page).locator('h1')).toHaveText(/Results/);
   });
 
-  test('in the Source editor, ⌘/Ctrl+click on a reference puts the cursor at the label in its chapter', async ({ page }) => {
+  test('in the Source editor, a reference shows the same hint; ⌘/Ctrl+click puts the cursor at the label in its chapter', async ({ page }) => {
     await page.getByRole('tab', { name: 'Source' }).click();
     const source = page.locator('[data-testid=typst-source]:visible');
-    await source.locator('.typst-source__path', { hasText: '@fig:compile-times' }).click({ modifiers: ['ControlOrMeta'] });
+    const reference = source.locator('.typst-source__path', { hasText: '@fig:compile-times' });
+    await reference.hover();
+    await expect(hint(page)).toHaveClass('typst-link-hint');
+    await expect(hint(page)).toHaveText(/^Go to Figure · Cold \(dark\) and incremental \(light\)… in chapters\/results\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await reference.click({ modifiers: ['ControlOrMeta'] });
     await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
     await expect(source.locator('.cm-activeLine')).toContainText('<fig:compile-times>');
   });
@@ -42,10 +51,13 @@ test('⌘/Ctrl+click on a web link opens its address in a new tab; a plain click
     el.value = 'Made with #link("https://typst.app/")[Typst].\n';
   });
   const link = visual(page).locator('.typst-markup__link');
+  await link.hover();
+  await expect(hint(page)).toHaveText(/^Open https:\/\/typst\.app\/\s*\(/);
+  await expect(link).not.toHaveAttribute('title');
+  await page.mouse.move(0, 0);
+  await expect(hint(page)).toHaveCount(0);
   await link.click();
   expect(page.context().pages()).toHaveLength(1);
-  await link.hover();
-  await expect(visual(page)).toHaveAttribute('title', /^Open https:\/\/typst\.app\/ \(/);
   const opened = page.context().waitForEvent('page');
   await link.click({ modifiers: ['ControlOrMeta'] });
   await expect((await opened)).toHaveURL('https://typst.app/');

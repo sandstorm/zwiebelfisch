@@ -119,7 +119,7 @@ test('⌘/Ctrl+click on the path of a spreadsheet\'s Typst file ("Edit spreadshe
   // the import line's raw box in the Visual editor
   const path = page.locator('[data-testid=typst-visual]:visible .typst-visual__raw-block .typst-source__path', { hasText: 'compile-times.ic.gen.typ' });
   await path.hover();
-  await expect(page.locator('.cm-tooltip')).toContainText('Edit spreadsheet');
+  await expect(page.locator('.typst-link-hint')).toContainText('Edit spreadsheet');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'data/compile-times.ic')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('typst-spreadsheet').locator('.ic-root')).toBeVisible();

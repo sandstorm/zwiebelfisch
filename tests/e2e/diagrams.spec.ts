@@ -97,7 +97,9 @@ test('⌘/Ctrl+click on the image box\'s picture ("Edit diagram") opens the diag
 
   const picture = editor(page).getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering');
   await picture.hover();
-  await expect(picture).toHaveAttribute('title', /^Edit diagram \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+  await expect(page.getByRole('tooltip')).toHaveClass('typst-link-hint');
+  await expect(page.getByRole('tooltip')).toHaveText(/^Edit diagram\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+  await expect(picture).not.toHaveAttribute('title');
   await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
 });

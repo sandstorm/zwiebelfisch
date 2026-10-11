@@ -36,7 +36,7 @@ test('Mod+click on the #import path in the Source editor opens the file', async 
   await page.getByRole('tab', { name: 'Source' }).click();
   const path = page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'template.typ' });
   await path.hover();
-  await expect(page.locator('.cm-tooltip')).toContainText('Open template.typ');
+  await expect(page.locator('.typst-link-hint')).toContainText('Open template.typ');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
@@ -47,7 +47,7 @@ test('a raw box in the Visual editor has no "Open …" row; its path shows the l
   await expect(visual.getByRole('button', { name: 'Open template.typ' })).toHaveCount(0);
   const path = visual.locator('.typst-visual__raw-block .typst-source__path', { hasText: 'template.typ' });
   await path.hover();
-  await expect(page.locator('.cm-tooltip')).toContainText('Open template.typ');
+  await expect(page.locator('.typst-link-hint')).toContainText('Open template.typ');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
@@ -114,6 +114,6 @@ test('"Create …" in the link tooltip of a missing file creates and opens it', 
   await page.evaluate(() => ((window as unknown as { editor: { source: string } }).editor.source = '#include "appendix.typ"\n'));
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'appendix.typ' }).hover();
-  await page.locator('.cm-tooltip').getByRole('button', { name: 'Create appendix.typ' }).click();
+  await page.locator('.typst-link-hint').getByRole('button', { name: 'Create appendix.typ' }).click();
   await expect(fileRow(page, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 });

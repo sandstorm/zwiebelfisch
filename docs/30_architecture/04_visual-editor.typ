@@ -35,7 +35,7 @@ What `ExtensionContext.visualEditor` is. Contributions register once, at activat
 - Constructs: `registerNode`, `registerMark` (@extensions-visual-editor-constructs).
 - Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, highlights, box renderers, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
 - Who wins where they compete: @architecture-conventions-api.
-- Where its links lead (`VisualEditorLinks`, given by the workbench, not contributed): a raw box's picture the primary document link of the box's Typst, the text (a reference chip, a link mark) the link at the source offset under the pointer or at the cursor (`languages`), so the host knows no links. Hovering one sets the editor's title to where it leads, with Mod held the pointer shows (`typst-visual--link`), Mod+click or Alt+Enter follows it, a plain click edits.
+- Where its links lead (`VisualEditorLinks`, given by the workbench, not contributed): a raw box's picture the primary document link of the box's Typst, the text (a reference chip, a link mark) the link at the source offset under the pointer or at the cursor (`languages`), so the host knows no links. Hovered, one shows as links do in every editor (`FollowableLink.hover`, the languages host's): the same hint after the same delay (`.typst-link-hint`, role=tooltip, describing the chip, the link's text or the picture), with Mod held the link look (`typst-link--mod`), no `title`; Mod+click or Alt+Enter follows it, a plain click edits.
 
 == VisualEditorContext <architecture-visual-editor-context>
 
@@ -51,7 +51,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - With a box renderer, the box shows a picture until its code gets focus (the preview's boxes of its range, @architecture-preview-concepts); while focused it shows only its code, inline boxes as block boxes (the picture stays in the box, hidden, and shows again without a new render). Until the renderer has one (before the first compile) it shows its code; a picture is decoded before it replaces the code or the one before (no blank in between) and fades in.
 - When the renderer changes (after every compile), only boxes near the view (an `IntersectionObserver`, one viewport above and below) are drawn again; one further away, or in a hidden editor, is drawn again once it comes near.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
-- The picture is a link to where the box's Typst leads (`VisualEditorLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
+- The picture is a link to where the box's Typst leads (`VisualEditorLinks`): hovered, it shows the hint of every link; with Mod held it shows as one (framed); Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
 - `editRawBox(pos, offset)` (a Tiptap command): focuses the code of the box at `pos`, the cursor at `offset`; for a box just inserted to be written in (Insert → "Inline math").
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
 

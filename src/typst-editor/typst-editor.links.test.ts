@@ -41,7 +41,25 @@ function setup(viewType?: string) {
   return { host, editor, visual, source };
 }
 
+/** The hint shown after the pointer moved over `element` and rested there; null: none. */
+function hintAfterHover(element: Element, init: MouseEventInit = {}): HTMLElement | null {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, ...init }));
+  vi.advanceTimersByTime(300);
+  vi.useRealTimers();
+  return document.querySelector<HTMLElement>('.typst-link-hint[role=tooltip]');
+}
+
+/** The pointer left the editor of `element`. */
+function leave(element: Element): void {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  element.closest('.ProseMirror, .cm-content')!.dispatchEvent(new MouseEvent('mouseleave'));
+  vi.advanceTimersByTime(300);
+  vi.useRealTimers();
+}
+
 afterEach(() => {
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   document.body.replaceChildren();
   sessionStorage.clear();
   vi.restoreAllMocks();
@@ -65,6 +83,16 @@ describe('links in the Source editor', () => {
     view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
     expect(open).toHaveBeenCalledWith('https://typst.app/', '_blank', 'noopener');
   });
+
+  it('hovering a reference shows the same hint as a reference chip in the Visual editor', () => {
+    const { host } = setup(SOURCE_EDITOR);
+    const mark = [...host.querySelectorAll('.typst-source__path')].find((m) => m.textContent === '@fig:setup')!;
+    const hint = hintAfterHover(mark)!;
+    expect(hint.textContent).toMatch(/^Go to Figure · The measurement setup in ch2\.typ\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(mark.hasAttribute('title')).toBe(false);
+    leave(mark);
+    expect(document.querySelector('.typst-link-hint')).toBeNull();
+  });
 });
 
 describe('links in the Visual editor', () => {
@@ -77,17 +105,19 @@ describe('links in the Visual editor', () => {
     return at;
   }
 
-  it('hovering a reference says where it leads; with Mod held it shows as a link; Mod+click goes there', () => {
+  it('hovering a reference shows the hint of every link; with Mod held it shows as a link; Mod+click goes there', () => {
     const { editor, host, visual } = setup();
     const view = visual();
     const at = chipAt(view, 'fig:setup');
     view.posAtCoords = () => ({ pos: at, inside: at });
     const chip = host.querySelector<HTMLElement>('[data-target="fig:setup"]')!;
-    chip.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-    expect(view.dom.title).toMatch(/^Go to Figure · The measurement setup in ch2\.typ \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    expect(view.dom.classList.contains('typst-visual--link')).toBe(false);
+    const hint = hintAfterHover(chip)!;
+    expect(hint.textContent).toMatch(/^Go to Figure · The measurement setup in ch2\.typ\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(chip.getAttribute('aria-describedby')).toBe(hint.id);
+    expect([view.dom.hasAttribute('title'), chip.hasAttribute('title')]).toEqual([false, false]);
+    expect(chip.classList.contains('typst-link--mod')).toBe(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ...MOD }));
-    expect(view.dom.classList.contains('typst-visual--link')).toBe(true);
+    expect(chip.classList.contains('typst-link--mod')).toBe(true);
     chip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
     expect(editor.activeFile).toBe('/main.typ'); // a plain click edits
     chip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
@@ -99,8 +129,7 @@ describe('links in the Visual editor', () => {
     const view = visual();
     const at = chipAt(view, 'nowhere');
     view.posAtCoords = () => ({ pos: at, inside: at });
-    host.querySelector('[data-target="nowhere"]')!.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-    expect(view.dom.hasAttribute('title')).toBe(false);
+    expect(hintAfterHover(host.querySelector('[data-target="nowhere"]')!)).toBeNull();
     expect(host.querySelector<HTMLElement>('[data-target="nowhere"]')!.title).toContain('no label <nowhere>');
   });
 
@@ -122,8 +151,12 @@ describe('links in the Visual editor', () => {
     });
     view.posAtCoords = () => ({ pos, inside: -1 });
     const anchor = host.querySelector<HTMLElement>('.typst-markup__link')!;
-    anchor.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
-    expect(view.dom.title).toMatch(/^Open https:\/\/typst\.app\/ \(/);
+    const hint = hintAfterHover(anchor)!;
+    expect(hint.className).toBe('typst-link-hint');
+    expect(hint.textContent).toMatch(/^Open https:\/\/typst\.app\/\(/);
+    expect(anchor.hasAttribute('title')).toBe(false);
+    leave(anchor);
+    expect(document.querySelector('.typst-link-hint')).toBeNull();
     anchor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
     expect(open).toHaveBeenCalledWith('https://typst.app/', '_blank', 'noopener');
   });

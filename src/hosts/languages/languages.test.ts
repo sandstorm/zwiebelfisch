@@ -1,10 +1,26 @@
+// @vitest-environment jsdom
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
 // through their provider; a document's primary link and the link at an offset; the declared languages by ending; the help sheets by language;
 // the drop edit of a dropped file.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
+import { type DocumentLink, type DocumentLinkProvider, type FollowableLink, LanguagesHost } from './languages';
+
+/** What `link`'s hint says when it is hovered (after the hover delay); it goes when the pointer leaves. */
+function hintOf(link: FollowableLink): string {
+  vi.useFakeTimers();
+  const page = globalThis.document;
+  const element = page.body.appendChild(page.createElement('span'));
+  link.hover(new MouseEvent('mousemove'), element);
+  vi.advanceTimersByTime(300);
+  const text = page.querySelector('.typst-link-hint')?.textContent ?? '';
+  link.leave(new MouseEvent('mouseleave'));
+  vi.advanceTimersByTime(300);
+  element.remove();
+  vi.useRealTimers();
+  return text;
+}
 
 const document = { path: ProjectPath.of('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
 const targets = { open() {}, executeCommand: async () => undefined };
@@ -56,7 +72,7 @@ describe('LanguagesHost', () => {
     expect(links.resolveDocumentLink(resolved).target).toBe(ProjectPath.of('/a.typ'));
   });
 
-  it('gives the primary link of a document: the first leading somewhere, titled as the hover offers it, opening it', () => {
+  it('gives the primary link of a document: the first leading somewhere, hinted as the hover offers it, opening it', () => {
     const open = vi.fn();
     const links = new LanguagesHost({ ...targets, open });
     const to = (file: string) => (link: DocumentLink) => ({ ...link, target: ProjectPath.of(file) });
@@ -64,14 +80,14 @@ describe('LanguagesHost', () => {
     links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 5, to: 9 }) }], resolveDocumentLink: to('/flow.drawio.png') });
     links.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
     const primary = links.primaryLink(document)!;
-    expect(primary.title).toMatch(/^Open flow\.drawio\.png \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(hintOf(primary)).toMatch(/^Open flow\.drawio\.png\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     expect(primary.isFollowEvent({ ctrlKey: true, metaKey: true } as MouseEvent)).toBe(true);
     expect(primary.isFollowEvent({ ctrlKey: false, metaKey: false } as MouseEvent)).toBe(false);
     primary.follow();
     expect(open).toHaveBeenCalledWith(ProjectPath.of('/flow.drawio.png'), undefined);
     const tooltipped = new LanguagesHost(targets);
     tooltipped.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
-    expect(tooltipped.primaryLink(document)?.title).toMatch(/^Edit diagram \(/);
+    expect(hintOf(tooltipped.primaryLink(document)!)).toMatch(/^Edit diagram\(/);
     expect(new LanguagesHost(targets).primaryLink(document)).toBeNull();
   });
 
@@ -87,7 +103,7 @@ describe('LanguagesHost', () => {
     expect(links.linkAt(document, SourceOffset.of(4))).toBeNull();
     expect(links.linkAt(document, SourceOffset.of(12))).toBeNull(); // leads nowhere
     const link = links.linkAt(document, SourceOffset.of(9))!;
-    expect(link.title).toMatch(/^Go to Figure · Setup \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(hintOf(link)).toMatch(/^Go to Figure · Setup\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     at = 7; // the label moved since
     link.follow();
     expect(open).toHaveBeenCalledWith(ProjectPath.of('/ch2.typ'), { from: 7, to: 7 });
@@ -97,13 +113,13 @@ describe('LanguagesHost', () => {
     expect(provide).toHaveBeenCalledTimes(2);
   });
 
-  it('titles a link to a URL by its address and opens it', () => {
+  it('hints a link to a URL by its address and opens it', () => {
     const open = vi.fn();
     const links = new LanguagesHost({ ...targets, open });
     const url = new URL('https://typst.app/docs');
     links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 0, to: 4 }), target: url }] });
     const link = links.linkAt(document, SourceOffset.of(2))!;
-    expect(link.title).toMatch(/^Open https:\/\/typst\.app\/docs \(/);
+    expect(hintOf(link)).toMatch(/^Open https:\/\/typst\.app\/docs\(/);
     link.follow();
     expect(open).toHaveBeenCalledWith(url, undefined);
   });

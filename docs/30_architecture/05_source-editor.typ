@@ -54,7 +54,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
   [`invisibles`], [Shared: `highlightWhitespace()` while invisible characters are shown.],
-  [workbench], [Document links of every provider for `typst` (@architecture-workbench).],
+  [workbench], [Document links of every provider for `typst` (@architecture-workbench): Mod+click or Alt+Enter follows one; hovered, it shows the hint every link shows (the languages host's `.typst-link-hint`, not CodeMirror's tooltip: one look, one delay, in every editor), with Mod held the link look (the editor carries `typst-link--mod`: CodeMirror owns the marks' DOM).],
 )
 
 Writing one: @extensions-source-editor-and-preview.

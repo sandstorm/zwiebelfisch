@@ -203,10 +203,11 @@ describe('diagrams', () => {
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
     const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')].map(hovered);
-    expect(flow.title).toMatch(/^Edit diagram \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    expect(logo.title).toMatch(/^Open img\/logo\.png \(/);
+    expect(flow.hint).toMatch(/^Edit diagram\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(logo.hint).toMatch(/^Open img\/logo\.png\(/);
+    expect(flow.picture.hasAttribute('title')).toBe(false);
     expect(host.querySelector('.typst-visual__box-actions, .typst-images__tools button[aria-label="Edit diagram"]')).toBeNull();
-    modClick(flow);
+    modClick(flow.picture);
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
     expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
   });
@@ -263,18 +264,24 @@ describe('mermaid', () => {
       source: '#figure(mermaid(read("loop.mmd")), caption: [Loop])\n',
       files: { '/loop.mmd': 'flowchart LR\n  A --> B\n' },
     });
-    const picture = hovered(host.querySelector<HTMLElement>('.typst-visual__raw-block')!);
-    expect(picture.title).toMatch(/^Edit diagram \(/);
+    const { picture, hint } = hovered(host.querySelector<HTMLElement>('.typst-visual__raw-block')!);
+    expect(hint).toMatch(/^Edit diagram\(/);
     modClick(picture);
     expect(editor.activeFile).toBe('/loop.mmd');
   });
 });
 
-/** The picture of `box`, after the mouse entered it. */
-function hovered(box: HTMLElement): HTMLImageElement {
+/** The picture of `box`, and the hint it shows after the mouse entered it and rested (the hint of every link). */
+function hovered(box: HTMLElement): { picture: HTMLImageElement; hint: string } {
   const picture = box.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   picture.dispatchEvent(new MouseEvent('mouseenter'));
-  return picture;
+  vi.advanceTimersByTime(300);
+  vi.useRealTimers();
+  const hint = document.querySelector('.typst-link-hint[role=tooltip]');
+  expect(picture.getAttribute('aria-describedby')).toBe(hint?.id);
+  picture.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); // ends the hover
+  return { picture, hint: hint?.textContent ?? '' };
 }
 
 /** A click on `element` holding the link modifier (⌘ on Mac, Ctrl elsewhere: both held). */

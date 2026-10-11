@@ -199,12 +199,18 @@ export interface LinkTargets {
 
 /** A link as something other than a CodeMirror editor follows it (a raw box's picture, the Visual editor's text). */
 export interface FollowableLink {
-  /** What following it does and how, as the hover says it: "Edit diagram (⌘+click or Alt+Enter)". */
-  readonly title: string;
   /** Whether a click with `event`'s modifiers follows it, as on links in text (⌘ on Mac, else Ctrl). */
   isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
   /** Opens its target (resolved again: a label may have moved since). */
   follow(): void;
+  /**
+   * The pointer moved (`event`) over it at `element` (a reference chip, a link's text, a picture): it shows as links in
+   * text do, the same hint after the same delay ("Edit diagram (⌘+click or Alt+Enter)", `.typst-link-hint`) and,
+   * while the modifier is held, the link look (`typst-link--mod` on `element`).
+   */
+  hover(event: MouseEvent, element: Element): void;
+  /** The pointer (`event`) left it: its hint goes (unless the pointer moves into it), and its link look. */
+  leave(event: MouseEvent): void;
 }
 
 /**
@@ -222,7 +228,7 @@ export class LanguagesHost implements Languages {
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
-  /** The CSS of the links' hover (`.typst-file-link`), for the workbench to put where the widget renders. */
+  /** The CSS of links (their hint `.typst-link-hint`, their look `typst-link--mod`), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
   constructor(private readonly targets: LinkTargets) {}
@@ -337,8 +343,13 @@ export class LanguagesHost implements Languages {
   }
 
   /** What a followed link needs from this host: resolving it, and where it leads (`targets`). */
-  get #actions(): Pick<LinkActions, 'resolveDocumentLink' | 'open'> {
-    return { resolveDocumentLink: (link) => this.resolveDocumentLink(link), open: (target, selection) => this.targets.open(target, selection) };
+  get #actions(): Pick<LinkActions, 'resolveDocumentLink' | 'open' | 'executeCommand'> {
+    const { targets } = this;
+    return {
+      resolveDocumentLink: (link) => this.resolveDocumentLink(link),
+      open: (target, selection) => targets.open(target, selection),
+      executeCommand: (command, ...args) => targets.executeCommand(command, ...args),
+    };
   }
 }
 
