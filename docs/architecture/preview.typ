@@ -20,6 +20,7 @@
 - *Units*: the engine's `PageIndex` and `Pt`; the DOM's CSS pixels as `Px` (`pages/geometry.ts`: `measure(element)`, `pointOnPage`); the zoom is a plain factor (1 = 100 %, 96 px per 72 pt).
 - *Hit-testing*: a click is converted px → pt (`pointOnPage`) and sent as `click`; the clicked source run is outlined until the next click, a successful compile or `clearClickHighlight()` and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, range)` (a `ProjectPath`, a `SourceRange`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
 - *Snippets*: `snippet(path, range, text)` cuts the range's boxes out of the last compiled page. No extra compile. Null when `text` is no longer what was compiled.
+- *A range's boxes* (`boxes`, `boxesForRanges`): glyphs, shapes and images whose source lies in the range, plus everything drawn between the start and end tag of a locatable or tagged element whose call lies wholly in it, wherever that drawing's code lives: a `figure` of a package's picture (Mermaid via merman) or of a helper from another file. Paragraphs and lists are not taken whole (Typst gives them the span of their first child).
 
 == Flow <architecture-preview-flow>
 

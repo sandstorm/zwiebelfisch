@@ -1,14 +1,19 @@
 // Tests for createEngine (typst-engine.ts), against the built wasm.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { type FontInfo, type TypstEngine, PageIndex, Pt, createEngine } from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
+import { withPackages } from '../typst-packages/typst-packages';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts/', import.meta.url);
 /** The default fonts' index (`mise run build:fonts`): file name → faces. */
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
 const fontFile = (name: string) => new Uint8Array(readFileSync(new URL(name, fontDir)));
+/** merman, as the e2e tests cache it (too big for a fixture); the test using it is skipped without it. */
+const merman = new URL('../../../.cache/typst-packages/merman-0.4.0.tar.gz', import.meta.url);
 
 /** An engine with the default fonts, loaded lazily; `loaded` lists the files in the order they were loaded. */
 async function engineWithFonts(loaded: string[] = []): Promise<TypstEngine> {
@@ -155,6 +160,47 @@ describe('TypstEngine', () => {
     const boxes = engine.boxesForRanges('/main.typ', [SourceRange.of({ from: math, to: math + 7 })]);
     expect(boxes.length).toBeGreaterThanOrEqual(3); // numerator, denominator, line
     expect(boxes.every((b) => b.y > 80)).toBe(true);
+  });
+
+  it('returns boxes for everything an element in the ranges draws, also from code in another file', () => {
+    engine.setSource('/helpers.typ', '#let picture() = rect(width: 60pt, height: 40pt, fill: blue)');
+    const figure = '#figure(picture(), caption: [Cap])';
+    const source = `#import "helpers.typ": picture
+#set page(width: 200pt, height: 200pt, margin: 0pt)
+Hello #picture() world
+
+${figure}`;
+    engine.setSource('/main.typ', source);
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    const from = source.indexOf(figure);
+    const boxes = engine.boxesForRanges('/main.typ', [SourceRange.of({ from, to: from + figure.length })]);
+    const rect = boxes.find((b) => b.w >= 60 && b.h >= 40); // drawn with the spans of helpers.typ
+    expect(rect?.y).toBeGreaterThan(40); // the figure's, below the paragraph's
+    // a paragraph gets the span of its first word: asking for that word does not take the whole paragraph
+    const hello = engine.boxesForRanges('/main.typ', [SourceRange.of({ from: source.indexOf('Hello'), to: source.indexOf('Hello') + 5 })]);
+    expect(hello).toHaveLength(1);
+    expect(hello[0].h).toBeLessThan(40);
+  });
+
+  it.skipIf(!existsSync(merman))('returns boxes for the Mermaid figure of the advanced demo, drawn by the merman package', async () => {
+    const demo = fileURLToPath(new URL('../../../demo/examples/advanced/', import.meta.url));
+    for (const path of readdirSync(demo, { recursive: true, encoding: 'utf8' })) {
+      const file = join(demo, path);
+      if (!statSync(file).isFile()) continue;
+      if (path.endsWith('.typ')) engine.setSource(`/${path}`, readFileSync(file, 'utf8'));
+      else engine.setBinary(`/${path}`, new Uint8Array(readFileSync(file)));
+    }
+    const source = readFileSync(join(demo, 'chapters/method.typ'), 'utf8');
+    const packages = withPackages(engine, async () => new Uint8Array(readFileSync(merman)));
+    expect((await packages.compile('/main.typ')).diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const from = source.indexOf('#figure(\n  mermaid');
+    const to = source.indexOf('<fig:measurement>') + '<fig:measurement>'.length;
+    const boxes = engine.boxesForRanges('/chapters/method.typ', [SourceRange.of({ from, to })]);
+    const caption = boxes.filter((b) => b.h < 20);
+    const picture = boxes.filter((b) => b.h >= 20);
+    expect(caption.length).toBeGreaterThan(0);
+    expect(picture.length).toBeGreaterThan(0);
+    expect(Math.min(...picture.map((b) => b.y))).toBeLessThan(Math.min(...caption.map((b) => b.y)));
   });
 
   it('returns nothing for a click on empty space', () => {

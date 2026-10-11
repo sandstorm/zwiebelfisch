@@ -1,7 +1,12 @@
 //! Geometry of text in a laid-out document: which source span is under a
 //! point, and where all glyphs of a span are drawn (for highlighting).
 
+use std::collections::HashSet;
+
+use typst::foundations::Content;
+use typst::introspection::{Location, Tag};
 use typst::layout::{Abs, Frame, FrameItem, Point, Transform};
+use typst::model::{CiteGroup, EnumElem, ListElem, ParElem, TermsElem};
 use typst::syntax::Span;
 use typst::text::TextItem;
 use typst_layout::PagedDocument;
@@ -38,24 +43,48 @@ pub fn span_boxes(document: &PagedDocument, span: Span) -> Vec<PageBox> {
 /// One box per contiguous run of glyphs for which `keep(span, offset)` holds,
 /// on every page; `offset` is the glyph's byte offset within its span's text.
 pub fn glyph_boxes(document: &PagedDocument, keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
-    boxes(document, false, keep)
+    boxes(document, false, keep, |_| false)
 }
 
 /// Like `glyph_boxes`, but shapes (rules, fraction lines, rectangles) and
 /// images count, too: each one whose span passes `keep(span, 0)` is a box of
-/// its own.
-pub fn drawn_boxes(document: &PagedDocument, keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
-    boxes(document, true, keep)
+/// its own. And everything drawn inside an element whose span passes
+/// `whole(span)` counts, whatever its own span: a figure's picture that a
+/// package draws carries the package's spans, but sits between the start and
+/// end tag of the figure (Typst tags locatable and tagged elements).
+pub fn drawn_boxes(
+    document: &PagedDocument,
+    keep: impl FnMut(Span, u16) -> bool,
+    whole: impl FnMut(Span) -> bool,
+) -> Vec<PageBox> {
+    boxes(document, true, keep, whole)
 }
 
-fn boxes(document: &PagedDocument, graphics: bool, mut keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
+fn boxes(
+    document: &PagedDocument,
+    graphics: bool,
+    mut keep: impl FnMut(Span, u16) -> bool,
+    mut whole: impl FnMut(Span) -> bool,
+) -> Vec<PageBox> {
     let mut boxes = Vec::new();
+    // The elements passing `whole` that are open at the current item; tags
+    // come in document order, and an element may end on a later page.
+    let mut open: HashSet<Location> = HashSet::new();
     for (page, p) in document.pages().iter().enumerate() {
         walk_items(&p.frame, Transform::identity(), &mut |ts, pos, item| match item {
+            FrameItem::Tag(Tag::Start(elem, _)) => {
+                if !is_grouping(elem) && whole(elem.span()) {
+                    open.extend(elem.location());
+                }
+            }
+            FrameItem::Tag(Tag::End(location, ..)) => {
+                open.remove(location);
+            }
             FrameItem::Text(text) => {
+                let inside = !open.is_empty();
                 let mut run: Option<Rect> = None;
                 for ((glyph, offset), rect) in glyph_rects(ts, pos, text) {
-                    if keep(glyph, offset) {
+                    if inside || keep(glyph, offset) {
                         run = Some(run.map_or(rect, |r| r.union(rect)));
                     } else if let Some(r) = run.take() {
                         boxes.push(r.on_page(page));
@@ -65,17 +94,28 @@ fn boxes(document: &PagedDocument, graphics: bool, mut keep: impl FnMut(Span, u1
                     boxes.push(r.on_page(page));
                 }
             }
-            FrameItem::Shape(shape, span) if graphics && keep(*span, 0) => {
+            FrameItem::Shape(shape, span) if graphics && (!open.is_empty() || keep(*span, 0)) => {
                 let bbox = shape.bbox(true);
                 boxes.push(Rect::transformed(ts, pos + bbox.min, pos + bbox.max).on_page(page));
             }
-            FrameItem::Image(_, size, span) if graphics && keep(*span, 0) => {
+            FrameItem::Image(_, size, span) if graphics && (!open.is_empty() || keep(*span, 0)) => {
                 boxes.push(Rect::transformed(ts, pos, pos + size.to_point()).on_page(page));
             }
             _ => {}
         });
     }
     boxes
+}
+
+/// Whether realization made `elem` from a run of siblings (a paragraph, a
+/// list) and gave it the span of the first one, so that its span says nothing
+/// about where the rest comes from.
+fn is_grouping(elem: &Content) -> bool {
+    elem.is::<ParElem>()
+        || elem.is::<ListElem>()
+        || elem.is::<EnumElem>()
+        || elem.is::<TermsElem>()
+        || elem.is::<CiteGroup>()
 }
 
 #[derive(Debug, Clone, Copy)]

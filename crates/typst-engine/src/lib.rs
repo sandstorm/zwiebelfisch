@@ -267,7 +267,9 @@ impl Engine {
     /// Returns where the text of the source ranges `[from, to, from, to, ...]`
     /// (UTF-16) of `path` is drawn, as `BoxJson[]` JSON: one box per run of
     /// glyphs whose source character lies in one of the ranges, and one per
-    /// shape or image whose syntax node starts in one of them.
+    /// shape or image whose syntax node starts in one of them. Everything an
+    /// element whose call lies wholly in one of the ranges draws counts, too,
+    /// also what a package or another file draws for it (a figure's picture).
     #[wasm_bindgen(js_name = boxesForRanges)]
     pub fn boxes_for_ranges(&self, path: &str, ranges: Vec<u32>) -> String {
         let boxes = (|| {
@@ -279,17 +281,28 @@ impl Engine {
                 .chunks_exact(2)
                 .filter_map(|r| Some(lines.utf16_to_byte(r[0] as usize)?..lines.utf16_to_byte(r[1] as usize)?))
                 .collect();
-            let mut nodes: HashMap<Span, Option<Range<usize>>> = HashMap::new();
-            Some(highlight::drawn_boxes(document, |span, offset| {
+            let nodes = std::cell::RefCell::new(HashMap::<Span, Option<Range<usize>>>::new());
+            // The span's syntax node, if it is in `path`.
+            let node = |span: Span| {
                 if span.id() != Some(id) {
-                    return false;
+                    return None;
                 }
-                let node = nodes.entry(span).or_insert_with(|| self.world.range(span));
-                node.as_ref().is_some_and(|node| {
-                    let byte = node.start + offset as usize;
-                    bytes.iter().any(|range| range.contains(&byte))
-                })
-            }))
+                nodes.borrow_mut().entry(span).or_insert_with(|| self.world.range(span)).clone()
+            };
+            Some(highlight::drawn_boxes(
+                document,
+                |span, offset| {
+                    node(span).is_some_and(|node| {
+                        let byte = node.start + offset as usize;
+                        bytes.iter().any(|range| range.contains(&byte))
+                    })
+                },
+                |span| {
+                    node(span).is_some_and(|node| {
+                        bytes.iter().any(|range| range.start <= node.start && node.end <= range.end)
+                    })
+                },
+            ))
         })()
         .unwrap_or_default();
         to_json(&boxes.into_iter().map(box_json).collect::<Vec<_>>())
