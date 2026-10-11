@@ -1,5 +1,5 @@
 // Tests for typst-file.ts, against IronCalc's real engine (wasm) and, for the generated source, the Typst engine.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import init, { Model } from '@ironcalc/wasm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine } from '../../../core/typst-engine/typst-engine';
@@ -117,8 +117,10 @@ describe('spreadsheetTypst', () => {
   it('writes Typst that compiles: tables, fills and values', async () => {
     const wasm = readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
     const fontDir = new URL('../../../core/typst-engine/fonts/', import.meta.url);
-    const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
-    const engine = await createEngine(wasm, fonts);
+    const engine = await createEngine(wasm);
+    for (const name of ['LibertinusSerif-Regular.otf', 'LibertinusSerif-Bold.otf']) {
+      engine.addFont(readFileSync(new URL(name, fontDir)));
+    }
     const model = workbook({ A1: 'Rent', B1: '=600*2', A2: 'say "hi" \\', B2: 'TRUE' });
     model.newSheet();
     model.renameSheet(1, 'My "Sheet"');

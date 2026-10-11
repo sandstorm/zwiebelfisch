@@ -1,7 +1,7 @@
 // Tests that the engine compiles checklists with the cheq package (./fixtures/cheq-0.4.0), as task lists need it.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst-engine';
+import { type FontInfo, type TypstEngine, createEngine } from '../../../core/typst-engine/typst-engine';
 import { withPackages } from '../../../core/typst-packages/typst-packages';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 
@@ -13,7 +13,16 @@ import { SourceRange } from '../../../core/typst-document/typst-document';
 const engineDir = new URL('../../../core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
 const fontDir = new URL('fonts/', engineDir);
-const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
+
+/** An engine with the default fonts, each loaded when a compile first uses it. */
+async function engineWithFonts(): Promise<TypstEngine> {
+  const engine = await createEngine(wasm);
+  for (const [name, faces] of Object.entries(fontIndex)) {
+    engine.addLazyFont({ faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
+  }
+  return engine;
+}
 const cheq = new Uint8Array(readFileSync(new URL('./fixtures/cheq-0.4.0.tar.gz', import.meta.url)));
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist\n\n';
@@ -22,7 +31,7 @@ const LIST = '- [ ] todo\n- [x] done\n';
 describe('cheq checklists', () => {
   let engine: TypstEngine;
   beforeAll(async () => {
-    engine = await createEngine(wasm, fonts);
+    engine = await engineWithFonts();
   });
 
   /** Compiles `source` and returns the boxes drawn for its `[ ]` box. */

@@ -1,8 +1,8 @@
 // Tests for the model against the real drafting package (./fixtures/drafting-0.2.2): the notes, threads, page margins
 // and the sources without notes it writes compile, and draw what they should.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createEngine } from '../../../core/typst-engine/typst-engine';
+import { type FontInfo, type TypstEngine, createEngine } from '../../../core/typst-engine/typst-engine';
 import { withPackages } from '../../../core/typst-packages/typst-packages';
 import { SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { calculateMarginNoteChanges } from './add-margin-note';
@@ -12,13 +12,22 @@ import { withoutNotes } from './without-notes';
 const engineDir = new URL('../../../core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
 const fontDir = new URL('fonts/', engineDir);
-const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
+
+/** An engine with the default fonts, each loaded when a compile first uses it. */
+async function engineWithFonts(): Promise<TypstEngine> {
+  const engine = await createEngine(wasm);
+  for (const [name, faces] of Object.entries(fontIndex)) {
+    engine.addLazyFont({ faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
+  }
+  return engine;
+}
 
 describe('the drafting package (margin notes)', () => {
   const drafting = new Uint8Array(readFileSync(new URL('./fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
 
   it('compiles point and range margin notes', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const project = withPackages(bare, async () => drafting);
     bare.setSource(
       '/main.typ',
@@ -35,7 +44,7 @@ describe('the drafting package (margin notes)', () => {
   });
 
   it('compiles comment threads (one list item per message) in both layouts', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const project = withPackages(bare, async () => drafting);
     const anna = { author: 'Anna', date: '2026-10-10', text: 'Is this *right*? #1 ]' };
     const bob = { author: 'Bob', date: '2026-10-11', text: 'Yes.\nChecked.\n\n- with finance' };
@@ -55,7 +64,7 @@ describe('the drafting package (margin notes)', () => {
   });
 
   it('compiles a note in a document without page setup', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const project = withPackages(bare, async () => drafting);
     bare.setSource('/main.typ', '#import "@preview/drafting:0.2.2": margin-note\nText#margin-note[note]');
     expect((await project.compile('/main.typ')).diagnostics).toEqual([]);
@@ -65,7 +74,7 @@ describe('the drafting package (margin notes)', () => {
     const page = '#set page(width: 16cm, height: 8cm, margin: (right: 4cm, rest: 1cm))\n';
     /** Glyphs drawn (SVG `<use>`s) when compiling `main` with `sources`. */
     const glyphs = async (sources: Record<string, string>, main = '/main.typ') => {
-      const bare = await createEngine(wasm, fonts);
+      const bare = await engineWithFonts();
       const project = withPackages(bare, async () => drafting);
       for (const [path, text] of Object.entries(sources)) bare.setSource(path, text);
       const { pages, diagnostics } = await project.compile(main);
@@ -94,7 +103,7 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
   describe('page margins (drafting 0.2.2 needs a margin that differs by side)', () => {
     const demo = readFileSync(new URL('../../../../demo/examples/hello/main.typ', import.meta.url), 'utf8');
     const compile = async (text: string) => {
-      const bare = await createEngine(wasm, fonts);
+      const bare = await engineWithFonts();
       const project = withPackages(bare, async () => drafting);
       bare.setSource('/main.typ', text);
       return (await project.compile('/main.typ')).diagnostics.map((d) => d.message);

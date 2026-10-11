@@ -1,8 +1,8 @@
 // Tests that every demo example compiles without errors (examples.ts, against the built wasm), with the packages
 // they import from .cache/typst-packages (mise run build:packages).
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type TypstEngine } from '../src/core/typst-engine/typst-engine';
+import { type FontInfo, type TypstEngine, createEngine } from '../src/core/typst-engine/typst-engine';
 import { withPackages } from '../src/core/typst-packages/typst-packages';
 import type { ProjectFiles } from '../src';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
@@ -10,7 +10,17 @@ import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './exampl
 const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
 const fontDir = new URL('fonts/', engineDir);
-const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
+
+/** An engine with the default fonts, each loaded when a compile first uses it; `loaded` lists the files loaded. */
+async function engineWithFonts(loaded: string[] = []): Promise<TypstEngine> {
+  const engine = await createEngine(wasm);
+  for (const [name, faces] of Object.entries(fontIndex)) {
+    engine.addLazyFont({ faces, load: () => (loaded.push(name), new Uint8Array(readFileSync(new URL(name, fontDir)))) });
+  }
+  return engine;
+}
+
 const packageDir = new URL('../.cache/typst-packages/', import.meta.url);
 
 /** `@preview/name:1.0.0` from the downloads of `mise run build:packages`, as the demo would fetch it. */
@@ -23,7 +33,7 @@ describe('demo examples', () => {
   let engine: TypstEngine;
   let loaded: string[] = [];
   beforeAll(async () => {
-    engine = await createEngine(wasm, fonts);
+    engine = await engineWithFonts();
   });
 
   /** Compiles a project on its own: the files of earlier projects are removed first. */
@@ -48,6 +58,20 @@ describe('demo examples', () => {
     expect(Object.keys(files)).toEqual(['/main.typ']);
     expect(files['/main.typ']).toMatch(/^#set page\(width: 16cm, height: auto, margin: 1\.5cm\)\n/);
     expect(files['/main.typ']).toContain('\n= Hello Typst\n');
+  });
+
+  it('the default document loads only the fonts it uses: the first render downloads 4 of 17 font files', async () => {
+    const loaded: string[] = [];
+    const fresh = await engineWithFonts(loaded);
+    fresh.setSource('/main.typ', exampleFiles('hello')['/main.typ'] as string);
+    expect(fresh.compile('/main.typ').diagnostics).toEqual([]);
+    // 2.4 MB (1.7 MB gzipped) instead of all 9.7 MB (6.4 MB gzipped)
+    expect(loaded.sort()).toEqual([
+      'LibertinusSerif-Bold.otf',
+      'LibertinusSerif-Italic.otf',
+      'LibertinusSerif-Regular.otf',
+      'NewCMMath-Book.otf',
+    ]);
   });
 
   it('the simple example is a single file', () => {

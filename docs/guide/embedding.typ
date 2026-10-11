@@ -14,7 +14,7 @@ Two ways in, same options:
   [File], [Content],
   [`typst-editor.js`], [ES module, all dependencies bundled. Importing it registers `<typst-editor>`.],
   [`typst_engine_bg.wasm`], [The Typst compiler and PDF export (about 22 MB, 9 MB gzipped).],
-  [`*.otf`, `*.ttf`], [Typst's default fonts.],
+  [`*.otf`, `*.ttf`], [Typst's default fonts, each downloaded when a document first uses it.],
   [other `*.js`], [Chunks loaded on demand (e.g. collaboration).],
   [`assets/engine.worker-*.js`], [The compile worker.],
   [`types/index.d.ts`], [TypeScript declarations.],

@@ -1,17 +1,44 @@
-#!/usr/bin/env bash
-#MISE description="Copy the default fonts (Typst's typst-assets set) into src/core/typst-engine/fonts as static assets"
-#MISE sources=["crates/typst-engine/Cargo.lock"]
-#MISE outputs=["src/core/typst-engine/fonts/LibertinusSerif-Regular.otf"]
-# The fonts come from the typst-assets crate that Cargo.lock pins, so they are
-# exactly the ones the Typst CLI of the same version embeds. The .pfb files next
-# to them are PDF base-14 substitutes that typst-assets does not expose as fonts.
-set -euo pipefail
-manifest=$(cargo metadata --manifest-path crates/typst-engine/Cargo.toml --format-version 1 \
-  --locked --filter-platform wasm32-unknown-unknown \
-  | node -e 'let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () =>
-      console.log(JSON.parse(s).packages.find((p) => p.name === "typst-assets").manifest_path))')
-source_dir="$(dirname "$manifest")/files/fonts"
-rm -rf src/core/typst-engine/fonts
-mkdir -p src/core/typst-engine/fonts
-cp "$source_dir"/*.otf "$source_dir"/*.ttf src/core/typst-engine/fonts/
-echo "fonts: $(ls src/core/typst-engine/fonts | wc -l | tr -d ' ') files, $(du -sh src/core/typst-engine/fonts | cut -f1)"
+#!/usr/bin/env node
+//MISE description="Copy the default fonts (Typst's typst-assets set) into src/core/typst-engine/fonts and write their index (index.json)"
+//MISE depends=["build:engine"]
+//MISE sources=["crates/typst-engine/Cargo.lock", "src/core/typst-engine/wasm/typst_engine_bg.wasm", "mise-tasks/build/fonts"]
+//MISE outputs=["src/core/typst-engine/fonts/LibertinusSerif-Regular.otf", "src/core/typst-engine/fonts/index.json"]
+// The fonts come from the typst-assets crate that Cargo.lock pins, so they are exactly the ones the Typst CLI of the
+// same version embeds. The .pfb files next to them are PDF base-14 substitutes that typst-assets does not expose as
+// fonts. The index lists every face's FontInfo, computed by the engine itself, so the engine knows the fonts before
+// it loads any (see docs/architecture/core.typ): { "<file name>": FontInfo[] }, files sorted by name.
+import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import init, { describeFont } from '../../src/core/typst-engine/wasm/typst_engine.js';
+
+const TARGET = 'src/core/typst-engine/fonts';
+
+const metadata = JSON.parse(
+  execFileSync(
+    'cargo',
+    ['metadata', '--manifest-path', 'crates/typst-engine/Cargo.toml', '--format-version', '1', '--locked',
+      '--filter-platform', 'wasm32-unknown-unknown'],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  ),
+);
+const assets = metadata.packages.find((p) => p.name === 'typst-assets');
+const source = join(dirname(assets.manifest_path), 'files', 'fonts');
+const names = readdirSync(source).filter((name) => /\.(otf|ttf)$/.test(name)).sort();
+
+rmSync(TARGET, { recursive: true, force: true });
+mkdirSync(TARGET, { recursive: true });
+await init({ module_or_path: readFileSync('src/core/typst-engine/wasm/typst_engine_bg.wasm') });
+const index = {};
+let bytes = 0;
+for (const name of names) {
+  copyFileSync(join(source, name), join(TARGET, name));
+  const data = readFileSync(join(TARGET, name));
+  bytes += data.length;
+  index[name] = JSON.parse(describeFont(data));
+  if (index[name].length === 0) throw new Error(`${name}: no font faces`);
+}
+const json = JSON.stringify(index);
+writeFileSync(join(TARGET, 'index.json'), json);
+const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
+console.log(`fonts: ${names.length} files, ${kb(bytes)}; index.json ${kb(json.length)}`);

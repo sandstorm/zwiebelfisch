@@ -12,7 +12,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`dev`], [Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else); builds engine and fonts first],
   [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@guide-getting-started-demo); builds engine and fonts first],
   [`build:engine`], [Rust → wasm (`cargo`, `wasm-bindgen`, `wasm-opt -Oz`) into `src/core/typst-engine/wasm/`; skipped when the Rust sources are unchanged],
-  [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`],
+  [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`, and their index `index.json` (@architecture-core-engine-fonts)],
   [`build:packages`], [the `@preview/…` packages the demo examples import, downloaded once into `.cache/typst-packages/` (not committed); `test:unit` runs it],
   [`build`], [typecheck, engine, fonts, library, then the static demo → `dist/demo`],
   [`build:lib`], [the library → `dist/lib`: ESM, worker, wasm, d.ts],
@@ -80,7 +80,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 - *Packages*: only `@preview` from packages.typst.org (no `@local`, no other registry); a failed download is retried only after the worker restarts.
 - *Visual view*: tables with merged cells, `table.cell`, header arguments or `columns: (..)` stay raw boxes; the toolbar acts on the last main-text selection while the cursor is in a raw box; text typed into a raw box that is modelled Typst stays raw until re-read; a change before the first block re-renders the whole editor; margin-note cards edit raw markup.
 - *Preview*: a call whose glyphs come from its definition (`ms(18)`) shows code, not a picture; snippets show only the first page a range is drawn on; raw boxes ask for boxes after every compile, also while the Visual view is hidden.
-- *Size*: lazy font loading (a font index up front, data on first use); a smaller wasm needs a Typst fork with feature flags.
+- *Size*: a smaller wasm needs a Typst fork with feature flags.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual view looks like the document; templates from Typst Universe.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
 - *Devtools extension*: a dev-only side panel showing the projection, every contribution by extension and events as they fire, built only on the public API.

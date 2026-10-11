@@ -14,7 +14,7 @@
 == Concepts <architecture-preview-concepts>
 
 - *`Preview`* (`preview.ts`): the host and what `ExtensionContext.preview` is (`PreviewContributions`). `update(files, main)` is cheap per keystroke.
-- *Engine worker* (`worker/`): the Typst wasm in a Web Worker. The first message is `init` (wasm and font URLs, resolved on the main thread). Then requests by id: `compile`, `click`, `cursor`, `boxes`, `pdf`. `FileSender` sends text every time and bytes once per `Uint8Array` identity (`null` = unchanged). `@preview` packages download on first use (`core/typst-packages`).
+- *Engine worker* (`worker/`): the Typst wasm in a Web Worker. The first message is `init` (the wasm URL and the default fonts' URLs and faces, resolved on the main thread; a font file is downloaded when a compile first uses it, @architecture-core-engine-fonts). Then requests by id: `compile`, `click`, `cursor`, `boxes`, `pdf`. `FileSender` sends text every time and bytes once per `Uint8Array` identity (`null` = unchanged). `@preview` packages download on first use (`core/typst-packages`).
 - *`LatestOnly`*: at most one run in flight; values pushed meanwhile replace each other. Compiles use it; reveals too, throttled to one per 80 ms. Typing never queues a backlog.
 - *`PageList`* (`pages/`): a placeholder per page sized by `aspect-ratio`. An `IntersectionObserver` (one viewport above and below) decides which pages carry SVG. Only near pages whose `hash` changed get new markup.
 - *Units*: the engine's `PageIndex` and `Pt`; the DOM's CSS pixels as `Px` (`pages/geometry.ts`: `measure(element)`, `pointOnPage`); the zoom is a plain factor (1 = 100 %, 96 px per 72 pt).

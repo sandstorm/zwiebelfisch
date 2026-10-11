@@ -14,7 +14,7 @@ import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometr
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
-import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
+import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
 import type { Init, EngineRequest, EngineResponse } from './worker/protocol';
@@ -217,7 +217,7 @@ export class Preview implements PreviewContributions {
       interval: REVEAL_INTERVAL_MS,
     });
 
-    this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONT_URLS } satisfies Init);
+    this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONTS } satisfies Init);
     this.worker.onmessage = (event: MessageEvent<EngineResponse>) => {
       this.pending.get(event.data.id)?.(event.data);
       this.pending.delete(event.data.id);
