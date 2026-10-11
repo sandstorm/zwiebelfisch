@@ -1,5 +1,5 @@
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider.
+// through their provider; the declared languages by ending; the help sheets by language.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -53,5 +53,33 @@ describe('LanguagesHost', () => {
     const resolved = links.resolveDocumentLink(resolving);
     expect(resolved.target).toBe(ProjectPath.of('/a.typ'));
     expect(links.resolveDocumentLink(resolved).target).toBe(ProjectPath.of('/a.typ'));
+  });
+
+  it('names the language of a file by the longest declared ending, in any case; undefined without one', () => {
+    const languages = new LanguagesHost(targets);
+    languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
+    languages.declare([
+      { id: 'generated', extensions: ['.gen.typ'] },
+      { id: 'yaml', extensions: ['.yaml', '.YML'] },
+    ]);
+    expect(languages.getLanguageId(ProjectPath.of('/a/main.TYP'))).toBe('typst');
+    expect(languages.getLanguageId(ProjectPath.of('/t.ic.gen.typ'))).toBe('generated');
+    expect(languages.getLanguageId(ProjectPath.of('/conf.yml'))).toBe('yaml');
+    expect(languages.getLanguageId(ProjectPath.of('/logo.png'))).toBeUndefined();
+    expect(() => languages.declare([{ id: 'other', extensions: ['.typ'] }])).toThrow(/\.typ are typst/);
+  });
+
+  it('gives the help sheets of the providers for a language (no language: every file), until disposed', () => {
+    const languages = new LanguagesHost(targets);
+    const sheet = (title: string) => ({ provideHelp: () => ({ title, sections: [] }) });
+    languages.registerHelpProvider({ language: 'typst' }, sheet('Typst'));
+    const mermaid = languages.registerHelpProvider([{ language: 'mermaid' }], sheet('Mermaid'));
+    languages.registerHelpProvider({}, sheet('Everywhere'));
+    const titles = (languageId: string | undefined) => languages.provideHelp(languageId).map(({ title }) => title);
+    expect(titles('typst')).toEqual(['Typst', 'Everywhere']);
+    expect(titles('mermaid')).toEqual(['Mermaid', 'Everywhere']);
+    expect(titles(undefined)).toEqual(['Everywhere']);
+    mermaid.dispose();
+    expect(titles('mermaid')).toEqual(['Everywhere']);
   });
 });

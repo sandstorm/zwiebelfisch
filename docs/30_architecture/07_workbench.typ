@@ -31,7 +31,7 @@
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
   [`window`], [messages, input box, quick pick, save dialog, contributed menus (`showContextMenu`), progress (`withProgress`), search everywhere's providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity; search providers: `order`, then `id`],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
-  [`languages`], [document link providers for a `DocumentSelector` (by `languageId`)], [`priority` (default 100)],
+  [`languages`], [document link providers and help providers for a `DocumentSelector` (by `languageId`); the language of a path (`getLanguageId`, from `contributes.languages` and the workbench's `typst`)], [links: `priority` (default 100); help: all shown; an ending declared for two languages throws],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
   [`workbench`], [`open`, side panels (left and right), editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order` within their side],
 )
@@ -39,7 +39,7 @@
 == Lifecycle <architecture-workbench-lifecycle>
 
 + The constructor makes every host and the frame, and puts the CSS in: first the tokens and the frame (`typst-editor.css`) with the workbench's own (`<style id="typst-editor-styles">`), then each host's `<name>.css` (its `styleSheet`; the Visual editor's after ProseMirror's vendored `prosemirror.css`). The extensions' follow at activation.
-+ `activate(list)` declares every extension's settings (`contributes.configuration`) and collects its commands for people (`contributes.commands`), so any declared setting is readable during activation. Values for undeclared ids: console warning, ignored.
++ `activate(list)` declares every extension's settings (`contributes.configuration`) and languages (`contributes.languages`), and collects its commands for people (`contributes.commands`), so any declared setting and language is readable during activation. Values for undeclared ids: console warning, ignored.
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
 + The main file is shown (in the editor the option `viewType` names) and compiled. Views are created later, on demand, with what was registered.
 + `dispose()` disposes the extensions in reverse list order, each one's subscriptions in reverse, then the frame.

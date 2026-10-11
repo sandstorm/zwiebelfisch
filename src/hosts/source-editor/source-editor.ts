@@ -128,6 +128,12 @@ export class SourceEditor {
     this.view.focus();
   }
 
+  /** Puts `text` in place of the selection, the cursor after it, scrolled into view; focuses the editor. */
+  insert(text: string): void {
+    this.view.dispatch(this.view.state.replaceSelection(text), { scrollIntoView: true, userEvent: 'input' });
+    this.view.focus();
+  }
+
   /** The selected source range (the main selection). */
   selection(): SourceRange {
     return SourceRange.of(this.view.state.selection.main);

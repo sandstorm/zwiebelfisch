@@ -6,10 +6,12 @@ import type { Languages } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { isMermaid } from './model/mermaid-figure';
 import { editMermaidAction, insertMermaid } from './visual-editor/visual-editor';
+import { MERMAID_HELP } from './workbench/mermaid-help';
 
 /**
  * "Insert Mermaid diagram" in the Visual editor's Insert menu; "Edit diagram" on Visual editor boxes whose Typst reads a
- * Mermaid file of the project (`read("x.mmd")`), opening it.
+ * Mermaid file of the project (`read("x.mmd")`), opening it; the help sheet "Mermaid basics" for `.mmd` files (language
+ * `mermaid`).
  *
  * Mermaid diagrams as figures drawn by the merman package while Typst compiles — "Insert Mermaid diagram" (a new `.mmd`
  * file with a starter flowchart, its figure and the import in the text) and "Edit diagram" on a box reading one.
@@ -26,6 +28,7 @@ export function mermaid(): TypstExtension {
       subscriptions.push(
         visualEditor.registerToolbarItem(insertMermaid(context)),
         visualEditor.registerRawBoxAction(editMermaidAction(mermaidIn(project, languages), (path) => workbench.open(path))),
+        languages.registerHelpProvider({ language: 'mermaid' }, { provideHelp: () => MERMAID_HELP }),
       );
     },
   };

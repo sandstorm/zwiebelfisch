@@ -7,7 +7,7 @@ import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import type { User } from '../../core/user/user';
 import { type Commands, CommandsHost } from '../commands/commands';
-import { type Languages, LanguagesHost } from '../languages/languages';
+import { type LanguageContribution, type Languages, LanguagesHost } from '../languages/languages';
 import { Preview, type PreviewContributions, type PreviewProgress } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceEditorHost, type SourceEditorContributions } from '../source-editor/source-editor';
@@ -45,7 +45,7 @@ export interface TypstExtension {
   readonly id: string;
   /**
    * What the extension declares before any extension is activated (VS Code's `contributes` in an extension's
-   * manifest): its settings.
+   * manifest): its settings, commands and languages.
    */
   readonly contributes?: ExtensionContributions;
   /** Registers the extension's contributions; everything it pushes into `context.subscriptions` is disposed with the widget. */
@@ -64,6 +64,11 @@ export interface ExtensionContributions {
    * without arguments, so declare only commands that work without any.
    */
   readonly commands?: readonly CommandContribution[];
+  /**
+   * The languages of files it knows by ending (VS Code's `contributes.languages`): `languages.getLanguageId(path)`
+   * reads them, e.g. to pick the help sheet of the shown file. An ending belongs to one language.
+   */
+  readonly languages?: readonly LanguageContribution[];
 }
 
 /** A command as people see it (VS Code's `contributes.commands` entry). */
@@ -385,11 +390,14 @@ export class WorkbenchHost implements Workbench {
   }
 
   /**
-   * Declares the settings of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
+   * Declares the settings and languages of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
    * Values set for settings no one declares are reported (console) and ignored.
    */
   activate(extensions: readonly TypstExtension[]): void {
-    for (const extension of extensions) this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
+    for (const extension of extensions) {
+      this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
+      this.#languages.declare(extension.contributes?.languages ?? []);
+    }
     this.#declaredCommands = extensions.flatMap((extension) => extension.contributes?.commands ?? []);
     this.#workspace.check();
     this.#extensions.activate(extensions);
@@ -583,8 +591,12 @@ export class WorkbenchHost implements Workbench {
     this.#layout.setDefaultPanel('right', this.#workspace.getConfiguration('workbench').get<string | null>('rightSidePanel'));
   }
 
-  /** The registered document links in every Source editor and in the code of every raw box (Typst, in its file). */
+  /**
+   * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
+   * code of every raw box (in its file).
+   */
   #showDocumentLinks(): void {
+    this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));

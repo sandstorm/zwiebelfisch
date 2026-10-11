@@ -33,7 +33,7 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
 }
 
 function sourceEditor(document: TypstDocument, selection: { from: number; to: number }): TextEditor {
-  return { document, viewType: SOURCE_EDITOR, selection: SourceRange.of(selection), revealRange: vi.fn() };
+  return { document, viewType: SOURCE_EDITOR, selection: SourceRange.of(selection), revealRange: vi.fn(), insertSnippet: vi.fn() };
 }
 
 describe('comments.addComment', () => {
@@ -61,6 +61,7 @@ describe('comments.addComment', () => {
         return view.selection();
       },
       revealRange: (range) => view.reveal(range),
+      insertSnippet: (snippet) => view.insert(snippet),
     };
     // as the widget wires it: the notes gutter opens the new note's card
     comment = setup(editor, notes).comment;

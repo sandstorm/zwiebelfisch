@@ -227,7 +227,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerRawBoxCodeMirrorExtension(editor => extension)`], [CodeMirror extensions for the code of every raw box],
 )
 
-- `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the Visual editor reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram").
+- `insertTypst(editor, source, at?)` (a plain function): inserts what Typst `source` is read as, as the Visual editor reads any Typst (a figure of an image becomes a figure, the rest raw boxes), at the selection or at position `at` (a drop): one paragraph's inline content into the text, blocks after the block there. For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram") and the help panel's snippets.
 - Contributions register once; the host applies them to every editor it creates (editors are made lazily, per document). Disposing a registration takes it out of editors created later.
 - Per-editor things (the document, a popover) come through the `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setRawBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual editor draws on its box.

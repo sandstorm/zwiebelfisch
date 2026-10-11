@@ -321,14 +321,15 @@ describe('the built-in extensions', () => {
     expect(action()).toBeNull();
   });
 
-  it('removes the file panel while files.panel is hide', () => {
+  it('removes the file panel while files.panel is hide (the left side keeps Help)', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
-    const side = () => host.querySelector<HTMLElement>('.typst-editor__side--left')!;
-    expect(side().hidden).toBe(false);
+    const button = (id: string) => host.querySelector<HTMLElement>(`[data-testid=typst-panel-toggle-${id}]`)!;
+    expect(button('files').hidden).toBe(false);
     editor.settings = { 'files.panel': 'hide' };
-    expect(side().hidden).toBe(true);
+    expect(button('files').hidden).toBe(true);
+    expect(button('help').hidden).toBe(false);
     editor.settings = {};
-    expect(side().hidden).toBe(false);
+    expect(button('files').hidden).toBe(false);
   });
 
   it('keeps the preview in step (preview-sync): it follows the focused selection, and a click selects its source', () => {
