@@ -17,6 +17,19 @@ describe('DiagnosticCollection', () => {
     expect(collection.get(two)).toEqual([]);
     expect(changed).toEqual([one]);
   });
+
+  it('tells nothing when a document had no diagnostics and still has none (every compile without errors)', () => {
+    const collection = new DiagnosticCollection();
+    const one = new TypstDocument('one\n');
+    const changed: TypstDocument[] = [];
+    collection.onDidChange((document) => changed.push(document));
+    collection.set(one, []);
+    collection.set(one, [error]);
+    collection.set(one, []);
+    collection.set(one, []);
+    expect(changed).toEqual([one, one]);
+    expect(collection.get(one)).toEqual([]);
+  });
 });
 
 describe('describeDiagnostic', () => {

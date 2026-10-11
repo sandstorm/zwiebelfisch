@@ -9,11 +9,13 @@ import type { SourceRange, TypstDocument } from '../../../core/typst-document/ty
 export class DiagnosticCollection {
   private readonly entries = new WeakMap<TypstDocument, readonly SourceDiagnostic[]>();
   private readonly changed = new EventEmitter<TypstDocument>();
-  /** Fires with the document whose diagnostics were set. */
+  /** Fires with the document whose diagnostics were set (not when it had none and still has none). */
   readonly onDidChange = this.changed.event;
 
   /** Replaces the diagnostics of `document` (offsets in its current text). */
   set(document: TypstDocument, diagnostics: readonly SourceDiagnostic[]): void {
+    // none before and none now, as after every compile of a document without errors: nothing to tell
+    if (diagnostics.length === 0 && this.get(document).length === 0) return;
     this.entries.set(document, diagnostics);
     this.changed.fire(document);
   }
