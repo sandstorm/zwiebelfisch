@@ -41,7 +41,7 @@ extensions/<name>/
   [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Mod+Alt+M); PDF option `comments.include`], [node, mark, gutter, command, PDF option],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar],
   [`styles`], [`StyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
-  [`previewSync`], [preview follows the cursor; a click selects the source; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`],
+  [`previewSync`], [preview follows the cursor; a click selects the source, its outline goes with the next edit or selection move; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`, `clearClickHighlight`],
   [`previewControls`], [zoom, page number], [preview toolbar],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
 )

@@ -18,6 +18,8 @@ interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
   pdfOptions: PdfExportOption[];
   revealed: [string, SourceRange][];
+  /** How often the click outline was removed. */
+  cleared: number;
   compiled(diagnostics: Diagnostic[]): void;
   click(click: PageClick): void;
 }
@@ -36,6 +38,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly toolbarItems: unknown[] = [];
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
+      cleared = 0;
       readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
@@ -50,6 +53,9 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
         this.#clicks.fire(click);
       }
       update() {}
+      clearClickHighlight() {
+        this.cleared++;
+      }
       reveal(...args: unknown[]) {
         this.revealed.push(args);
       }
@@ -323,6 +329,30 @@ describe('the built-in extensions', () => {
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
     preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) });
     expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
+  });
+
+  it("removes a click's outline in the preview with the next edit (any view) or once the selection moves away", () => {
+    const { editor, preview, source } = setup({ source: '= Hi\n\nText more\n' });
+    const click = { path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) };
+    preview.click(click);
+    // selecting the clicked range (also again, as a focus may) keeps it
+    source().dispatch({ selection: { anchor: 6, head: 10 } });
+    expect(preview.cleared).toBe(0);
+    source().dispatch({ selection: { anchor: 2 } });
+    expect(preview.cleared).toBe(1);
+    // once gone, nothing is removed again
+    source().dispatch({ selection: { anchor: 3 } });
+    expect(preview.cleared).toBe(1);
+
+    preview.click(click);
+    expect(preview.cleared).toBe(1);
+    source().dispatch({ changes: { from: 0, to: 0, insert: '!' }, selection: { anchor: 7, head: 11 } });
+    expect(preview.cleared).toBe(2);
+
+    // an edit from elsewhere (another view, the API) too
+    preview.click(click);
+    editor.files = { '/main.typ': '= Hi\n\nOther\n' };
+    expect(preview.cleared).toBe(3);
   });
 
   it('does not follow while "Follow cursor" is off', () => {

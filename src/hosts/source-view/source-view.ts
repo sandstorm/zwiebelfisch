@@ -7,7 +7,7 @@ import { basicSetup } from 'codemirror';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
 } from '@codemirror/state';
-import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { Decoration, EditorView, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
@@ -113,7 +113,7 @@ export class SourceView {
     ];
   }
 
-  /** Selects `range`, scrolls it into view and briefly highlights it. */
+  /** Selects `range`, scrolls it into view and highlights it until the text changes or the selection moves. */
   reveal({ from, to }: SourceRange): void {
     const length = this.view.state.doc.length;
     const range = { from: Math.min(from, length), to: Math.min(to, length) };
@@ -135,22 +135,25 @@ export class SourceView {
   }
 }
 
-/** The range `reveal` highlights, until the next reveal; it follows edits. */
-const setHighlight = StateEffect.define<{ from: number; to: number } | null>();
-const highlightField = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
-  update(decorations, tr) {
+/**
+ * The range `reveal` highlights, while it is what the user looks at: it goes when the text changes (here or in
+ * another view) or the selection moves away from it, so it never stays behind as a second selection.
+ */
+const setHighlight = StateEffect.define<{ from: number; to: number }>();
+const highlightField = StateField.define<{ from: number; to: number } | null>({
+  create: () => null,
+  update(range, tr) {
     for (const effect of tr.effects) {
-      if (effect.is(setHighlight)) {
-        const range = effect.value;
-        decorations = range && range.from < range.to
-          ? Decoration.set(Decoration.mark({ class: 'typst-source__jump' }).range(range.from, range.to))
-          : Decoration.none;
-      }
+      if (effect.is(setHighlight)) return effect.value.from < effect.value.to ? effect.value : null;
     }
-    return tr.docChanged ? decorations.map(tr.changes) : decorations;
+    if (!range || tr.docChanged) return null;
+    const selected = tr.selection?.main ?? range;
+    return selected.from === range.from && selected.to === range.to ? range : null;
   },
-  provide: (field) => EditorView.decorations.from(field),
+  provide: (field) =>
+    EditorView.decorations.from(field, (range) =>
+      range ? Decoration.set(Decoration.mark({ class: 'typst-source__jump' }).range(range.from, range.to)) : Decoration.none,
+    ),
 });
 
 /** Tells `options` about a moved selection or changed text (after the view has it). */

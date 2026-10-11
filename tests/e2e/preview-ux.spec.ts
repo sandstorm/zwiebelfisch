@@ -71,6 +71,33 @@ test('highlights the clicked text in the preview', async ({ page }) => {
   expect(box.width).toBeLessThan(pageBox.width * 0.9);
 });
 
+test("a double click's highlights go with the next edit or once the selection moves, in either view", async ({ page }) => {
+  const outline = pages(page).first().locator('.typst-preview__highlight');
+  const jump = page.getByTestId('typst-source').locator('.typst-source__jump');
+  const heading = pages(page).locator('svg use').first();
+
+  // Source view: an edit removes the outline in the preview and the highlight in the source
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await clickGlyph(heading, { clickCount: 2 });
+  await expect(jump).toHaveText('Hello Typst');
+  await expect(outline).toBeVisible();
+  await page.keyboard.press('End');
+  await page.keyboard.type('!');
+  await expect(jump).toHaveCount(0);
+  await expect(outline).toHaveCount(0);
+
+  // Visual view: moving the selection away removes the outline; so does an edit
+  await page.getByRole('tab', { name: 'Visual' }).click();
+  await clickGlyph(heading, { clickCount: 2 });
+  await expect(outline).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(outline).toHaveCount(0);
+  await clickGlyph(heading, { clickCount: 2 });
+  await expect(outline).toBeVisible();
+  await page.keyboard.type('?');
+  await expect(outline).toHaveCount(0);
+});
+
 test.describe('a 30-page document', () => {
   test.beforeEach(async ({ page }) => {
     await page.getByRole('tab', { name: 'Source' }).click();

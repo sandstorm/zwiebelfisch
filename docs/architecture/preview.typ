@@ -6,7 +6,7 @@
   columns: (auto, 1fr),
   table.header[Host (mechanism)][Extensions (policy)],
   [engine worker, coalesced compiles, lazy page list], [toolbar items: zoom, page number (`previewControls`), "Follow cursor" (`previewSync`), "Download PDF" (`pdfExport`)],
-  [hit-testing, `onDidClickPage`, `reveal`], [when to reveal, where a click leads (`previewSync`)],
+  [hit-testing, `onDidClickPage`, `reveal`, `clearClickHighlight`], [when to reveal, where a click leads, how long its outline stays (`previewSync`)],
   [PDF export with every registered option], [the options (`comments.include`) and how they are offered (`pdfExport`)],
   [snippets of a source range], [raw boxes drawn as pictures (`renderedBoxes`)],
 )
@@ -18,7 +18,7 @@
 - *`LatestOnly`*: at most one run in flight; values pushed meanwhile replace each other. Compiles use it; reveals too, throttled to one per 80 ms. Typing never queues a backlog.
 - *`PageList`* (`pages/`): a placeholder per page sized by `aspect-ratio`. An `IntersectionObserver` (one viewport above and below) decides which pages carry SVG. Only near pages whose `hash` changed get new markup.
 - *Units*: the engine's `PageIndex` and `Pt`; the DOM's CSS pixels as `Px` (`pages/geometry.ts`: `measure(element)`, `pointOnPage`); the zoom is a plain factor (1 = 100 %, 96 px per 72 pt).
-- *Hit-testing*: a click is converted px → pt (`pointOnPage`) and sent as `click`; the clicked source run is outlined until the next click or compile and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, range)` (a `ProjectPath`, a `SourceRange`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
+- *Hit-testing*: a click is converted px → pt (`pointOnPage`) and sent as `click`; the clicked source run is outlined until the next click, a successful compile or `clearClickHighlight()` and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, range)` (a `ProjectPath`, a `SourceRange`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
 - *Snippets*: `snippet(path, range, text)` cuts the range's boxes out of the last compiled page. No extra compile. Null when `text` is no longer what was compiled.
 
 == Flow <architecture-preview-flow>
@@ -29,6 +29,7 @@ project change ─► update(files) ─► LatestOnly ─► worker: compile ─
         page list: swap pages whose hash changed ◄───────────────────┤
         onDidRender, onDidChangeDiagnostics (only if no newer update) ◄┘
 click ─► px→pt ─► worker: click ─► onDidClickPage ─► previewSync selects the source
+edit, selection moved away ─► previewSync ─► clearClickHighlight
 cursor ─► previewSync ─► reveal ─► worker: cursor ─► scroll if off-screen
 ```
 
