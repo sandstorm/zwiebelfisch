@@ -8,15 +8,19 @@ Typst is a markup language for documents. Text is written as it is, and a few
 characters add structure: *stars* make text strong, _underscores_ emphasise it,
 and `backticks` show code.
 
+It looks at first sight almost like Markdown, but is way more powerful and consistent,
+can actually be used for real typesetting.
+
 == Writing in the Visual editor
 
 The Visual tab edits this page like a word processor, the Source tab shows its
 Typst. In the Visual editor, a few keys do the markup for you:
 
+- Ctrl+B and Ctrl+I make text strong
+    or emphasised (Cmd on a Mac).
 - `# ` at the start of a line makes a heading, `## ` a smaller one.
 - `- ` starts a bullet list, `1. ` a numbered one, `> ` a quote.
-- Text typed between backticks becomes code. Ctrl+B and Ctrl+I make text strong
-  or emphasised (Cmd on a Mac).
+- Text typed between backticks becomes code; and
 - `/` opens the commands: try `/table`, `/h2` or `/quote`.
 - `@` lists the labels to refer to, like a heading or a figure.
 - Shift twice searches everywhere. The question mark on the left opens a cheat
