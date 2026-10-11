@@ -1,13 +1,14 @@
-// Task lists (checklists, rendered by the cheq package): `- [ ] todo` / `- [x] done`. See visual-view.ts.
+// Task lists (checklists, rendered by the cheq package): `- [ ] todo` / `- [x] done`, and cheq's import and show rule
+// that a Visual-view edit adding a task item brings along. See visual-view.ts.
 import { Extension } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, type Transaction } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
+import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
 
 /**
  * Task lists' Tiptap priority, over bullet lists (default 100), whose syntax they share: a task item is a bullet item
@@ -110,3 +111,30 @@ export const TASK_LIST_ACTION: ToolbarAction = {
   run: (c) => c.toggleTaskList(),
   active: (e) => e.isActive('taskList'),
 };
+
+// --- The checklist preamble (whether and where it is missing is the model's calculateChecklistPreambleChange)
+
+/**
+ * Adds what is missing of cheq's import and show rule to the top-level raw
+ * blocks of `tr.doc` (the only place they apply to the whole document): both
+ * as one block at the top, the show rule right after an existing import, or
+ * the import at the top before an existing show rule.
+ */
+function ensureChecklistPreamble(tr: Transaction): void {
+  const blocks: { code: string; end: number }[] = [];
+  tr.doc.forEach((block, offset) => {
+    if (block.type.name === 'rawBlock') blocks.push({ code: block.attrs.src, end: offset + block.nodeSize });
+  });
+  const change = calculateChecklistPreambleChange(blocks.map((block) => block.code));
+  if (change) tr.insert(change.after === null ? 0 : blocks[change.after].end, tr.doc.type.schema.nodes.rawBlock.create({ src: change.code }));
+}
+
+/** How many task items `doc` holds. */
+function countTaskItems(doc: Node): number {
+  let count = 0;
+  doc.descendants((node) => {
+    if (node.type.name === 'taskItem') count++;
+    return node.isBlock && !node.isTextblock;
+  });
+  return count;
+}
