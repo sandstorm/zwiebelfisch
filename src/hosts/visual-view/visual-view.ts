@@ -9,7 +9,7 @@ import { EditorState, TextSelection, type Plugin, type Transaction } from '@tipt
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
@@ -92,8 +92,8 @@ export class VisualView {
     ];
   }
 
-  /** Selects what shows source range `from`..`to` (a caret if empty) and scrolls to it. */
-  reveal(from: number, to: number): void {
+  /** Selects what shows source range `range` (a caret if empty) and scrolls to it. */
+  reveal({ from, to }: SourceRange): void {
     const { doc } = this.editor.state;
     const anchor = sourceToPos(doc, from);
     const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
@@ -106,10 +106,11 @@ export class VisualView {
    * The source range the selection shows: where it starts, and where the
    * last character (or box) it covers ends; `from === to` for a caret.
    */
-  selection(): { from: number; to: number } {
+  selection(): SourceRange {
     const { doc, selection } = this.editor.state;
     const from = posToSource(doc, selection.from);
-    return { from, to: selection.empty ? from : Math.max(from, posToSource(doc, selection.to, -1)) };
+    const end = posToSource(doc, selection.to, -1);
+    return { from, to: selection.empty || end < from ? from : end };
   }
 
   dispose(): void {
@@ -190,9 +191,7 @@ export type GutterProvider = (view: VisualViewContext, body: HTMLElement) => Gut
  * are set on the marked DOM (e.g. a style with the user's color). Views follow
  * edits with their highlights until the owner sets them again.
  */
-export interface Highlight {
-  from: number;
-  to: number;
+export interface Highlight extends SourceRange {
   className: string;
   attributes?: Record<string, string>;
 }
@@ -421,14 +420,15 @@ export interface VisualViewContext {
   /** The document the view shows. */
   readonly document: TypstDocument;
   /** The source range the view's selection shows (see `VisualView.selection`). */
-  selection(): { from: number; to: number };
+  selection(): SourceRange;
   /**
    * The position in `doc` (the view's document node, e.g. a transaction's) that shows source offset `offset`: with
-   * `bias` -1, a position at the end of the text before it (a caret at a line end stays there).
+   * `bias` -1, a position at the end of the text before it (a caret at a line end stays there). The only way from
+   * source offsets to ProseMirror positions.
    */
-  sourceToPos(doc: Node, offset: number, bias?: 1 | -1): number;
-  /** The source offset a position in `doc` shows (with `bias` -1: where the text before it ends). */
-  posToSource(doc: Node, pos: number, bias?: 1 | -1): number;
+  sourceToPos(doc: Node, offset: SourceOffset, bias?: 1 | -1): number;
+  /** The source offset a position in `doc` shows (with `bias` -1: where the text before it ends); the only way back. */
+  posToSource(doc: Node, pos: number, bias?: 1 | -1): SourceOffset;
   /** Whether `node` shows as a box of its own (raw Typst, an image, a page break, a margin note), not as text. */
   isBox(node: Node): boolean;
 }
@@ -450,8 +450,8 @@ export interface BoxPicture {
 export interface BoxRenderer {
   /** Whether it draws boxes of `node`'s kind. */
   renders(node: Node): boolean;
-  /** The picture of the box `node` whose source starts at offset `from`; null: show the code. */
-  render(node: Node, from: number): Promise<BoxPicture | null>;
+  /** The picture of the box `node` whose source starts at `from`; null: show the code. */
+  render(node: Node, from: SourceOffset): Promise<BoxPicture | null>;
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
   /** Fires whenever pictures may have changed (a new compile). */

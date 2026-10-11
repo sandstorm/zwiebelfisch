@@ -3,7 +3,7 @@
 // src/testing composes the built-ins; jsdom).
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
 import { createVisualView } from '../testing/testing';
 
 /** A Visual view over `text`, its toolbar, and its Tiptap editor (for typing). */
@@ -36,7 +36,7 @@ function type(editor: Editor, text: string): void {
 describe('page breaks and horizontal rules', () => {
   it('"Insert page break" adds #pagebreak() after the paragraph', () => {
     const { doc, view, button, parent } = setup('Hello\n');
-    view.reveal(5, 5);
+    view.reveal(SourceRange.of({ from: 5, to: 5 }));
     button('Insert page break').click();
     expect(doc.text).toBe('Hello\n\n#pagebreak()\n');
     expect(parent.querySelector('.typst-visual__page-break')?.textContent).toBe('Page break');
@@ -44,7 +44,7 @@ describe('page breaks and horizontal rules', () => {
 
   it('"Horizontal rule" adds #line(length: 100%)', () => {
     const { doc, view, button, parent } = setup('Hello\n');
-    view.reveal(5, 5);
+    view.reveal(SourceRange.of({ from: 5, to: 5 }));
     button('Horizontal rule').click();
     expect(doc.text).toBe('Hello\n\n#line(length: 100%)\n');
     expect(parent.querySelector('.typst-visual__rule hr')).not.toBeNull();
@@ -52,7 +52,7 @@ describe('page breaks and horizontal rules', () => {
 
   it('"---" in an empty paragraph becomes a rule', () => {
     const { doc, view, editor } = setup('Hello\n');
-    view.reveal(5, 5);
+    view.reveal(SourceRange.of({ from: 5, to: 5 }));
     editor.commands.splitBlock();
     type(editor, '---');
     expect(doc.text).toBe('Hello\n\n#line(length: 100%)\n\n\n');
@@ -62,7 +62,7 @@ describe('page breaks and horizontal rules', () => {
 
   it('"---" inside text stays text (an em dash in Typst is written that way, so it is escaped)', () => {
     const { doc, view, editor } = setup('Hello\n');
-    view.reveal(5, 5);
+    view.reveal(SourceRange.of({ from: 5, to: 5 }));
     type(editor, ' ---');
     expect(editor.state.doc.child(0).type.name).toBe('paragraph');
     expect(doc.text).toBe('Hello \\-\\--\n');
@@ -72,7 +72,7 @@ describe('page breaks and horizontal rules', () => {
 describe('block quotes', () => {
   it('"Quote" wraps the paragraph in #quote(block: true)[..] and unwraps it again', () => {
     const { doc, view, button, parent } = setup('Hello\n');
-    view.reveal(2, 2);
+    view.reveal(SourceRange.of({ from: 2, to: 2 }));
     button('Quote').click();
     expect(doc.text).toBe('#quote(block: true)[Hello]\n');
     expect(parent.querySelector('blockquote')?.textContent).toBe('Hello');
@@ -83,7 +83,7 @@ describe('block quotes', () => {
 
   it('"> " at the start of a paragraph starts a quote', () => {
     const { doc, view, editor } = setup('Hello\n');
-    view.reveal(5, 5);
+    view.reveal(SourceRange.of({ from: 5, to: 5 }));
     editor.commands.splitBlock();
     type(editor, '> Wise words');
     expect(doc.text).toBe('Hello\n\n#quote(block: true)[Wise words]\n');
@@ -94,9 +94,9 @@ describe('table header row', () => {
   it('"Header row" wraps the first row in table.header and back', () => {
     const source = 'Hi\n\n#table(columns: 2, [a], [b], [c], [d])\n';
     const { doc, view, button, parent } = setup(source);
-    view.reveal(1, 1);
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
     expect(button('Header row').disabled).toBe(true);
-    view.reveal(source.indexOf('c'), source.indexOf('c'));
+    view.reveal(SourceRange.of({ from: source.indexOf('c'), to: source.indexOf('c') }));
     expect(button('Header row').getAttribute('aria-pressed')).toBe('false');
     button('Header row').click();
     // re-printed in the style it was written in: one line
@@ -114,7 +114,7 @@ describe('task lists', () => {
 
   it('"Task list" turns the paragraph into a task and adds cheq once', () => {
     const { doc, view, button, editor } = setup('= Todo\n\nBuy milk\n');
-    view.reveal(16, 16);
+    view.reveal(SourceRange.of({ from: 16, to: 16 }));
     button('Task list').click();
     expect(doc.text).toBe(`${PREAMBLE}= Todo\n\n- [ ] Buy milk\n`);
     expect(button('Task list').getAttribute('aria-pressed')).toBe('true');
@@ -125,7 +125,7 @@ describe('task lists', () => {
 
   it('one undo removes the task list and the preamble it brought', () => {
     const { doc, view, button } = setup('Buy milk\n');
-    view.reveal(1, 1);
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
     button('Task list').click();
     expect(doc.text).toBe(`${PREAMBLE}- [ ] Buy milk\n`);
     button('Undo').click();
@@ -134,7 +134,7 @@ describe('task lists', () => {
 
   it('"[ ] " at the start of a paragraph starts a task list', () => {
     const { doc, view, editor } = setup(`${PREAMBLE}Hello\n`);
-    view.reveal(PREAMBLE.length + 5, PREAMBLE.length + 5);
+    view.reveal(SourceRange.of({ from: PREAMBLE.length + 5, to: PREAMBLE.length + 5 }));
     editor.commands.splitBlock();
     type(editor, '[x] Done');
     expect(doc.text).toBe(`${PREAMBLE}Hello\n\n- [x] Done\n`);
@@ -193,11 +193,11 @@ describe('real-world tables', () => {
 
   it('"Add row" and "Header row" keep the way the table is written', () => {
     const { doc, view, button } = setup(source);
-    view.reveal(source.indexOf('[1]') + 1, source.indexOf('[1]') + 1);
+    view.reveal(SourceRange.of({ from: source.indexOf('[1]') + 1, to: source.indexOf('[1]') + 1 }));
     button('Add row').click();
     const added = source.replace('ms(18),\n', 'ms(18),\n    [], [],\n');
     expect(doc.text).toBe(added);
-    view.reveal(source.indexOf('Pages'), source.indexOf('Pages'));
+    view.reveal(SourceRange.of({ from: source.indexOf('Pages'), to: source.indexOf('Pages') }));
     button('Header row').click();
     expect(doc.text).toBe(added.replace('table.header([*Pages*], [*Cold*])', '[*Pages*], [*Cold*]'));
   });

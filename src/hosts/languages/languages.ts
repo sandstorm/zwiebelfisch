@@ -7,6 +7,7 @@
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
+import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { linkExtension } from './link-extension';
@@ -41,7 +42,7 @@ export interface TextDocument {
 /** A range of a text that leads somewhere (VS Code's DocumentLink). */
 export interface DocumentLink {
   /** Where the link is, as offsets in the text given to the provider. */
-  readonly range: { readonly from: number; readonly to: number };
+  readonly range: SourceRange;
   /** The project file following the link opens; absent until resolved, or when it leads to no file. */
   readonly target?: ProjectPath;
   /** What the hover says about the link (e.g. that its file is missing). */

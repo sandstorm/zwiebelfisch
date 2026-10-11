@@ -1,7 +1,8 @@
 // Tests for createEngine (typst-engine.ts), against the built wasm.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from './typst-engine';
+import { type Engine, PageIndex, Pt, createEngine } from './typst-engine';
+import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts/', import.meta.url);
@@ -79,7 +80,7 @@ describe('Engine', () => {
     const source = '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHällo world';
     engine.setSource('/main.typ', source);
     engine.compile('/main.typ');
-    const jump = engine.jumpFromClick(0, 5, 5);
+    const jump = engine.jumpFromClick(PageIndex.of(0), Pt.of(5), Pt.of(5));
     expect(jump).toMatchObject({ kind: 'source', path: '/main.typ' });
     if (jump?.kind !== 'source') throw new Error('expected source jump');
     expect(source.slice(jump.from, jump.to)).toBe('Hällo world');
@@ -90,7 +91,7 @@ describe('Engine', () => {
     const words = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda';
     engine.setSource('/main.typ', `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`);
     engine.compile('/main.typ');
-    const title = engine.jumpFromClick(0, 4, 8);
+    const title = engine.jumpFromClick(PageIndex.of(0), Pt.of(4), Pt.of(8));
     if (title?.kind !== 'source') throw new Error('expected source jump');
     expect(title.boxes).toHaveLength(1);
     const [box] = title.boxes;
@@ -102,8 +103,8 @@ describe('Engine', () => {
     expect(box.y + box.h).toBeGreaterThanOrEqual(8);
 
     const source = `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`;
-    const [at] = engine.jumpFromCursor('/main.typ', source.indexOf('alpha') + 1);
-    const paragraph = engine.jumpFromClick(0, at.x, at.y - 2);
+    const [at] = engine.jumpFromCursor('/main.typ', SourceOffset.of(source.indexOf('alpha') + 1));
+    const paragraph = engine.jumpFromClick(PageIndex.of(0), at.x, Pt.of(at.y - 2));
     if (paragraph?.kind !== 'source') throw new Error('expected source jump');
     expect(paragraph.boxes.length).toBeGreaterThan(1); // the paragraph wraps
     expect(new Set(paragraph.boxes.map((b) => Math.round(b.y))).size).toBe(paragraph.boxes.length);
@@ -115,19 +116,19 @@ describe('Engine', () => {
     engine.setSource('/main.typ', source);
     engine.compile('/main.typ');
     const gamma = source.indexOf('gamma');
-    const boxes = engine.boxesForRanges('/main.typ', [{ from: gamma, to: gamma + 5 }]);
+    const boxes = engine.boxesForRanges('/main.typ', [SourceRange.of({ from: gamma, to: gamma + 5 })]);
     expect(boxes).toHaveLength(1);
     expect(boxes[0].page).toBe(0);
     expect(boxes[0].x).toBeGreaterThan(10);
     expect(boxes[0].w).toBeLessThan(40);
 
     const both = engine.boxesForRanges('/main.typ', [
-      { from: gamma, to: gamma + 5 },
-      { from: source.indexOf('second'), to: source.indexOf('second') + 6 },
+      SourceRange.of({ from: gamma, to: gamma + 5 }),
+      SourceRange.of({ from: source.indexOf('second'), to: source.indexOf('second') + 6 }),
     ]);
     expect(both.map((b) => b.page)).toEqual([0, 1]);
-    expect(engine.boxesForRanges('/main.typ', [{ from: 0, to: 10 }])).toEqual([]); // code, not drawn text
-    expect(engine.boxesForRanges('/other.typ', [{ from: gamma, to: gamma + 5 }])).toEqual([]);
+    expect(engine.boxesForRanges('/main.typ', [SourceRange.of({ from: 0, to: 10 })])).toEqual([]); // code, not drawn text
+    expect(engine.boxesForRanges('/other.typ', [SourceRange.of({ from: gamma, to: gamma + 5 })])).toEqual([]);
   });
 
   it('returns boxes for shapes drawn from source ranges, e.g. rectangles and fraction lines', () => {
@@ -135,12 +136,12 @@ describe('Engine', () => {
     engine.setSource('/main.typ', source);
     engine.compile('/main.typ');
     const rect = source.indexOf('#rect');
-    const [box] = engine.boxesForRanges('/main.typ', [{ from: rect, to: rect + '#rect(width: 40pt, height: 30pt)'.length }]);
+    const [box] = engine.boxesForRanges('/main.typ', [SourceRange.of({ from: rect, to: rect + '#rect(width: 40pt, height: 30pt)'.length })]);
     expect(box.y).toBeCloseTo(49.5, 1); // 50pt down, minus half the stroke
     expect(box.w).toBeGreaterThanOrEqual(40);
     expect(box.h).toBeGreaterThanOrEqual(30);
     const math = source.indexOf('$ 1/2 $');
-    const boxes = engine.boxesForRanges('/main.typ', [{ from: math, to: math + 7 }]);
+    const boxes = engine.boxesForRanges('/main.typ', [SourceRange.of({ from: math, to: math + 7 })]);
     expect(boxes.length).toBeGreaterThanOrEqual(3); // numerator, denominator, line
     expect(boxes.every((b) => b.y > 80)).toBe(true);
   });
@@ -148,14 +149,14 @@ describe('Engine', () => {
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');
-    expect(engine.jumpFromClick(0, 150, 90)).toBeNull();
+    expect(engine.jumpFromClick(PageIndex.of(0), Pt.of(150), Pt.of(90))).toBeNull();
   });
 
   it('jumps from a cursor in the source to positions in the preview', () => {
     const source = '#set page(width: 200pt, height: 100pt, margin: 0pt)\nfirst\n#pagebreak()\nsecond';
     engine.setSource('/main.typ', source);
     engine.compile('/main.typ');
-    const positions = engine.jumpFromCursor('/main.typ', source.indexOf('second') + 2);
+    const positions = engine.jumpFromCursor('/main.typ', SourceOffset.of(source.indexOf('second') + 2));
     expect(positions).toHaveLength(1);
     expect(positions[0].page).toBe(1);
   });
@@ -204,7 +205,8 @@ describe('Engine', () => {
     engine.setSource('/main.typ', '#import "@preview/tiny:1.0.0": shout\n#shout("hi")');
     const result = engine.compile('/main.typ');
     expect(result.missingPackages).toEqual([]);
-    expect(result.diagnostics[0].path).toBe('@preview/tiny:1.0.0/src/lib.typ');
+    // the error is in the package file, which has no project path
+    expect(result.diagnostics[0]).toMatchObject({ path: null, message: expect.stringContaining('oops') });
     engine.setSource('@preview/tiny:1.0.0/src/lib.typ', '#let shout(x) = upper(x)');
     expect(engine.compile('/main.typ').diagnostics).toEqual([]);
   });
@@ -242,7 +244,7 @@ describe('Engine.exportPdf', () => {
     engine.compile('/main.typ');
     engine.setSource('/other.typ', '#include "/main.typ"\nMore');
     expect(engine.exportPdf('/other.typ').pdf).not.toBeNull();
-    expect(engine.jumpFromCursor('/main.typ', 3)).toHaveLength(1);
+    expect(engine.jumpFromCursor('/main.typ', SourceOffset.of(3))).toHaveLength(1);
     // the preview's next compile still compiles its own main file
     engine.setSource('/main.typ', 'Preview text #oops');
     expect(engine.compile('/main.typ').diagnostics[0].path).toBe('/main.typ');

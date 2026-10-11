@@ -235,7 +235,7 @@ export class FilePanel {
 
   /** A row dragged onto `folder`. */
   private async move(source: ProjectPath, folder: Folder): Promise<void> {
-    const target = ProjectPath.of(`${folder ?? ''}/${source.slice(source.lastIndexOf('/') + 1)}`);
+    const target = ProjectPath.of(`${folder ?? ''}/${ProjectPath.name(source)}`);
     const error = await this.relocate(source, target);
     if (error) void this.options.prompts.showErrorMessage(error);
   }

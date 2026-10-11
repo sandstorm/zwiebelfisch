@@ -6,7 +6,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from './core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from './core/typst-document/typst-document';
 import {
   callArguments, decodeString, namedArgument, quote, trailingContent, withHash,
   type ToolbarItem, type TypstExtension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
@@ -153,7 +153,7 @@ describe('a Visual-view construct written against the package entry', () => {
 
   it('wraps the selected paragraph from the Insert menu', () => {
     const { doc, view, button } = setup('Text\n');
-    view.reveal(0, 4);
+    view.reveal(SourceRange.of({ from: 0, to: 4 }));
     button('Callout').click();
     expect(doc.text).toBe('#callout(title: "Note")[Text]\n');
   });

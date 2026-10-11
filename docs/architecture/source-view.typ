@@ -19,8 +19,8 @@ createView(parent, document, { onSelection? }) → SourceView    // the workbenc
 == SourceView <architecture-source-view-view>
 
 ```ts
-.reveal(from, to)    // select, scroll to the center, highlight
-.selection() → { from, to }
+.reveal(range: SourceRange)    // select, scroll to the center, highlight
+.selection() → SourceRange
 .dispose()
 ```
 

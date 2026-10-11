@@ -51,6 +51,13 @@ describe('ProjectPath.displayName', () => {
   });
 });
 
+describe('ProjectPath.name', () => {
+  it('is the last segment', () => {
+    expect(ProjectPath.name(path('/parts/intro.typ'))).toBe('intro.typ');
+    expect(ProjectPath.name(path('/main.typ'))).toBe('main.typ');
+  });
+});
+
 describe('ProjectPath.resolve', () => {
   it('resolves Typst paths like Typst: relative to the file, or from the project root', () => {
     expect(ProjectPath.resolve(path('/main.typ'), ref('logo.png'))).toBe('/logo.png');

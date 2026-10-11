@@ -8,6 +8,7 @@ import type { Diagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/ty
 import type { PdfExportOption, PreviewContext, PreviewToolbarItem } from '../../hosts/preview/preview';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { pdfExport } from './pdf-export';
+import { SourceOffset } from '../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -65,7 +66,7 @@ const bytes = (blob: Blob) =>
     reader.readAsArrayBuffer(blob);
   });
 
-const error = (message: string): Diagnostic => ({ severity: 'error', message, hints: [], path: path('/main.typ'), from: 0, to: 1 });
+const error = (message: string): Diagnostic => ({ severity: 'error', message, hints: [], path: path('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) });
 
 /** An option that, when on, adds a source naming itself and what it was applied to. */
 const marker = (id: string, value = false): PdfExportOption => ({

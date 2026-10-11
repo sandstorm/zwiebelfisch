@@ -5,7 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
 vi.mock('../preview/preview', async (importOriginal) => ({
@@ -169,7 +169,7 @@ describe('WorkbenchHost', () => {
 
   it('opens a file at a range, in the Source tab when asked', () => {
     const { workbench, context } = setup(undefined, { mode: 'visual' });
-    workbench.open(path('/a.typ'), { selection: { from: 0, to: 1 }, mode: 'source' });
+    workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), mode: 'source' });
     const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
     expect(editor.mode).toBe('source');
@@ -179,7 +179,7 @@ describe('WorkbenchHost', () => {
   it('tells about a moved selection in an editor, after it has the new one', () => {
     const seen: { from: number; to: number }[] = [];
     const { context } = setup(({ window }) => void window.onDidChangeTextEditorSelection(({ textEditor }) => seen.push(textEditor.selection)));
-    context.window.activeTextEditor!.revealRange(2, 4);
+    context.window.activeTextEditor!.revealRange(SourceRange.of({ from: 2, to: 4 }));
     expect(seen.at(-1)).toEqual({ from: 2, to: 4 });
   });
 
@@ -273,7 +273,7 @@ describe('WorkbenchHost', () => {
     const { host } = setup(({ languages, subscriptions }) =>
       subscriptions.push(
         languages.registerDocumentLinkProvider({
-          provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: { from: 2, to: text.length - 1 } }]),
+          provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: SourceRange.of({ from: 2, to: text.length - 1 }) }]),
         }),
       ),
     );

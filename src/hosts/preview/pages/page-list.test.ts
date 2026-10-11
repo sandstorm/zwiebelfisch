@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for page-list.ts.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Page } from '../../../core/typst-engine/typst-engine';
+import { type Page, Pt } from '../../../core/typst-engine/typst-engine';
 import { PageList } from './page-list';
 
 /** Stands in for IntersectionObserver (missing in jsdom); tests decide what is near the viewport. */
@@ -32,8 +32,8 @@ class FakeObserver {
 
 const page = (n: number, hash = `h${n}`): Page => ({
   hash,
-  width: 200,
-  height: 300,
+  width: Pt.of(200),
+  height: Pt.of(300),
   svg: `<svg data-n="${n}"></svg>`,
 });
 

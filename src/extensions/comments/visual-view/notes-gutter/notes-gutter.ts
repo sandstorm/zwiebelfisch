@@ -1,7 +1,7 @@
 // NotesGutter: the comment column of the Visual view, a card per margin note. See docs/guide/features.typ.
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import type { TypstDocument } from '../../../../core/typst-document/typst-document';
+import type { SourceOffset, TypstDocument } from '../../../../core/typst-document/typst-document';
 import { addReply, deleteMessage, editMessage, localDate } from '../../model/note-thread';
 import { layoutCards } from '../../model/card-layout';
 import { safeNote } from '../../model/margin-note-syntax';
@@ -21,7 +21,7 @@ export interface NotesGutterContribution extends VisualViewContribution {
    * point note, or the note part of a range note) in the Visual view of
    * `document`. False if there is none.
    */
-  editNote(document: TypstDocument, offset: number): boolean;
+  editNote(document: TypstDocument, offset: SourceOffset): boolean;
 }
 
 /** A notes gutter (see `NotesGutter`) beside the text of every Visual view. */
@@ -104,7 +104,7 @@ class NotesGutter {
   }
 
   /** Focuses the card of the note whose source holds `offset` (a point note's call, a range note's `][note]`); false if none. */
-  edit(offset: number): boolean {
+  edit(offset: SourceOffset): boolean {
     const view = this.view;
     const note = view ? noteAtOffset(gutterKey.getState(view.state)!.notes, view.state.doc, offset) : undefined;
     if (note) this.focus(note.key);

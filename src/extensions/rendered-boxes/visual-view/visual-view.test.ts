@@ -3,7 +3,9 @@
 // renderer drawing image boxes.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { ProjectPath } from '../../../core/paths/paths';
+import { Pt } from '../../../core/typst-engine/typst-engine';
+import { type SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { PreviewContributions } from '../../../hosts/preview/preview';
 import { inlinePictureSize } from '../model/model';
 import { createVisualView } from '../../../testing/testing';
@@ -17,7 +19,7 @@ type Preview = Pick<PreviewContributions, 'snippet' | 'onDidRender'>;
 function fakeRenderer(overrides: Partial<Preview> = {}) {
   const rendered = new EventEmitter<void>();
   const renderer = {
-    snippet: vi.fn(async (_path: string, _from: number, _to: number, text: string) => (text.startsWith('$') ? { svg: SVG, width: 30, height: 12, textHeight: 12, padding: 0 } : null)),
+    snippet: vi.fn(async (_path: ProjectPath, _range: SourceRange, text: string) => (text.startsWith('$') ? { svg: SVG, width: Pt.of(30), height: Pt.of(12), textHeight: Pt.of(12), padding: Pt.of(0) } : null)),
     onDidRender: rendered.event,
     ...overrides,
   };
@@ -45,7 +47,7 @@ describe('rendered raw boxes', () => {
     const { parent } = await setup(MATH_DOC, renderer);
     const box = parent.querySelector('.typst-visual__raw-block')!;
     const { picture, code } = parts(box);
-    expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', MATH_DOC.indexOf('$'), MATH_DOC.indexOf('$') + 7, '$ x^2 $');
+    expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', { from: MATH_DOC.indexOf('$'), to: MATH_DOC.indexOf('$') + 7 }, '$ x^2 $');
     expect(picture?.hidden).toBe(false);
     expect(decodeURIComponent(picture!.src)).toContain(SVG);
     expect(picture!.style.width).toBe('30pt');
@@ -81,7 +83,7 @@ describe('rendered raw boxes', () => {
 
   it('refresh when the renderer reports a change', async () => {
     let svg = SVG;
-    const { renderer, changed } = fakeRenderer({ snippet: async () => ({ svg, width: 10, height: 5, textHeight: 5, padding: 0 }) });
+    const { renderer, changed } = fakeRenderer({ snippet: async () => ({ svg, width: Pt.of(10), height: Pt.of(5), textHeight: Pt.of(5), padding: Pt.of(0) }) });
     const { parent } = await setup(MATH_DOC, renderer);
     svg = '<svg viewBox="0 0 1 1"></svg>';
     changed();
@@ -90,14 +92,14 @@ describe('rendered raw boxes', () => {
   });
 
   it('inline: scale the snippet so its text is as big as the text around it, on one line', async () => {
-    const snippet = async () => ({ svg: SVG, width: 30, height: 16.5, textHeight: 12.5, padding: 2 });
+    const snippet = async () => ({ svg: SVG, width: Pt.of(30), height: Pt.of(16.5), textHeight: Pt.of(12.5), padding: Pt.of(2) });
     const { renderer } = fakeRenderer({ snippet });
     const { parent } = await setup('Took #ms(6) here.\n', renderer);
     const box = parent.querySelector('.typst-visual__raw-inline')!;
     const { picture, code } = parts(box);
     expect(picture?.hidden).toBe(false);
     expect(code.hidden).toBe(true);
-    const { height, margin } = inlinePictureSize({ height: 16.5, textHeight: 12.5, padding: 2 })!;
+    const { height, margin } = inlinePictureSize({ height: Pt.of(16.5), textHeight: Pt.of(12.5), padding: Pt.of(2) })!;
     expect(picture!.style.height).toBe(`${height}em`);
     expect(picture!.style.width).toBe('');
     expect([picture!.style.marginTop, picture!.style.marginBottom]).toEqual([`${margin}em`, `${margin}em`]);

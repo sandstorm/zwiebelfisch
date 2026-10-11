@@ -5,6 +5,7 @@
 // offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
 // this extension's policy.
 import { Disposable } from '../../core/disposable/disposable';
+import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { Diagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
@@ -83,7 +84,7 @@ class PdfExport {
   /** The PDF and its file name, after the main file (`main.pdf`). */
   async file(values: Record<string, boolean> = {}): Promise<{ blob: Blob; name: string }> {
     const main = this.project.main;
-    const name = `${main.slice(main.lastIndexOf('/') + 1).replace(/\.typ$/, '')}.pdf`;
+    const name = `${ProjectPath.name(main).replace(/\.typ$/, '')}.pdf`;
     return { blob: await this.blob(values), name };
   }
 

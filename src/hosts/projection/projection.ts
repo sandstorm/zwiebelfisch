@@ -37,6 +37,7 @@ import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
+import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-document';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { Grammar } from './grammar';
 import { parseDocument } from './parser';
@@ -64,12 +65,12 @@ export interface Placed {
 export interface TypstParseContext {
   readonly schema: Schema;
   readonly source: string;
-  /** The source of `range`. */
-  text(range: { from: number; to: number }): string;
+  /** The source of `range` (or of a syntax node). */
+  text(range: SourceRange | SyntaxNode): string;
   /** A call (a `FuncCall` without `#`, e.g. a figure's body) as the block the specs' parse rules make of it, or null. */
   blockCall(call: SyntaxNode): Node | null;
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
-  blocks(content: SyntaxNode): { content: Node[]; from: number; to: number };
+  blocks(content: SyntaxNode): { content: Node[]; from: SourceOffset; to: SourceOffset };
   /** Parses inline syntax (a textblock's content), each node carrying `marks`. */
   inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): Placed[];
   /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
@@ -323,7 +324,7 @@ export function onDidChangeGrammar(schema: Schema, listener: () => void): Dispos
  * With `bias` -1, `offset` is the end of a range and maps to the position
  * just after the visible character before it.
  */
-export function sourceToPos(doc: Node, offset: number, bias: 1 | -1 = 1): number {
+export function sourceToPos(doc: Node, offset: SourceOffset, bias: 1 | -1 = 1): number {
   const { spans, end } = printed(doc);
   if (bias < 0 && offset > 0) {
     const span = spans[firstIndex(spans, (s) => s.to >= offset)];
@@ -342,16 +343,16 @@ export function sourceToPos(doc: Node, offset: number, bias: 1 | -1 = 1): number
  * With `bias` -1, `pos` is the end of a range and maps to just after the
  * source of the visible character (or atom) before it.
  */
-export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): number {
+export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): SourceOffset {
   const { spans } = printed(doc);
   const end = bias < 0 ? endSource(spans, pos) : null;
-  if (end !== null) return end;
+  if (end !== null) return SourceOffset.of(end);
   const index = firstIndex(spans, (s) => s.pmTo > pos);
   const span = spans[index];
   if (span && span.kind !== 'syntax' && span.pmFrom <= pos) {
-    return span.kind === 'text' ? span.from + pos - span.pmFrom : span.from;
+    return SourceOffset.of(span.kind === 'text' ? span.from + pos - span.pmFrom : span.from);
   }
-  return gapSource(spans, index, pos);
+  return SourceOffset.of(gapSource(spans, index, pos));
 }
 
 /**

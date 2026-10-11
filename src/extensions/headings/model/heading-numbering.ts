@@ -2,7 +2,7 @@
 // numbering on or off. Pure: works on Typst code, not on a view's document. See ../headings.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { numberingFormatter } from './numbering';
 
 /**
@@ -60,7 +60,8 @@ export function calculateNumberingToggle(text: string): TextChange[] {
   const rules = topLevelHeadingRules(text);
   if (rules.some(({ rule }) => numbersHeadings(text.slice(rule.from, rule.to)))) return rules.flatMap((found) => withoutNumbering(text, found));
   const end = leadingCodeEnd(text);
-  return [end === null ? { from: 0, to: 0, insert: `${HEADING_NUMBERING_RULE}\n\n` } : { from: end, to: end, insert: `\n\n${HEADING_NUMBERING_RULE}` }];
+  const at = SourceOffset.of(end ?? 0);
+  return [{ from: at, to: at, insert: end === null ? `${HEADING_NUMBERING_RULE}\n\n` : `\n\n${HEADING_NUMBERING_RULE}` }];
 }
 
 /** A top-level `#set heading(..)` rule (from its `#`) and the syntax nodes around it. */
@@ -87,12 +88,12 @@ function withoutNumbering(text: string, found: FoundRule): TextChange[] {
   const src = text.slice(rule.from, rule.to);
   const rest = withoutHeadingNumbering(src);
   if (rest === src) return [];
-  return [rest === '' ? ruleRemoval(text, found) : { from: rule.from, to: rule.to, insert: rest }];
+  return [rest === '' ? ruleRemoval(text, found) : { ...SourceRange.of(rule), insert: rest }];
 }
 
 /** Removes a whole rule: a block of its own, or a line of a block. */
 function ruleRemoval(text: string, found: FoundRule): TextChange {
-  return { ...(blockRange(found) ?? lineRange(text, found)), insert: '' };
+  return { ...SourceRange.of(blockRange(found) ?? lineRange(text, found)), insert: '' };
 }
 
 /** A rule that is a block of its own, with the paragraph break after it (before it, when it is the last block); else null. */

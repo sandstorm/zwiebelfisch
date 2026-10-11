@@ -3,7 +3,7 @@
 import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../projection/projection';
@@ -39,7 +39,7 @@ describe('VisualView', () => {
   it('reveals a source range by selecting exactly what shows it', () => {
     const source = 'Title\n\nSome *bold* text.\n';
     const { view } = setup(source);
-    view.reveal(source.indexOf('bold'), source.indexOf('bold') + 4);
+    view.reveal(SourceRange.of({ from: source.indexOf('bold'), to: source.indexOf('bold') + 4 }));
     expect(window.getSelection()?.toString()).toBe('bold');
   });
 
@@ -48,7 +48,7 @@ describe('VisualView', () => {
     const source = 'Title\n\nSome *bold* text.\n';
     const { view } = setup(source);
     const from = source.indexOf('bold');
-    view.reveal(from, from + 4);
+    view.reveal(SourceRange.of({ from: from, to: from + 4 }));
     expect(view.selection()).toEqual({ from, to: from + 4 });
   });
 
@@ -80,11 +80,11 @@ describe('VisualViewHost.registerHighlights', () => {
     contributions.registerHighlights('test', { provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
     const doc = new TypstDocument('Hello world\n');
     const other = new TypstDocument('Other\n');
-    ranges.set(doc, [{ from: 0, to: 5, className: 'marked' }]);
+    ranges.set(doc, [{ from: SourceOffset.of(0), to: SourceOffset.of(5), className: 'marked' }]);
     const parent = document.body.appendChild(document.createElement('div'));
     const view = new VisualView(parent, doc, contributions);
     expect(parent.querySelector('.marked')?.textContent).toBe('Hello');
-    ranges.set(doc, [{ from: 6, to: 11, className: 'marked' }]);
+    ranges.set(doc, [{ from: SourceOffset.of(6), to: SourceOffset.of(11), className: 'marked' }]);
     changed.fire(other);
     expect(parent.querySelector('.marked')?.textContent).toBe('Hello');
     changed.fire(doc);
@@ -96,7 +96,7 @@ describe('VisualViewHost.registerHighlights', () => {
   it('draws highlights given in source offsets over the visible text', () => {
     const source = 'Title\n\nSome *bold* text.\n';
     const from = source.indexOf('bold');
-    const { highlights, parent } = withHighlights(source, [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-user': 'a' } }]);
+    const { highlights, parent } = withHighlights(source, [{ from: SourceOffset.of(from - 1), to: SourceOffset.of(from + 5), className: 'note', attributes: { 'data-user': 'a' } }]);
     expect([...parent.querySelectorAll('.note[data-user="a"]')].map((e) => e.textContent).join('')).toBe('bold');
     highlights([]);
     expect(parent.querySelector('.note')).toBeNull();
@@ -104,7 +104,7 @@ describe('VisualViewHost.registerHighlights', () => {
 
   it('keeps highlights on their text through edits from elsewhere', () => {
     const source = 'Some bold text\n';
-    const { doc, parent } = withHighlights(source, [{ from: 5, to: 9, className: 'note' }]);
+    const { doc, parent } = withHighlights(source, [{ from: SourceOffset.of(5), to: SourceOffset.of(9), className: 'note' }]);
     doc.setText(`Really. ${source}`, 'source');
     expect(parent.querySelector('.note')?.textContent).toBe('bold');
   });
@@ -143,7 +143,7 @@ describe('VisualView contexts', () => {
     const doc = editor.state.doc;
     const boxes: string[] = [];
     doc.descendants((node) => void (context.isBox(node) && boxes.push(node.type.name)));
-    seen.push({ pos: context.sourceToPos(doc, source.indexOf('llo')), offset: context.posToSource(doc, 3), boxes });
+    seen.push({ pos: context.sourceToPos(doc, SourceOffset.of(source.indexOf('llo'))), offset: context.posToSource(doc, 3), boxes });
     expect(seen).toEqual([{ pos: 3, offset: 2, boxes: ['rawBlock'] }]);
     view.dispose();
   });

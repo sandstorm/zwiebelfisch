@@ -18,9 +18,9 @@ export function renderedBoxes(): TypstExtension {
       subscriptions.push(
         visualView.registerBoxRenderer(({ document }) =>
           snippetRenderer({
-            snippet: async (from, to, text) => {
+            snippet: async (range, text) => {
               const file = project.pathOf(document);
-              return file ? preview.snippet(file, from, to, text) : null;
+              return file ? preview.snippet(file, range, text) : null;
             },
             onDidChange: preview.onDidRender,
           }),

@@ -1,7 +1,7 @@
 // Reading labels and references out of one file: Typst source (Lezer) or a BibTeX bibliography. See ../labels.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceOffset, type TextChange } from '../../../core/typst-document/typst-document';
 
 /** What a label labels, as far as a cheap look at the source tells. */
 export type LabelKind = 'heading' | 'figure' | 'table' | 'listing' | 'equation' | 'bibliography';
@@ -47,7 +47,7 @@ export function calculateReferenceRenames(text: string, from: string, to: string
   const edits: TextChange[] = [];
   const cursor = typstParser.parse(text).cursor();
   do {
-    if (cursor.name === 'RefMarker' && text.slice(cursor.from + 1, cursor.to) === from) edits.push({ from: cursor.from + 1, to: cursor.to, insert: to });
+    if (cursor.name === 'RefMarker' && text.slice(cursor.from + 1, cursor.to) === from) edits.push({ from: SourceOffset.of(cursor.from + 1), to: SourceOffset.of(cursor.to), insert: to });
   } while (cursor.next());
   return edits;
 }

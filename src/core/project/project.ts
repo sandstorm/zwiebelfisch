@@ -11,6 +11,13 @@ import { ProjectPath } from '../paths/paths';
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
 
+export const FileContent = {
+  /** `content` as bytes: text UTF-8 encoded. */
+  bytes(content: FileContent): Uint8Array {
+    return typeof content === 'string' ? new TextEncoder().encode(content) : content;
+  },
+};
+
 /**
  * Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. The plain data the
  * host and the engine exchange; `Project` parses its keys (see `ProjectPath`).

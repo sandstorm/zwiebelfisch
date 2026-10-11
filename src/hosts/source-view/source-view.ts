@@ -5,12 +5,12 @@
 // contribution, registered once and applied to every view made before or after, so a feature never tracks views.
 import { basicSetup } from 'codemirror';
 import {
-  Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec, type Extension,
+  Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
 } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */
 export interface SourceViewContributions {
@@ -104,14 +104,14 @@ export class SourceView {
     this.view.dom.dataset.testid = 'typst-source';
     this.subscriptions = [
       document.onDidChange(({ contentChanges, origin }) => {
-        if (origin !== this) this.view.dispatch({ changes: contentChanges as ChangeSpec[], annotations: fromDocument.of({ origin }) });
+        if (origin !== this) this.view.dispatch({ changes: [...contentChanges], annotations: fromDocument.of({ origin }) });
       }),
       contributions.onDidChange(() => this.view.dispatch({ effects: this.contributed.reconfigure(contributions.extensionsFor(context)) })),
     ];
   }
 
-  /** Selects `from..to`, scrolls it into view and briefly highlights it. */
-  reveal(from: number, to: number): void {
+  /** Selects `range`, scrolls it into view and briefly highlights it. */
+  reveal({ from, to }: SourceRange): void {
     const length = this.view.state.doc.length;
     const range = { from: Math.min(from, length), to: Math.min(to, length) };
     this.view.dispatch({
@@ -122,9 +122,8 @@ export class SourceView {
   }
 
   /** The selected source range (the main selection). */
-  selection(): { from: number; to: number } {
-    const { from, to } = this.view.state.selection.main;
-    return { from, to };
+  selection(): SourceRange {
+    return SourceRange.of(this.view.state.selection.main);
   }
 
   dispose(): void {
@@ -159,6 +158,6 @@ function reportSelection(update: ViewUpdate, options: SourceViewOptions): void {
 function toTextChanges(changes: ChangeSet): TextChange[] {
   const result: TextChange[] = [];
   // eslint-disable-next-line max-params -- callback signature is fixed by CodeMirror
-  changes.iterChanges((from, to, _fromB, _toB, inserted) => result.push({ from, to, insert: inserted.toString() }));
+  changes.iterChanges((from, to, _fromB, _toB, inserted) => result.push({ ...SourceRange.of({ from, to }), insert: inserted.toString() }));
   return result;
 }

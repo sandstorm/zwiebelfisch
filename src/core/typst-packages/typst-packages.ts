@@ -1,5 +1,6 @@
 // withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
 // core/typst-packages/. See docs/architecture/core.typ.
+import { SourceRange } from '../typst-document/typst-document';
 import type { CompileResult, Diagnostic, Engine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
 
@@ -64,8 +65,7 @@ function withFailures<R extends { diagnostics: Diagnostic[]; missingPackages: st
     message: `could not download package ${spec}: ${failed.get(spec)}`,
     hints: [],
     path: null,
-    from: 0,
-    to: 0,
+    ...SourceRange.of({ from: 0, to: 0 }),
   }));
   return { ...result, diagnostics: [...result.diagnostics, ...failures] };
 }

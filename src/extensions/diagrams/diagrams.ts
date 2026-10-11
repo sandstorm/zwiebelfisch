@@ -6,7 +6,7 @@
 // entry a menu item, "Edit diagram" a box action, its document links come from whichever provider: the hosts' generic
 // contribution points; the protocol (model/) is pure state, so it is tested without an iframe.
 import { ProjectPath } from '../../core/paths/paths';
-import type { FileContent, Project } from '../../core/project/project';
+import { FileContent, type Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Languages } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
@@ -67,7 +67,7 @@ function diagramEditor({ window, workspace, workbench }: ExtensionContext, edito
     resolveCustomEditor({ path, content }, panel) {
       const editor = new DiagramEditor(panel.element, {
         path,
-        content: bytes(content),
+        content: FileContent.bytes(content),
         editorUrl: editorUrl(),
         save: (png) =>
           void workspace.applyEdit({ kind: 'update', path, content: png }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
@@ -90,8 +90,4 @@ function diagramIn(project: Project, languages: Languages): (src: string, docume
     }
     return null;
   };
-}
-
-function bytes(content: FileContent): Uint8Array {
-  return typeof content === 'string' ? new TextEncoder().encode(content) : content;
 }

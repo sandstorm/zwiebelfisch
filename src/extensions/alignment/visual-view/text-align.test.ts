@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for text-align.ts.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView } from '../../../testing/testing';
 
 const LABELS = { left: 'Align left', center: 'Center', right: 'Align right', justify: 'Justify' } as const;
@@ -17,7 +17,7 @@ function setup(text: string) {
   /** Puts the cursor into (or selects from..to of) the source text `needle`. */
   const select = (needle: string, length = 0) => {
     const at = doc.text.indexOf(needle);
-    view.reveal(at, at + length);
+    view.reveal(SourceRange.of({ from: at, to: at + length }));
   };
   const changes: number[] = [];
   doc.onDidChange(() => changes.push(changes.length));

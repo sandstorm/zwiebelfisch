@@ -7,8 +7,10 @@
 // jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
-import { isInside, mostVisible } from './pages/geometry';
+import { ProjectPath } from '../../core/paths/paths';
+import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
+import type { Diagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
+import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
@@ -46,18 +48,20 @@ export interface PreviewContributions {
   /** After every successful compilation (snippets may have changed). */
   readonly onDidRender: Event<void>;
   /**
-   * Scrolls the preview to where the source range `from`..`to` of `path` is drawn (its start), only if that is
-   * off-screen; nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the
-   * newest is looked up.
+   * Scrolls the preview to where source range `range` of `path` is drawn (its start), only if that is off-screen;
+   * nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the newest is looked up.
    */
-  reveal(path: string, from: number, to: number): void;
-  /** Someone clicked something in the preview that has a source location (outlined in the preview until the next click or compile). */
+  reveal(path: ProjectPath, range: SourceRange): void;
+  /**
+   * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
+   * until the next click or compile; package files are outlined but not reported).
+   */
   readonly onDidClickPage: Event<PageClick>;
   /**
-   * How the source range `from`..`to` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it
-   * draws nothing or `text` is not what was compiled last.
+   * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
+   * nothing or `text` is not what was compiled last.
    */
-  snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
+  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null>;
   /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
@@ -93,16 +97,13 @@ export interface PreviewContext {
   setZoom(zoom: Zoom): void;
   /** The scale of the first page (1 = 100 %), also when fitting the width. */
   scale(): number;
-  /** The page covering most of the viewport (0-based) and the number of pages. */
-  visiblePage(): { index: number; count: number };
+  /** The page covering most of the viewport and the number of pages. */
+  visiblePage(): { index: PageIndex; count: number };
 }
 
 /** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
-export interface PageClick {
-  /** The file, as the engine names it (a project path, or a package file). */
-  readonly path: string;
-  readonly from: number;
-  readonly to: number;
+export interface PageClick extends SourceRange {
+  readonly path: ProjectPath;
 }
 
 /**
@@ -129,20 +130,20 @@ export interface PdfExportOption {
 /** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
 export type Zoom = 'fit' | number;
 
-/** A cut-out of a compiled page: standalone SVG markup and its size in points. */
+/** A cut-out of a compiled page: standalone SVG markup and its size. */
 export interface Snippet {
   readonly svg: string;
-  readonly width: number;
-  readonly height: number;
-  /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
-  readonly textHeight: number;
-  /** Space (pt) kept around what is drawn (less where the page ends). */
-  readonly padding: number;
+  readonly width: Pt;
+  readonly height: Pt;
+  /** Height of its tallest box: one line of its biggest text, what an inline view scales by. */
+  readonly textHeight: Pt;
+  /** Space kept around what is drawn (less where the page ends). */
+  readonly padding: Pt;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
-type Reveal = { path: string; from: number };
+type Reveal = { path: ProjectPath; from: SourceOffset };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -230,24 +231,24 @@ export class Preview implements PreviewContributions {
     this.compiles.push({ files, main });
   }
 
-  reveal(path: string, from: number, _to: number): void {
+  reveal(path: ProjectPath, { from }: SourceRange): void {
     this.reveals.push({ path, from });
   }
 
   /**
-   * How the source range `from`..`to` of `path` looks in the document: its
-   * page cut down to where that range draws text, shapes or images (first page
-   * only). Null when it draws nothing, or when `text` is not what that range
-   * held at the last successful compilation (it was edited, or the document
-   * has errors). Waits for running compilations, so it answers for the newest
+   * How source range `range` of `path` looks in the document: its page cut
+   * down to where that range draws text, shapes or images (first page only).
+   * Null when it draws nothing, or when `text` is not what that range held at
+   * the last successful compilation (it was edited, or the document has
+   * errors). Waits for running compilations, so it answers for the newest
    * text passed to `update()`.
    */
-  async snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null> {
+  async snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null> {
     await this.compiles.idle();
     const { files, pages } = this.compiled;
     const compiled = files[path];
-    if (typeof compiled !== 'string' || compiled.slice(from, to) !== text) return null;
-    const response = await this.request({ type: 'boxes', path, ranges: [{ from, to }] });
+    if (typeof compiled !== 'string' || compiled.slice(range.from, range.to) !== text) return null;
+    const response = await this.request({ type: 'boxes', path, ranges: [range] });
     return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
   }
 
@@ -352,9 +353,9 @@ export class Preview implements PreviewContributions {
     this.updateStatus();
   }
 
-  private visiblePage(): { index: number; count: number } {
-    const rects = this.list.elements().map((element) => element.getBoundingClientRect());
-    return { index: mostVisible(rects, this.scroller.getBoundingClientRect()), count: rects.length };
+  private visiblePage(): { index: PageIndex; count: number } {
+    const rects = this.list.elements().map(measure);
+    return { index: mostVisible(rects, measure(this.scroller)), count: rects.length };
   }
 
   /** Lets the toolbar items show the new view (zoom, page number) at most once per frame. */
@@ -371,16 +372,14 @@ export class Preview implements PreviewContributions {
     const target = event.target as Element;
     const hit = this.list.pageAt(target);
     if (!hit) return;
-    const rect = hit.element.getBoundingClientRect();
-    const scale = hit.page.width / rect.width;
-    const x = (event.clientX - rect.left) * scale;
-    const y = (event.clientY - rect.top) * scale;
+    const { x, y } = pointOnPage(hit.page, measure(hit.element), Px.of(event.clientX), Px.of(event.clientY));
     const response = await this.request({ type: 'click', page: hit.index, x, y });
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
     // where the clicked source node is drawn (every line/page)
     this.clickHighlight.set(response.jump.boxes);
-    const { path, from, to } = response.jump;
-    this.clicked.fire({ path, from, to });
+    const { from, to } = response.jump;
+    const path = ProjectPath.parse(response.jump.path);
+    if (path) this.clicked.fire({ path, from, to });
   }
 
   /** Scrolls to where the cursor's text is drawn, if that is off-screen; nothing is drawn there. */
@@ -398,8 +397,8 @@ export class Preview implements PreviewContributions {
 
   /** Scrolls the preview (and nothing around it) so `target` is centred, unless it is already visible. */
   private scrollIntoView(target: HTMLElement): void {
-    const viewport = this.scroller.getBoundingClientRect();
-    const rect = target.getBoundingClientRect();
+    const viewport = measure(this.scroller);
+    const rect = measure(target);
     if (isInside(rect, viewport)) return;
     this.scroller.scrollBy({
       top: rect.top + rect.height / 2 - (viewport.top + viewport.height / 2),

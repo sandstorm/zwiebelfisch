@@ -2,6 +2,7 @@
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
+import type { SourceOffset } from '../../../../core/typst-document/typst-document';
 import { rangeNoteSyntax } from '../../model/margin-note-syntax';
 import { posToSource, print, sourceToPos } from '../../../../hosts/projection/projection';
 
@@ -91,7 +92,7 @@ export function noteAtSelection<T extends DocNote>(notes: readonly T[], selectio
  * The note whose source holds `offset` (in the printed document): a point
  * note's call, or the `][note]` part of a range note.
  */
-export function noteAtOffset<T extends DocNote>(notes: readonly T[], doc: PMNode, offset: number): T | undefined {
+export function noteAtOffset<T extends DocNote>(notes: readonly T[], doc: PMNode, offset: SourceOffset): T | undefined {
   const found = noteAt(doc, offset);
   if (!found) return undefined;
   if (found.id === undefined) return notes.find((n) => n.kind === 'point' && n.from === found.pos);
@@ -99,7 +100,7 @@ export function noteAtOffset<T extends DocNote>(notes: readonly T[], doc: PMNode
 }
 
 /** A point note at `pos`, or the range note `id` whose text ends at `pos`. */
-function noteAt(doc: PMNode, offset: number): { pos: number; id?: unknown } | null {
+function noteAt(doc: PMNode, offset: SourceOffset): { pos: number; id?: unknown } | null {
   // hidden syntax maps to the next visible position: the end of the range note's text, or a point note's atom
   const pos = sourceToPos(doc, offset);
   if (doc.nodeAt(pos)?.type.name === 'marginNote' && posToSource(doc, pos) <= offset) return { pos };
@@ -107,7 +108,7 @@ function noteAt(doc: PMNode, offset: number): { pos: number; id?: unknown } | nu
   // notes ending at the same place are nested; the inner one, numbered later, closes first
   const ending = noteSpans($pos.parent, $pos.start()).filter((span) => span.to === pos).sort((a, b) => b.mark.attrs.id - a.mark.attrs.id);
   const source = print(doc);
-  let cursor = posToSource(doc, pos, -1);
+  let cursor: number = posToSource(doc, pos, -1);
   for (const { mark } of ending) {
     const { close } = rangeNoteSyntax(mark.attrs.head, mark.attrs.note);
     const at = source.indexOf(close, cursor);

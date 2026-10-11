@@ -4,12 +4,13 @@ import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, Shared } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
+import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
-/** The file the local user works in, and what they have selected there (source offsets). */
+/** The file the local user works in, and what they have selected there. */
 export interface CurrentSelection {
   path: ProjectPath;
-  selection: { from: number; to: number };
+  selection: SourceRange;
 }
 
 /** What the link asks of the widget, and tells it. */

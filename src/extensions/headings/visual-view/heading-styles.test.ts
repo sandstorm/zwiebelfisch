@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for HEADING_STYLES (visual-view.ts): the heading levels in the text style menu, through the Visual view.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView } from '../../../testing/testing';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
@@ -30,7 +30,7 @@ describe('headings in the text style menu', () => {
       menu.value = value;
       menu.dispatchEvent(new Event('change', { bubbles: true }));
     };
-    view.reveal(0, 'Hello world'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     expect(menu.value).toBe('paragraph');
     choose('heading-2');
     expect(doc.text).toBe('== Hello world\n');

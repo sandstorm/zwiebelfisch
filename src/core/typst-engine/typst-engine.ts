@@ -1,9 +1,31 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
 // data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
+import { ProjectPath } from '../paths/paths';
+import type { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 // Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
 // (@preview/…) are core/typst-packages.
+
+/** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
+export type PageIndex = number & { readonly __type: 'PageIndex' };
+
+/** A length in Typst points (1/72 inch), as the engine measures pages, from a page's top-left corner. */
+export type Pt = number & { readonly __type: 'Pt' };
+
+export const PageIndex = {
+  /** `value`, counted from 0, as a page index. */
+  of(value: number): PageIndex {
+    return value as PageIndex;
+  },
+};
+
+export const Pt = {
+  /** `value`, in points, as a length. */
+  of(value: number): Pt {
+    return value as Pt;
+  },
+};
 
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
@@ -27,9 +49,9 @@ export interface Engine {
    */
   exportPdf(main: string): PdfResult;
   /** What is at a point of the last compiled document, or null for empty space. */
-  jumpFromClick(page: number, x: number, y: number): Jump | null;
+  jumpFromClick(page: PageIndex, x: Pt, y: Pt): Jump | null;
   /** Where the text at `offset` appears in the last compiled document. */
-  jumpFromCursor(path: string, offset: number): Position[];
+  jumpFromCursor(path: string, offset: SourceOffset): Position[];
   /**
    * Where the given source ranges of `path` are drawn in the last compiled
    * document: one box per run of glyphs (per line and page) whose character
@@ -37,7 +59,7 @@ export interface Engine {
    * image whose syntax node starts in one. Empty ranges and code that draws
    * nothing yield nothing.
    */
-  boxesForRanges(path: string, ranges: readonly { from: number; to: number }[]): Box[];
+  boxesForRanges(path: string, ranges: readonly SourceRange[]): Box[];
 }
 
 export interface CompileResult {
@@ -72,34 +94,33 @@ export interface PdfResult {
 export interface Page {
   /** Changes if and only if the page's content changes. */
   hash: string;
-  width: number;
-  height: number;
+  width: Pt;
+  height: Pt;
   svg: string;
 }
 
-export interface Diagnostic {
+/** A compile error or warning, at `from..to` of its file. */
+export interface Diagnostic extends SourceRange {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
-  /** null when the diagnostic has no location in a file. */
-  path: string | null;
-  from: number;
-  to: number;
+  /** The project file it is in; null when it has no location, or is in a package file. */
+  path: ProjectPath | null;
 }
 
 export interface Position {
-  page: number;
-  x: number;
-  y: number;
+  page: PageIndex;
+  x: Pt;
+  y: Pt;
 }
 
-/** A rectangle on a page, in points from its top-left corner. */
+/** A rectangle on a page, from its top-left corner. */
 export interface Box {
-  page: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  page: PageIndex;
+  x: Pt;
+  y: Pt;
+  w: Pt;
+  h: Pt;
 }
 
 export type Jump =
@@ -107,9 +128,9 @@ export type Jump =
   | {
       kind: 'source';
       path: string;
-      offset: number;
-      from: number;
-      to: number;
+      offset: SourceOffset;
+      from: SourceOffset;
+      to: SourceOffset;
       /** Where the clicked source node is drawn: one box per line/page; empty for non-text. */
       boxes: Box[];
     }
@@ -138,11 +159,11 @@ export async function createEngine(
     setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),
-    compile: (main) => JSON.parse(engine.compile(main)),
+    compile: (main) => parseReport<CompileResult>(engine.compile(main)),
     exportPdf: (main) => {
       const exported = engine.exportPdf(main);
       try {
-        return { pdf: exported.pdf() ?? null, ...JSON.parse(exported.report()) };
+        return { pdf: exported.pdf() ?? null, ...parseReport<Omit<PdfResult, 'pdf'>>(exported.report()) };
       } finally {
         exported.free();
       }
@@ -155,6 +176,13 @@ export async function createEngine(
     boxesForRanges: (path, ranges) =>
       JSON.parse(engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to])))),
   };
+}
+
+/** A report of the wasm (JSON) with its diagnostics' paths parsed: a package file has no project path. */
+function parseReport<R extends { diagnostics: Diagnostic[] }>(json: string): R {
+  const report = JSON.parse(json) as R;
+  for (const d of report.diagnostics) d.path = d.path === null ? null : ProjectPath.parse(d.path);
+  return report;
 }
 
 function assertValidPath(ok: boolean, path: string): void {

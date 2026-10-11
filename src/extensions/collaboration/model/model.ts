@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
@@ -75,7 +76,7 @@ export class Collaboration {
   }
 
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
-  setCursor(path: ProjectPath | null, range?: { from: number; to: number }): void {
+  setCursor(path: ProjectPath | null, range?: SourceRange): void {
     this.cursors?.setLocal(path, range);
   }
 

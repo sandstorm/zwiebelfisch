@@ -2,14 +2,14 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceOffset, type SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { calculatePageMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
 export interface MarginNoteChanges {
   changes: TextChange[];
-  note: number;
+  note: SourceOffset;
 }
 
 /**
@@ -27,12 +27,12 @@ export interface MarginNoteChanges {
  *
  * Null where no note fits (the position is inside code).
  */
-export function calculateMarginNoteChanges(text: string, range: { from: number; to: number }): MarginNoteChanges | null {
+export function calculateMarginNoteChanges(text: string, range: SourceRange): MarginNoteChanges | null {
   const note = noteEdit(text, range);
   if (!note) return null;
   const changes = [...withImport(text, note), ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
-  return { changes, note: mapOffset(changes, note.at(-1)!.from) - 1 };
+  return { changes, note: SourceOffset.of(mapOffset(changes, note.at(-1)!.from) - 1) };
 }
 
 /**
@@ -97,7 +97,7 @@ function delimitedMarkup(node: SyntaxNode): SyntaxNode | null {
 }
 
 function insert(at: number, text: string): TextChange {
-  return { from: at, to: at, insert: text };
+  return { from: SourceOffset.of(at), to: SourceOffset.of(at), insert: text };
 }
 
 /** Whether inserting `parts` (offset, text; ascending) into `text` yields one margin note call that ends with the last part. */
@@ -127,7 +127,7 @@ function withImport(text: string, changes: TextChange[]): TextChange[] {
 }
 
 /** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `calculateImportChange`). */
-function marginNoteImport(text: string, use: number): TextChange | null {
+function marginNoteImport(text: string, use: SourceOffset): TextChange | null {
   const version = DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1);
   return calculateImportChange(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => newImport(text), use });
 }

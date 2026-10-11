@@ -57,7 +57,7 @@ A spec groups its fields by owner:
 - `standsAlone`: a block even without paragraph breaks around it (`Heading`, `ListItem`). `takesLabel`: a label right after it is its label.
 - `inRunningText(p, call)`: the call belongs in running text even where `inline` leaves it raw.
 
-`TypstParseContext`: `schema`, `source`, `text(range)`, `blocks(contentBlock)`, `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `pristine(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
+`TypstParseContext`: `schema`, `source`, `text(range)` (a `SourceRange` or a syntax node), `blocks(contentBlock)` (the blocks and their `from`, `to`), `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `pristine(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
 
 Read calls with the package's plain functions over Lezer nodes:
 
@@ -69,7 +69,7 @@ Read calls with the package's plain functions over Lezer nodes:
   [`namedArgument(call, name, source)`], [The value of `name: …`, or `null`],
   [`trailingContent(call)`], [The content blocks `[..]` after the parentheses; `null` if not closed],
   [`hasOnlyArguments(call)`], [Whether it is `name(..)` with no content block],
-  [`withHash(node)`], [The node's source range with its `#`],
+  [`withHash(node)`], [The node's `SourceRange` with its `#`],
   [`children(node)`], [The node's children],
   [`isClosedContent(node)`], [Whether it is a closed content block],
   [`decodeString(literal)`], [A string literal's value; `null` for escapes other than `\"` and `\\`],
@@ -227,5 +227,5 @@ createTypstEditor(host, { extensions: (builtins) => [...builtins, callout()] });
 )
 
 - Contributions register once; the host applies them to every view it creates (views are made lazily, per document). Disposing a registration takes it out of views created later.
-- Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualViewContext`: `document`, `selection()`, `sourceToPos`, `posToSource`, `isBox(node)`.
+- Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualViewContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual view draws on its box.

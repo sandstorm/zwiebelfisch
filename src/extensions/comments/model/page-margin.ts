@@ -1,7 +1,7 @@
 // Page margins that leave room for margin notes (drafting 0.2.2 workaround). See ../comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 
 /**
@@ -26,7 +26,7 @@ export function calculatePageMarginChanges(text: string): TextChange[] {
     const margin = node.name === 'SetRule' && name(text, node) === 'page' ? namedArgument(text, node.getChild('Args'), 'margin') : null;
     const uniform = margin ? uniformMargin(text, margin) : null;
     if (margin && uniform !== null) {
-      changes.push({ from: margin.from, to: margin.to, insert: `(right: ${rightMargin(text, uniform)}, rest: ${slice(text, uniform)})` });
+      changes.push({ ...SourceRange.of(margin), insert: `(right: ${rightMargin(text, uniform)}, rest: ${slice(text, uniform)})` });
     }
   }
   return changes;

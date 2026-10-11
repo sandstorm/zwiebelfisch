@@ -1,16 +1,17 @@
 // Rendered boxes in the Visual view: raw boxes show the compiled snippet of their source while they are not
 // edited. See ../rendered-boxes.ts and docs/architecture/built-in-extensions.typ.
 import type { Event } from '../../../core/event-emitter/event-emitter';
+import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { BoxRenderer } from '../../../hosts/visual-view/visual-view';
 import { rendersInPlace, snippetSize, type Snippet } from '../model/model';
 
 /** Where a document's snippets come from: the compiled pages. */
 export interface SnippetSource {
   /**
-   * How source `from`..`to` of the document, which holds `text`, looks
+   * How source range `range` of the document, which holds `text`, looks
    * compiled; null when it draws nothing or cannot be shown right now.
    */
-  snippet(from: number, to: number, text: string): Promise<Snippet | null>;
+  snippet(range: SourceRange, text: string): Promise<Snippet | null>;
   /** Fires whenever snippets may have changed. */
   readonly onDidChange: Event<void>;
 }
@@ -27,7 +28,7 @@ export function snippetRenderer(source: SnippetSource): BoxRenderer {
     render: async (node, from) => {
       const src: string = node.attrs.src;
       if (!rendersInPlace(src)) return null;
-      const snippet = await source.snippet(from, from + src.length, src);
+      const snippet = await source.snippet(SourceRange.of({ from, to: from + src.length }), src);
       return snippet && { url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(snippet.svg)}`, ...snippetSize(snippet, node.isInline) };
     },
     onDidChange: source.onDidChange,

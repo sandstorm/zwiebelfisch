@@ -13,7 +13,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import type { User } from '../../core/user/user';
 import { type Commands, CommandsHost } from '../commands/commands';
 import { type Languages, LanguagesHost } from '../languages/languages';
@@ -174,8 +174,8 @@ export interface MenuItem {
 export type MenuContext = Readonly<Record<string, unknown>>;
 
 export interface OpenOptions {
-  /** A range of the Typst file (source offsets) to reveal. */
-  selection?: { from: number; to: number };
+  /** A range of the Typst file to reveal. */
+  selection?: SourceRange;
   /** Reveals in that tab (switching to it); default: the current one. */
   mode?: EditorMode;
   /** The custom editor to open a file that is not Typst source in (its view type); default: the one its name picks. */
@@ -382,7 +382,7 @@ export class WorkbenchHost implements Workbench {
     const document = this.project.document(path);
     this.#window.showCustomEditor(document ? null : { path, content: this.project.content(path)! }, options.viewType);
     this.#views.show(document ?? null);
-    if (document && options.selection) this.#views.reveal(options.selection.from, options.selection.to, options.mode);
+    if (document && options.selection) this.#views.reveal(options.selection, options.mode);
     this.#shown.fire(path);
     this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);

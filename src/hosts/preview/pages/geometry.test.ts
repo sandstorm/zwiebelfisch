@@ -1,24 +1,32 @@
 // Tests for geometry.ts.
 import { describe, expect, it } from 'vitest';
-import { isInside, mostVisible, percentOfPage } from './geometry';
+import { isInside, mostVisible, percentOfPage, pointOnPage, Px } from './geometry';
+import { Pt } from '../../../core/typst-engine/typst-engine';
 
 const rect = (left: number, top: number, width: number, height: number) => ({
-  left,
-  top,
-  right: left + width,
-  bottom: top + height,
-  width,
-  height,
+  left: Px.of(left),
+  top: Px.of(top),
+  right: Px.of(left + width),
+  bottom: Px.of(top + height),
+  width: Px.of(width),
+  height: Px.of(height),
 });
 
 describe('percentOfPage', () => {
   it('gives a box in points as percentages of its page', () => {
-    expect(percentOfPage({ x: 50, y: 50, w: 50, h: 20 }, { width: 200, height: 400 })).toEqual({
+    expect(percentOfPage({ x: Pt.of(50), y: Pt.of(50), w: Pt.of(50), h: Pt.of(20) }, { width: Pt.of(200), height: Pt.of(400) })).toEqual({
       left: 25,
       top: 12.5,
       width: 25,
       height: 5,
     });
+  });
+});
+
+describe('pointOnPage', () => {
+  it('converts a client position (px) to the point of the page drawn there (pt)', () => {
+    // a 200 pt wide page drawn 400 px wide: 2 px per pt
+    expect(pointOnPage({ width: Pt.of(200) }, rect(100, 50, 400, 800), Px.of(300), Px.of(250))).toEqual({ x: 100, y: 100 });
   });
 });
 

@@ -6,6 +6,7 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { posToSource, print, sourceToPos, syncDoc } from '../hosts/projection/projection';
 import { after, builtins, edit, expectPreciseMap, project, schema, schemaOf } from '../testing/testing';
+import { SourceOffset } from '../core/typst-document/typst-document';
 
 
 const FIXTURES: Record<string, string> = {
@@ -143,10 +144,10 @@ describe('source offset <-> document position', () => {
 
   it('maps text one to one', () => {
     const doc = project('Hello world');
-    expect(sourceToPos(doc, 0)).toBe(1);
-    expect(sourceToPos(doc, 6)).toBe(7);
+    expect(sourceToPos(doc, SourceOffset.of(0))).toBe(1);
+    expect(sourceToPos(doc, SourceOffset.of(6))).toBe(7);
     expect(posToSource(doc, 7)).toBe(6);
-    expect(sourceToPos(doc, 11)).toBe(12);
+    expect(sourceToPos(doc, SourceOffset.of(11))).toBe(12);
     expect(posToSource(doc, 12)).toBe(11);
   });
 
@@ -154,37 +155,37 @@ describe('source offset <-> document position', () => {
     const source = 'An *important* point';
     const doc = project(source);
     const bold = after(doc, 'important') - 'important'.length;
-    expect(sourceToPos(doc, source.indexOf('*'))).toBe(bold);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('*')))).toBe(bold);
     expect(posToSource(doc, bold)).toBe(source.indexOf('important'));
-    expect(sourceToPos(doc, source.lastIndexOf('*'))).toBe(after(doc, 'important'));
+    expect(sourceToPos(doc, SourceOffset.of(source.lastIndexOf('*')))).toBe(after(doc, 'important'));
   });
 
   it('maps an atom (raw inline, decoded escape) to the position before it', () => {
     const source = 'A #emph[func] call and \\* star';
     const doc = project(source);
     const raw = after(doc, 'A ');
-    expect(sourceToPos(doc, source.indexOf('emph'))).toBe(raw);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('emph')))).toBe(raw);
     expect(posToSource(doc, raw)).toBe(source.indexOf('#'));
     expect(posToSource(doc, raw + 1)).toBe(source.indexOf(' call'));
-    expect(sourceToPos(doc, source.indexOf('*'))).toBe(after(doc, 'call and '));
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('*')))).toBe(after(doc, 'call and '));
   });
 
   it('maps heading and list markers and separators to the following text', () => {
     const source = '= Title\n\n- one\n- two\n';
     const doc = project(source);
-    expect(sourceToPos(doc, 0)).toBe(after(doc, 'Title') - 'Title'.length);
-    expect(sourceToPos(doc, source.indexOf('- two'))).toBe(after(doc, 'two') - 'two'.length);
-    expect(sourceToPos(doc, source.indexOf('\n\n'))).toBe(after(doc, 'one') - 'one'.length);
+    expect(sourceToPos(doc, SourceOffset.of(0))).toBe(after(doc, 'Title') - 'Title'.length);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('- two')))).toBe(after(doc, 'two') - 'two'.length);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('\n\n')))).toBe(after(doc, 'one') - 'one'.length);
   });
 
   it('maps the end of a range to just after its last visible character', () => {
     const source = 'ab\n\n*cd*\n\nef';
     const doc = project(source);
-    expect(sourceToPos(doc, 2)).toBe(after(doc, 'cd') - 2);
-    expect(sourceToPos(doc, 2, -1)).toBe(after(doc, 'ab'));
+    expect(sourceToPos(doc, SourceOffset.of(2))).toBe(after(doc, 'cd') - 2);
+    expect(sourceToPos(doc, SourceOffset.of(2), -1)).toBe(after(doc, 'ab'));
     expect(posToSource(doc, after(doc, 'ab'))).toBe(2);
-    expect(sourceToPos(doc, source.indexOf('\n\nef'), -1)).toBe(after(doc, 'cd'));
-    expect(sourceToPos(doc, 0, -1)).toBe(1);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('\n\nef')), -1)).toBe(after(doc, 'cd'));
+    expect(sourceToPos(doc, SourceOffset.of(0), -1)).toBe(1);
   });
 
   it('maps a range end back to just after the source of its last visible character', () => {
@@ -198,7 +199,7 @@ describe('source offset <-> document position', () => {
 
   it('places the end of the source at the end of the last block', () => {
     const doc = project('Text\n\n');
-    expect(sourceToPos(doc, 6)).toBe(after(doc, 'Text'));
+    expect(sourceToPos(doc, SourceOffset.of(6))).toBe(after(doc, 'Text'));
   });
 
   it('stays precise in edited blocks, where text is escaped and marks re-printed', () => {

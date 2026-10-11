@@ -9,7 +9,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { Notifications } from './notifications/notifications';
@@ -234,10 +234,10 @@ export interface TextEditor {
   readonly document: TypstDocument;
   /** The tab the user works in: the view `selection` and `revealRange` use. */
   readonly mode: EditorMode;
-  /** The selection in that view, as source offsets (`from === to` for a caret). */
-  readonly selection: { readonly from: number; readonly to: number };
-  /** Selects `from`..`to` (source offsets) in that view, scrolls it into view and focuses the view. */
-  revealRange(from: number, to: number): void;
+  /** The selection in that view, in the source (`from === to` for a caret). */
+  readonly selection: SourceRange;
+  /** Selects `range` in that view, scrolls it into view and focuses the view. */
+  revealRange(range: SourceRange): void;
 }
 
 export interface TextEditorSelectionChangeEvent {

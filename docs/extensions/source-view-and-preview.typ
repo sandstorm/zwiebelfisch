@@ -24,7 +24,7 @@ subscriptions.push(
 languages.registerDocumentLinkProvider({
   provideDocumentLinks(document) {   // TextDocument: path, text
     return [...document.text.matchAll(/TODO/g)].map((m) => ({
-      range: { from: m.index, to: m.index + 4 },
+      range: SourceRange.of({ from: m.index, to: m.index + 4 }),
       tooltip: 'Open the to-do list',
       target: ProjectPath.of('/todo.typ'),
     }));
@@ -32,7 +32,7 @@ languages.registerDocumentLinkProvider({
 });
 ```
 
-- `DocumentLink`: `range` (offsets in the text given), `target?` (a project file), `tooltip?`, `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
+- `DocumentLink`: `range` (a `SourceRange` in the text given), `target?` (a project file), `tooltip?`, `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
 - Keep `provideDocumentLinks` cheap; `resolveDocumentLink(link)` may fill in `target`, `tooltip` or `command` when a link is shown or followed.
 - Where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
 - An extension that shows links itself (an image box's path) reads `languages.provideDocumentLinks(document)` and `languages.resolveDocumentLink(link)`.
@@ -47,17 +47,17 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
   [`registerToolbarItem(item, { group, order })`], [A toolbar control. Groups sort by name; the built-ins: `1_sync` ("Follow cursor"), `2_view` (zoom, page number), `3_export` ("Download PDF")],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports],
   [`pdfExportOptions()`], [The registered options, in the order an export applies them],
-  [`reveal(path, from, to)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
-  [`onDidClickPage`], [A click on something with a source location: `{ path, from, to }`],
-  [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files],
+  [`reveal(path, range)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
+  [`onDidClickPage`], [A click on something with a source location in a project file: `{ path, from, to }`],
+  [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files; `path` is a `ProjectPath`, `null` without location or in a package file],
   [`onDidRender`], [After every successful compile],
-  [`snippet(path, from, to, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
+  [`snippet(path, range, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
   [`exportPdf(entry)`], [A PDF of `entry.main` from the files last compiled],
 )
 
 === Toolbar items <extensions-source-view-and-preview-toolbar>
 
-A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
+A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`: a `PageIndex`, counted from 0, and the page count) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
 
 ```ts
 const pageNumber: PreviewToolbarItem = (preview) => {

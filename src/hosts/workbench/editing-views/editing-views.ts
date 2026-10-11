@@ -1,5 +1,5 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { EditorMode, TextEditor } from '../../window/window';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewHost } from '../../visual-view/visual-view';
@@ -36,12 +36,12 @@ export class DocumentEditor implements TextEditor {
     return this.tabs.mode;
   }
 
-  get selection(): { from: number; to: number } {
+  get selection(): SourceRange {
     return this.views[this.mode].selection();
   }
 
-  revealRange(from: number, to: number): void {
-    this.views[this.mode].reveal(from, to);
+  revealRange(range: SourceRange): void {
+    this.views[this.mode].reveal(range);
   }
 }
 
@@ -122,14 +122,14 @@ export class EditingViews {
   }
 
   /**
-   * Reveals `from..to` of the shown document in the current view, or in the view of
+   * Reveals `range` of the shown document in the current view, or in the view of
    * `mode`, switching to its tab so that the range is visible.
    */
-  reveal(from: number, to: number, mode?: EditorMode): void {
+  reveal(range: SourceRange, mode?: EditorMode): void {
     const views = this.active && this.views.get(this.active);
     if (!views) return;
     if (mode && this.current !== mode) this.switchTo(mode);
-    views[this.current].reveal(from, to);
+    views[this.current].reveal(range);
   }
 
   /** Destroys the views of every document not in `documents` (deleted files). */

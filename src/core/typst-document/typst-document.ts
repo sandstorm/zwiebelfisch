@@ -5,11 +5,35 @@
 // arriving through it come back through `change`, with an origin of its own.
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
-/** A replacement of `from..to` (UTF-16 offsets) by `insert`: the one edit format of the widget (CodeMirror's ChangeSpec shape). */
-export interface TextChange {
-  from: number;
-  to: number;
-  insert: string;
+/**
+ * An offset into a Typst document's text, in UTF-16 code units (as Lezer, CodeMirror and string indices count). Not a
+ * position in the Visual view's ProseMirror document: the projection's `sourceToPos` / `posToSource` convert.
+ */
+export type SourceOffset = number & { readonly __type: 'SourceOffset' };
+
+/** A stretch `from..to` of a Typst document's text. */
+export interface SourceRange {
+  readonly from: SourceOffset;
+  readonly to: SourceOffset;
+}
+
+export const SourceOffset = {
+  /** `value`, counted in the text itself (a string index, a Lezer node's or a CodeMirror position), as an offset. */
+  of(value: number): SourceOffset {
+    return value as SourceOffset;
+  },
+};
+
+export const SourceRange = {
+  /** `range` (a Lezer node, a CodeMirror selection, two string indices) as a source range. */
+  of(range: { readonly from: number; readonly to: number }): SourceRange {
+    return { from: range.from as SourceOffset, to: range.to as SourceOffset };
+  },
+};
+
+/** A replacement of `from..to` by `insert`: the one edit format of the widget (CodeMirror's ChangeSpec shape). */
+export interface TextChange extends SourceRange {
+  readonly insert: string;
 }
 
 /** What `TypstDocument.onDidChange` tells: the changes (coordinates of the text before them) and who made them. */
@@ -99,7 +123,7 @@ export function minimalChange(before: string, after: string): TextChange | null 
   while (suffix < maxSuffix && before.charCodeAt(before.length - 1 - suffix) === after.charCodeAt(after.length - 1 - suffix)) suffix++;
   if (suffix > 0 && isLowSurrogate(before.charCodeAt(before.length - suffix))) suffix--;
 
-  return { from: prefix, to: before.length - suffix, insert: after.slice(prefix, after.length - suffix) };
+  return { ...SourceRange.of({ from: prefix, to: before.length - suffix }), insert: after.slice(prefix, after.length - suffix) };
 }
 
 function isHighSurrogate(code: number): boolean {

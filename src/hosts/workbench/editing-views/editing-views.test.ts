@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for editing-views.ts.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualViewHost } from '../../visual-view/visual-view';
 import { EditingViews } from './editing-views';
 
@@ -56,7 +56,7 @@ describe('EditingViews', () => {
     // regression: clicking the error count in the Visual view revealed the error in the hidden source view
     const { views, a, visible, tab } = setup();
     views.show(a);
-    views.reveal(2, 3, 'source');
+    views.reveal(SourceRange.of({ from: 2, to: 3 }), 'source');
     expect(views.mode).toBe('source');
     expect(tab('Source').getAttribute('aria-selected')).toBe('true');
     expect(visible()).toHaveLength(1);
@@ -82,7 +82,7 @@ describe('EditingViews', () => {
   it('reveals in the current view without switching tabs otherwise', () => {
     const { views, a, visible } = setup();
     views.show(a);
-    views.reveal(2, 3);
+    views.reveal(SourceRange.of({ from: 2, to: 3 }));
     expect(views.mode).toBe('visual');
     expect(visible()[0].querySelector('[data-testid=typst-source]')).toBeNull();
   });
@@ -112,9 +112,9 @@ describe('EditingViews selection reports', () => {
     const seen: { from: number; to: number }[] = [];
     const views = new EditingViews(parent, { onSelection: (editor) => seen.push(editor.selection) });
     views.show(new TypstDocument('Hello world\n'));
-    views.activeTextEditor!.revealRange(6, 11);
+    views.activeTextEditor!.revealRange(SourceRange.of({ from: 6, to: 11 }));
     expect(seen.at(-1)).toEqual({ from: 6, to: 11 });
-    views.reveal(0, 5, 'source');
+    views.reveal(SourceRange.of({ from: 0, to: 5 }), 'source');
     expect(seen.at(-1)).toEqual({ from: 0, to: 5 });
   });
 });

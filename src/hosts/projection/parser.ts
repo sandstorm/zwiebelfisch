@@ -9,6 +9,7 @@ import type { Grammar } from './grammar';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
 import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
+import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
 export function parseDocument(source: string, schema: Schema, grammar: Grammar): Node {
@@ -76,7 +77,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return schema.nodes.doc.create({ lead: source.slice(0, segments[0].from), trail: source.slice(end(segments.at(-1)!)) }, this.blocksOf(segments));
   }
 
-  text({ from, to }: { from: number; to: number }): string {
+  text({ from, to }: SourceRange | SyntaxNode): string {
     return this.source.slice(from, to);
   }
 
@@ -84,13 +85,13 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return call.name === 'FuncCall' ? this.callBlock(call, null) : null;
   }
 
-  blocks(content: SyntaxNode): { content: Node[]; from: number; to: number } {
+  blocks(content: SyntaxNode): { content: Node[]; from: SourceOffset; to: SourceOffset } {
     const markup = content.getChild('Markup')!;
     const segments = this.segment(children(markup));
     const from = segments[0]?.from ?? markup.from;
     const to = segments.length > 0 ? end(segments.at(-1)!) : markup.from;
     const blocks = segments.length > 0 ? this.blocksOf(segments) : [this.textblock({ type: 'paragraph', attrs: { src: '' } }, from, [])];
-    return { content: blocks, from, to };
+    return { content: blocks, ...SourceRange.of({ from, to }) };
   }
 
   inline(nodes: readonly SyntaxNode[], marks: readonly Mark[] = []): Placed[] {

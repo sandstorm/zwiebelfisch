@@ -20,7 +20,7 @@ export class FilenamePattern {
   }
 
   matches(path: ProjectPath): boolean {
-    const name = this.#byPath ? ProjectPath.displayName(path) : path.slice(path.lastIndexOf('/') + 1);
+    const name = this.#byPath ? ProjectPath.displayName(path) : ProjectPath.name(path);
     return this.#regex.test(name);
   }
 }

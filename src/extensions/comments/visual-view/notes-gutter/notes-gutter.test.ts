@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for notes-gutter.ts and note-card.ts (through VisualView): cards, threads, replies, editing, resolve, layout.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from '../../../../core/typst-document/typst-document';
 import { calculateMarginNoteChanges } from '../../model/add-margin-note';
 import { localDate } from '../../model/note-thread';
 import { createVisualView } from '../../../../testing/testing';
@@ -15,7 +15,7 @@ function setup(source: string, options: NotesGutterOptions = {}) {
   const doc = new TypstDocument(source);
   const notes = notesGutter(options);
   const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes({ comment: () => {} }), notes] }), {
-    editNote: (offset: number) => notes.editNote(doc, offset),
+    editNote: (offset: number) => notes.editNote(doc, SourceOffset.of(offset)),
   });
   const cards = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-card"]')];
   /** The reply box of card `i`. */
@@ -125,7 +125,7 @@ describe('the notes gutter', () => {
       const source = 'This is *bold* text.\n';
       const { doc, view, field } = setup(source, { user: { name: 'Anna' } });
       const word = source.indexOf('bold');
-      view.reveal(word, word + 4);
+      view.reveal(SourceRange.of({ from: word, to: word + 4 }));
       doc.change(calculateMarginNoteChanges(doc.text, view.selection())!.changes, 'comment');
       const made = doc.text;
       expect(made).toContain('This is #margin-note[*bold*][] text.');
@@ -272,7 +272,7 @@ describe('the notes gutter', () => {
         const open = field(0);
         open.focus();
         open.value = 'typed';
-        doc.change([{ from: 0, to: 0, insert: 'XX' }], 'remote');
+        doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'XX' }], 'remote');
         expect(field(0)).toBe(open);
         expect(open.value).toBe('typed');
         expect(document.activeElement).toBe(open);
@@ -297,7 +297,7 @@ describe('the notes gutter', () => {
       const open = field(0);
       open.focus();
       open.value = 'typed';
-      doc.change([{ from: 21, to: 21, insert: 's' }], 'remote');
+      doc.change([{ from: SourceOffset.of(21), to: SourceOffset.of(21), insert: 's' }], 'remote');
       expect(field(0)).toBe(open);
       key(open, 'Enter', { ctrlKey: true });
       expect(doc.text).toBe(`Text #margin-note[keys][- ${signed('Anonymous', 'typed')}] here.\n`);
@@ -308,7 +308,7 @@ describe('the notes gutter', () => {
       const open = field(0);
       open.focus();
       open.value = 'typed';
-      doc.change([{ from: 1, to: 1, insert: '#margin-note[new]' }], 'remote');
+      doc.change([{ from: SourceOffset.of(1), to: SourceOffset.of(1), insert: '#margin-note[new]' }], 'remote');
       expect(cards()).toHaveLength(2);
       expect(field(1)).toBe(open);
       key(open, 'Enter', { ctrlKey: true });
@@ -345,9 +345,9 @@ describe('the notes gutter', () => {
     it('the cursor in highlighted text makes its card active', () => {
       const source = 'A #margin-note[key][n] and more.\n';
       const { view, cards } = setup(source);
-      view.reveal(source.indexOf('key') + 1, source.indexOf('key') + 1);
+      view.reveal(SourceRange.of({ from: source.indexOf('key') + 1, to: source.indexOf('key') + 1 }));
       expect(cards()[0].classList.contains('typst-note-card--active')).toBe(true);
-      view.reveal(source.indexOf('more'), source.indexOf('more'));
+      view.reveal(SourceRange.of({ from: source.indexOf('more'), to: source.indexOf('more') }));
       expect(cards()[0].classList.contains('typst-note-card--active')).toBe(false);
     });
 

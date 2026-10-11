@@ -5,6 +5,7 @@ import { scanStyles } from './discover';
 import { calculateNewStyleChange } from './new-style';
 import { StyleIndex } from './style-index';
 import { ProjectPath } from '../../../core/paths/paths';
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -48,15 +49,15 @@ describe('StyleIndex', () => {
     const { project, index } = setup({ '/chapters/one.typ': 'Text\n' });
     const [note] = index.styles();
     const chapter = project.document(path('/chapters/one.typ'))!;
-    expect(index.calculateImportChange(chapter, note, 0)).toEqual({ from: 0, to: 0, insert: '#import "/styles.typ": note\n\n' });
+    expect(index.calculateImportChange(chapter, note, SourceOffset.of(0))).toEqual({ from: 0, to: 0, insert: '#import "/styles.typ": note\n\n' });
     const main = project.document(path('/main.typ'))!;
-    expect(index.calculateImportChange(main, note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n\n' });
+    expect(index.calculateImportChange(main, note, SourceOffset.of(0))).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n\n' });
     main.setText('\n= Doc\n', 'test');
-    expect(index.calculateImportChange(main, note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n' });
+    expect(index.calculateImportChange(main, note, SourceOffset.of(0))).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n' });
     main.setText('#import "styles.typ": note\n#note[x]\n', 'test');
-    expect(index.calculateImportChange(main, note, 30)).toBeNull();
+    expect(index.calculateImportChange(main, note, SourceOffset.of(30))).toBeNull();
     const own = project.document(path('/styles.typ'))!;
-    expect(index.calculateImportChange(own, note, STYLES.length)).toBeNull();
+    expect(index.calculateImportChange(own, note, SourceOffset.of(STYLES.length))).toBeNull();
   });
 });
 

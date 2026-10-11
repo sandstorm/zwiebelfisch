@@ -1,4 +1,5 @@
 // The diagnostics in the Visual views: each one's text highlighted, the message as tooltip. See ../diagnostics.ts.
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { Highlight } from '../../../hosts/visual-view/visual-view';
 import { describeDiagnostic, type SourceDiagnostic } from '../model/model';
 
@@ -9,7 +10,7 @@ import { describeDiagnostic, type SourceDiagnostic } from '../model/model';
 export function diagnosticHighlight(diagnostic: SourceDiagnostic): Highlight {
   return {
     from: diagnostic.from,
-    to: Math.max(diagnostic.to, diagnostic.from + 1),
+    to: SourceOffset.of(Math.max(diagnostic.to, diagnostic.from + 1)),
     className: 'typst-diagnostic',
     attributes: { 'data-severity': diagnostic.severity, title: describeDiagnostic(diagnostic) },
   };

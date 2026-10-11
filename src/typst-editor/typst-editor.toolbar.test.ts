@@ -3,7 +3,7 @@
 // Files to upload are Node's (jsdom's have no `arrayBuffer`).
 import { File } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
 import type { FileChange } from '../core/project/project';
 import { createVisualView, TestPrompts, type TestViewOptions } from '../testing/testing';
 
@@ -25,7 +25,7 @@ function setup(text: string, options: TestViewOptions = {}) {
 describe('Visual view toolbar', () => {
   it('bold and italic wrap the selection', () => {
     const { doc, view, button } = setup('Hello world\n');
-    view.reveal(0, 'Hello world'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     button('Bold').click();
     expect(doc.text).toBe('*Hello world*\n');
     expect(button('Bold').getAttribute('aria-pressed')).toBe('true');
@@ -35,7 +35,7 @@ describe('Visual view toolbar', () => {
 
   it('turns a paragraph into a bullet list and a numbered list', () => {
     const { doc, view, button } = setup('Hello world\n');
-    view.reveal(0, 'Hello world'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     button('Bulleted list').click();
     expect(doc.text).toBe('- Hello world\n');
     expect(button('Bulleted list').getAttribute('aria-pressed')).toBe('true');
@@ -56,7 +56,7 @@ describe('Visual view toolbar', () => {
     it('asks for the URL and links the selection', async () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup('Hello world\n', { prompts });
-      view.reveal(6, 11);
+      view.reveal(SourceRange.of({ from: 6, to: 11 }));
       await linkTo(button, prompts, 'https://typst.app');
       expect(prompts.asked[0].options).toMatchObject({ title: 'Link', prompt: 'URL', value: '', placeHolder: 'https://…' });
       expect(doc.text).toBe('Hello #link("https://typst.app")[world]\n');
@@ -66,7 +66,7 @@ describe('Visual view toolbar', () => {
     it('inserts the URL as linked text where nothing is selected', async () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup('See  now\n', { prompts });
-      view.reveal(4, 4);
+      view.reveal(SourceRange.of({ from: 4, to: 4 }));
       await linkTo(button, prompts, 'https://typst.app');
       expect(doc.text).toBe('See https://typst.app now\n');
     });
@@ -75,7 +75,7 @@ describe('Visual view toolbar', () => {
       const source = 'A #link("https://a.org")[site] b\n';
       const prompts = new TestPrompts();
       const { doc, view, button } = setup(source, { prompts });
-      view.reveal(source.indexOf('ite'), source.indexOf('ite'));
+      view.reveal(SourceRange.of({ from: source.indexOf('ite'), to: source.indexOf('ite') }));
       await linkTo(button, prompts, 'https://b.org');
       expect(prompts.asked[0].options).toMatchObject({ prompt: 'URL (empty removes the link)', value: 'https://a.org' });
       expect(doc.text).toBe('A #link("https://b.org")[site] b\n');
@@ -99,7 +99,7 @@ describe('Visual view toolbar', () => {
       const prompts = new TestPrompts();
       const source = '```\ncode here\n```\n';
       const { view, button, parent } = setup(source, { prompts });
-      view.reveal(source.indexOf('code'), source.indexOf(' here'));
+      view.reveal(SourceRange.of({ from: source.indexOf('code'), to: source.indexOf(' here') }));
       expect(button('Link').disabled).toBe(true);
       const mac = /Mac/.test(navigator.platform);
       const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
@@ -111,7 +111,7 @@ describe('Visual view toolbar', () => {
     it('changes nothing when cancelled', async () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup('Hello\n', { prompts });
-      view.reveal(0, 5);
+      view.reveal(SourceRange.of({ from: 0, to: 5 }));
       await linkTo(button, prompts, undefined);
       expect(doc.text).toBe('Hello\n');
     });
@@ -121,7 +121,7 @@ describe('Visual view toolbar', () => {
     const files = { '/img/logo.png': IMAGE, '/shared/photo.jpg': IMAGE, '/notes.txt': 'not an image' };
     const prompts = new TestPrompts().answer('shared/photo.jpg', 'Enter a path…', 'cat.png');
     const { doc, view, button } = setup('Text\n', { files, prompts });
-    view.reveal(4, 4);
+    view.reveal(SourceRange.of({ from: 4, to: 4 }));
     button('Insert image').click();
     await settle();
     expect(prompts.asked[0].items!.map((item) => (typeof item === 'string' ? item : item.label))).toEqual([
@@ -142,7 +142,7 @@ describe('Visual view toolbar', () => {
     const applyEdit = async (change: FileChange) => (applied.push(change), null);
     const prompts = new TestPrompts().answer('Upload image…');
     const { doc, view, parent, button } = setup('Text\n', { applyEdit, prompts });
-    view.reveal(4, 4);
+    view.reveal(SourceRange.of({ from: 4, to: 4 }));
     const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
     const opened = vi.spyOn(input, 'click').mockImplementation(() => {});
     button('Insert image').click();
@@ -160,7 +160,7 @@ describe('Visual view toolbar', () => {
     const applyEdit = async () => 'This change is not allowed here.';
     const prompts = new TestPrompts();
     const { doc, view, parent } = setup('Text\n', { applyEdit, prompts });
-    view.reveal(4, 4);
+    view.reveal(SourceRange.of({ from: 4, to: 4 }));
     const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
     Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
     input.dispatchEvent(new Event('change'));
@@ -190,7 +190,7 @@ describe('Visual view toolbar', () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup(SOURCE, { prompts });
       const at = SOURCE.indexOf('Hello') + 2;
-      view.reveal(at, at);
+      view.reveal(SourceRange.of({ from: at, to: at }));
       await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\n#image("cat.png")\n\nSome text here.\n');
     });
@@ -198,7 +198,7 @@ describe('Visual view toolbar', () => {
     it('keeps selected text and goes after its paragraph', async () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup(SOURCE, { prompts });
-      view.reveal(SOURCE.indexOf('Some'), SOURCE.indexOf(' here'));
+      view.reveal(SourceRange.of({ from: SOURCE.indexOf('Some'), to: SOURCE.indexOf(' here') }));
       await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe(`${SOURCE}\n#image("cat.png")\n`);
     });
@@ -235,7 +235,7 @@ describe('Visual view toolbar', () => {
     it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
       const { options, uploaded } = withUploads();
       const { doc, view, parent } = setup('One\n\nTwo\n', options);
-      view.reveal(1, 1);
+      view.reveal(SourceRange.of({ from: 1, to: 1 }));
       const event = fileEvent('paste', [png('shot.png')]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
@@ -247,7 +247,7 @@ describe('Visual view toolbar', () => {
     it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
       const { options, uploaded } = withUploads();
       const { doc, view, parent } = setup('One\n', options);
-      view.reveal(3, 3);
+      view.reveal(SourceRange.of({ from: 3, to: 3 }));
       const outside: Event[] = [];
       parent.addEventListener('drop', (e) => outside.push(e));
       const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
@@ -289,7 +289,7 @@ describe('Visual view toolbar', () => {
     it('an image dragged from the file panel is inserted where it is dropped, without an upload', () => {
       const { options, uploaded } = withUploads();
       const { doc, view, parent } = setup('One\n\nTwo\n', options);
-      view.reveal(1, 1);
+      view.reveal(SourceRange.of({ from: 1, to: 1 }));
       const editable = parent.querySelector('[contenteditable]')!;
       const over = rowEvent('dragover', '/img/logo.png');
       editable.dispatchEvent(over);
@@ -312,7 +312,7 @@ describe('Visual view toolbar', () => {
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
     expect(button('Add row').disabled).toBe(true);
-    view.reveal(4, 4);
+    view.reveal(SourceRange.of({ from: 4, to: 4 }));
     button('Insert table').click();
     expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
     expect(button('Add row').disabled).toBe(false);
@@ -327,7 +327,7 @@ describe('Visual view toolbar', () => {
 
   it('Code marks the selection as inline code', () => {
     const { doc, view, button } = setup('Hello world\n');
-    view.reveal(6, 11);
+    view.reveal(SourceRange.of({ from: 6, to: 11 }));
     button('Code').click();
     expect(doc.text).toBe('Hello `world`\n');
     expect(button('Code').getAttribute('aria-pressed')).toBe('true');
@@ -337,7 +337,7 @@ describe('Visual view toolbar', () => {
 
   it('Code block turns the paragraph into a code block and back', () => {
     const { doc, view, button } = setup('Hello *world*\n');
-    view.reveal(0, 0);
+    view.reveal(SourceRange.of({ from: 0, to: 0 }));
     button('Code block').click();
     expect(doc.text).toBe('```\nHello world\n```\n');
     expect(button('Code block').getAttribute('aria-pressed')).toBe('true');
@@ -363,7 +363,7 @@ describe('Visual view toolbar', () => {
 
   it('Table of contents inserts #outline() as its own block', () => {
     const { doc, view, button, parent } = setup('= Intro\n\nText\n');
-    view.reveal(15, 15);
+    view.reveal(SourceRange.of({ from: 15, to: 15 }));
     button('Table of contents').click();
     expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
     expect(parent.querySelector('.typst-visual__outline .typst-visual__box-label')?.textContent).toBe('Table of contents');

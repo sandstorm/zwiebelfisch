@@ -21,7 +21,7 @@ export function parseTable(p: TypstParseContext, call: SyntaxNode, sep: string |
   if (!style) return null;
   const { schema, source } = p;
   const gaps: string[] = [];
-  let pos = range.from;
+  let pos: number = range.from;
   const cells = parsed.cells.map(({ node, bare }, index) => {
     const { content, from, to } = bare ? bareCell(p, node) : p.blocks(node);
     gaps.push(source.slice(pos, from));

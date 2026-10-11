@@ -1,12 +1,11 @@
 // summarizeDiagnostics: compile diagnostics counted and sorted per file. See model.ts.
-import { ProjectPath } from '../../../core/paths/paths';
+import type { ProjectPath } from '../../../core/paths/paths';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 
 /** A range in a project file. */
-export interface DiagnosticTarget {
+export interface DiagnosticTarget extends SourceRange {
   path: ProjectPath;
-  from: number;
-  to: number;
 }
 
 export interface DiagnosticsSummary {
@@ -39,10 +38,9 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[], file: P
   };
 }
 
-/** Where a diagnostic is in the project; null in a package file or without location (the engine's path is a string). */
+/** Where a diagnostic is in the project; null in a package file or without location. */
 export function targetOf({ path, from, to }: Diagnostic): DiagnosticTarget | null {
-  const projectPath = path === null ? null : ProjectPath.parse(path);
-  return projectPath && { path: projectPath, from, to };
+  return path && { path, from, to };
 }
 
 function count(n: number, noun: string): string {

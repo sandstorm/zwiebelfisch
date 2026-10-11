@@ -1,6 +1,7 @@
 // RenderedBox: a raw box shown as a picture (from a box renderer) while it is not edited. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Disposable } from '../../../core/disposable/disposable';
+import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { BoxPicture, BoxRenderer } from '../visual-view';
 
 /** The raw box a `RenderedBox` belongs to. */
@@ -10,7 +11,7 @@ export interface BoxHost {
   /** The element holding the code editor. */
   code: HTMLElement;
   /** The box's node and where its source starts, or null while it is not in the document. */
-  source(): { node: Node; from: number } | null;
+  source(): { node: Node; from: SourceOffset } | null;
   /** The picture was clicked (focus the code, or select the box). */
   activate(): void;
 }

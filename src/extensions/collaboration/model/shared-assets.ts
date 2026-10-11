@@ -1,7 +1,7 @@
 // SharedAssets: the project's non-Typst files in a GitLab-backed room. See model.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
-import { type FileChange, type Project } from '../../../core/project/project';
+import { type FileChange, FileContent, type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { ASSETS_MAP } from '../../../core/room-protocol/room-protocol';
 
@@ -59,7 +59,7 @@ export class SharedAssets {
   private push(change: FileChange): void {
     if (change.kind === 'update' || ProjectPath.isTypst(change.path)) return;
     this.ydoc.transact(() => {
-      if (change.kind === 'create') this.assets.set(change.path, bytes(change.content));
+      if (change.kind === 'create') this.assets.set(change.path, FileContent.bytes(change.content));
       if (change.kind === 'delete') this.assets.delete(change.path);
       if (change.kind === 'rename') {
         const value = this.assets.get(change.from);
@@ -122,8 +122,4 @@ export class SharedAssets {
     }
     return true;
   }
-}
-
-function bytes(content: string | Uint8Array): Uint8Array {
-  return typeof content === 'string' ? new TextEncoder().encode(content) : content;
 }

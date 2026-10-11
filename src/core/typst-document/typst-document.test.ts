@@ -1,13 +1,13 @@
 // Tests for typst-document.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from './typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from './typst-document';
 
 describe('TypstDocument', () => {
   it('applies changes given in coordinates of the current text', () => {
     const doc = new TypstDocument('Hello world');
     doc.change([
-      { from: 0, to: 5, insert: 'Goodbye' },
-      { from: 11, to: 11, insert: '!' },
+      { from: SourceOffset.of(0), to: SourceOffset.of(5), insert: 'Goodbye' },
+      { from: SourceOffset.of(11), to: SourceOffset.of(11), insert: '!' },
     ], 'test');
     expect(doc.text).toBe('Goodbye world!');
   });
@@ -16,7 +16,7 @@ describe('TypstDocument', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
     doc.onDidChange(listener);
-    const changes = [{ from: 1, to: 2, insert: 'X' }];
+    const changes = [{ ...SourceRange.of({ from: 1, to: 2 }), insert: 'X' }];
     doc.change(changes, 'source-view');
     expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'source-view' });
   });
@@ -25,7 +25,7 @@ describe('TypstDocument', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
     doc.onDidChange(listener).dispose();
-    doc.change([{ from: 0, to: 0, insert: 'x' }], 'test');
+    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'x' }], 'test');
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -33,10 +33,10 @@ describe('TypstDocument', () => {
     const doc = new TypstDocument('abc');
     const heard: string[] = [];
     doc.onDidChange(({ origin }) => {
-      if (origin === 'first') doc.change([{ from: 0, to: 0, insert: '>' }], 'nested');
+      if (origin === 'first') doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '>' }], 'nested');
     });
     doc.onDidChange(({ contentChanges, origin }) => heard.push(`${origin} ${contentChanges[0].insert}`));
-    doc.change([{ from: 3, to: 3, insert: '!' }], 'first');
+    doc.change([{ from: SourceOffset.of(3), to: SourceOffset.of(3), insert: '!' }], 'first');
     expect(heard).toEqual(['first !', 'nested >']);
     expect(doc.text).toBe('>abc!');
   });
@@ -45,7 +45,7 @@ describe('TypstDocument', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
     doc.onDidChange(listener);
-    doc.change([{ from: 1, to: 1, insert: '' }], 'test');
+    doc.change([{ from: SourceOffset.of(1), to: SourceOffset.of(1), insert: '' }], 'test');
     expect(listener).not.toHaveBeenCalled();
   });
 });
