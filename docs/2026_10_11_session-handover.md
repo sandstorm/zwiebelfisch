@@ -11,7 +11,7 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 
 | Task | Workflow | Notes |
 |---|---|---|
-| One hover tooltip look for every link (references, URLs, files, diagrams) in both editors | `wya9gdmez` (wf_c7027712-272) | User: "Go to Section" tooltip looks different from link tooltips |
+| "Go to Section" does nothing in the Visual editor (bug) | `w48qwv7ni` (wf_150926b9-c38) | Reproduce through the widget, fix root cause, all reference kinds |
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
 resolved paths by name; run typecheck, quality, test:unit (and server:test) BEFORE committing; new test files
@@ -20,10 +20,7 @@ often lack preview-mock members (`registerViewOption`, `viewOptions`, `setViewOp
 
 ## Queued next (user asked; not started)
 
-1. **"Go to Section does not do anything in the Visual editor"** (user, last message): ⌘/Ctrl-click or Alt+Enter
-   on a reference chip `@sec:…` in the Visual editor should jump to the label (the labels link provider
-   from the cmd-click work, `text-links.ts` in the Visual editor host). Investigate and fix (maybe together
-   with the tooltip agent's result).
+1. (Go to Section: running, see above; the one-tooltip-look work is merged.)
 2. **Comment styling into the comments extension** (user): the `#set-margin-note-defaults(stroke:…, fill:…,
    rect: …)` block must not live in documents (`demo/examples/simple/main.typ`, check advanced and docs);
    the comments extension's preview view option (`comments.show`, prelude) and the PDF option
