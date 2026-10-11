@@ -27,7 +27,7 @@ const methodFile = (page: Page) => () => page.locator('typst-editor').evaluate((
 
 test('a heading label is a tag in the heading; a reference is a chip saying what it points to', async ({ page }) => {
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveText('intro');
-  const chip = visual(page).locator('.typst-visual__ref[data-target="method"]');
+  const chip = visual(page).locator('.typst-labels__ref[data-target="method"]');
   await expect(chip).toHaveAttribute('data-hint', 'Section · Method');
   // the hint is a hover tooltip only: nothing is drawn after the name
   expect(await chip.evaluate((el) => getComputedStyle(el, '::after').content)).toBe('none');
@@ -44,14 +44,14 @@ test('typing @ lists the labels; Enter inserts the chosen one as a reference', a
   await page.keyboard.press('Enter');
   await expect(list).toBeHidden();
   await expect.poll(value(page)).toContain('describes the setup. See @intro\n');
-  await expect(visual(page).locator('.typst-visual__ref[data-target="intro"]')).toHaveAttribute('data-hint', 'Section · Introduction');
+  await expect(visual(page).locator('.typst-labels__ref[data-target="intro"]')).toHaveAttribute('data-hint', 'Section · Introduction');
 });
 
 test('a reference to a missing label is marked', async ({ page }) => {
   await page.locator('typst-editor').evaluate((el: Editor) => {
     el.value = 'See @nowhere.\n';
   });
-  await expect(visual(page).locator('.typst-visual__ref--unknown')).toHaveText('nowhere');
+  await expect(visual(page).locator('.typst-labels__ref--unknown')).toHaveText('nowhere');
 });
 
 /** Clicks the heading's label tag and picks `choice` in the quick pick it opens. */

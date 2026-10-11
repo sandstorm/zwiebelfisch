@@ -1,0 +1,142 @@
+/* The workbench host's styles: side panels (rail, resizable panel, narrow overlay), the editing area (tab bar, the
+   views' panes, the editor/title menu), the split to the preview and the status bar. Put in first by the workbench,
+   after the tokens and the frame of typst-editor.css. See workbench.ts. */
+.typst-editor__side {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  min-height: 0;
+  border-right: 1px solid var(--te-border);
+  background: var(--te-subtle);
+}
+.typst-editor__side[hidden] { display: none; }
+.typst-editor__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+}
+.typst-editor__rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: none;
+  color: var(--te-muted);
+  cursor: pointer;
+}
+.typst-editor__rail-button[hidden] { display: none; }
+.typst-editor__rail-button:hover { background: var(--te-hover); color: var(--te-text); }
+.typst-editor__rail-button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
+.typst-editor__rail-button svg { width: 16px; height: 16px; }
+.typst-editor__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 50vw;
+  border-left: 1px solid var(--te-border);
+  background: var(--te-subtle);
+}
+.typst-editor__panel[hidden],
+.typst-editor__panel-body[hidden] { display: none; }
+.typst-editor__panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-editor__resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  z-index: 3;
+  cursor: col-resize;
+}
+.typst-editor__resizer:hover,
+.typst-editor__resizer:focus-visible,
+.typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
+.typst-editor--resizing { cursor: col-resize; user-select: none; }
+/* Between editing area and preview: on the preview's left edge (inside it: it clips its overflow) */
+.typst-editor__split {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  z-index: 5;
+  cursor: col-resize;
+}
+.typst-editor__split:hover,
+.typst-editor__split:focus-visible { background: var(--te-jump); outline: none; }
+/* Narrow widget: an open panel lies over the editing area. */
+.typst-editor--narrow .typst-editor__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  z-index: 10;
+  max-width: calc(100vw - 48px);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.16);
+}
+/* Below everything: the status bar items (e.g. the compile status), the left ones from the start, the right ones at
+   the end (StatusBar orders them; hidden while there is none). */
+.typst-editor__status-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  min-width: 0;
+  border-top: 1px solid var(--te-border);
+}
+.typst-editor__status-bar[hidden] { display: none; }
+.typst-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
+.typst-editor__status-bar-right { display: flex; }
+/* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
+.typst-editor { position: relative; }
+/* The editing area: the Visual / Source tab bar, the views' panes, a dragged file over the widget. */
+.typst-editor__left .cm-editor { flex: 1; min-height: 0; }
+.typst-editor__left .cm-scroller { overflow: auto; }
+.typst-editor__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--te-border);
+  background: var(--te-subtle);
+}
+.typst-editor__tab {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 12px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__tab[aria-selected='true'] { background: var(--te-surface); border-color: var(--te-border); }
+.typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+.typst-editor__pane[hidden] { display: none; }
+.typst-editor__tabs[hidden] { display: none; }
+.typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
+/* The editor/title menu: actions at the end of the Visual / Source tab bar (e.g. Comment, Save to GitLab…). */
+.typst-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
+.typst-editor__tab-actions:empty { display: none; }
+.typst-editor__tab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: var(--te-surface);
+  color: var(--te-text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__tab-action:hover { background: var(--te-hover); }
+.typst-editor__tab-action:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+.typst-editor__tab-action-icon { display: inline-flex; }
+.typst-editor__tab-action-icon svg { width: 16px; height: 16px; }

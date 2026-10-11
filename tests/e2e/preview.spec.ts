@@ -82,8 +82,8 @@ test('hovering the error count lists the message; the Visual view marks the erro
   await page.getByRole('tab', { name: 'Visual' }).click();
   const status = page.getByTestId('typst-status');
   await status.getByRole('button', { name: /1 error/ }).hover();
-  await expect(status.locator('.typst-status__details')).toBeVisible();
-  await expect(status.locator('.typst-status__details')).toContainText('unknown variable');
-  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostic[data-severity=error]')).toHaveCount(1);
-  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostic')).toHaveAttribute('title', /unknown variable/);
+  await expect(status.locator('.typst-diagnostics__status-details')).toBeVisible();
+  await expect(status.locator('.typst-diagnostics__status-details')).toContainText('unknown variable');
+  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostics__highlight[data-severity=error]')).toHaveCount(1);
+  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostics__highlight')).toHaveAttribute('title', /unknown variable/);
 });

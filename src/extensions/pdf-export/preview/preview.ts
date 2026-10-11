@@ -45,12 +45,12 @@ class DownloadPdfButton {
     private readonly messages: PdfMessages,
   ) {
     this.element = doc.createElement('span');
-    this.element.className = 'typst-preview__pdf';
+    this.element.className = 'typst-pdf-export';
     this.element.dataset.testid = 'typst-pdf';
     this.download = this.button(LABEL);
     this.download.addEventListener('click', () => this.click());
     this.popover = doc.createElement('div');
-    this.popover.className = 'typst-preview__pdf-options';
+    this.popover.className = 'typst-pdf-export__options';
     this.popover.setAttribute('role', 'dialog');
     this.popover.setAttribute('aria-label', 'PDF options');
     this.popover.hidden = true;
@@ -100,7 +100,7 @@ class DownloadPdfButton {
     const remembered = this.remembered();
     const boxes = this.pdfs.options().map((option) => this.checkbox(option, remembered[option.id] ?? option.default));
     const download = this.button('Download');
-    download.className = 'typst-preview__pdf-download';
+    download.className = 'typst-pdf-export__download';
     download.addEventListener('click', () => {
       const values = Object.fromEntries(boxes.map(({ id, input }) => [id, input.checked]));
       this.open(false);

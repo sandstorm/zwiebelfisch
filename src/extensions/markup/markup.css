@@ -1,20 +1,20 @@
 /* The markup extension's styles: Links, inline code, code blocks and block quotes in the Visual view.
    Registered by markup.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-.typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
+.typst-markup__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 /* Code: inline code and code blocks (plain text edited in place, with a language field) */
-.typst-visual__code-inline {
+.typst-markup__code-inline {
   padding: 0 3px;
   border-radius: 4px;
   background: var(--te-chip);
   font: 0.85em ui-monospace, monospace;
 }
-.typst-visual__code-block {
+.typst-markup__code-block {
   margin: 0 0 0.7em;
   border: 1px solid var(--te-border);
   border-radius: 6px;
   background: var(--te-subtle);
 }
-.typst-visual__code-header {
+.typst-markup__code-header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -24,7 +24,7 @@
   color: var(--te-text-2);
   user-select: none;
 }
-.typst-visual__code-language {
+.typst-markup__code-language {
   width: 9em;
   padding: 1px 4px;
   border: 1px solid transparent;
@@ -33,14 +33,14 @@
   font: 12px ui-monospace, monospace;
   color: inherit;
 }
-.typst-visual__code-language:hover,
-.typst-visual__code-language:focus { border-color: var(--te-border); background: var(--te-surface); outline: none; }
-.typst-visual__code-block pre {
+.typst-markup__code-language:hover,
+.typst-markup__code-language:focus { border-color: var(--te-border); background: var(--te-surface); outline: none; }
+.typst-markup__code-block pre {
   margin: 0;
   padding: 6px 8px;
   font: 13px/1.45 ui-monospace, monospace;
   color: var(--te-text);
   white-space: pre-wrap;
 }
-.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
-.typst-visual__quote > :last-child { margin-bottom: 0; }
+.typst-markup__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
+.typst-markup__quote > :last-child { margin-bottom: 0; }

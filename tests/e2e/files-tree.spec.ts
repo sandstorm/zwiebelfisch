@@ -96,16 +96,16 @@ test('narrow: the panel is an overlay that closes after choosing a file', async 
 });
 
 test('an included file links the files before and after it, at its start and its end', async ({ page }) => {
-  const bars = page.locator('nav.typst-editor__file-nav:visible');
-  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button', { name });
+  const bars = page.locator('nav.typst-file-navigation:visible');
+  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.typst-file-navigation--${where}:visible`).getByRole('button', { name });
   await expect(bars).toHaveCount(0); // the main file has none
   await openFile(page, 'chapters/method.typ');
   for (const where of ['top', 'bottom'] as const) {
-    await expect(page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
+    await expect(page.locator(`nav.typst-file-navigation--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
   }
   await link('bottom', 'chapters/results.typ →').click();
   await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('nav.typst-editor__file-nav--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
+  await expect(page.locator('nav.typst-file-navigation--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
   await link('top', '← chapters/method.typ').click();
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
 });

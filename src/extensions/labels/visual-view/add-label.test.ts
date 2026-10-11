@@ -72,8 +72,8 @@ describe('Add label', () => {
     item.click();
     const input = draft()!;
     // below the figure, where its tag will be
-    expect(input.closest('.typst-label-tag--block')).not.toBeNull();
-    expect(parent.querySelector('figure')!.nextElementSibling).toBe(input.closest('.typst-label-tag'));
+    expect(input.closest('.typst-labels__tag--block')).not.toBeNull();
+    expect(parent.querySelector('figure')!.nextElementSibling).toBe(input.closest('.typst-labels__tag'));
     key(input, 'Escape');
     expect(draft()).toBeNull();
     expect(doc.text).toBe(TABLE_FIGURE);

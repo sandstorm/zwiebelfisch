@@ -1,6 +1,6 @@
 /* The page-layout extension's styles: Page breaks and horizontal rules in the Visual view.
    Registered by page-layout.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-.typst-visual__page-break {
+.typst-page-layout__page-break {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -10,7 +10,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.typst-visual__page-break::before,
-.typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
-.typst-visual__rule { padding: 0.4em 0 1.1em; }
-.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid var(--te-text); }
+.typst-page-layout__page-break::before,
+.typst-page-layout__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
+.typst-page-layout__rule { padding: 0.4em 0 1.1em; }
+.typst-page-layout__rule hr { margin: 0; border: none; border-top: 1px solid var(--te-text); }

@@ -88,11 +88,11 @@ describe('custom styles in the text style menu', () => {
 
   it('follows the declared styles: a call shows styled once its style is declared', () => {
     const { parent, declare, labels } = setup('#note[Hi]\n', []);
-    expect(parent.querySelector('.typst-visual__style')).toBeNull();
+    expect(parent.querySelector('.typst-styles__block')).toBeNull();
     expect(labels()).toEqual([]);
     declare([NOTE]);
-    expect(parent.querySelector('.typst-visual__style')?.getAttribute('data-style-title')).toBe('Note');
-    expect(parent.querySelector('.typst-visual__style p')?.textContent).toBe('Hi');
+    expect(parent.querySelector('.typst-styles__block')?.getAttribute('data-style-title')).toBe('Note');
+    expect(parent.querySelector('.typst-styles__block p')?.textContent).toBe('Hi');
     expect(labels()).toEqual([['Paragraph styles', 'Note']]);
   });
 

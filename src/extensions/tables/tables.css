@@ -1,10 +1,10 @@
 /* The tables extension's styles: Tables in the Visual view.
    Registered by tables.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-.typst-visual__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
-.typst-visual__table td,
-.typst-visual__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }
-.typst-visual__table td > :last-child,
-.typst-visual__table th > :last-child { margin-bottom: 0; }
-.typst-visual__table .selectedCell { background: var(--te-selected); }
+.typst-tables__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
+.typst-tables__table td,
+.typst-tables__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }
+.typst-tables__table td > :last-child,
+.typst-tables__table th > :last-child { margin-bottom: 0; }
+.typst-tables__table .selectedCell { background: var(--te-selected); }
 /* A table as a figure's body (the figures extension's <figure>): centred above its caption, as Typst sets it */
-figure .typst-visual__table { margin: 0 auto 0.2em; }
+figure .typst-tables__table { margin: 0 auto 0.2em; }

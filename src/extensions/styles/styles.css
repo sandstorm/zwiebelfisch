@@ -1,8 +1,8 @@
 /* The styles extension's styles: Custom styles in the Visual view (styled blocks, text styles).
    Registered by styles.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Custom styles (extensions/styles): a paragraph style's blocks in a frame with its name; text in a text style
-   underlined dotted, its name as tooltip. Hosts style one by its class, typst-style--<name>. */
-.typst-visual__style {
+   underlined dotted, its name as tooltip. Hosts style one by its class, typst-styles--<name>. */
+.typst-styles__block {
   position: relative;
   margin: 0 0 0.7em;
   padding: 0.35em 0.8em 0.1em;
@@ -10,7 +10,7 @@
   border-radius: 0 6px 6px 0;
   background: var(--te-accent-faint);
 }
-.typst-visual__style::before {
+.typst-styles__block::before {
   content: attr(data-style-title);
   display: block;
   margin-bottom: 0.15em;
@@ -20,5 +20,5 @@
   pointer-events: none;
   user-select: none;
 }
-.typst-visual__style > :last-child { margin-bottom: 0.4em; }
-.typst-visual__style-text { text-decoration: underline dotted var(--te-hint); text-underline-offset: 3px; }
+.typst-styles__block > :last-child { margin-bottom: 0.4em; }
+.typst-styles__text { text-decoration: underline dotted var(--te-hint); text-underline-offset: 3px; }

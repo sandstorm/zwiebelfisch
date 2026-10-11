@@ -54,8 +54,8 @@ describe('the numbered layout', () => {
     const doc = new TypstDocument('= A\n');
     createVisualView(parent, doc);
     const editor = parent.querySelector('.ProseMirror')!;
-    expect(editor.classList.contains('typst-visual--numbered')).toBe(false);
+    expect(editor.classList.contains('typst-headings--numbered')).toBe(false);
     doc.setText('#set heading(numbering: "1.")\n\n= A\n', 'test');
-    expect(editor.classList.contains('typst-visual--numbered')).toBe(true);
+    expect(editor.classList.contains('typst-headings--numbered')).toBe(true);
   });
 });

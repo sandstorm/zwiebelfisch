@@ -58,7 +58,7 @@ const MarginNote = Node.create({
     return { head: { default: NOTE_HEAD, rendered: false }, note: { default: '', rendered: false } };
   },
   renderHTML({ node }) {
-    return ['span', { class: 'typst-visual__note' }, node.attrs.note];
+    return ['span', { class: 'typst-comments__note' }, node.attrs.note];
   },
   addNodeView() {
     return ({ node, editor }) => new PointNoteMarker(node, editor.view.dom.ownerDocument);
@@ -80,7 +80,7 @@ const NoteRange = Mark.create({
     };
   },
   renderHTML() {
-    return ['mark', { class: 'typst-visual__note-range' }, 0];
+    return ['mark', { class: 'typst-comments__range' }, 0];
   },
 });
 
@@ -120,7 +120,7 @@ class PointNoteMarker implements NodeView {
 
   constructor(private node: PMNode, doc: Document) {
     this.dom = doc.createElement('span');
-    this.dom.className = 'typst-visual__note';
+    this.dom.className = 'typst-comments__note';
     this.dom.contentEditable = 'false';
     this.dom.dataset.testid = 'typst-note-marker';
     this.dom.innerHTML = NOTE_ICON;
@@ -141,12 +141,12 @@ class PointNoteMarker implements NodeView {
   private show(): void {
     const note: string = this.node.attrs.note;
     this.dom.title = note.trim() === '' ? 'Empty note' : note;
-    this.dom.classList.toggle('typst-visual__note--empty', note.trim() === '');
+    this.dom.classList.toggle('typst-comments__note--empty', note.trim() === '');
   }
 }
 
 const NOTE_ICON =
-  '<svg class="typst-visual__note-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
+  '<svg class="typst-comments__note-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 
 const COMMENT_ICON = svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>');
 

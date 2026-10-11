@@ -4,6 +4,7 @@
 // Why an extension: the Visual view only knows that a box may be drawn by a renderer; where pictures come from
 // (the preview, under the document's current path) is this extension's knowledge.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './rendered-boxes.css?inline';
 import { snippetRenderer } from './visual-view/visual-view';
 
 /**
@@ -14,8 +15,9 @@ import { snippetRenderer } from './visual-view/visual-view';
 export function renderedBoxes(): TypstExtension {
   return {
     id: 'rendered-boxes',
-    activate({ project, preview, visualView, subscriptions }) {
+    activate({ project, preview, visualView, workbench, subscriptions }) {
       subscriptions.push(
+        workbench.registerStyleSheet(css),
         visualView.registerBoxRenderer(({ document }) =>
           snippetRenderer({
             snippet: async (range, text) => {

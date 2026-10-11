@@ -14,7 +14,7 @@ const Outline = Node.create({
     return { src: { default: '#outline()', rendered: false }, sep: { default: null, rendered: false } };
   },
   renderHTML({ node }) {
-    return ['pre', { class: 'typst-visual__outline' }, node.attrs.src];
+    return ['pre', { class: 'typst-outline__box' }, node.attrs.src];
   },
 });
 
@@ -30,7 +30,7 @@ export const OUTLINE: TypstNodeSpec = {
     parseTypst: { calls: { outline: { block: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.outline.create({ src: p.text(withHash(call)), sep }) : null) } } },
     labelled: true,
   },
-  view: { box: 'code', title: { className: 'typst-visual__outline', text: () => 'Table of contents' } },
+  view: { box: 'code', title: { className: 'typst-outline__box', text: () => 'Table of contents' } },
 };
 
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');

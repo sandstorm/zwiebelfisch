@@ -2,7 +2,7 @@
    an image's path link, and the read-only view of image and data files.
    Registered by images.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* An image box's path: a button opening the file, or struck through when the file is missing */
-.typst-visual__path {
+.typst-images__path {
   border: 0;
   padding: 0;
   background: none;
@@ -10,16 +10,15 @@
   font: inherit;
   cursor: pointer;
 }
-.typst-visual__path:hover { text-decoration: underline; }
-.typst-visual__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
-/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
-   the picture sits in the image frame, so not a direct child) */
-.typst-visual__image .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
+.typst-images__path:hover { text-decoration: underline; }
+.typst-images__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
+.typst-images__picture { max-height: min(24em, 40vh); object-fit: contain; }
 /* Images: a frame showing the width, resize handles and the image toolbar while selected */
-.typst-visual__image-frame { position: relative; width: fit-content; max-width: 100%; }
-.typst-visual__image-frame--sized > .typst-visual__rendering { width: 100%; }
-.typst-visual__image-frame:has(> .typst-visual__rendering[hidden]) { display: none; }
-.typst-visual__resize-handle {
+.typst-images__frame { position: relative; width: fit-content; max-width: 100%; }
+.typst-images__frame--sized > .typst-images__picture { width: 100%; }
+.typst-images__frame:has(> .typst-images__picture[hidden]) { display: none; }
+.typst-images__resize-handle {
   position: absolute;
   display: none;
   width: 10px;
@@ -30,15 +29,15 @@
   background: var(--te-accent);
   touch-action: none;
 }
-.typst-visual__image.ProseMirror-selectednode .typst-visual__resize-handle,
-.typst-visual__image-frame--resizing .typst-visual__resize-handle { display: block; }
-.typst-visual__resize-handle[data-handle='nw'] { top: 0; left: 0; cursor: nwse-resize; }
-.typst-visual__resize-handle[data-handle='ne'] { top: 0; right: 0; cursor: nesw-resize; }
-.typst-visual__resize-handle[data-handle='sw'] { bottom: 0; left: 0; cursor: nesw-resize; }
-.typst-visual__resize-handle[data-handle='se'] { bottom: 0; right: 0; cursor: nwse-resize; }
-.typst-visual__resize-handle[data-handle='w'] { top: 50%; left: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
-.typst-visual__resize-handle[data-handle='e'] { top: 50%; right: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
-.typst-visual__image-size {
+.typst-images__box.ProseMirror-selectednode .typst-images__resize-handle,
+.typst-images__frame--resizing .typst-images__resize-handle { display: block; }
+.typst-images__resize-handle[data-handle='nw'] { top: 0; left: 0; cursor: nwse-resize; }
+.typst-images__resize-handle[data-handle='ne'] { top: 0; right: 0; cursor: nesw-resize; }
+.typst-images__resize-handle[data-handle='sw'] { bottom: 0; left: 0; cursor: nesw-resize; }
+.typst-images__resize-handle[data-handle='se'] { bottom: 0; right: 0; cursor: nwse-resize; }
+.typst-images__resize-handle[data-handle='w'] { top: 50%; left: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-images__resize-handle[data-handle='e'] { top: 50%; right: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-images__size {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -49,8 +48,8 @@
   color: white;
   font: 12px system-ui, sans-serif;
 }
-.typst-visual__image-frame--resizing > .typst-visual__image-size { display: block; }
-.typst-visual__image-tools {
+.typst-images__frame--resizing > .typst-images__size { display: block; }
+.typst-images__tools {
   position: relative;
   display: none;
   flex-wrap: wrap;
@@ -58,10 +57,10 @@
   margin-top: 4px;
   font: 12px system-ui, sans-serif;
 }
-.typst-visual__image.ProseMirror-selectednode.typst-visual__raw--rendered > .typst-visual__image-tools,
-.typst-visual__image-tools:focus-within { display: flex; }
-.typst-visual__image-tools > .typst-visual__box-actions { display: contents; }
-.typst-visual__image-tools button {
+.typst-images__box.ProseMirror-selectednode:has(.typst-images__picture:not([hidden])) > .typst-images__tools,
+.typst-images__tools:focus-within { display: flex; }
+.typst-images__actions { display: contents; }
+.typst-images__tools button {
   padding: 2px 8px;
   border: 1px solid var(--te-border);
   border-radius: 4px;
@@ -69,14 +68,14 @@
   font: inherit;
   cursor: pointer;
 }
-.typst-visual__image-tools button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
+.typst-images__tools button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
 /* An image as a figure's body (the figures extension's <figure>): centred above the caption */
-figure > .typst-visual__image { margin-bottom: 0.2em; }
-figure .typst-visual__image-frame { margin: 0 auto; }
-figure .typst-visual__image-tools { justify-content: center; }
-.typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
+figure > .typst-images__box { margin-bottom: 0.2em; }
+figure .typst-images__frame { margin: 0 auto; }
+figure .typst-images__tools { justify-content: center; }
+.typst-images__frame > .typst-images__picture { cursor: default; }
 /* Read-only view of image files */
-.typst-asset {
+.typst-images__file {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -86,9 +85,9 @@ figure .typst-visual__image-tools { justify-content: center; }
   gap: 16px;
   padding: 24px;
 }
-.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
-.typst-asset__size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
-.typst-asset__image {
+.typst-images__file-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-images__file-size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
+.typst-images__file-image {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;

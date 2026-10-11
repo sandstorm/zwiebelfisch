@@ -10,7 +10,7 @@ describe('diagnosticHighlight', () => {
     expect(diagnosticHighlight(error)).toEqual({
       from: 3,
       to: 6,
-      className: 'typst-diagnostic',
+      className: 'typst-diagnostics__highlight',
       attributes: { 'data-severity': 'error', title: 'unknown variable: foo\nhint: try bar' },
     });
   });

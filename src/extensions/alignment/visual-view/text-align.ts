@@ -68,7 +68,7 @@ export const TextAlign = Node.create({
   renderHTML({ node }) {
     const horizontal = alignArgs(node.attrs.args)?.horizontal;
     const style = horizontal ? `text-align: ${horizontal}` : undefined;
-    return ['div', { class: 'typst-visual__align', 'data-typst-align': node.attrs.args, style }, 0];
+    return ['div', { class: 'typst-alignment__block', 'data-typst-align': node.attrs.args, style }, 0];
   },
   addCommands() {
     return {

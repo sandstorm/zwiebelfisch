@@ -57,7 +57,7 @@ function cursorAfter(editor: Editor, text: string): void {
   editor.commands.setTextSelection(end);
 }
 
-const chip = (parent: HTMLElement, target: string) => parent.querySelector<HTMLElement>(`.typst-visual__ref[data-target="${target}"]`)!;
+const chip = (parent: HTMLElement, target: string) => parent.querySelector<HTMLElement>(`.typst-labels__ref[data-target="${target}"]`)!;
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 describe('references in the Visual view', () => {
@@ -67,19 +67,19 @@ describe('references in the Visual view', () => {
     expect(chip(parent, 'method').dataset.hint).toBe('Section · Method');
     expect(chip(parent, 'fig:compile-times').dataset.hint).toBe('Figure · Cold (dark) and incremental (light)…');
     expect(chip(parent, 'results').title).toBe('Section · Results (in chapters/results.typ)');
-    expect(parent.querySelector('.typst-visual__ref--unknown')).toBeNull();
+    expect(parent.querySelector('.typst-labels__ref--unknown')).toBeNull();
   });
 
   it('marks references to missing labels, and unmarks them once the label exists', async () => {
     const { parent, project } = setup(path('/chapters/introduction.typ'), (files) => {
       files['/chapters/method.typ'] = files['/chapters/method.typ'].replace('<method>', '<approach>');
     });
-    expect(chip(parent, 'method').classList.contains('typst-visual__ref--unknown')).toBe(true);
+    expect(chip(parent, 'method').classList.contains('typst-labels__ref--unknown')).toBe(true);
     expect(chip(parent, 'method').title).toContain('no label <method>');
     const method = project.document(path('/chapters/method.typ'))!;
     method.setText(method.text.replace('<approach>', '<method>'), 'test');
     await tick();
-    expect(chip(parent, 'method').classList.contains('typst-visual__ref--unknown')).toBe(false);
+    expect(chip(parent, 'method').classList.contains('typst-labels__ref--unknown')).toBe(false);
   });
 
   it('shows the heading label as a tag in the heading, not as a raw box', () => {
@@ -96,7 +96,7 @@ describe('references in the Visual view', () => {
     type(editor, ' See @');
     const list = parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!;
     expect(list.hidden).toBe(false);
-    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-ref-suggestions__name')!.textContent);
+    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-labels__suggestions-name')!.textContent);
     expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
     type(editor, 'fig');
     expect(options()).toEqual(['fig:compile-times']);

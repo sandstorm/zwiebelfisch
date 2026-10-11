@@ -25,7 +25,7 @@ declare module '@tiptap/core' {
  * Blocks in a paragraph style: `#note[..]` (or `#callout(kind: ..)[..]`)
  * around them. Their content is edited as usual; the call around it is kept
  * as written (`layout`, owned by the projection), a new one is `#name[..]`.
- * Drawn as a frame with the style's name and the class `typst-style--<name>`.
+ * Drawn as a frame with the style's name and the class `typst-styles--<name>`.
  */
 export const StyledBlock = Node.create({
   name: 'styledBlock',
@@ -45,7 +45,7 @@ export const StyledBlock = Node.create({
     return [{ tag: 'div[data-typst-style]', getAttrs: (element) => ({ name: element.getAttribute('data-typst-style') }) }];
   },
   renderHTML({ node }) {
-    return ['div', { class: `typst-visual__style typst-style--${node.attrs.name}`, 'data-typst-style': node.attrs.name, 'data-style-title': node.attrs.title || node.attrs.name }, 0];
+    return ['div', { class: `typst-styles__block typst-styles--${node.attrs.name}`, 'data-typst-style': node.attrs.name, 'data-style-title': node.attrs.title || node.attrs.name }, 0];
   },
   addCommands() {
     return {
@@ -66,7 +66,7 @@ export const StyledBlock = Node.create({
 /**
  * Text in a text style: `#key[..]` around it (`head` keeps a call written
  * with arguments, `#key(..)[`). Drawn with a dotted underline, the style's
- * name as tooltip and the class `typst-style--<name>`. One text style at a time.
+ * name as tooltip and the class `typst-styles--<name>`. One text style at a time.
  */
 export const StyleMark = Mark.create({
   name: 'style',
@@ -85,7 +85,7 @@ export const StyleMark = Mark.create({
   },
   renderHTML({ mark }) {
     const title = mark.attrs.title || mark.attrs.name;
-    return ['span', { class: `typst-visual__style-text typst-style--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
+    return ['span', { class: `typst-styles__text typst-styles--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
   },
   addCommands() {
     return {

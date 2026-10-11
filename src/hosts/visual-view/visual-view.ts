@@ -15,6 +15,8 @@ import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
+import proseMirrorCss from './prosemirror.css?inline';
+import css from './visual-view.css?inline';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
@@ -329,6 +331,8 @@ export class VisualViewHost implements VisualViewContributions {
     boxActions: [] as BoxAction[],
     textStyles: [] as TextStyleProvider[],
   };
+  /** The CSS of the views (ProseMirror's own first), for the workbench to put where the widget renders. */
+  readonly styleSheet: string = proseMirrorCss + css;
 
   /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
   static from(contributions: readonly VisualViewContribution[]): VisualViewHost {
@@ -454,6 +458,8 @@ export interface BoxRenderer {
   render(node: Node, from: SourceOffset): Promise<BoxPicture | null>;
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
+  /** A class of the renderer's own on the picture (`<img>`), for its CSS (compiled snippets inverted in the dark). */
+  readonly className?: string;
   /** Fires whenever pictures may have changed (a new compile). */
   readonly onDidChange: Event<void>;
 }

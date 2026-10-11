@@ -20,7 +20,7 @@ const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: E
 
 test('a code block shows its language and text; typing edits the code in place', async ({ page }) => {
   await load(page, 'Intro\n\n```rust\nfn main() {}\n```\n');
-  const block = visual(page).locator('.typst-visual__code-block');
+  const block = visual(page).locator('.typst-markup__code-block');
   await expect(block.getByLabel('Language')).toHaveValue('rust');
   await expect(block.locator('pre code')).toHaveText('fn main() {}');
   await caretAtEnd(block.locator('pre code'));
@@ -42,7 +42,7 @@ test('Code block turns the current paragraph into a fenced block', async ({ page
   await load(page, 'Intro\n\nlet a = 1\n');
   await visual(page).locator('p', { hasText: 'let a = 1' }).click();
   await chooseFrom(toolbar(page), 'Insert', 'Code block');
-  await expect(visual(page).locator('.typst-visual__code-block pre code')).toHaveText('let a = 1');
+  await expect(visual(page).locator('.typst-markup__code-block pre code')).toHaveText('let a = 1');
   await expect.poll(value(page)).toBe('Intro\n\n```\nlet a = 1\n```\n');
 });
 
@@ -69,7 +69,7 @@ test('Table of contents inserts #outline(), shown compiled with its label', asyn
   await caretAtEnd(visual(page).locator('p', { hasText: 'Text' }));
   await chooseFrom(toolbar(page), 'Insert', 'Table of contents');
   await expect.poll(value(page)).toBe('= Intro\n\nText\n\n#outline()\n\n= Details\n');
-  const box = visual(page).locator('.typst-visual__outline');
+  const box = visual(page).locator('.typst-outline__box');
   await expect(box.locator('.typst-visual__box-label')).toHaveText('Table of contents');
   await expect(box.locator('img.typst-visual__rendering')).toBeVisible();
 });

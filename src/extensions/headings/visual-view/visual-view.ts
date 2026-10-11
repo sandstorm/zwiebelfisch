@@ -14,7 +14,7 @@ import { starterKitPart } from '../../../hosts/projection/projection';
 export const HEADING: TypstNodeSpec = {
   name: 'heading',
   // Tiptap's heading (StarterKit's), with the source anchors
-  tiptap: starterKitPart('typstHeading', { heading: {} }).extend({
+  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'typst-headings__heading' } } }).extend({
     addGlobalAttributes: () => [
       { types: ['heading'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
     ],

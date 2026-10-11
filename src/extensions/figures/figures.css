@@ -1,8 +1,8 @@
 /* The figures extension's styles: figures and their captions in the Visual view.
    Registered by figures.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-.typst-visual__figure { margin: 0 0 0.7em; }
-.typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
-.typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+.typst-figures__figure { margin: 0 0 0.7em; }
+.typst-figures__caption { position: relative; text-align: center; font-size: 0.95em; }
+.typst-figures__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
   content: 'Caption';
   position: absolute;
   inset: 0;

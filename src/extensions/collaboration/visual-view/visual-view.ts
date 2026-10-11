@@ -43,7 +43,7 @@ function selection({ user, anchor, head }: PlacedPresence): Highlight[] {
   if (anchor === head) return [];
   const attributes = { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` };
   const [from, to] = anchor < head ? [anchor, head] : [head, anchor];
-  return [{ from, to, className: 'typst-remote-selection', attributes }];
+  return [{ from, to, className: 'typst-collaboration__selection', attributes }];
 }
 
 const key = new PluginKey<DecorationSet>('typst-presence');
@@ -112,7 +112,7 @@ function caret(pos: number, id: string, user: PresenceUser): Decoration {
 function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
   const { color } = carets[0].user;
   const attrs = {
-    class: 'typst-remote-box',
+    class: 'typst-collaboration__box',
     'data-user': carets.map((c) => c.user.name).join(', '),
     style: `--typst-remote-color: ${color}; --typst-remote-text: ${textColorOn(color)}`,
   };

@@ -45,9 +45,9 @@ describe('VisualView presence', () => {
     const source = 'Some bold text\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('bold')) }]);
-    const caret = parent.querySelector<HTMLElement>('.typst-remote-caret')!;
+    const caret = parent.querySelector<HTMLElement>('.typst-collaboration__caret')!;
     expect(caret.dataset.user).toBe('Ann');
-    expect(caret.querySelector('.typst-remote-caret__flag')!.textContent).toBe('Ann');
+    expect(caret.querySelector('.typst-collaboration__caret-flag')!.textContent).toBe('Ann');
     expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
     expect(textBefore(caret)).toBe('Some ');
   });
@@ -57,7 +57,7 @@ describe('VisualView presence', () => {
     const { view, parent } = setup(source);
     const caretAt = (offset: number) => {
       view.setPresence([{ ...ann, ...at(offset) }]);
-      const caret = parent.querySelector('.typst-remote-caret')!;
+      const caret = parent.querySelector('.typst-collaboration__caret')!;
       return { block: caret.closest('p, h1')!.textContent!.replace('Ann', ''), before: textBefore(caret).replace('Ann', '') };
     };
     expect(caretAt(source.indexOf('\n'))).toEqual({ block: 'Title', before: 'Title' });
@@ -72,7 +72,7 @@ describe('VisualView presence', () => {
     const source = '#table(columns: 2, [a], [])\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('[]') + 1) }]);
-    const caret = parent.querySelector('.typst-remote-caret');
+    const caret = parent.querySelector('.typst-collaboration__caret');
     expect(caret).not.toBeNull();
     expect(caret!.closest('p')?.textContent).toBe('Ann');
     expect(caret!.closest('td')).toBe(parent.querySelectorAll('td')[1]);
@@ -91,11 +91,11 @@ describe('VisualView presence', () => {
     const source = 'Some bold text\n';
     const { doc, view, parent } = setup(source);
     view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
-    expect(parent.querySelector('.typst-remote-selection[data-user="Ann"]')?.textContent).toBe('bold');
+    expect(parent.querySelector('.typst-collaboration__selection[data-user="Ann"]')?.textContent).toBe('bold');
     doc.setText(`Really. ${source}`, 'source');
-    expect(textBefore(parent.querySelector('.typst-remote-caret')!)).toBe('Really. Some bold');
+    expect(textBefore(parent.querySelector('.typst-collaboration__caret')!)).toBe('Really. Some bold');
     view.setPresence([]);
-    expect(parent.querySelector('.typst-remote-caret, .typst-remote-selection')).toBeNull();
+    expect(parent.querySelector('.typst-collaboration__caret, .typst-collaboration__selection')).toBeNull();
   });
 
   it('outlines a raw box with a caret inside, naming everyone there, and draws the carets in its code', () => {
@@ -103,12 +103,12 @@ describe('VisualView presence', () => {
     const { view, parent } = setup(source);
     const box = source.indexOf('#set');
     view.setPresence([{ ...ann, ...at(box + 4) }, { ...bob, ...at(box + 1) }]);
-    const outlined = parent.querySelector<HTMLElement>('.typst-visual__raw-block.typst-remote-box')!;
+    const outlined = parent.querySelector<HTMLElement>('.typst-visual__raw-block.typst-collaboration__box')!;
     expect(outlined.dataset.user).toBe('Ann, Bob');
     expect(outlined.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
     expect(outlined.style.getPropertyValue('--typst-remote-text')).toBe('#000000');
-    expect(parent.querySelector('p .typst-remote-caret')).toBeNull();
-    const inCode = [...outlined.querySelectorAll<HTMLElement>('.cm-line .typst-remote-caret')];
+    expect(parent.querySelector('p .typst-collaboration__caret')).toBeNull();
+    const inCode = [...outlined.querySelectorAll<HTMLElement>('.cm-line .typst-collaboration__caret')];
     expect(inCode.map((caret) => caret.dataset.user).sort()).toEqual(['Ann', 'Bob']);
   });
 
@@ -116,15 +116,15 @@ describe('VisualView presence', () => {
     const source = 'Text #box[x] more\n\n#image("a.png")\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('image') + 3) }, { ...bob, ...at(source.indexOf('#box')) }]);
-    expect(parent.querySelector('.typst-visual__image.typst-remote-box')?.getAttribute('data-user')).toBe('Ann');
-    expect(parent.querySelector('.typst-visual__raw-inline.typst-remote-box')).toBeNull();
-    expect(parent.querySelector('p .typst-remote-caret[data-user="Bob"]')).not.toBeNull();
+    expect(parent.querySelector('.typst-images__box.typst-collaboration__box')?.getAttribute('data-user')).toBe('Ann');
+    expect(parent.querySelector('.typst-visual__raw-inline.typst-collaboration__box')).toBeNull();
+    expect(parent.querySelector('p .typst-collaboration__caret[data-user="Bob"]')).not.toBeNull();
   });
 
   it('outlines an inline raw box with a caret strictly inside', () => {
     const source = 'Text #box[x] more\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...bob, ...at(source.indexOf('box')) }]);
-    expect(parent.querySelector('.typst-visual__raw-inline.typst-remote-box')?.getAttribute('data-user')).toBe('Bob');
+    expect(parent.querySelector('.typst-visual__raw-inline.typst-collaboration__box')?.getAttribute('data-user')).toBe('Bob');
   });
 });

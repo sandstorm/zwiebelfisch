@@ -45,13 +45,13 @@ export class NoteCard {
 
   constructor(doc: Document, private readonly key: string, private readonly me: string, private readonly actions: CardActions) {
     this.dom = doc.createElement('div');
-    this.dom.className = 'typst-note-card';
+    this.dom.className = 'typst-comments__card';
     this.dom.dataset.testid = 'typst-note-card';
     this.dom.dataset.noteKey = key;
     this.dom.innerHTML = CARD_HTML;
-    this.quote = this.dom.querySelector('.typst-note-card__quote')!;
-    this.thread = this.dom.querySelector('.typst-note-card__thread')!;
-    this.field = this.dom.querySelector('.typst-note-card__reply')!;
+    this.quote = this.dom.querySelector('.typst-comments__card-quote')!;
+    this.thread = this.dom.querySelector('.typst-comments__card-thread')!;
+    this.field = this.dom.querySelector('.typst-comments__card-reply')!;
     // buttons must not take the focus from a field (resolving must not send a draft first)
     this.dom.addEventListener('mousedown', (event) => this.handleMouseDown(event));
     this.dom.addEventListener('click', (event) => this.handleClick(event));
@@ -68,7 +68,7 @@ export class NoteCard {
 
   /** Shows `note`; the reply box and a message being edited keep what the user typed. */
   show(note: KeyedNote): void {
-    this.dom.classList.toggle('typst-note-card--range', note.kind === 'range');
+    this.dom.classList.toggle('typst-comments__card--range', note.kind === 'range');
     this.quote.textContent = note.kind === 'range' ? note.text : 'Note';
     this.quote.title = note.kind === 'range' ? note.text : '';
     if (note.note === this.markup) return;
@@ -80,8 +80,8 @@ export class NoteCard {
   }
 
   highlight(active: boolean, hover: boolean): void {
-    this.dom.classList.toggle('typst-note-card--active', active);
-    this.dom.classList.toggle('typst-note-card--hover', hover);
+    this.dom.classList.toggle('typst-comments__card--active', active);
+    this.dom.classList.toggle('typst-comments__card--hover', hover);
   }
 
   /** Focuses the reply box. */
@@ -103,7 +103,7 @@ export class NoteCard {
     const items = shown.map(({ message, index }) => this.messageItem(doc, message, index));
     if (collapsed) {
       const more = doc.createElement('li');
-      more.innerHTML = `<button type="button" class="typst-note-card__more" data-action="more">${count - 1 - SHOWN_AT_END} more</button>`;
+      more.innerHTML = `<button type="button" class="typst-comments__card-more" data-action="more">${count - 1 - SHOWN_AT_END} more</button>`;
       items.splice(1, 0, more);
     }
     this.thread.replaceChildren(...items);
@@ -113,17 +113,17 @@ export class NoteCard {
 
   private messageItem(doc: Document, message: NoteMessage, index: number): HTMLElement {
     const item = doc.createElement('li');
-    item.className = 'typst-note-card__message';
+    item.className = 'typst-comments__card-message';
     item.dataset.testid = 'typst-note-message';
     item.dataset.index = String(index);
     const meta = item.appendChild(doc.createElement('div'));
-    meta.className = 'typst-note-card__meta';
-    if (message.author !== null) meta.append(span(doc, 'typst-note-card__author', message.author));
-    if (message.date !== null) meta.append(span(doc, 'typst-note-card__date', message.date));
+    meta.className = 'typst-comments__card-meta';
+    if (message.author !== null) meta.append(span(doc, 'typst-comments__card-author', message.author));
+    if (message.date !== null) meta.append(span(doc, 'typst-comments__card-date', message.date));
     const own = message.author === this.me;
     if (own || message.author === null) meta.insertAdjacentHTML('beforeend', EDIT_BUTTON);
     if (own && index === this.messages.length - 1) meta.insertAdjacentHTML('beforeend', DELETE_BUTTON);
-    item.append(span(doc, 'typst-note-card__text', message.text));
+    item.append(span(doc, 'typst-comments__card-text', message.text));
     return item;
   }
 
@@ -131,7 +131,7 @@ export class NoteCard {
     const target = event.target as Element;
     if (target.closest('button')) {
       event.preventDefault();
-    } else if (!target.closest('textarea, .typst-note-card__thread')) {
+    } else if (!target.closest('textarea, .typst-comments__card-thread')) {
       // a click on the card's head or margins goes to the reply box
       event.preventDefault();
       this.focus();
@@ -181,10 +181,10 @@ export class NoteCard {
   /** Replaces message `index`'s text with a text area holding it. */
   private startEdit(index: number): void {
     const item = this.thread.querySelector<HTMLElement>(`[data-index="${index}"]`);
-    const text = item?.querySelector('.typst-note-card__text');
+    const text = item?.querySelector('.typst-comments__card-text');
     if (!item || !text || this.editing) return;
     const field = this.dom.ownerDocument.createElement('textarea');
-    field.className = 'typst-note-card__field';
+    field.className = 'typst-comments__card-field';
     field.rows = 2;
     field.setAttribute('aria-label', 'Edit message');
     field.value = this.messages[index].text;
@@ -222,7 +222,7 @@ function span(doc: Document, className: string, text: string): HTMLElement {
 }
 
 const ICON =
-  '<svg class="typst-note-card__icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
+  '<svg class="typst-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 const CHECK =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
 const PENCIL =
@@ -231,11 +231,11 @@ const TRASH =
   '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
 const SEND =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8l11-5-4 11-2-4.5z"/></svg>';
-const EDIT_BUTTON = `<button type="button" class="typst-note-card__edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
-const DELETE_BUTTON = `<button type="button" class="typst-note-card__delete" data-action="delete" aria-label="Delete message" title="Delete">${TRASH}</button>`;
+const EDIT_BUTTON = `<button type="button" class="typst-comments__card-edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
+const DELETE_BUTTON = `<button type="button" class="typst-comments__card-delete" data-action="delete" aria-label="Delete message" title="Delete">${TRASH}</button>`;
 const CARD_HTML =
-  `<div class="typst-note-card__head">${ICON}<span class="typst-note-card__quote"></span>`
-  + `<button type="button" class="typst-note-card__resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
-  + '<ol class="typst-note-card__thread" hidden></ol>'
-  + '<div class="typst-note-card__compose"><textarea class="typst-note-card__reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
-  + `<button type="button" class="typst-note-card__send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;
+  `<div class="typst-comments__card-head">${ICON}<span class="typst-comments__card-quote"></span>`
+  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
+  + '<ol class="typst-comments__card-thread" hidden></ol>'
+  + '<div class="typst-comments__card-compose"><textarea class="typst-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
+  + `<button type="button" class="typst-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;

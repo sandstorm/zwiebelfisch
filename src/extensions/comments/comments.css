@@ -1,12 +1,12 @@
 /* The comments extension's styles: Margin notes in the text, the notes gutter with its cards, and the Comment button.
    Registered by comments.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
-.typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
-.typst-visual__note-anchor--hover .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--hover,
-.typst-visual__note-anchor--active .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--active { background: var(--te-note-strong); }
-.typst-visual__note {
+.typst-comments__range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
+.typst-comments__anchor--hover .typst-comments__range,
+.typst-comments__range .typst-comments__anchor--hover,
+.typst-comments__anchor--active .typst-comments__range,
+.typst-comments__range .typst-comments__anchor--active { background: var(--te-note-strong); }
+.typst-comments__note {
   display: inline-flex;
   align-items: center;
   margin: 0 2px;
@@ -18,12 +18,12 @@
   vertical-align: baseline;
   cursor: pointer;
 }
-.typst-visual__note--empty { border-style: dashed; }
-.typst-visual__note.typst-visual__note-anchor--hover,
-.typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
-.typst-visual__note-icon { flex: none; }
-.typst-notes-gutter { display: none; }
-.typst-visual__body--notes > .typst-notes-gutter {
+.typst-comments__note--empty { border-style: dashed; }
+.typst-comments__note.typst-comments__anchor--hover,
+.typst-comments__note.typst-comments__anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
+.typst-comments__note-icon { flex: none; }
+.typst-comments__gutter { display: none; }
+.typst-comments--notes > .typst-comments__gutter {
   display: block;
   position: relative;
   flex: none;
@@ -31,7 +31,7 @@
   border-left: 1px solid var(--te-border);
   background: var(--te-subtle);
 }
-.typst-note-card {
+.typst-comments__card {
   position: absolute;
   top: 0;
   left: 8px;
@@ -45,16 +45,16 @@
   cursor: text;
   transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
 }
-.typst-note-card--hover { border-color: var(--te-note-line); }
-.typst-note-card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
-.typst-note-card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
-.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
-.typst-note-card__icon { flex: none; }
-.typst-note-card__quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
-.typst-note-card--range .typst-note-card__quote { font-style: italic; }
-.typst-note-card--range .typst-note-card__quote::before { content: "\201C"; }
-.typst-note-card--range .typst-note-card__quote::after { content: "\201D"; }
-.typst-note-card__resolve {
+.typst-comments__card--hover { border-color: var(--te-note-line); }
+.typst-comments__card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.typst-comments__card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
+.typst-comments__card-head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
+.typst-comments__card-icon { flex: none; }
+.typst-comments__card-quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.typst-comments__card--range .typst-comments__card-quote { font-style: italic; }
+.typst-comments__card--range .typst-comments__card-quote::before { content: "\201C"; }
+.typst-comments__card--range .typst-comments__card-quote::after { content: "\201D"; }
+.typst-comments__card-resolve {
   flex: none;
   display: inline-flex;
   padding: 2px;
@@ -64,20 +64,20 @@
   color: var(--te-muted);
   cursor: pointer;
 }
-.typst-note-card__resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
+.typst-comments__card-resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
 /* the thread: one message per list item (name, date, text), oldest first */
-.typst-note-card__thread { margin: 4px 0 0; padding: 0; list-style: none; }
-.typst-note-card__thread[hidden] { display: none; }
-.typst-note-card__message { padding: 4px 0; }
-.typst-note-card__message + .typst-note-card__message { border-top: 1px solid var(--te-divider); }
-.typst-note-card__meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
-.typst-note-card__author { font-weight: 600; }
-.typst-note-card__date { color: var(--te-muted-2); font-size: 12px; }
-.typst-note-card__text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-.typst-note-card__edit,
-.typst-note-card__delete,
-.typst-note-card__send,
-.typst-note-card__more {
+.typst-comments__card-thread { margin: 4px 0 0; padding: 0; list-style: none; }
+.typst-comments__card-thread[hidden] { display: none; }
+.typst-comments__card-message { padding: 4px 0; }
+.typst-comments__card-message + .typst-comments__card-message { border-top: 1px solid var(--te-divider); }
+.typst-comments__card-meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.typst-comments__card-author { font-weight: 600; }
+.typst-comments__card-date { color: var(--te-muted-2); font-size: 12px; }
+.typst-comments__card-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.typst-comments__card-edit,
+.typst-comments__card-delete,
+.typst-comments__card-send,
+.typst-comments__card-more {
   display: inline-flex;
   padding: 2px;
   border: 1px solid transparent;
@@ -88,17 +88,17 @@
   font-size: 12px;
   cursor: pointer;
 }
-.typst-note-card__edit { margin-left: auto; }
-.typst-note-card__delete:hover { color: var(--te-danger); }
-.typst-note-card__edit:hover,
-.typst-note-card__send:hover,
-.typst-note-card__more:hover { border-color: var(--te-border); background: var(--te-subtle); }
-.typst-note-card__more { padding: 0 4px; color: var(--te-accent); }
+.typst-comments__card-edit { margin-left: auto; }
+.typst-comments__card-delete:hover { color: var(--te-danger); }
+.typst-comments__card-edit:hover,
+.typst-comments__card-send:hover,
+.typst-comments__card-more:hover { border-color: var(--te-border); background: var(--te-subtle); }
+.typst-comments__card-more { padding: 0 4px; color: var(--te-accent); }
 /* the reply box (and a message being edited) */
-.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
-.typst-note-card__thread[hidden] + .typst-note-card__compose { border-top: none; }
-.typst-note-card__field,
-.typst-note-card__reply {
+.typst-comments__card-compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
+.typst-comments__card-thread[hidden] + .typst-comments__card-compose { border-top: none; }
+.typst-comments__card-field,
+.typst-comments__card-reply {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -112,10 +112,10 @@
   resize: none;
   field-sizing: content;
 }
-.typst-note-card__field { min-height: 2.8em; }
-.typst-note-card__send { flex: none; }
+.typst-comments__card-field { min-height: 2.8em; }
+.typst-comments__card-send { flex: none; }
 /* Narrow panes: no gutter column; the active note's card pops up below its anchor */
-.typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
+.typst-comments--narrow.typst-comments--notes > .typst-comments__gutter {
   position: absolute;
   top: 0;
   right: 8px;
@@ -124,5 +124,5 @@
   background: none;
   pointer-events: none;
 }
-.typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
-.typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
+.typst-comments--narrow .typst-comments__card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
+.typst-comments--narrow .typst-comments__card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }

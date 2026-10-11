@@ -19,7 +19,7 @@ const Tables = Extension.create({
       addAttributes() {
         return { ...this.parent?.(), sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
       },
-    }).configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
+    }).configure({ resizable: false, HTMLAttributes: { class: 'typst-tables__table' } }),
     TableRow,
     TableCell.extend({ group: 'blockContainer' }),
     TableHeader.extend({ group: 'blockContainer' }),

@@ -180,8 +180,8 @@ describe('diagrams', () => {
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
-    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-visual__image')];
-    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-visual__image-tools .typst-visual__box-actions button')].map((b) => b.textContent);
+    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')];
+    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-images__tools .typst-visual__box-actions button')].map((b) => b.textContent);
     expect(actions(flow)).toEqual(['Edit diagram']);
     expect(actions(logo)).toEqual([]);
     flow.querySelector<HTMLButtonElement>('.typst-visual__box-actions button')!.click();
@@ -228,18 +228,18 @@ describe('the built-in extensions', () => {
       // in raw code (a block atom), of a file whose views do not exist yet
       { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: SourceOffset.of(1), to: SourceOffset.of(4) },
     ]);
-    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
+    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostics__highlight')!;
     expect(mark.textContent).toBe('world');
     expect(mark.dataset.severity).toBe('error');
     expect(mark.title).toBe('unknown variable: foo\nhint: did you mean bar?');
     editor.open('/a.typ');
     const shown = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden)!;
-    expect(shown.querySelector<HTMLElement>('.typst-diagnostic')?.dataset.severity).toBe('warning');
+    expect(shown.querySelector<HTMLElement>('.typst-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
   it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['typst-preview__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
+    const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
     expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
     editor.settings = { 'pdfExport.download': false };

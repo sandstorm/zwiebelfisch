@@ -45,14 +45,14 @@ export class DiagramEditor {
     private readonly options: DiagramEditorOptions,
   ) {
     const doc = parent.ownerDocument;
-    this.#root = element(doc, 'div', 'typst-diagram');
+    this.#root = element(doc, 'div', 'typst-diagrams');
     this.#root.dataset.testid = 'typst-diagram';
-    const title = element(doc, 'h2', 'typst-diagram__title');
+    const title = element(doc, 'h2', 'typst-diagrams__title');
     title.textContent = ProjectPath.displayName(options.path);
-    this.#body = element(doc, 'div', 'typst-diagram__body');
-    this.#status = element(doc, 'p', 'typst-diagram__status');
+    this.#body = element(doc, 'div', 'typst-diagrams__body');
+    this.#status = element(doc, 'p', 'typst-diagrams__status');
     this.#status.setAttribute('role', 'status');
-    this.#frame = element(doc, 'iframe', 'typst-diagram__frame');
+    this.#frame = element(doc, 'iframe', 'typst-diagrams__frame');
     this.#frame.title = 'Diagram editor';
     this.#body.append(this.#status, this.#frame);
     this.#root.append(title, this.#body);
@@ -124,7 +124,7 @@ export class DiagramEditor {
     this.#session.flush();
     this.#frame.remove();
     this.#frame = null;
-    const image = element(this.#root.ownerDocument, 'img', 'typst-diagram__image');
+    const image = element(this.#root.ownerDocument, 'img', 'typst-diagrams__image');
     image.alt = ProjectPath.displayName(this.options.path);
     this.#imageUrl = URL.createObjectURL(new Blob([this.#session.content as BlobPart], { type: 'image/png' }));
     image.src = this.#imageUrl;

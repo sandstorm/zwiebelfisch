@@ -1,7 +1,7 @@
 /* The labels extension's styles: References (@key) as chips, labels (<key>) as tags, the @ list.
    Registered by labels.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
-.typst-visual__ref {
+.typst-labels__ref {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4em;
@@ -14,12 +14,12 @@
   white-space: nowrap;
   cursor: default;
 }
-.typst-visual__ref-supplement { color: var(--te-text); }
-.typst-visual__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
+.typst-labels__ref-supplement { color: var(--te-text); }
+.typst-labels__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
-.typst-label-tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
-.typst-label-tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
-.typst-label-tag__name {
+.typst-labels__tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
+.typst-labels__tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
+.typst-labels__tag-name {
   padding: 0 7px;
   border: 1px solid var(--te-border);
   border-radius: 9px;
@@ -28,10 +28,10 @@
   font: inherit;
   cursor: pointer;
 }
-.typst-label-tag__name::before { content: '<'; opacity: 0.5; }
-.typst-label-tag__name::after { content: '>'; opacity: 0.5; }
-.typst-label-tag__name:hover { border-color: var(--te-accent); color: var(--te-accent); }
-.typst-label-tag__input {
+.typst-labels__tag-name::before { content: '<'; opacity: 0.5; }
+.typst-labels__tag-name::after { content: '>'; opacity: 0.5; }
+.typst-labels__tag-name:hover { border-color: var(--te-accent); color: var(--te-accent); }
+.typst-labels__tag-input {
   padding: 0 7px;
   border: 1px solid var(--te-accent);
   border-radius: 9px;
@@ -42,7 +42,7 @@
   box-shadow: 0 0 0 2px var(--te-jump);
 }
 /* The @ list: the project's labels below the typed @ */
-.typst-ref-suggestions {
+.typst-labels__suggestions {
   position: absolute;
   z-index: 3;
   min-width: 220px;
@@ -54,8 +54,8 @@
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
   font: 13px system-ui, sans-serif;
 }
-.typst-ref-suggestions[hidden] { display: none; }
-.typst-ref-suggestions__option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.typst-ref-suggestions__option[aria-selected='true'] { background: var(--te-hover); }
-.typst-ref-suggestions__name { font-family: ui-monospace, monospace; white-space: nowrap; }
-.typst-ref-suggestions__hint { overflow: hidden; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.typst-labels__suggestions[hidden] { display: none; }
+.typst-labels__suggestions-option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.typst-labels__suggestions-option[aria-selected='true'] { background: var(--te-hover); }
+.typst-labels__suggestions-name { font-family: ui-monospace, monospace; white-space: nowrap; }
+.typst-labels__suggestions-hint { overflow: hidden; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }

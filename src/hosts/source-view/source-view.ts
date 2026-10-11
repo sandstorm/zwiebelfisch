@@ -11,6 +11,7 @@ import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@co
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import css from './source-view.css?inline';
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */
 export interface SourceViewContributions {
@@ -30,6 +31,8 @@ export class SourceViewHost implements SourceViewContributions {
     extensionsFor: (view) => this.extensionsFor(view),
     onDidChange: this.changed.event,
   };
+  /** The CSS of the views (a revealed range), for the workbench to put where the widget renders. */
+  readonly styleSheet: string = css;
 
   registerCodeMirrorExtension(extension: Extension | ((view: SourceViewContext) => Extension)): Disposable {
     this.extensions.push(extension);

@@ -218,7 +218,7 @@ createTypstEditor(host, { extensions: (builtins) => [...builtins, callout()] });
   [`registerToolbarGroup(group)`], [A place for items: a `group` in the row, a `menu` button, or a `floating` bar at an anchor. The host's: `history` (order 10), `text-style` (20), the `insert` menu (50), the floating `selection` bar],
   [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled) or `create(toolbar)` for an item with state per view],
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles)],
-  [`registerBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100)],
+  [`registerBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
   [`registerBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" is one],
   [`registerGutter(provider)`], [A column beside the text, per view (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],

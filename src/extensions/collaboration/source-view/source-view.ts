@@ -81,7 +81,7 @@ function decorations(state: EditorState, shown: readonly Shown[]): DecorationSet
 
 function selectionMark(user: PresenceUser): Decoration {
   return Decoration.mark({
-    class: 'typst-remote-selection',
+    class: 'typst-collaboration__selection',
     attributes: { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` },
   });
 }
@@ -102,7 +102,7 @@ class CaretWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const caret = caretElement(view.dom.ownerDocument, this.user);
     // The flag shows briefly after a move, then on hover only.
-    caret.classList.add('typst-remote-caret--transient');
+    caret.classList.add('typst-collaboration__caret--transient');
     return caret;
   }
 
@@ -123,13 +123,13 @@ function presenceStyle(element: HTMLElement, user: PresenceUser): void {
  */
 export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
   const caret = doc.createElement('span');
-  caret.className = 'typst-remote-caret';
+  caret.className = 'typst-collaboration__caret';
   caret.dataset.user = user.name;
   caret.setAttribute('aria-hidden', 'true');
   caret.contentEditable = 'false';
   presenceStyle(caret, user);
   const flag = doc.createElement('span');
-  flag.className = 'typst-remote-caret__flag';
+  flag.className = 'typst-collaboration__caret-flag';
   flag.textContent = user.name;
   caret.append(flag);
   return caret;

@@ -20,7 +20,7 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, onJump);
     parent.append(status.element);
     status.show(summarizeDiagnostics([diag({ message: 'unknown variable: foo', hints: ['try bar'], from: SourceOffset.of(3), to: SourceOffset.of(6) })], MAIN));
-    const details = parent.querySelector<HTMLElement>('.typst-status__details')!;
+    const details = parent.querySelector<HTMLElement>('.typst-diagnostics__status-details')!;
     expect(details.textContent).toContain('unknown variable: foo');
     expect(details.textContent).toContain('hint: try bar');
     details.querySelector('button')!.click();
@@ -33,7 +33,7 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, onJump);
     parent.append(status.element);
     status.show(summarizeDiagnostics([diag({ path: ProjectPath.of('/lib.typ'), from: SourceOffset.of(2), to: SourceOffset.of(4) }), diag({ path: null })], MAIN));
-    const items = [...parent.querySelectorAll('.typst-status__elsewhere li')];
+    const items = [...parent.querySelectorAll('.typst-diagnostics__status-elsewhere li')];
     expect(items.map((item) => item.textContent)).toEqual(['/lib.typ: boom', '(no project file): boom']);
     expect(items[1].querySelector('button')).toBeNull();
     items[0].querySelector('button')!.click();
@@ -45,6 +45,6 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, () => {});
     parent.append(status.element);
     status.show(summarizeDiagnostics([], MAIN));
-    expect(parent.querySelector<HTMLElement>('.typst-status__details')!.hidden).toBe(true);
+    expect(parent.querySelector<HTMLElement>('.typst-diagnostics__status-details')!.hidden).toBe(true);
   });
 });

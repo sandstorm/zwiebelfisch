@@ -1,7 +1,7 @@
 /* The file-navigation extension's styles: "← previous file" / "next file →" at the start and end of an included file
    (reading order of the main file). Registered by file-navigation.ts (Workbench.registerStyleSheet). */
-.typst-editor__file-nav { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
-.typst-editor__file-nav[hidden] { display: none; }
-.typst-editor__file-nav-link--next { margin-left: auto; }
-.typst-editor__file-nav-link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
-.typst-editor__file-nav-link:hover { text-decoration: underline; }
+.typst-file-navigation { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
+.typst-file-navigation[hidden] { display: none; }
+.typst-file-navigation__link--next { margin-left: auto; }
+.typst-file-navigation__link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
+.typst-file-navigation__link:hover { text-decoration: underline; }

@@ -34,7 +34,7 @@ test('a declared paragraph style wraps the paragraph, imports itself, stays edit
   await caretAtEnd(visual(page).locator('p', { hasText: 'A paragraph' }));
   await styleMenu(page).selectOption({ label: 'Note' });
   await expect.poll(value(page)).toBe('#import "styles.typ": note\n\nIntro\n\n#note[A paragraph to style.]\n');
-  const styled = visual(page).locator('.typst-visual__style.typst-style--note');
+  const styled = visual(page).locator('.typst-styles__block.typst-styles--note');
   await expect(styled).toHaveAttribute('data-style-title', 'Note');
   await expect(styled.locator('p')).toHaveText('A paragraph to style.');
   await expect(page.locator('typst-editor').getByTestId('typst-status')).toHaveText(/✓/); // compiles: the import works
@@ -50,12 +50,12 @@ test('a declared paragraph style wraps the paragraph, imports itself, stays edit
   await caretAtEnd(styled.locator('p'));
   await styleMenu(page).selectOption({ label: 'Normal text' });
   await expect.poll(value(page)).toBe('#import "styles.typ": note\n\nIntro\n\nA paragraph to style. More.\n');
-  await expect(visual(page).locator('.typst-visual__style')).toHaveCount(0);
+  await expect(visual(page).locator('.typst-styles__block')).toHaveCount(0);
 });
 
 test('a declared text style goes around the selected words', async ({ page }) => {
   await selectText(visual(page).locator('p', { hasText: 'A paragraph' }), 'paragraph');
   await styleMenu(page).selectOption({ label: 'Keyword' });
   await expect.poll(value(page)).toBe('#import "styles.typ": key\n\nIntro\n\nA #key[paragraph] to style.\n');
-  await expect(visual(page).locator('.typst-visual__style-text')).toHaveText('paragraph');
+  await expect(visual(page).locator('.typst-styles__text')).toHaveText('paragraph');
 });

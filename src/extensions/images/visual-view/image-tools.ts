@@ -46,21 +46,21 @@ export class ImageTools implements BoxTools {
   constructor(private readonly host: ImageToolsHost, node: Node) {
     this.node = node;
     const doc = host.dom.ownerDocument;
-    host.dom.classList.add('typst-visual__image');
+    host.dom.classList.add('typst-images__box');
     this.label = doc.createElement('div');
-    this.label.className = 'typst-visual__box-label typst-visual__image-label';
+    this.label.className = 'typst-visual__box-label typst-images__label';
     host.dom.prepend(this.label);
     if (host.picture) {
       this.frame = doc.createElement('div');
-      this.frame.className = 'typst-visual__image-frame';
+      this.frame.className = 'typst-images__frame';
       this.badge = doc.createElement('span');
-      this.badge.className = 'typst-visual__image-size';
+      this.badge.className = 'typst-images__size';
       this.frame.append(host.picture, ...HANDLES.map((h) => this.handle(h)), this.badge);
       this.frame.addEventListener('dblclick', () => host.editCode());
       host.dom.insertBefore(this.frame, host.code);
     }
     this.tools = doc.createElement('div');
-    this.tools.className = 'typst-visual__image-tools';
+    this.tools.className = 'typst-images__tools';
     this.tools.setAttribute('role', 'toolbar');
     this.tools.setAttribute('aria-label', 'Image');
     this.tools.addEventListener('mousedown', (event) => {
@@ -75,7 +75,8 @@ export class ImageTools implements BoxTools {
     const prompts = host.prompts;
     const altButtons = prompts ? [this.button('Alt text', () => void this.askAlt(prompts))] : [];
     const codeButton = this.button('Edit code', () => host.editCode());
-    // the box actions of other contributions ("Edit diagram") go before "Edit code"
+    // the box actions of other contributions ("Edit diagram") go before "Edit code", as buttons of the toolbar
+    host.actions.classList.add('typst-images__actions');
     this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, host.actions, codeButton);
     host.dom.insertBefore(this.tools, host.code);
     this.update(node);
@@ -153,7 +154,7 @@ export class ImageTools implements BoxTools {
 
   private showWidth(width: string): void {
     this.frame!.style.width = width;
-    this.frame!.classList.toggle('typst-visual__image-frame--sized', width !== '');
+    this.frame!.classList.toggle('typst-images__frame--sized', width !== '');
   }
 
   private button(text: string, click: () => void): HTMLButtonElement {
@@ -166,7 +167,7 @@ export class ImageTools implements BoxTools {
 
   private handle(name: string): HTMLElement {
     const handle = this.host.dom.ownerDocument.createElement('span');
-    handle.className = 'typst-visual__resize-handle';
+    handle.className = 'typst-images__resize-handle';
     handle.dataset.handle = name;
     handle.addEventListener('pointerdown', (event) => this.startDrag(event, name.includes('w') ? -1 : 1));
     return handle;
@@ -200,12 +201,12 @@ export class ImageTools implements BoxTools {
     this.stopDrag = () => {
       doc.removeEventListener('pointermove', move);
       doc.removeEventListener('pointerup', up);
-      frame.classList.remove('typst-visual__image-frame--resizing');
+      frame.classList.remove('typst-images__frame--resizing');
       this.stopDrag = null;
     };
     doc.addEventListener('pointermove', move);
     doc.addEventListener('pointerup', up);
-    frame.classList.add('typst-visual__image-frame--resizing');
+    frame.classList.add('typst-images__frame--resizing');
     this.badge!.textContent = `${percent}%`;
   }
 }

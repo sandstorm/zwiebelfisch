@@ -25,7 +25,7 @@ async function load(page: Page, value: string) {
 
 const visual = (page: Page) => page.getByTestId('typst-visual');
 const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
-const imageBox = (page: Page) => visual(page).locator('.typst-visual__image');
+const imageBox = (page: Page) => visual(page).locator('.typst-images__box');
 const picture = (page: Page) => imageBox(page).locator('img.typst-visual__rendering');
 const imageTools = (page: Page) => imageBox(page).getByRole('toolbar', { name: 'Image' });
 
@@ -60,7 +60,7 @@ test('insert an image, add a caption, type it, drag a handle: the source gets th
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 5 });
-  await expect(imageBox(page).locator('.typst-visual__image-size')).toHaveText(/^\d+%$/);
+  await expect(imageBox(page).locator('.typst-images__size')).toHaveText(/^\d+%$/);
   await page.mouse.up();
   await expect.poll(value(page)).toMatch(/#figure\(image\("logo\.svg", width: \d+%\), caption: \[A teal box\]\)/);
 

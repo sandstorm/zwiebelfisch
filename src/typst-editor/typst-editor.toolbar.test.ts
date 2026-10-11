@@ -366,6 +366,6 @@ describe('Visual view toolbar', () => {
     view.reveal(SourceRange.of({ from: 15, to: 15 }));
     button('Table of contents').click();
     expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
-    expect(parent.querySelector('.typst-visual__outline .typst-visual__box-label')?.textContent).toBe('Table of contents');
+    expect(parent.querySelector('.typst-outline__box .typst-visual__box-label')?.textContent).toBe('Table of contents');
   });
 });

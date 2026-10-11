@@ -58,7 +58,7 @@ const ChecklistPreamble = Extension.create({
 
 const TaskLists = Extension.create({
   name: 'typstTaskLists',
-  addExtensions: () => [TypstTaskList, TypstTaskItem, ChecklistPreamble],
+  addExtensions: () => [TypstTaskList.configure({ HTMLAttributes: { class: 'typst-lists__tasks' } }), TypstTaskItem, ChecklistPreamble],
 });
 
 /**

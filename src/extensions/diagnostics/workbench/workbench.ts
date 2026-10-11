@@ -24,24 +24,24 @@ export class DiagnosticsStatus {
     private readonly onJump: (target: DiagnosticTarget) => void,
   ) {
     this.element = doc.createElement('div');
-    this.element.className = 'typst-status';
+    this.element.className = 'typst-diagnostics__status';
     this.element.dataset.testid = 'typst-status';
     this.button = doc.createElement('button');
     this.button.type = 'button';
-    this.button.className = 'typst-status__summary';
+    this.button.className = 'typst-diagnostics__status-summary';
     this.button.textContent = 'compiling…';
     this.button.addEventListener('click', () => {
       if (this.target) onJump(this.target);
     });
     this.details = doc.createElement('ul');
-    this.details.className = 'typst-status__details';
+    this.details.className = 'typst-diagnostics__status-details';
     this.details.hidden = true;
     // The details open on hover/focus of this wrapper, so the pointer can move into them.
     const summary = doc.createElement('span');
-    summary.className = 'typst-status__hover';
+    summary.className = 'typst-diagnostics__status-hover';
     summary.append(this.button, this.details);
     this.list = doc.createElement('ul');
-    this.list.className = 'typst-status__elsewhere';
+    this.list.className = 'typst-diagnostics__status-elsewhere';
     this.element.append(summary, this.list);
   }
 
@@ -65,7 +65,7 @@ export class DiagnosticsStatus {
     item.dataset.severity = diagnostic.severity;
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-status__detail';
+    button.className = 'typst-diagnostics__status-detail';
     button.textContent = describeDiagnostic(diagnostic);
     const target = targetOf(diagnostic);
     if (target) button.addEventListener('click', () => this.onJump(target));
@@ -85,7 +85,7 @@ export class DiagnosticsStatus {
     }
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-status__open';
+    button.className = 'typst-diagnostics__status-open';
     button.textContent = text;
     button.addEventListener('click', () => this.onJump(target));
     item.append(button);

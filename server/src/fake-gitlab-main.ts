@@ -5,7 +5,7 @@
 // images). No real GitLab, no secrets, nothing stored. Any branch works:
 // gitlab:demo/report@<branch> starts at main.
 //   PORT (default 1234)
-// See docs/demo-playground.md.
+// See docs/architecture/development.typ.
 import { createCollabServer } from './collab-server.ts';
 import { FakeGitLab } from './gitlab/fake-gitlab.ts';
 import { PLAYGROUND_PROJECT, playgroundOptions } from './playground/playground.ts';

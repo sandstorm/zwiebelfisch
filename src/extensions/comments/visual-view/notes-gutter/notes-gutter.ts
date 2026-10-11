@@ -86,7 +86,7 @@ class NotesGutter {
     const doc = body.ownerDocument;
     this.me = options.user?.name.trim() || 'Anonymous';
     this.root = body.appendChild(doc.createElement('aside'));
-    this.root.className = 'typst-notes-gutter';
+    this.root.className = 'typst-comments__gutter';
     this.root.setAttribute('aria-label', 'Notes');
     this.plugin = gutterPlugin({
       attach: (view) => this.attach(view),
@@ -136,7 +136,7 @@ class NotesGutter {
     this.shown = state;
     if (state.notes !== shown?.notes) this.renderCards(state.notes);
     // no notes, no gutter column
-    this.body.classList.toggle('typst-visual__body--notes', state.notes.length > 0);
+    this.body.classList.toggle('typst-comments--notes', state.notes.length > 0);
     for (const [key, card] of this.cards) card.highlight(key === state.active, key === state.hover);
     // anchors move with the document (notes are found anew on every change); the active card aligns
     if (state.notes !== shown?.notes || state.active !== shown?.active) this.schedule();
@@ -245,7 +245,7 @@ class NotesGutter {
     if (!state || !view) return;
     const width = this.body.clientWidth;
     const narrow = width > 0 && width < NARROW_PX;
-    this.body.classList.toggle('typst-visual__body--narrow', narrow);
+    this.body.classList.toggle('typst-comments--narrow', narrow);
     const origin = this.root.getBoundingClientRect().top;
     const measured = state.notes.map((note) => {
       const anchor = view.dom.querySelector(`[data-note-key="${note.key}"]`)?.getBoundingClientRect();
@@ -283,7 +283,7 @@ interface GutterState {
 
 type GutterMeta = { active?: string | null; hover?: string | null };
 
-const gutterKey = new PluginKey<GutterState>('typst-notes-gutter');
+const gutterKey = new PluginKey<GutterState>('typst-comments__gutter');
 
 interface GutterHooks {
   attach(view: EditorView): void;
@@ -312,7 +312,7 @@ function gutterPlugin(hooks: GutterHooks): Plugin<GutterState> {
         mouseleave: (view) => hoverAnchor(view, null),
         mousedown: (_view, event) => {
           // a point note's marker has no text to click into: it opens the card
-          const marker = (event.target as Element).closest?.('.typst-visual__note');
+          const marker = (event.target as Element).closest?.('.typst-comments__note');
           const key = marker ? anchorKey(marker) : null;
           if (!key) return false;
           event.preventDefault();
@@ -341,8 +341,8 @@ function nextState(tr: Transaction, previous: GutterState, state: EditorState, n
 /** The anchors: `data-note-key` on every note's marker or highlighted text, plus the active and hover classes. */
 function withDecorations(state: EditorState, { notes, active, hover }: Omit<GutterState, 'decorations'>): GutterState {
   const decorations = notes.map(({ key, kind, from, to }) => {
-    const flags = `${key === active ? ' typst-visual__note-anchor--active' : ''}${key === hover ? ' typst-visual__note-anchor--hover' : ''}`;
-    const attrs = { 'data-note-key': key, class: `typst-visual__note-anchor${flags}` };
+    const flags = `${key === active ? ' typst-comments__anchor--active' : ''}${key === hover ? ' typst-comments__anchor--hover' : ''}`;
+    const attrs = { 'data-note-key': key, class: `typst-comments__anchor${flags}` };
     return kind === 'point' ? Decoration.node(from, to, attrs) : Decoration.inline(from, to, attrs);
   });
   return { notes, active, hover, decorations: DecorationSet.create(state.doc, decorations) };

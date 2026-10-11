@@ -16,6 +16,7 @@ import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
 import { StatusBar } from './status-bar/status-bar';
+import css from './window.css?inline';
 
 /** The widget's window as extensions use it (VS Code's `window` namespace). */
 export interface Window {
@@ -275,6 +276,8 @@ export class WindowHost implements Window {
   readonly #fileDecorations = new FileDecorations();
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
+  /** The CSS of messages, input boxes, quick picks and custom editors' panels, for the workbench to put where the widget renders. */
+  readonly styleSheet: string = css;
 
   constructor(private readonly options: WindowOptions) {
     this.#notifications = new Notifications(options.host);

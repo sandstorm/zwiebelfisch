@@ -9,7 +9,7 @@ const path = ProjectPath.of;
 function setup() {
   const parent = document.createElement('div');
   const view = new AssetView(parent);
-  const root = parent.querySelector<HTMLElement>('.typst-asset')!;
+  const root = parent.querySelector<HTMLElement>('.typst-images__file')!;
   return { parent, view, root };
 }
 

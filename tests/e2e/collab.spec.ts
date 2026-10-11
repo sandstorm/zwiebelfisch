@@ -51,7 +51,7 @@ test('edits from both Visual views converge', async ({ browser, baseURL }, info)
 test('the other user’s selection is shown with their name', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
-  const selection = bob.getByTestId('typst-visual').locator('.typst-remote-selection');
+  const selection = bob.getByTestId('typst-visual').locator('.typst-collaboration__selection');
   await expect(selection).toHaveText('bold');
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
@@ -60,10 +60,10 @@ test('the other user’s caret shows with their name in both views, where they m
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');
-  const visualCaret = bob.getByTestId('typst-visual').locator('h1 .typst-remote-caret[data-user="Ann"]');
+  const visualCaret = bob.getByTestId('typst-visual').locator('h1 .typst-collaboration__caret[data-user="Ann"]');
   await expect(visualCaret).toHaveCount(1);
-  await expect(visualCaret.locator('.typst-remote-caret__flag')).toBeVisible();
-  await expect(visualCaret.locator('.typst-remote-caret__flag')).toHaveText('Ann');
+  await expect(visualCaret.locator('.typst-collaboration__caret-flag')).toBeVisible();
+  await expect(visualCaret.locator('.typst-collaboration__caret-flag')).toHaveText('Ann');
   // Regression: the caret is published after the move, not one step behind (at the click position).
   const textBefore = () =>
     visualCaret.evaluate((caret) => {
@@ -81,10 +81,10 @@ test('the other user’s caret shows with their name in both views, where they m
   await expect(decoration).toHaveAttribute('title', 'Ann');
   await bob.getByRole('tab', { name: 'Source' }).click();
   const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Hello Typst' });
-  const sourceCaret = line.locator('.typst-remote-caret[data-user="Ann"]');
+  const sourceCaret = line.locator('.typst-collaboration__caret[data-user="Ann"]');
   await expect(sourceCaret).toHaveCount(1);
   await sourceCaret.hover({ force: true });
-  await expect(sourceCaret.locator('.typst-remote-caret__flag')).toHaveCSS('opacity', '1');
+  await expect(sourceCaret.locator('.typst-collaboration__caret-flag')).toHaveCSS('opacity', '1');
 });
 
 test('a caret on an empty line shows in the other user’s Source view', async ({ browser, baseURL }, info) => {
@@ -92,7 +92,7 @@ test('a caret on an empty line shows in the other user’s Source view', async (
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: /^$/ }).first().click();
   await bob.getByRole('tab', { name: 'Source' }).click();
-  const caret = bob.getByTestId('typst-source').locator('.typst-remote-caret[data-user="Ann"]');
+  const caret = bob.getByTestId('typst-source').locator('.typst-collaboration__caret[data-user="Ann"]');
   await expect(bob.getByTestId('typst-source').locator('.cm-line', { has: caret })).toHaveText('Ann');
 });
 
@@ -103,8 +103,8 @@ test('a margin note reaches the other user', async ({ browser, baseURL }, info) 
   const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
-  await expect(bob.getByTestId('typst-note-card').locator('.typst-note-card__text')).toHaveText(['Shared note']);
-  await expect(bob.getByTestId('typst-visual').locator('mark.typst-visual__note-range')).toHaveText('bold');
+  await expect(bob.getByTestId('typst-note-card').locator('.typst-comments__card-text')).toHaveText(['Shared note']);
+  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range')).toHaveText('bold');
 });
 
 test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {
@@ -121,18 +121,18 @@ test('a reply from the other user: both see the thread in the card and in the PD
   await annField.press('ControlOrMeta+Enter');
 
   const bobCard = bob.getByTestId('typst-note-card');
-  await expect(bobCard.locator('.typst-note-card__text')).toHaveText(['Is this right?']);
+  await expect(bobCard.locator('.typst-comments__card-text')).toHaveText(['Is this right?']);
   // Ann's message is not Bob's to edit
   await expect(bobCard.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
-  await bobCard.locator('.typst-note-card__head').click();
+  await bobCard.locator('.typst-comments__card-head').click();
   const bobField = bobCard.getByRole('textbox', { name: 'Reply' });
   await bobField.fill('Yes, checked.');
   await bobField.press('ControlOrMeta+Enter');
 
   for (const page of [ann, bob]) {
     const card = page.getByTestId('typst-note-card');
-    await expect(card.locator('.typst-note-card__author')).toHaveText(['Ann', 'Bob']);
-    await expect(card.locator('.typst-note-card__text')).toHaveText(['Is this right?', 'Yes, checked.']);
+    await expect(card.locator('.typst-comments__card-author')).toHaveText(['Ann', 'Bob']);
+    await expect(card.locator('.typst-comments__card-text')).toHaveText(['Is this right?', 'Yes, checked.']);
     // drafting draws the note (both messages) in the page's right margin: the last 4cm of 16cm
     await expect.poll(() => page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
       const box = svg.getBoundingClientRect();
