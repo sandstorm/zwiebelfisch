@@ -10,6 +10,9 @@ export type ProjectPath = string & { readonly __type: 'ProjectPath' };
 /** A path as written in Typst source (`img/logo.png`, `../template.typ`, `/data.csv`): relative to the file it is in. */
 export type PathReference = string & { readonly __type: 'PathReference' };
 
+/** A typed name as a path (`ProjectPath.fromName`), or what is wrong with it, for the user. */
+export type NamedPath = { readonly kind: 'valid'; readonly path: ProjectPath } | { readonly kind: 'invalid'; readonly error: string };
+
 export const ProjectPath = {
   /** `value` as a project path; null when it is none (relative, `..`, empty segments, a backslash). */
   parse(value: string): ProjectPath | null {
@@ -29,13 +32,13 @@ export const ProjectPath = {
    * The path of a name someone typed ("chapter 2", "parts/intro.typ"), with
    * `extension` added when the name has none. Folders may nest.
    */
-  fromName(name: string, extension: string): { path: ProjectPath } | { error: string } {
+  fromName(name: string, extension: string): NamedPath {
     const trimmed = name.trim().replace(/^\.?\/+/, '');
-    if (trimmed === '') return { error: 'Please enter a name.' };
+    if (trimmed === '') return { kind: 'invalid', error: 'Please enter a name.' };
     const named = ProjectPath.parse(`/${trimmed}`);
-    if (named === null) return { error: 'Names cannot contain "\\", "..", or empty folder names.' };
+    if (named === null) return { kind: 'invalid', error: 'Names cannot contain "\\", "..", or empty folder names.' };
     const last = trimmed.slice(trimmed.lastIndexOf('/') + 1);
-    return { path: last.includes('.') ? named : ProjectPath.of(`${named}${extension}`) };
+    return { kind: 'valid', path: last.includes('.') ? named : ProjectPath.of(`${named}${extension}`) };
   },
 
   /**

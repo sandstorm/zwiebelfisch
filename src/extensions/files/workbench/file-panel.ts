@@ -1,7 +1,7 @@
 // FilePanel: the file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context
 // menu per row, uploads. It turns gestures into FileChanges and leaves to its owner whether they happen. See ../files.ts.
 import type { FileChange } from '../../../core/project/project';
-import { ProjectPath } from '../../../core/paths/paths';
+import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
 import type { FileDecoration, Memory, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
@@ -114,7 +114,7 @@ export class FilePanel {
       validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '.typ')),
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, '.typ');
-    if (target && 'path' in target) await this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
+    if (target?.kind === 'valid') await this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
   }
 
   /** Asks for a name and makes that (empty) folder in the folder of `at`; it lives in the panel until a file goes in. */
@@ -127,7 +127,7 @@ export class FilePanel {
       validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '')),
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, '');
-    if (!target || !('path' in target)) return;
+    if (!target || target.kind === 'invalid') return;
     this.emptyFolders.add(target.path);
     this.render(this.state);
     this.tree.focus(target.path);
@@ -159,7 +159,7 @@ export class FilePanel {
       validateInput: (value) => this.problemWith(ProjectPath.fromName(value, extension), from),
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, extension);
-    if (!target || !('path' in target) || target.path === from) return;
+    if (!target || target.kind === 'invalid' || target.path === from) return;
     const error = await this.relocate(from, target.path);
     if (error) void this.options.prompts.showErrorMessage(error);
   }
@@ -218,8 +218,8 @@ export class FilePanel {
   }
 
   /** What is wrong with a name typed for a new or renamed (from `from`) file or folder; null if nothing. */
-  private problemWith(target: { path: ProjectPath } | { error: string }, from?: ProjectPath): string | null {
-    if ('error' in target) return target.error;
+  private problemWith(target: NamedPath, from?: ProjectPath): string | null {
+    if (target.kind === 'invalid') return target.error;
     if (target.path === from) return null;
     const taken = this.state.paths.includes(target.path) || this.tree.isFolder(target.path);
     return taken ? `${ProjectPath.displayName(target.path)} already exists.` : null;

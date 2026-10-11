@@ -608,7 +608,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
 type ProjectPath = string & { __type: 'ProjectPath' }      // '/chapters/intro.typ': absolute, no '.', '..' or empty segments
 type PathReference = string & { __type: 'PathReference' }  // 'img/logo.png', '../x.typ', '/data.csv': as written in Typst
 ProjectPath.parse(value) → ProjectPath | null    ProjectPath.of(value) → ProjectPath (throws; constants, tests)
-ProjectPath.fromName(typed, extension) → { path } | { error }    // "chapter 2" → /chapter 2.typ
+ProjectPath.fromName(typed, extension) → { kind: 'valid', path } | { kind: 'invalid', error }    // "chapter 2" → /chapter 2.typ
 ProjectPath.resolve(file, reference) → ProjectPath | null         // as Typst resolves it; null: leaves the project
 ProjectPath.referenceTo(file, target) → PathReference             // relative in the same folder tree, else absolute
 ProjectPath.isTypst / displayName / extension                    PathReference.of(written)

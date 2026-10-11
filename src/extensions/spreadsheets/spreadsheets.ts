@@ -69,13 +69,13 @@ async function newSpreadsheet(project: Project, workbench: Workbench, resource =
     placeHolder: 'e.g. budget',
     validateInput: (typed) => {
       const target = pathOf(typed);
-      if ('error' in target) return target.error;
+      if (target.kind === 'invalid') return target.error;
       if (!target.path.endsWith('.ic')) return 'A spreadsheet’s name ends in .ic.';
       return project.has(target.path) ? `${ProjectPath.displayName(target.path)} already exists.` : null;
     },
   });
   const target = name === undefined ? null : pathOf(name);
-  if (!target || !('path' in target)) return;
+  if (!target || target.kind === 'invalid') return;
   const problem = await workbench.applyChange({ kind: 'create', path: target.path, content: new Uint8Array() });
   if (problem) void workbench.showErrorMessage(`${ProjectPath.displayName(target.path)} not created: ${problem}`);
   else workbench.open(target.path);
