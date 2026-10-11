@@ -65,6 +65,18 @@ describe('<typst-editor>', () => {
     expect(option.value).toBe('= Option');
   });
 
+  it('takes the source written inside it without the indentation HTML gives it', () => {
+    const value = (html: string) => {
+      const el = element(`<typst-editor>${html}</typst-editor>`);
+      document.body.append(el);
+      return el.value;
+    };
+    expect(value('\n      = Title\n\n      - item\n        nested\n    ')).toBe('= Title\n\n- item\n  nested\n');
+    expect(value('\n= Title\nBody\n')).toBe('= Title\nBody\n');
+    // blank lines don't count for the indentation
+    expect(value('\n    a\n\n  \n    b')).toBe('a\n\n\nb\n');
+  });
+
   it('maps the settings attribute (JSON) onto the settings, over options.settings, also when it changes', () => {
     const el = element(`<typst-editor settings='{"workbench.theme": "dark"}'></typst-editor>`);
     el.options = { settings: { 'workbench.theme': 'light', 'files.panel': 'show' } };

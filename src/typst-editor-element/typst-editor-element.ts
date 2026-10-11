@@ -7,7 +7,6 @@ import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '..
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
 import type { Settings } from '../hosts/workspace/workspace';
-import { inlineSource } from './inline-source';
 
 /**
  * `detail` of the `change` event: what the file at `path` holds after a change. `content` is null when the
@@ -222,6 +221,19 @@ function parseSettings(json: string | null): Settings {
   }
   console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
   return {};
+}
+
+/**
+ * The Typst source written inside the element: without the newline after the opening tag, the trailing blank lines
+ * and the indentation common to all non-blank lines (HTML indents it with the page); ends with one newline, or empty.
+ */
+function inlineSource(text: string): string {
+  const lines = text.replace(/^\r?\n/, '').split(/\r?\n/);
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+  if (lines.length === 0) return '';
+  const indents = lines.filter((line) => line.trim() !== '').map((line) => /^[ \t]*/.exec(line)![0].length);
+  const indent = Math.min(...indents);
+  return lines.map((line) => (line.slice(indent).trimEnd() === '' ? '' : line.slice(indent))).join('\n') + '\n';
 }
 
 /** HTMLElement, or a plain class where there is no DOM (SSR, unit tests), so this module can be imported there. */
