@@ -10,6 +10,11 @@
   they stay only as data — groups (`figureBody`), configured type lists / spec flags (Tiptap's
   `addGlobalAttributes({ types })`), always guarded (`schema.nodes.x`, `editor.can()`) — and
   contribution points where one extension drives another's UI (text-style menu).
+- A6 (changed by the user): **use Tiptap / ProseMirror directly** — no `{ priority }` of our own on
+  `registerNode` / `registerMark`; the spec's Tiptap extension `priority` (default 100, higher first)
+  is the one knob for schema order, mark nesting, keymaps *and* which projector claims a syntax. Our
+  own `priority` stays only where Tiptap has nothing (box renderers, link providers, PDF options,
+  custom editors). The wave running at the time builds the opposite; a follow-up replaces it.
 
 Eight agents reviewed every area against [the code conventions](2026_10_11_code-conventions.md) on
 2026-10-11 and fixed what was clear (about 70 small commits, merged at `c103841`). These are the
