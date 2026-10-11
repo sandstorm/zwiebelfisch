@@ -1,4 +1,5 @@
-// An image call's path: reading it from `#image("path", ..)` and writing a new call. See ../images.ts.
+// An image call's path: reading it from `#image("path", ..)` and writing a new call. See images in
+// ../images.ts.
 import { PathReference } from '../../../core/paths/paths';
 import { decodeString, quote } from '../../../core/typst-syntax/typst-syntax';
 

@@ -1,4 +1,4 @@
-// ImageTools: resize handles, width presets, alt text and caption on an image box. See ../images.ts.
+// Resize handles, width presets, alt text and caption on an image box. See images in ../images.ts.
 import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';

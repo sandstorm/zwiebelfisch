@@ -1,4 +1,5 @@
-// Where an uploaded image goes in the project. See ../images.ts.
+// Where an uploaded image goes in the project (its path from the file name is core/uploads'). See images in
+// ../images.ts.
 import type { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 
@@ -7,8 +8,6 @@ import { ProjectPath } from '../../../core/paths/paths';
  * content (`name.png`, `name-2.png`, …), else the first free one of those
  * names (browsers name every pasted screenshot `image.png`). `contentOf`
  * reads the project's files.
- *
- * The name it gets next to the project's other files (its path from the file name is core/uploads').
  */
 export function uploadTarget(path: ProjectPath, content: FileContent, contentOf: (path: ProjectPath) => FileContent | undefined): ProjectPath {
   const extension = ProjectPath.extension(path);

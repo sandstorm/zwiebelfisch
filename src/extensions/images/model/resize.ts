@@ -1,12 +1,10 @@
-// Resizing an image by dragging a handle. See ../images.ts.
+// Resizing an image by dragging a handle. Pure: the image tools measure the pixels. See ImageTools in
+// ../visual-editor/image-tools.ts.
 
 /**
  * The new width in percent of the text width after dragging a handle by `dx`
  * pixels: `direction` is -1 for handles on the left. A centered image grows
  * on both sides, so it changes by twice the drag. Whole percent, 1 to 100.
- *
- * The width it gets, in whole percent of the text width. Pure: the image tools (visual-editor/image-tools.ts) measure
- * the pixels.
  */
 export function resizedPercent({ width, reference, centered }: DragStart, dx: number, direction: 1 | -1): number {
   if (reference <= 0) return 100;

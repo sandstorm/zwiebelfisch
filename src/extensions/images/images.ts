@@ -1,4 +1,3 @@
-// The images extension. Entry of extensions/images/. See docs/30_architecture/08_built-in-extensions.typ.
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
@@ -12,16 +11,16 @@ import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-e
 import { imageEditor } from './workbench/image-editor';
 
 /**
- * Images in every document's Visual editor (`#image(..)` boxes showing the project's image file, "Insert image"
- * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
- * document link on it, from the link providers (`languages`)), and the read-only editor of image files: the custom
- * editor `images.editor` (`*.{png,jpg,jpeg,gif,svg,webp}`).
+ * Images, from the file in the project to the box in the text. In the Visual editor an `#image("path", ..)` block
+ * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it,
+ * set its alt text and add a caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
+ * images and uploads; image files dropped on or pasted into the text are uploaded and inserted too. Uploads go through
+ * `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
  *
- * `#image(..)` blocks (also as figures' bodies) in the Visual editor showing the project's image files, "Insert image"
- * with the project's images and uploads, and image files opened read-only in the editing area.
- *
- * Why one extension: an image is one concept from the file in the project to the box in the text; the Visual editor's
- * host only knows boxes, renderers and custom editors, and the file panel only knows files.
+ * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
+ * the window only custom editors, and the file panel only files. The path on an image box is the document link the
+ * link providers (`languages`) put on it, so it opens the file or says it is missing. An edit on an image box rewrites
+ * only the argument it touches (model/image-call.ts). See docs/30_architecture/08_built-in-extensions.typ.
  */
 export function images(): TypstExtension {
   return {

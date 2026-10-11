@@ -1,4 +1,4 @@
-// Images in the Visual editor. See docs/30_architecture/08_built-in-extensions.typ.
+// Images in the Visual editor. See images in ../images.ts.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
@@ -19,11 +19,6 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * figures extension offers one) and the image file in place of the code, also
  * as a figure's body; "Insert image" (a path, or the project's images and
  * uploads), and image files dropped on or pasted into the text.
- *
- * `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project files, uploads),
- * inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools on an image box
- * (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualEditor` registers them
- * for images.ts.
  */
 export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
   return {

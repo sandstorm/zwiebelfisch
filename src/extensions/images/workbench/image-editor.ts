@@ -1,5 +1,4 @@
-// The images extension in the workbench: image files open read-only in the editing area (imageEditor, showing an
-// ImageEditor). See ../images.ts.
+// Image files read-only in the editing area. See images in ../images.ts.
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { CustomEditorProvider } from '../../../hosts/window/window';

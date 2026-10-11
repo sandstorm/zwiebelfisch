@@ -1,4 +1,5 @@
-// Inserting image blocks: from the toolbar, and from files dropped on the editor. See ../images.ts.
+// Inserting image blocks: from the toolbar, and from files dropped on or pasted into the editor. See images in
+// ../images.ts.
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { type PathReference, ProjectPath } from '../../../core/paths/paths';

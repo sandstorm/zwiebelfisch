@@ -1,15 +1,10 @@
-// See ../images.ts.
+// Reading and editing the arguments of an image call, `#image("path", ..)` (an image block) or `image("path", ..)`
+// (a figure's body). An edit replaces only the text of the argument it touches, so a resize or a new alt text is a
+// minimal source change. See images in ../images.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 
-/**
- * The source of argument `name` of the image call `call`, or null if it has none.
- *
- * Reading and editing the arguments of an image call, `#image("path", ..)`
- * (an image block) or `image("path", ..)` (the body of a figure). Edits
- * replace only the text of the argument they touch, so a resize or a new alt
- * text is a minimal source change and everything else stays as written.
- */
+/** The source of argument `name` of the image call `call`, or null if it has none. */
 export function imageArg(call: string, name: string): string | null {
   const arg = parseArgs(call)?.named.get(name);
   return arg ? call.slice(arg.value.from, arg.value.to) : null;
