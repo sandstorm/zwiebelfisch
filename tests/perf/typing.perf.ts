@@ -40,7 +40,7 @@ interface Scenario {
 
 const ADVANCED = 'demo/examples/advanced';
 const DOCS = 'docs';
-const SEARCH = '/20_features/15_search-everywhere.typ';
+const SEARCH = '/20_features/17_search-everywhere.typ';
 const scenarios: Scenario[] = [
   { name: 'advanced, paragraph', folder: ADVANCED, path: '/chapters/introduction.typ', after: 'while they type', inside: 'paragraph' },
   { name: 'advanced, list item', folder: ADVANCED, path: '/chapters/introduction.typ', after: 'length of a document', inside: 'listItem' },

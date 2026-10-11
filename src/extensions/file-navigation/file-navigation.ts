@@ -20,7 +20,7 @@ import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
  *
  * The history listens to the shown file, not to the ways of opening one (links, the preview, the file panel, …).
  * Every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code, and no feature needs to
- * know about the history. See docs/20_features/24_multi-file-projects.typ.
+ * know about the history. See docs/20_features/25_multi-file-projects.typ.
  */
 export function fileNavigation(): TypstExtension {
   return {

@@ -20,7 +20,7 @@ import { textSearch } from './workbench/text-search';
  * sheet "BibTeX", and gives search everywhere the group "Text": lines in these files and in the Typst files.
  *
  * Which files are text files is decided here, by their ending; the window and the workbench only offer the custom
- * editor and the saving (`workspace.applyEdit`). See docs/20_features/14_files.typ.
+ * editor and the saving (`workspace.applyEdit`). See docs/20_features/13_files.typ.
  */
 export function textFiles(): TypstExtension {
   return {
