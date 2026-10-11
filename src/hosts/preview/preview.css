@@ -1,5 +1,6 @@
-/* The preview host's styles: its pane, toolbar, pages (inverted in the dark), the outline of a click, the shading of
-   highlighted source ranges, the dimming of a failed compile and the loader. Added by the workbench (Preview.styleSheet). See preview.ts. */
+/* The preview's pane, toolbar, pages (inverted in the dark), the outline of a click, the shading of highlighted source
+   ranges, the dimming of a failed compile and the loader. See Preview in preview.ts, whose styleSheet the workbench
+   adds. */
 .typst-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--te-preview-bg); }
 .typst-preview__toolbar {
   display: flex;

@@ -1,4 +1,3 @@
-// Preview. Entry of hosts/preview/. See docs/30_architecture/06_preview.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
@@ -19,20 +18,17 @@ import { Loader } from './progress/loader';
 import css from './preview.css?inline';
 
 /**
- * The live preview: compiles Typst in a worker and shows the pages as SVG,
- * under a toolbar of contributed items.
+ * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar.
  *
- * Hides the worker, request coalescing (only the newest pending update or
- * reveal is processed), lazy and incremental page rendering, and the px ↔ pt
- * mapping for click-to-source and source-to-preview reveal.
+ * It is the right side's built-in panel. The workbench gives it the project's files on every change, and it compiles
+ * whether shown or not, because others need what a compile finds out: the diagnostics, the pictures of raw boxes
+ * (`snippet`), where a click or the cursor lands. Compiling never falls behind typing: text that is outdated before
+ * its turn is skipped (`LatestOnly`).
  *
- * The live preview of a Typst project, compiled in a worker, with hit-testing.
- *
- * Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the lazily
- * rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is contributed:
- * toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers, and the policy
- * of when to reveal what (the preview-sync extension follows the cursor and jumps to the source of a click). So a
- * feature adds to the preview without the preview knowing it.
+ * The preview keeps the mechanism: the engine worker, the page list that renders only the pages near the view,
+ * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
+ * page number, "Follow cursor", "Download PDF"), the PDF export options, and when to reveal or shade what
+ * (preview-sync). While the engine loads, the pane shows what it waits for. See docs/30_architecture/06_preview.typ.
  */
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();
@@ -478,7 +474,7 @@ export interface RenderedSnippet {
 /**
  * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
  * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded (`failed`).
- * The pane shows it while it has no pages; the workbench shows it in the status bar.
+ * The pane shows it while it has no pages; the workbench turns `failed` into an error message.
  */
 export interface PreviewProgress {
   readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';

@@ -1,4 +1,4 @@
-// Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual editor). See ../preview.ts.
+// Snippets: a page's SVG cut down to the boxes of a source range (a raw box's picture). See Preview in ../preview.ts.
 import { Pt, type PageRect, type Page } from '../../../core/typst-engine/typst-engine';
 import type { RenderedSnippet } from '../preview';
 

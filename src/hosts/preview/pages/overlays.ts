@@ -1,4 +1,4 @@
-// Overlays on the preview's pages: elements positioned in percent of their page. See ../preview.ts.
+// Overlays on the preview's pages: elements positioned in percent of their page. See Preview in ../preview.ts.
 import type { PageRect } from '../../../core/typst-engine/typst-engine';
 import { percentOfPage } from './geometry';
 import type { PageList } from './page-list';

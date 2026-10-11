@@ -1,4 +1,4 @@
-// PageList: page placeholders; SVG only for the pages near the viewport. See ../preview.ts.
+// See Preview in ../preview.ts.
 import { PageIndex, type Page } from '../../../core/typst-engine/typst-engine';
 import type { Zoom } from '../preview';
 import { measure, Px } from './geometry';

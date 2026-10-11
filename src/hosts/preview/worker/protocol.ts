@@ -1,4 +1,4 @@
-// The messages between the preview and the engine worker. See worker.ts and docs/30_architecture/06_preview.typ.
+// The messages between the preview and the engine worker. See startEngineWorker in worker.ts.
 import type { PageRect, CompileResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';

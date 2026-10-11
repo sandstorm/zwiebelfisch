@@ -1,4 +1,4 @@
-// LatestOnly: a task runner that only processes the newest value (compiles, cursor reveals). See preview.ts.
+// See Preview in preview.ts.
 
 /**
  * Runs an async task for pushed values, one at a time, dropping values that

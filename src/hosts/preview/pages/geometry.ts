@@ -1,11 +1,9 @@
-// Preview geometry. See ../preview.ts.
+// The preview's units: CSS pixels (Px) as the DOM measures them, points (Pt) as the engine does, boxes in percent of
+// a page, and which page or box is in view. See Preview in ../preview.ts.
 import { PageIndex, Pt } from '../../../core/typst-engine/typst-engine';
 
 /**
  * A length in CSS pixels, as the DOM measures it (`getBoundingClientRect`, mouse events); a page's points scaled by the zoom.
- *
- * CSS pixels (Px) as the DOM measures them, points (Pt) as the engine does, boxes in percent of a page, and which page
- * or box is in view.
  */
 export type Px = number & { readonly __type: 'Px' };
 

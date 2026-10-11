@@ -1,4 +1,4 @@
-// downloadWasm. See engine.worker.ts and docs/30_architecture/06_preview.typ.
+// See startEngineWorker in worker.ts.
 
 /**
  * Fetches the wasm at `url` and returns a response whose body is the download as it arrives, counted for `onProgress`,
@@ -7,9 +7,6 @@
  *
  * `total` is the `Content-Length` when the body comes as sent; a compressed body (`Content-Encoding`) arrives
  * decompressed, larger than its length, so then `total` is null, as it is when more arrives than announced.
- *
- * The engine's wasm as a streamed response that reports how much has arrived, so the preview can show the download
- * while the browser compiles the module as it comes in.
  */
 export async function downloadWasm(url: string, onProgress: DownloadListener, fetcher: typeof fetch = fetch): Promise<Response> {
   const response = await fetcher(url);

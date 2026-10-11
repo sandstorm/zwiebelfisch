@@ -1,5 +1,4 @@
-// The engine worker: hosts the Typst engine off the main thread and answers the preview's requests.
-// See worker.ts and docs/30_architecture/06_preview.typ.
+// The engine worker's own thread: answers the preview's requests. See startEngineWorker in worker.ts.
 import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst-engine';
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
 import { downloadWasm } from './download';

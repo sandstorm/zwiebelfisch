@@ -1,13 +1,11 @@
-// LoadState. See ../preview.ts and docs/30_architecture/06_preview.typ.
+// See Preview in ../preview.ts and docs/30_architecture/06_preview.typ, "Concepts".
 import type { PreviewProgress } from '../preview';
 import type { LoadEvent } from '../worker/protocol';
 
 /**
  * The preview's loading, most important first: a failed engine, the engine's download, packages and fonts downloading
- * during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending.
- *
- * What the preview still waits for — the engine's wasm, the first compile, packages, fonts — from the worker's load
- * events, as one `PreviewProgress`. No DOM.
+ * during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending. Made from the
+ * worker's load events, as one `PreviewProgress`; no DOM.
  */
 export class LoadState {
   #engine: Engine = { kind: 'loading', loaded: 0, total: null };
