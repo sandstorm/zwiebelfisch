@@ -365,6 +365,11 @@ export class WindowHost implements WindowApi {
     return this.#customEditors.show(file, viewType);
   }
 
+  /** The element of the custom editor's panel shown in the editing area; null while none is shown. */
+  activeCustomEditorElement(): HTMLElement | null {
+    return this.#customEditors.shownElement;
+  }
+
   /** The editors `path` can be switched between (the tabs), best first. */
   customEditorChoices(path: ProjectPath): readonly CustomEditorChoice[] {
     return this.#customEditors.choicesFor(path);

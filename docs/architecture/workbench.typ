@@ -20,7 +20,7 @@
 - *The preview is the right side's built-in panel* (`preview`), registered by the workbench before any extension, so it comes first on the right rail. It compiles whether shown or not (diagnostics, raw box snippets, selection shading).
 - *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source view are the two built-in ones for `*.typ` (`visualView.editor`, `sourceView.editor`), registered by the workbench (`TypstEditors`) before any extension, so they win ties. They stay hosts with contribution points, like VS Code's built-in text editor.
 - *Tabs = "open with"*: a file several editors match gets a tab each; the one picked (a tab, `open(path, { viewType })`) is the user's choice for every later file it matches. Visual / Source is this switch for Typst files.
-- *`TypstEditors`*: a document's view is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both views (`activeTextEditor`); the editor frame goes into the visible view.
+- *`TypstEditors`*: a document's view is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both views (`activeTextEditor`); the editor frame goes into the visible view (around any other editor's panel).
 - *State*: `StorageMemento` behind `globalState` and `workspaceState` (@extensions-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
 
 #table(

@@ -1,22 +1,91 @@
-// The file-navigation extension: "← previous file" / "next file →" above and below a file the main file includes, in
-// its reading order. Entry of extensions/file-navigation/. See docs/guide/features.typ.
-// Why an extension of its own: it shares nothing with the file panel but the project; a host may keep one without
-// the other.
+// The file-navigation extension: the links around the shown file that lead to other files. "← previous file" /
+// "next file →" above and below a file the main file includes, in its reading order; "← Back to …" / "Forward to … →"
+// above any file, the files the user came from (VS Code's Go Back / Go Forward, also by key). Entry of
+// extensions/file-navigation/. See docs/guide/features.typ.
+// Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the
+// file panel, so a host may keep them without it.
+// Why the history listens to the shown file rather than to the ways of opening one (links, "Edit diagram", the
+// preview, the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in
+// VS Code, without any feature knowing about the history.
 import { neighbours } from '../../core/typst-syntax/typst-syntax';
+import type { ProjectPath } from '../../core/paths/paths';
+import { SourceRange } from '../../core/typst-document/typst-document';
+import type { TextEditor } from '../../hosts/window/window';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './file-navigation.css?inline';
+import { type NavigationLocation, NavigationHistory } from './model/navigation-history';
 import { FileNavigation } from './workbench/file-navigation';
+import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
 
-/** "← previous file" / "next file →" above and below a file the main file includes, in its reading order. */
+/** Goes back to the file shown before (with its editor and selection), if any. */
+const BACK = 'fileNavigation.back';
+/** Goes forward again, after going back. */
+const FORWARD = 'fileNavigation.forward';
+
+/** The links around the shown file: previous / next file in reading order, back / forward in the files the user was in. */
 export function fileNavigation(): TypstExtension {
   return {
     id: 'file-navigation',
-    activate({ project, window, workbench, subscriptions }) {
+    activate({ project, window, workbench, commands, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
-      const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
+      const doc = workbench.ownerDocument;
+      const readingOrder = new FileNavigation(doc, (path) => workbench.open(path));
+      const history = new NavigationHistory(window.activeFile);
+      // the file shown, and its Typst editor (read when the user leaves it: the view keeps its selection while hidden)
+      let shown: { path: ProjectPath; editor: TextEditor | null } = { path: window.activeFile, editor: window.activeTextEditor };
+      let going = false;
+      const here = (): NavigationLocation => {
+        const { path, editor } = shown;
+        if (!editor || !project.has(path)) return { path };
+        return { path, viewType: VIEW_TYPES[editor.mode], selection: editor.selection };
+      };
+      const go = (direction: 'back' | 'forward') => {
+        const target = direction === 'back' ? history.goBack(here()) : history.goForward(here());
+        if (!target) return;
+        const selection = target.selection && within(target.selection, project.document(target.path)?.text);
+        going = true;
+        try {
+          workbench.open(target.path, { viewType: target.viewType, selection });
+        } finally {
+          going = false;
+        }
+      };
+      const links = new HistoryLinks(doc, go);
+      const top = doc.createElement('div');
+      top.className = 'typst-file-navigation__top';
+      top.append(links.element, readingOrder.top);
       // recomputed on every open and every change: an #include may have been added, moved or removed
-      const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
-      subscriptions.push(workbench.registerEditorFrame(navigation), window.onDidChangeActiveFile(show), project.onDidChangeFile(show));
+      const show = () => {
+        readingOrder.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
+        links.show(history.back?.path ?? null, history.forward?.path ?? null);
+      };
+      const opened = (path: ProjectPath) => {
+        if (!going) history.open(here(), path);
+        shown = { path, editor: window.activeTextEditor };
+        show();
+      };
+      subscriptions.push(
+        workbench.registerEditorFrame({ top, bottom: readingOrder.bottom }),
+        window.onDidChangeActiveFile(opened),
+        project.onDidChangeFile((change) => {
+          history.followFileChange(change);
+          show();
+        }),
+        commands.registerCommand(BACK, () => go('back')),
+        commands.registerCommand(FORWARD, () => go('forward')),
+        commands.registerKeybinding(KEYBINDINGS.forward, FORWARD),
+        commands.registerKeybinding(KEYBINDINGS.back, BACK),
+      );
+      show();
     },
   };
+}
+
+/** The Typst editors' view types (`workbench.open`'s `viewType`), by the view a TextEditor shows. */
+const VIEW_TYPES = { visual: 'visualView.editor', source: 'sourceView.editor' } as const;
+
+/** `range` within a text of now (it may have become shorter since). */
+function within(range: SourceRange, text: string | undefined): SourceRange | undefined {
+  if (text === undefined) return undefined;
+  return SourceRange.of({ from: Math.min(range.from, text.length), to: Math.min(range.to, text.length) });
 }

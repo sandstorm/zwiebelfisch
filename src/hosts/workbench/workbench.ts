@@ -125,8 +125,9 @@ export interface Workbench {
    */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
-   * Shows `top` right before and `bottom` right after the shown Typst file's content (in the Visual tab below its
-   * toolbar), scrolling with it, across tab and file switches; detached while no Typst file is shown. One frame at a time.
+   * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: in a
+   * Typst file's view inside its content (in the Visual view below its toolbar), scrolling with it; around any other
+   * editor's panel, not scrolling. Detached while no editor is shown. One frame at a time.
    */
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
   /**
@@ -282,7 +283,7 @@ export class WorkbenchHost implements Workbench {
   readonly #visualView = new VisualViewHost();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
-  #hasFrame = false;
+  #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscription: Disposable;
@@ -389,6 +390,7 @@ export class WorkbenchHost implements Workbench {
     const viewType = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType);
     if (options.selection) this.#typstEditors.activeTextEditor?.revealRange(options.selection);
     this.#tabs.update(this.window.customEditorChoices(path), viewType);
+    this.#placeFrame();
     this.#shown.fire(path);
     this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);
@@ -403,12 +405,15 @@ export class WorkbenchHost implements Workbench {
   }
 
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
-    if (this.#hasFrame) throw new Error('There is an editor frame already');
-    this.#hasFrame = true;
+    if (this.#frame) throw new Error('There is an editor frame already');
+    this.#frame = frame;
     this.#typstEditors.setFrame(frame);
+    this.#placeFrame();
     return new Disposable(() => {
-      this.#hasFrame = false;
+      this.#frame = null;
       this.#typstEditors.setFrame(null);
+      frame.top.remove();
+      frame.bottom.remove();
     });
   }
 
@@ -475,6 +480,22 @@ export class WorkbenchHost implements Workbench {
   #createPreview(): Preview {
     const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
     return new Preview(panel.body);
+  }
+
+  /**
+   * The editor frame around the shown custom editor's panel, unless a Typst view is shown (TypstEditors puts it into
+   * the view's scrolling content then).
+   */
+  #placeFrame(): void {
+    if (!this.#frame || this.#typstEditors.activeTextEditor) return;
+    const panel = this.window.activeCustomEditorElement();
+    if (panel) {
+      panel.before(this.#frame.top);
+      panel.after(this.#frame.bottom);
+    } else {
+      this.#frame.top.remove();
+      this.#frame.bottom.remove();
+    }
   }
 
   /** The right side's default panel from the setting `workbench.rightSidePanel`. */
