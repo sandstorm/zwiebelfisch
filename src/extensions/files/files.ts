@@ -1,16 +1,14 @@
-// The files extensions: the file panel (the project's files as a tree in the left side panel: new file / folder,
-// upload, rename, delete as commands in its menus, drag & drop, file decorations) and "← previous / next file →"
-// around an included file. Entry of extensions/files/. See ARCHITECTURE.md, "File panel".
-// Why one extension per concern: each is a controller over the workbench's contribution points (a side panel, an
-// editor frame, commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what
-// they need of the workbench as options, so the panel is tested without one.
+// The files extension: the file panel (the project's files as a tree in the left side panel: new file / folder,
+// upload, rename, delete as commands in its menus, drag & drop, file decorations). Entry of extensions/files/. See
+// ARCHITECTURE.md, "File panel".
+// Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
+// commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
+// workbench as options, so the panel is tested without one.
 import { Disposable } from '../../core/disposable/disposable';
-import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU, type FilePanelOptions } from './workbench/file-panel';
-import { FileNavigation } from './workbench/file-navigation';
 import { icon } from './workbench/icons/icons';
 
 /** When the file panel is open (the setting `files.panel`). */
@@ -117,19 +115,5 @@ function panelMenus(workbench: Workbench): FilePanelOptions['menus'] {
   return {
     items: (menuId, context) => workbench.getMenuItems(menuId, context),
     run: (command, resource) => void workbench.executeCommand(command, resource).catch((error: unknown) => console.error(`Command ${command} failed:`, error)),
-  };
-}
-
-/** "← previous file" / "next file →" above and below a file the main file includes, in its reading order. */
-export function fileNavigation(): TypstExtension {
-  return {
-    id: 'file-navigation',
-    activate({ project, workbench, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
-      const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
-      // recomputed on every open and every change: an #include may have been added, moved or removed
-      const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));
-      subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), project.onDidChangeFile(show));
-    },
   };
 }

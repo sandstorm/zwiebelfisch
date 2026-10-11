@@ -7,7 +7,8 @@
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
-import { fileNavigation, files } from '../extensions/files/files';
+import { fileNavigation } from '../extensions/file-navigation/file-navigation';
+import { files } from '../extensions/files/files';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';

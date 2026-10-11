@@ -101,13 +101,12 @@ src/                        the widget (TypeScript); the most important API on t
                             entry files: the extension's files import each other directly. Extensions never import
                             each other.
     files/                  files (the file panel in a side panel; the commands files.newFile / newFolder / upload /
-                            rename / delete in the menus file/newFile and explorer/context), fileNavigation (editor
-                            frame); files.css (each extension with styles has its <name>.css, registered with
-                            Workbench.registerStyleSheet)
+                            rename / delete in the menus file/newFile and explorer/context); files.css (each extension
+                            with styles has its <name>.css, registered with Workbench.registerStyleSheet)
       model/                tree-model.ts (the tree as data, keyboard moves, relocate)
-      workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads), file-navigation.ts ("← previous file"
-                            / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, file decorations as
-                            badges), icons/ (leaf)
+      workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads), tree/
+                            (FileTree: rows, keyboard, drag & drop, file decorations as badges), icons/ (leaf)
+    file-navigation/        fileNavigation (editor frame): workbench/file-navigation.ts ("← previous file" / "next file →")
     spreadsheets/           spreadsheets: the `.ic` custom editor; every edit also stores `name.ic.gen.typ`; "New spreadsheet…"
       model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath), dark-theme.ts
                             (darkThemeVariables: IronCalc's palette from the widget's tokens)
@@ -1512,7 +1511,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   changes (a `MutationObserver`; `ColorScheme` at creation, on OS changes and on `workbench.theme` changes), so a page switching its own color-scheme later changes the tokens at
   once, CodeMirror's own chrome at the next resize, and the preview's inversion not until reload.
 
-### File panel (`src/extensions/files`)
+### File panel (`src/extensions/files`, `src/extensions/file-navigation`)
 
 ```ts
 files()  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
