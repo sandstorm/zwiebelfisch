@@ -38,8 +38,8 @@ import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { Grammar } from './grammar';
-import { projectDocument } from './projecting';
-import { forgetPrinted, printed, type Span } from './printing';
+import { projectDocument } from './parser';
+import { forgetPrinted, printed, type Span } from './serializer';
 import { pristine } from './pristine';
 import { ANCHORS, RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
@@ -60,7 +60,7 @@ export interface Placed {
  * What projectors get to build nodes from Typst syntax: the source, the schema, and the framework's own
  * steps (blocks of a content block, inline content, textblocks that print their source while untouched).
  */
-export interface ProjectionContext {
+export interface TypstParseContext {
   readonly schema: Schema;
   readonly source: string;
   /** The source of `range`. */
@@ -88,29 +88,29 @@ export interface ProjectionContext {
 
 /** Block syntax that always stands alone (`Heading`, `ListItem`): the block, or null to let the next projector try. */
 export interface BlockSyntaxProjector {
-  project(p: ProjectionContext, node: SyntaxNode, sep: string | null): Node | null;
+  project(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null;
   /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
   takesLabel?: boolean;
 }
 
 /** A run of markup that is exactly `node` (e.g. raw text over several lines): a block, or null. */
-export type RunProjector = (p: ProjectionContext, node: SyntaxNode, sep: string | null) => Node | null;
+export type RunProjector = (p: TypstParseContext, node: SyntaxNode, sep: string | null) => Node | null;
 
 /**
  * A run that is exactly one `#name(..)` call (`call`: its `FuncCall`; the run's source is `withHash(call)`), or a call
  * a spec reads as a block (a figure's body, without `#`): the block (checking the arguments first), or null.
  */
-export type BlockCallProjector = (p: ProjectionContext, call: SyntaxNode, sep: string | null) => Node | null;
+export type BlockCallProjector = (p: TypstParseContext, call: SyntaxNode, sep: string | null) => Node | null;
 
 /** One piece of inline syntax: a node showing all of its source, the placed content (marks), or null (raw). */
-export type InlineProjector = (p: ProjectionContext, node: SyntaxNode, marks: readonly Mark[]) => Node | Placed[] | null;
+export type InlineProjector = (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]) => Node | Placed[] | null;
 
 /** A call after `#` in running text (`#link("url")[text]`). */
 export interface InlineCallProjector {
   /** Whether `call` is this construct's: it then belongs in running text (makes its run a paragraph), even if left raw. */
-  matches(p: ProjectionContext, call: SyntaxNode): boolean;
+  matches(p: TypstParseContext, call: SyntaxNode): boolean;
   /** The node or placed content, or null to leave the call raw (or to the next projector). */
-  project(p: ProjectionContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+  project(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
 }
 
 /** How a spec reads Typst: by syntax, by call, by the inline syntax it models. */
@@ -130,7 +130,7 @@ export interface ProjectionSpec {
 }
 
 /** Prints an edited (not untouched) block that starts at document position `pos` inside `parent`. */
-export type BlockPrinter = (out: Printer, node: Node, pos: number, parent: Node) => void;
+export type BlockPrinter = (out: TypstSerializeState, node: Node, pos: number, parent: Node) => void;
 
 /** What the framework knows of a node type: its schema part, how it is read from Typst and printed back. */
 export interface NodeGrammar extends ProjectionSpec {
@@ -186,7 +186,7 @@ export interface MarkGrammar extends ProjectionSpec {
  * blocks (`NodeGrammar.print`) write through it: syntax hidden in the document, shown text and atoms, and child
  * blocks, which print as the grammar says.
  */
-export interface Printer {
+export interface TypstSerializeState {
   /** Source not shown in the document; it maps to the next visible position in its block. */
   hidden(src: string): void;
   /** Source shown by the document range `pmFrom`..`pmTo`. */

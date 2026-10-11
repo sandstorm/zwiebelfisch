@@ -8,7 +8,7 @@ import type { Mark, Node } from '@tiptap/pm/model';
 import type { Window } from '../../../hosts/window/window';
 import { callArguments, calleeName, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type Placed, type Printer, type ProjectionContext } from '../../../hosts/projection/projection';
+import { starterKitPart, type Around, type Placed, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -54,7 +54,7 @@ function delimitedSyntax(delimiter: string, func: string, { before, after, first
 
 /** `*…*` / `_…_` with both delimiters present: its content with the mark; null (raw) for unclosed ones. */
 function delimited(markName: string) {
-  return (p: ProjectionContext, node: SyntaxNode, marks: readonly Mark[]): Placed[] | null => {
+  return (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Placed[] | null => {
     const parts = children(node);
     const markup = node.getChild('Markup');
     if (parts.length !== 3 || !markup || parts[2].name !== parts[0].name) return null;
@@ -99,7 +99,7 @@ export const LINK: TypstMarkSpec = {
 };
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
-function linkCall(p: ProjectionContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
+function linkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
   const [url, ...others] = callArguments(call);
   const blocks = trailingContent(call);
   if (calleeName(call, p.source) !== 'link' || url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
@@ -189,7 +189,7 @@ export const BLOCKQUOTE: TypstNodeSpec = {
   print: (out, quote, pos) => printAround(out, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
 };
 
-function blockquote(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+function blockquote(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const blocks = trailingContent(call);
   if (blocks?.length !== 1 || !isBlockQuoteArgs(p, call)) return null;
   const { content, from, to } = p.blocks(blocks[0]);
@@ -199,13 +199,13 @@ function blockquote(p: ProjectionContext, call: SyntaxNode, sep: string | null):
 }
 
 /** Named arguments only, `block: true` among them. */
-function isBlockQuoteArgs(p: ProjectionContext, call: SyntaxNode): boolean {
+function isBlockQuoteArgs(p: TypstParseContext, call: SyntaxNode): boolean {
   const block = namedArgument(call, 'block', p.source);
   return callArguments(call).every((a) => a.name === 'Named') && block !== null && p.text(block) === 'true';
 }
 
 /** `open`, the container's blocks, `close`. */
-function printAround(out: Printer, block: Node, pos: number, { open, close }: QuoteLayout): void {
+function printAround(out: TypstSerializeState, block: Node, pos: number, { open, close }: QuoteLayout): void {
   out.hidden(open);
   out.blocks(block, pos + 1, '\n\n');
   out.closing(close);

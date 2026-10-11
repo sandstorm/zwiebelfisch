@@ -7,7 +7,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from './core/typst-document/typst-document';
 import type { SyntaxNode } from '@lezer/common';
-import { callArguments, decodeString, namedArgument, quote, trailingContent, withHash, type Printer, type ProjectionContext, type ToolbarItem, type TypstExtension, type TypstNodeSpec } from './index';
+import { callArguments, decodeString, namedArgument, quote, trailingContent, withHash, type TypstSerializeState, type TypstParseContext, type ToolbarItem, type TypstExtension, type TypstNodeSpec } from './index';
 import { createVisualView } from './testing/testing';
 
 // ----- the example, as in docs/embedding.md (there it imports from 'typst-editor') -----
@@ -57,7 +57,7 @@ const Callout = Node.create({
 });
 
 /** `#callout[..]` or `#callout(title: "plain string")[..]`, whose content is blocks; anything else stays raw Typst. */
-function projectCallout(p: ProjectionContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
+function projectCallout(p: TypstParseContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
   const content = trailingContent(call);
   const title = calloutTitle(p, call);
   if (content?.length !== 1 || title === null) return null;
@@ -68,7 +68,7 @@ function projectCallout(p: ProjectionContext, call: SyntaxNode, sep: string | nu
 }
 
 /** The title of `(title: "…")` (no arguments: "Note"); null for other arguments. */
-function calloutTitle(p: ProjectionContext, call: SyntaxNode): string | null {
+function calloutTitle(p: TypstParseContext, call: SyntaxNode): string | null {
   const args = callArguments(call);
   const title = namedArgument(call, 'title', p.source);
   if (args.length === 0) return 'Note';
@@ -76,7 +76,7 @@ function calloutTitle(p: ProjectionContext, call: SyntaxNode): string | null {
 }
 
 /** As written while the title is; a new callout, or one with a changed title, gets the call printed anew. */
-function printCallout(out: Printer, callout: ProseMirrorNode, pos: number): void {
+function printCallout(out: TypstSerializeState, callout: ProseMirrorNode, pos: number): void {
   const layout: CalloutLayout | null = callout.attrs.layout;
   const title: string = callout.attrs.title;
   out.hidden(layout?.title === title ? layout.open : `#callout(title: ${quote(title)})[`);

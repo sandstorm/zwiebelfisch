@@ -6,7 +6,7 @@ import type { Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/projection/projection';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
 
 const TypstTaskList = TaskList.extend({
@@ -78,7 +78,7 @@ export const TASK_ITEM: TypstNodeSpec = {
 const TASK_BOX = /^\[([ x])\](?: |$)/;
 
 /** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; null for other bullet items. */
-function taskItem(p: ProjectionContext, node: SyntaxNode, sep: string | null): Node | null {
+function taskItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {
   const markup = node.getChild('Markup');
   const box = markup ? TASK_BOX.exec(p.text(markup)) : null;
   if (!markup || !box) return null;

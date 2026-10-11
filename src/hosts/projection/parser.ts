@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { Placed, ProjectionContext, BlockLabel } from './projection';
+import type { Placed, TypstParseContext, BlockLabel } from './projection';
 import type { Grammar } from './grammar';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
@@ -11,7 +11,7 @@ import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
 export function projectDocument(source: string, schema: Schema, grammar: Grammar): Node {
-  return new Projection(schema, source, grammar).document();
+  return new TypstToProseMirrorParser(schema, source, grammar).document();
 }
 
 /** A top-level stretch of source that becomes one block (or one list item), and the label after it. */
@@ -41,7 +41,7 @@ const SHORTHANDS: Record<string, string> = {
 };
 
 /** The framework's own inline syntax: text, line breaks, escapes and shorthands. */
-const INLINE: Record<string, (p: Projection, src: string, marks: readonly Mark[]) => Node> = {
+const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: readonly Mark[]) => Node> = {
   Text: (p, src, marks) => p.schema.text(src, marks),
   SmartQuote: (p, src, marks) => p.schema.text(src, marks),
   Space: (p, src, marks) => (src.includes('\n') ? p.schema.nodes.softBreak.create({ src }) : p.schema.text(src, marks)),
@@ -55,8 +55,8 @@ function decodeEscape(src: string): string {
   return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
 }
 
-/** One projection of one source text: what projectors get as their `ProjectionContext`. */
-class Projection implements ProjectionContext {
+/** Parses one source text into a document: what the specs' parse functions get as their `TypstParseContext`. */
+class TypstToProseMirrorParser implements TypstParseContext {
   /** See `serial`. */
   private serials = 0;
 

@@ -81,8 +81,8 @@ export type {
   MarkGrammar,
   NodeGrammar,
   Placed,
-  Printer,
-  ProjectionContext,
+  TypstSerializeState,
+  TypstParseContext,
   ProjectionSpec,
   RunProjector,
 } from './hosts/projection/projection';

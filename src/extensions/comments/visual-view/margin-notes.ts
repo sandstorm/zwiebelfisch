@@ -8,7 +8,7 @@ import type { NodeView } from '@tiptap/pm/view';
 import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { Placed, ProjectionContext } from '../../../hosts/projection/projection';
+import type { Placed, TypstParseContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
@@ -103,7 +103,7 @@ const NOTE_RANGE: TypstMarkSpec = {
  * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
  * mark holding them. Null for calls that are not margin notes.
  */
-function marginNoteCall(p: ProjectionContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
+function marginNoteCall(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
   const syntax = noteCallSyntax(p.source, call);
   if (!syntax) return null;
   const { head, text, note } = syntax;

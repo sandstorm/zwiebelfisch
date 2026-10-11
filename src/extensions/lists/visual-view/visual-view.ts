@@ -6,7 +6,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { BlockPrinter, ProjectionContext } from '../../../hosts/projection/projection';
+import type { BlockPrinter, TypstParseContext } from '../../../hosts/projection/projection';
 
 /** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
 const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });
@@ -57,7 +57,7 @@ export const LIST_ITEM: TypstNodeSpec = {
   print: printListItem,
 };
 
-function listItem(p: ProjectionContext, node: SyntaxNode, sep: string | null): Node {
+function listItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node {
   const marker = node.firstChild!;
   const markup = node.getChild('Markup');
   const body = markup ? children(markup) : [];

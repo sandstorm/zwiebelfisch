@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, hasOnlyArguments, isClosedContent, isEmbeddable, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/projection/projection';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**
@@ -12,7 +12,7 @@ import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-lay
  * `table.header(..)`. A cell is a content block `[..]` or an expression
  * (`ms(18)`, `$x^2$`), which becomes a raw box in a cell of its own.
  */
-export function projectTable(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+export function projectTable(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const parsed = tableArgs(p, call);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
   if (parsed.headerCells !== 0 && parsed.headerCells !== parsed.columns) return null;
@@ -37,7 +37,7 @@ export function projectTable(p: ProjectionContext, call: SyntaxNode, sep: string
 }
 
 /** A cell written as an expression: a paragraph holding it as a raw box (code, without `#`). */
-function bareCell(p: ProjectionContext, node: SyntaxNode): { content: Node[]; from: number; to: number } {
+function bareCell(p: TypstParseContext, node: SyntaxNode): { content: Node[]; from: number; to: number } {
   const src = p.text(node);
   const atom = p.schema.nodes.rawInline.create({ src, code: true });
   const paragraph = p.textblock({ type: 'paragraph', attrs: { src } }, node.from, [{ node: atom, from: node.from, to: node.to }]);
@@ -53,7 +53,7 @@ const ARG_SEP = /^\s*,\s*$/;
  * call's syntax and what follows the last row. Null if `columns` comes after
  * the first row.
  */
-function tableStyle(p: ProjectionContext, call: { from: number; to: number }, parsed: TableArgs): TableStyle | null {
+function tableStyle(p: TypstParseContext, call: { from: number; to: number }, parsed: TableArgs): TableStyle | null {
   const text = (from: number, to: number) => p.source.slice(from, to);
   const between = (a: SyntaxNode | undefined, b: SyntaxNode | undefined) => (a && b ? text(a.to, b.from) : null);
   const cells = parsed.cells.map((c) => c.node);
@@ -107,7 +107,7 @@ interface TableArgs {
  * and cells only (see `tableCell`), the first of them optionally in a
  * `table.header(..)`.
  */
-function tableArgs(p: ProjectionContext, call: SyntaxNode): TableArgs | null {
+function tableArgs(p: TypstParseContext, call: SyntaxNode): TableArgs | null {
   if (!hasOnlyArguments(call)) return null;
   const result: TableArgs = { columns: 0, columnsCount: null, named: [], cells: [], header: null, headerCells: 0 };
   for (const arg of callArguments(call)) {
@@ -122,7 +122,7 @@ function tableArgs(p: ProjectionContext, call: SyntaxNode): TableArgs | null {
 }
 
 /** Takes a `table.header(..)` of cells before any other cell as the header cells. */
-function headerArg(p: ProjectionContext, arg: SyntaxNode, into: TableArgs): boolean {
+function headerArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): boolean {
   const target = arg.name === 'FuncCall' ? arg.firstChild : null;
   if (!target || p.text(target) !== 'table.header' || into.cells.length > 0) return false;
   // `table.header([a], [b])` or `table.header[a][b]`
@@ -141,14 +141,14 @@ function headerArg(p: ProjectionContext, arg: SyntaxNode, into: TableArgs): bool
  * `bare`. Other `table.*` elements (cells with spans, lines, a footer) and
  * comments are not cells: the table stays raw.
  */
-function tableCell(p: ProjectionContext, arg: SyntaxNode): { node: SyntaxNode; bare: boolean } | null {
+function tableCell(p: TypstParseContext, arg: SyntaxNode): { node: SyntaxNode; bare: boolean } | null {
   if (isClosedContent(arg)) return { node: arg, bare: false };
   const src = p.text(arg);
   if (arg.name === 'ContentBlock' || /Comment/.test(arg.name) || /^table\s*\./.test(src)) return null;
   return isEmbeddable(src) ? { node: arg, bare: true } : null;
 }
 
-function namedArg(p: ProjectionContext, arg: SyntaxNode, into: TableArgs): void {
+function namedArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): void {
   const name = arg.getChild('Ident');
   if (!name || p.text(name) !== 'columns') {
     into.named.push(arg);

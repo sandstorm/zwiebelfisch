@@ -5,7 +5,7 @@ import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/projection/projection';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -82,7 +82,7 @@ export const HORIZONTAL_RULE: TypstNodeSpec = {
 const POSITIONING = new Set(['start', 'end', 'angle']);
 
 /** Named arguments only, `length: 100%` among them and none of `POSITIONING`. */
-function isFullWidthLine(p: ProjectionContext, call: SyntaxNode): boolean {
+function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
   const named = callArguments(call).every((arg) => arg.name === 'Named' && !POSITIONING.has(p.text(arg.firstChild!)));
   const length = namedArgument(call, 'length', p.source);
   return named && length !== null && p.text(length) === '100%';

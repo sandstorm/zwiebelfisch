@@ -4,7 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 
@@ -41,7 +41,7 @@ export const JUSTIFIED_PARAGRAPH: TypstNodeSpec = {
 };
 
 /** `#align(<literal alignment>)[..]`: an alignment block whose content is projected like the document's. */
-function projectAlignment(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+function projectAlignment(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const blocks = trailingContent(call);
   const open = call.getChild('Args')?.getChild('LeftParen');
   const close = call.getChild('Args')?.getChild('RightParen');
@@ -55,7 +55,7 @@ function projectAlignment(p: ProjectionContext, call: SyntaxNode, sep: string | 
 }
 
 /** `#par(justify: <bool>)[..]` around one paragraph's inline content: that paragraph, with its `justify` flag. */
-function projectJustified(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+function projectJustified(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const blocks = trailingContent(call);
   const justify = namedArgument(call, 'justify', p.source);
   const value = justify && p.text(justify);
@@ -68,7 +68,7 @@ function projectJustified(p: ProjectionContext, call: SyntaxNode, sep: string | 
 }
 
 /** `#align(args)[blocks]`, keeping the source around the blocks as projected; only a changed `args` is re-printed. New: `#align(x)[A\n\nB]`. */
-function printAlignment(out: Printer, block: Node, pos: number): void {
+function printAlignment(out: TypstSerializeState, block: Node, pos: number): void {
   const args: string = block.attrs.args;
   const layout: AlignLayout = block.attrs.layout ?? { args, open: `#align(${args})[`, close: ']' };
   const head = '#align(';
@@ -78,7 +78,7 @@ function printAlignment(out: Printer, block: Node, pos: number): void {
 }
 
 /** An edited paragraph: its text, in `#par(justify: x)[..]` if it has `justify`. */
-function printParagraph(out: Printer, block: Node, pos: number): void {
+function printParagraph(out: TypstSerializeState, block: Node, pos: number): void {
   const justify: boolean | null = block.attrs.justify ?? null;
   if (justify !== null) out.hidden(`#par(justify: ${justify})[`);
   out.inline(block, pos + 1);

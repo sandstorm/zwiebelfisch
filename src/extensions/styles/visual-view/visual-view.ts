@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import type { Placed, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import type { TextStyle, TextStyleProvider, TypstMarkSpec, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
@@ -88,7 +88,7 @@ const STYLE: TypstMarkSpec = {
 };
 
 /** `#name(..)?[content]` of a declared paragraph style: a `styledBlock` whose content is segmented like the document. */
-function styledBlock(p: ProjectionContext, call: SyntaxNode, sep: string | null, declared: Declared): Node | null {
+function styledBlock(p: TypstParseContext, call: SyntaxNode, sep: string | null, declared: Declared): Node | null {
   const name = calleeName(call, p.source);
   const style = declared.get(name);
   const blocks = trailingContent(call);
@@ -100,7 +100,7 @@ function styledBlock(p: ProjectionContext, call: SyntaxNode, sep: string | null,
 }
 
 /** `#name[..]` around a styled block's blocks, or the call around them as projected. */
-function printStyledBlock(out: Printer, block: Node, pos: number): void {
+function printStyledBlock(out: TypstSerializeState, block: Node, pos: number): void {
   const { open, close }: StyleLayout = block.attrs.layout ?? { open: `#${block.attrs.name}[`, close: ']' };
   out.hidden(open);
   out.blocks(block, pos + 1, '\n\n');
@@ -108,7 +108,7 @@ function printStyledBlock(out: Printer, block: Node, pos: number): void {
 }
 
 /** `#key[text]` (or `#key(..)[text]`) of a declared text style, with non-empty, single-paragraph text; null otherwise. */
-function styleCall(p: ProjectionContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): Placed[] | null {
+function styleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): Placed[] | null {
   const name = calleeName(call, p.source);
   const style = declared.get(name);
   const blocks = trailingContent(call);
