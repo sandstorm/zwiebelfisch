@@ -238,6 +238,10 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    optional extension `devtools()` in `src/extensions/devtools/` (not in the built-in list; the demo
    toggle adds it), on the secondary side bar. Runs after the devtools-readable and
    selection-highlight merges.
+   **Docs sort by prefix** (user, 2026-10-11): parts `10_guide/`, `20_extensions/`, `30_architecture/`,
+   chapters `01_getting-started.typ`, `02_…` in reading order; all references (main.typ, site.typ,
+   code top comments, quality check, README, demo example) follow. After the running docs-touching
+   agents merge, before distilling the notes.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
