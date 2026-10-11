@@ -1,4 +1,4 @@
-/* The labels extension's styles: References (@key) as chips, labels (<key>) as tags, the @ list.
+/* The labels extension's styles: References (@key) as chips, labels (<key>) as tags.
    Registered by labels.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
 .typst-labels__ref {
@@ -41,21 +41,3 @@
   outline: none;
   box-shadow: 0 0 0 2px var(--te-jump);
 }
-/* The @ list: the project's labels below the typed @ */
-.typst-labels__suggestions {
-  position: absolute;
-  z-index: 3;
-  min-width: 220px;
-  max-width: 380px;
-  padding: 4px;
-  border: 1px solid var(--te-border);
-  border-radius: 8px;
-  background: var(--te-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
-  font: 13px system-ui, sans-serif;
-}
-.typst-labels__suggestions[hidden] { display: none; }
-.typst-labels__suggestions-option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.typst-labels__suggestions-option[aria-selected='true'] { background: var(--te-hover); }
-.typst-labels__suggestions-name { font-family: ui-monospace, monospace; white-space: nowrap; }
-.typst-labels__suggestions-hint { overflow: hidden; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }

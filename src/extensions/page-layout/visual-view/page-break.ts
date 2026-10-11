@@ -55,4 +55,4 @@ export const PAGE_BREAK: TypstNodeSpec = {
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');
 
 /** "Insert page break" in the Insert menu (also Mod+Enter in the text). */
-export const INSERT_PAGE_BREAK: ToolbarAction = { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, run: (c) => c.setPageBreak() };
+export const INSERT_PAGE_BREAK: ToolbarAction = { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, keywords: ['new page'], run: (c) => c.setPageBreak() };

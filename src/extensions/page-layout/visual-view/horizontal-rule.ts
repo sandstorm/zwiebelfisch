@@ -97,4 +97,4 @@ function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
 const ICON = svg('<path d="M3 12h18"/>');
 
 /** "Horizontal rule" in the Insert menu. */
-export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, run: (c) => c.setHorizontalRule() };
+export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, keywords: ['line', 'divider', 'separator'], run: (c) => c.setHorizontalRule() };

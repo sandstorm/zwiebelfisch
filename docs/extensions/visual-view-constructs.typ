@@ -216,8 +216,9 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   columns: 2,
   [Contribution point], [What],
   [`registerToolbarGroup(group)`], [A place for items: a `group` in the row, a `menu` button, or a `floating` bar at an anchor. The host's: `history` (order 10), `text-style` (20), the `insert` menu (50), the floating `selection` bar],
-  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled) or `create(toolbar)` for an item with state per view],
-  [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles)],
+  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first) or `create(toolbar)` for an item with state per view. `keywords`: other words the slash commands find it by],
+  [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
+  [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-view-constructs-completion)],
   [`registerBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
   [`registerBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" is one],
   [`registerGutter(provider)`], [A column beside the text, per view (the notes gutter)],
@@ -229,3 +230,34 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 - Contributions register once; the host applies them to every view it creates (views are made lazily, per document). Disposing a registration takes it out of views created later.
 - Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualViewContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual view draws on its box.
+
+== Completion lists <extensions-visual-view-constructs-completion>
+
+`registerCompletionItemProvider(provider, { char, allowedPrefixes? })`: a list that opens while `char` and a query are typed in the text. The labels after `@` and the slash commands after `/` are two.
+
+- *Where:* `char` at the start of a text block or after one of `allowedPrefixes` (default: a space); the query runs to the cursor, without spaces. Never in code (code blocks, inline code) nor raw boxes.
+- *What:* `provideCompletionItems(context)` returns `CompletionItem`s, asked again on every keystroke. `context` is the `VisualViewContext` plus `editor`, `query`, `toolbarActions(group)` and `textStyles()` (what this view's toolbar shows: how one extension offers what others registered).
+- *Filtering* is the host's: items whose `label` or `keywords` contain the query, case ignored; a label equal to it first, then labels starting with it, labels containing it, keywords containing it. No match: no list.
+- *Keys:* ↑ / ↓ choose (wrapping), Enter or Tab accept, Escape closes until another trigger is typed. The pointer chooses, a click accepts. The editor keeps the focus and names the chosen option (`aria-activedescendant` of the `listbox`).
+- Built on Tiptap's `Suggestion` (`@tiptap/suggestion`, placed with Floating UI); VS Code's names (`CompletionItem`, `commitCharacters`).
+
+#table(
+  columns: 2,
+  [`CompletionItem` field], [What],
+  [`label`], [Shown and matched],
+  [`detail?`], [Shown dimmed after the label (what a label labels, `Insert`)],
+  [`icon?`], [A toolbar icon (`svg(..)`) before the label],
+  [`keywords?`], [Other words it is found by],
+  [`commitCharacters?`], [Typed while the item is chosen: accept it, then type the character (`@intro` + `.`)],
+  [`command({ editor, range })`], [Accepting it: replace `range` (the trigger and the query) with what it stands for],
+)
+
+```ts
+visualView.registerCompletionItemProvider(
+  {
+    provideCompletionItems: () =>
+      ['TODO', 'FIXME'].map((tag) => ({ label: tag, command: ({ editor, range }) => editor.chain().focus().insertContentAt(range, `${tag}: `).run() })),
+  },
+  { char: '!' },
+);
+```

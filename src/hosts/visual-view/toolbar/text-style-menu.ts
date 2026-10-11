@@ -52,8 +52,7 @@ export class TextStyleMenu implements ToolbarControl {
 
   /** Asks the providers again and rebuilds the options. */
   private update(): void {
-    const provided = this.providers.flatMap((provider) => provider.provideTextStyles(this.view));
-    this.entries = provided.map((entry, index) => ({ entry, index })).sort((a, b) => (a.entry.order ?? 0) - (b.entry.order ?? 0) || a.index - b.index).map(({ entry }) => entry);
+    this.entries = textStyleEntries(this.providers, this.view);
     const doc = this.element.ownerDocument;
     this.element.replaceChildren(new Option('Normal text', NORMAL_TEXT));
     let section: HTMLOptGroupElement | null = null;
@@ -113,4 +112,10 @@ function onlyParagraphs({ doc, selection }: EditorState): boolean {
     return only;
   });
   return only;
+}
+
+/** The providers' entries for `view`, by `order` (equal: as provided): the menu's entries after "Normal text". */
+export function textStyleEntries(providers: readonly TextStyleProvider[], view: VisualViewContext): TextStyle[] {
+  const provided = providers.flatMap((provider) => provider.provideTextStyles(view));
+  return provided.map((entry, index) => ({ entry, index })).sort((a, b) => (a.entry.order ?? 0) - (b.entry.order ?? 0) || a.index - b.index).map(({ entry }) => entry);
 }

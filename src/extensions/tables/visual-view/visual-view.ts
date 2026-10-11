@@ -53,7 +53,7 @@ const ICONS = {
 };
 
 /** "Insert table" in the Insert menu: a 2 × 2 table without header row. */
-export const INSERT_TABLE: ToolbarAction = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
+export const INSERT_TABLE: ToolbarAction = { label: 'Insert table', icon: ICONS.table, keywords: ['grid', 'spreadsheet'], run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
 
 /** The bar floating above the table that holds the cursor. */
 export const TABLE_BAR: ToolbarGroup = { kind: 'floating', id: 'table', order: 20, label: 'Table', anchor: (editor) => tableAnchor(editor) };

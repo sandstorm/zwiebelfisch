@@ -1,7 +1,7 @@
-// Tests for label-choices.ts: which labels the @ list offers, and how a label is described.
+// Tests for label-description.ts: how a label is described.
 import { describe, expect, it } from 'vitest';
 import type { LabelInfo } from './label-index';
-import { describeLabel, labelChoices } from './label-choices';
+import { describeLabel } from './label-description';
 import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
@@ -16,26 +16,6 @@ const LABELS: LabelInfo[] = [
   { name: 'knuth1984', kind: 'bibliography', title: null, path: path('/refs.bib') },
   { name: 'intro', kind: 'heading', title: 'Duplicate', path: path('/other.typ') },
 ];
-
-const names = (query: string) => labelChoices(LABELS, query).map((l) => l.name);
-
-describe('labelChoices', () => {
-  it('offers every label (once per name) for an empty query', () => {
-    expect(names('')).toEqual(['intro', 'method', 'eq:speedup', 'results', 'tab:timings', 'fig:compile-times', 'knuth1984']);
-  });
-
-  it('puts names starting with the query first, then names and titles containing it; ignores case', () => {
-    expect(names('fig')).toEqual(['fig:compile-times']);
-    expect(names('ti')).toEqual(['tab:timings', 'fig:compile-times', 'intro']);
-    expect(names('RES')).toEqual(['results']);
-    expect(names('compile')).toEqual(['fig:compile-times', 'tab:timings']);
-    expect(names('zzz')).toEqual([]);
-  });
-
-  it('offers at most `limit` labels', () => {
-    expect(labelChoices(LABELS, '', 3)).toHaveLength(3);
-  });
-});
 
 describe('describeLabel', () => {
   it('names the kind and the title, shortened', () => {
