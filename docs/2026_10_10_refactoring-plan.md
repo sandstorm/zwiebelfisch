@@ -177,7 +177,12 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **No inspector side panel** (user, 2026-10-11): editing stays inline with popovers (image tools,
    label tags, Align menu, table bar, caption buttons). Remove the inspector from the docs' open
    work in the next docs-touching step.
-   **Text diagrams (Mermaid / D2), design decided by the user (2026-10-11):** no Typst package; the
+   **Mermaid via `@preview/merman` (user, 2026-10-11; research: it compiles in our engine, 3.45 MB
+   first download, ~200–420 ms per changed diagram, closest to Mermaid):** `.mmd` in the text-files
+   editor, a docs section (`#render(read("x.mmd"))` and ```` ```mermaid ```` blocks), one diagram in the
+   advanced demo. D2 (`@preview/tiago`) not now. The converter design below is only the fallback if
+   fidelity falls short.
+   **Text diagrams converter (fallback design, user 2026-10-11):** no Typst package; the
    **automatic converter is the must**, a special editor is **open** (later candidates: inline render
    errors at their line, syntax highlighting). Two plain files, both in git: the source `name.d2` / `name.mmd` (edited in the
    text-files editor, which gets these patterns) and the generated `name.d2.gen.svg` /
