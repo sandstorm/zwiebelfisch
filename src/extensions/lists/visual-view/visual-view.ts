@@ -81,7 +81,7 @@ function parseListItem(p: TypstParseContext, node: SyntaxNode, sep: string | nul
   const content = p.isOneParagraph(body)
     ? p.textblock({ type: 'paragraph', attrs: { src: bodySrc } }, markup?.from ?? 0, p.inline(body))
     : p.schema.nodes.rawBlock.create({ src: bodySrc });
-  return p.pristine('listItem', { marker: p.text(marker), src: p.text(node), sep }, [content]);
+  return p.unchangedNode('listItem', { marker: p.text(marker), src: p.text(node), sep }, [content]);
 }
 
 const ICONS = {

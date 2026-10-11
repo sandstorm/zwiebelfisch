@@ -7,7 +7,7 @@ import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { PlacedNode, TypstParseContext, BlockLabel } from './prosemirror-typst';
 import type { TypstConversions } from './typst-conversions';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
-import { layout, pristine } from './pristine';
+import { layout, unchangedNodes } from './unchanged-nodes';
 import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
@@ -114,14 +114,14 @@ class TypstToProseMirrorParser implements TypstParseContext {
   textblock({ type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node {
     const node = this.schema.nodes[type].create(attrs, content.map((p) => p.node));
     const to = from + attrs.src.length;
-    pristine.set(node, layout(content, from, contentTo ?? to, to));
+    unchangedNodes.set(node, layout(content, from, contentTo ?? to, to));
     this.serials = 0; // the next textblock counts from 0 again
     return node;
   }
 
-  pristine(type: string, attrs: Record<string, unknown>, content?: Node[] | Node['content']): Node {
+  unchangedNode(type: string, attrs: Record<string, unknown>, content?: Node[] | Node['content']): Node {
     const node = this.schema.nodes[type].create(attrs, content);
-    pristine.set(node, null);
+    unchangedNodes.set(node, null);
     return node;
   }
 
@@ -195,7 +195,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     if (!segment.label) return block;
     const label: BlockLabel = { name: this.source.slice(segment.label.from + 1, segment.label.to - 1), gap: this.source.slice(segment.to, segment.label.from) };
     const labelled = block.type.create({ ...block.attrs, label }, block.content, block.marks);
-    if (pristine.has(block)) pristine.set(labelled, pristine.get(block)!);
+    if (unchangedNodes.has(block)) unchangedNodes.set(labelled, unchangedNodes.get(block)!);
     return labelled;
   }
 
@@ -254,7 +254,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     const flush = () => {
       if (items.length === 0) return;
       const last = items.at(-1)!;
-      items[items.length - 1] = this.pristine(last.type.name, { ...last.attrs, sep: null }, last.content);
+      items[items.length - 1] = this.unchangedNode(last.type.name, { ...last.attrs, sep: null }, last.content);
       result.push(this.schema.nodes[containerOf(items[0])!].create({ sep: last.attrs.sep }, items));
       items = [];
     };

@@ -57,7 +57,7 @@ A spec groups its fields by owner:
 - `standsAlone`: a block even without paragraph breaks around it (`Heading`, `ListItem`). `takesLabel`: a label right after it is its label.
 - `inRunningText(p, call)`: the call belongs in running text even where `inline` leaves it raw.
 
-`TypstParseContext`: `schema`, `source`, `text(range)` (a `SourceRange` or a syntax node), `blocks(contentBlock)` (the blocks and their `from`, `to`), `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `pristine(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
+`TypstParseContext`: `schema`, `source`, `text(range)` (a `SourceRange` or a syntax node), `blocks(contentBlock)` (the blocks and their `from`, `to`), `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `unchangedNode(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
 
 Read calls with the package's plain functions over Lezer nodes:
 

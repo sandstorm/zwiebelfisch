@@ -42,7 +42,7 @@ import type { Event } from '../../core/event-emitter/event-emitter';
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
 import { forgetPrinted, printed, type Span } from './serializer';
-import { pristine } from './pristine';
+import { unchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
 /** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
@@ -81,7 +81,7 @@ export interface TypstParseContext {
    */
   textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node;
   /** A node that prints `attrs.src` while untouched (a list item: its marker, then its only child). */
-  pristine(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
+  unchangedNode(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
   /** Verbatim inline Typst: a raw inline box. */
   raw(src: string, marks?: readonly Mark[]): Node;
   /** Counts up from 0 within the textblock being parsed (equal neighbouring marks stay apart by such an `id`). */
@@ -360,7 +360,7 @@ export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): SourceOff
  * the smallest replacement: ProseMirror's diff descends into equal-typed
  * nodes, so a changed word inside a paragraph replaces just that text and a
  * cursor elsewhere in the paragraph stays put. Attributes (`src`, `sep`) are
- * then updated in place and the result is marked pristine again.
+ * then updated in place and the result is marked unchanged since parsed again.
  */
 export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   for (const attr of ['lead', 'trail']) {
@@ -383,7 +383,7 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
     tr.replace(start, endA, target.slice(start, endB));
   }
   copyAttrs(tr, target);
-  markPristine(tr.doc, target);
+  markUnchanged(tr.doc, target);
   forgetPrinted(tr.doc);
   return tr;
 }
@@ -434,8 +434,8 @@ function copyAttrs(tr: Transaction, target: Node): void {
   });
 }
 
-function markPristine(node: Node, target: Node): void {
-  if (pristine.has(target)) pristine.set(node, pristine.get(target)!);
+function markUnchanged(node: Node, target: Node): void {
+  if (unchangedNodes.has(target)) unchangedNodes.set(node, unchangedNodes.get(target)!);
   if (node.childCount !== target.childCount) return;
-  node.forEach((child, _offset, index) => markPristine(child, target.child(index)));
+  node.forEach((child, _offset, index) => markUnchanged(child, target.child(index)));
 }

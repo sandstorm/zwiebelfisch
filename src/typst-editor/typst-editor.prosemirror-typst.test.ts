@@ -246,7 +246,7 @@ describe('applyTypstChanges', () => {
     expect(tr.doc.textContent).toBe('Hello world, this is more text');
   });
 
-  it('keeps nodes pristine after syncing, so later edits elsewhere print exact source', () => {
+  it('keeps nodes unchanged since parsed after syncing, so later edits elsewhere print exact source', () => {
     const state = EditorState.create({ doc: parseTypst('A -- b\n\nOther\n') });
     const synced = state.apply(applyTypstChanges(state.tr, parseTypst('A -- bc\n\nOther\n')));
     const edited = synced.apply(synced.tr.insertText('!', after(synced.doc, 'Other')));
