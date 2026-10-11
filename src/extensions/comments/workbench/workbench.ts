@@ -33,9 +33,9 @@ export function registerAddComment({ commands, window, workbench }: CommentConte
 /** The command that adds a margin note at the selection of the editor the user works in. */
 export const ADD_COMMENT = 'comments.addComment';
 
-/** The notes' cards in the Visual editors: the notes gutter. */
+/** The notes' floating cards in the Visual editors. */
 export interface NoteCards {
-  /** Focuses the card of the note whose source holds `offset` in `document`'s Visual editor; false if there is none. */
+  /** Opens and focuses the card of the note whose source holds `offset` in `document`'s Visual editor; false if there is none. */
   editNote(document: TypstDocument, offset: SourceOffset): boolean;
 }
 

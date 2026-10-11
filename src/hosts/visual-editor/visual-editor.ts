@@ -1,7 +1,7 @@
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node, ResolvedPos } from '@tiptap/pm/model';
-import { EditorState, NodeSelection, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
+import { EditorState, NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
@@ -33,11 +33,10 @@ import css from './visual-editor.css?inline';
  * See docs/30_architecture/04_visual-editor.typ.
  */
 export class VisualEditor {
-  /** The text and the gutters beside it, below the toolbar: what scrolls as the document's content. */
+  /** The text column below the toolbar (with what floats in it): what scrolls as the document's content. */
   readonly content: HTMLElement;
   private readonly tiptap: Editor;
   private readonly toolbar: Toolbar;
-  private readonly gutters: Gutter[];
   private readonly selectionChanged = new EventEmitter<void>();
   /** After the selection moved or the text changed; `selection()` already returns the new selection. */
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
@@ -49,7 +48,7 @@ export class VisualEditor {
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
     const editor: VisualEditorContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
-    // the text and, right of it, the gutters
+    // the text column: the text and what floats in it (bars, popovers), `position: relative`
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
     this.content = body;
@@ -78,13 +77,12 @@ export class VisualEditor {
     });
     const { schema } = this.tiptap;
     attachGrammar(schema, contributed.nodes, contributed.marks);
-    this.gutters = contributed.gutters.map((provider) => provider(editor, body));
     // Load the parsed document itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.tiptap.view.updateState(
       EditorState.create({
         schema,
         doc: parseTypst(document.text, schema),
-        plugins: [...this.tiptap.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
+        plugins: this.tiptap.state.plugins,
       }),
     );
     this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
@@ -134,7 +132,6 @@ export class VisualEditor {
     this.selectionChanged.dispose();
     this.toolbar.dispose();
     this.tiptap.destroy();
-    for (const gutter of this.gutters) gutter.dispose();
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
@@ -215,16 +212,6 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
   };
 }
 
-/** A column beside the text (the notes gutter), made for one editor. */
-export interface Gutter {
-  /** Added to the editor's Tiptap state. */
-  readonly plugin?: Plugin;
-  dispose(): void;
-}
-
-/** Makes an editor's gutter in `body`, the element holding the text (`.typst-visual__body`). */
-export type GutterProvider = (editor: VisualEditorContext, body: HTMLElement) => Gutter;
-
 /**
  * A styled stretch of the source (UTF-16 offsets) that the Visual editor draws
  * over its text, e.g. another user's selection or a diagnostic. `attributes`
@@ -282,7 +269,6 @@ export interface Contributed {
   readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
-  readonly gutters: readonly GutterProvider[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxCodeMirrorExtensions: readonly ((editor: VisualEditorContext) => Extension)[];
@@ -332,8 +318,6 @@ export interface VisualEditorContributions {
    * blocks, inline code) nor raw boxes. Of two providers with the same character, each opens its own list.
    */
   registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable;
-  /** A column beside the text, made for each editor. */
-  registerGutter(provider: GutterProvider): Disposable;
   /**
    * Highlights from `provider` in every editor, as layer `layer` (one per provider): set when the editor is created and
    * again whenever the provider reports a change of its document; they follow edits in between.
@@ -361,7 +345,6 @@ export class VisualEditorHost implements VisualEditorContributions {
     tiptapExtensions: [] as ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
-    gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxCodeMirrorExtensions: [] as ((editor: VisualEditorContext) => Extension)[],
     textStyles: [] as TextStyleProvider[],
@@ -404,10 +387,6 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.completionItemProviders, { provider, trigger });
   }
 
-  registerGutter(provider: GutterProvider): Disposable {
-    return this.add(this.lists.gutters, provider);
-  }
-
   registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable {
     return this.add(this.lists.highlights, { layer, provider });
   }
@@ -433,7 +412,6 @@ export class VisualEditorHost implements VisualEditorContributions {
       tiptapExtensions: [...lists.tiptapExtensions],
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
-      gutters: [...lists.gutters],
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],

@@ -37,7 +37,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
   [`testing/`], [every module's entry], [being imported by non-test code],
 )
 
-- *The line between model and view is the DOM.* Pure display logic (card layout, zoom presets, tree rows) is model.
+- *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
 - *Hosts keep only mechanism.* For every host member ask: mechanism, or one feature's policy? Policy is an extension. A host folder may also be a host's model module without contribution points (`hosts/prosemirror-typst`).
 - *Extensions never depend on each other*: not through imports, a service registry, commands or schema names. When one has something for another, a host offers a generic contribution point and the consumer reads every contribution. Another extension's schema names are read only as data (node groups like `figureBody`, configured type lists) and always guarded (`schema.nodes.x`, `editor.can()`).
 

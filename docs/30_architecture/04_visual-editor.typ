@@ -32,7 +32,7 @@ The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual edi
 What `ExtensionContext.visualEditor` is. Contributions register once, at activation; the host applies them to every editor it creates later. No contribution tracks editors.
 
 - Constructs: `registerNode`, `registerMark` (@extensions-visual-editor-constructs).
-- Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, gutters, highlights, box renderers, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
+- Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, highlights, box renderers, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
 - Who wins where they compete: @architecture-conventions-api.
 - Where its links lead (`VisualEditorLinks`, given by the workbench, not contributed): a raw box's picture the primary document link of the box's Typst, the text (a reference chip, a link mark) the link at the source offset under the pointer or at the cursor (`languages`), so the host knows no links. Hovering one sets the editor's title to where it leads, with Mod held the pointer shows (`typst-visual--link`), Mod+click or Alt+Enter follows it, a plain click edits.
 

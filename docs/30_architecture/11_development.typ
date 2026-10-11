@@ -92,7 +92,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
 #table(
   columns: (auto, auto, auto, auto, 1fr),
   table.header[Module][Lines / test][Σ cognitive][Hot][What makes it expensive],
-  [ext `comments`], [1380 / 1330], [300], [19], [its own Typst text format for note threads; page-margin rewriting (a workaround for drafting 0.2.2); the notes gutter's card layout],
+  [ext `comments`], [1380 / 1330], [300], [19], [its own Typst text format for note threads; page-margin rewriting (a workaround for drafting 0.2.2); the floating note card's focus and close rules],
   [host `window`], [1480 / 860], [228], [11], [its own quick input, search everywhere, custom editors with a filename-pattern compiler, messages, save dialog, status bar, file decorations],
   [host `prosemirror-typst`], [920 / 90], [198], [9], [the densest code (Typst ↔ ProseMirror parser, serializer, position map), tested almost only through extensions],
   [ext `collaboration`], [1070 / 970], [188], [6], [every editor, plus a server and GitLab rooms; its e2e specs need the server],
@@ -105,7 +105,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
 )
 
 - To re-measure: `mise run quality:report 100000` lists every function; add up per `src/<layer>/<name>/`.
-- Candidates to simplify: page-margin rewriting in `comments`; own tests for `hosts/prosemirror-typst`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerGutter`, `registerPdfExportOption`: comments; `registerEditorFrame`: file-navigation); `diagrams` (an iframe from embed.diagrams.net) and `spreadsheets` (IronCalc wasm, React) as extensions a host adds, like collaboration.
+- Candidates to simplify: page-margin rewriting in `comments`; own tests for `hosts/prosemirror-typst`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`: comments; `registerEditorFrame`: file-navigation); `diagrams` (an iframe from embed.diagrams.net) and `spreadsheets` (IronCalc wasm, React) as extensions a host adds, like collaboration.
 
 == Open work <architecture-development-open-work>
 

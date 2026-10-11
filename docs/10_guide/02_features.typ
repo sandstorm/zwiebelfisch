@@ -329,7 +329,7 @@ Cold compile time #margin-note[grows linearly][- *Ada* (2026-10-10): Linear up t
 - *Grace* (2026-10-11): Running it tonight.] with the page count.
 ```
 
-What Grace sees in the Visual editor: "grows linearly" highlighted, and beside it a card in the notes gutter:
+What Grace sees in the Visual editor: "grows linearly" highlighted with a speech bubble after it; a click on the bubble opens the card, floating below it:
 
 #figure(
   mermaid(read("../diagrams/comment-card.mmd"), width: 65%),
@@ -338,7 +338,8 @@ What Grace sees in the Visual editor: "grows linearly" highlighted, and beside i
 
 - Add: "Comment" (Visual editor toolbar or selection bar, Source editor tab bar) or Ctrl+Alt+M (⌘⌥M on Mac). Without a selection: a point note at the cursor.
 - A note is a thread: one list item per message, signed with your name and the date.
-- On the card: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, Resolve (deletes the note).
+- In the text: a note's speech bubble shows its first author and words on hover. The card opens with a click on the bubble or into the highlighted text, or with Alt+Enter (⌥↩ on Mac) at the note. Escape, Close or a click elsewhere closes it; the text gets the focus back. There is no column of cards beside the text: one card at a time floats at its note.
+- On the card: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, Resolve (deletes the note). A new note's card opens with the focus in its reply box; closing it sends what was typed there. A co-author's reply shows on an open card at once.
 - The preview shows the notes in the page margin.
 - A page margin given as one length (`#set page(margin: 1.5cm)`) becomes `margin: (right: 4cm, rest: 1.5cm)` with the first note: drafting needs room on the right.
 

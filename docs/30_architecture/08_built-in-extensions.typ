@@ -41,7 +41,7 @@ extensions/<name>/
   [`pageLayout`], [page breaks, horizontal rules], [nodes, toolbar],
   [`lists`], [bulleted, numbered and task lists], [nodes, toolbar],
   [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
-  [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include`; search group "Comments"], [node, mark, gutter, command, PDF option, search provider],
+  [`comments`], [margin notes in the text, each thread in a card floating at its note's marker; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include`; search group "Comments"], [node, mark, Tiptap extension, command, PDF option, search provider],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"; search group "Labels" (not figures', not bibliography keys); references and `#link(<label>)` as links to their label], [nodes, toolbar, completion items, search provider, document link provider],
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"; search group "Styles" (applies to the selection in either editor; the Visual editors followed by a Tiptap extension)], [node, mark, text style provider, Tiptap extension, search provider],
   [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`; the hint "Type / for commands" in the empty paragraph holding the cursor (not in table cells)], [completion items (reads toolbar and text styles), Tiptap extension (a decoration)],

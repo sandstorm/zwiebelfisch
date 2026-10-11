@@ -46,7 +46,7 @@ describe('Visual editor toolbar', () => {
   it('is a labelled toolbar above the editor', () => {
     const { toolbar } = setup('Hello\n');
     expect(toolbar.getAttribute('aria-label')).toBe('Formatting');
-    // the text (with the gutters beside it) follows
+    // the text column follows
     expect(toolbar.nextElementSibling?.firstElementChild?.classList.contains('typst-visual')).toBe(true);
   });
 

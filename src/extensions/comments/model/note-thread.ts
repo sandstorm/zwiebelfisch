@@ -121,6 +121,14 @@ export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** `text` on one line, cut at a word to at most `max` characters plus "…" (a message in a list or a tooltip). */
+export function firstWords(text: string, max: number): string {
+  const line = text.replace(/\s+/g, ' ').trim();
+  if (line.length <= max) return line;
+  const cut = line.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max / 2)).trimEnd()}…`;
+}
+
 /** A list item for `reply`, its marker indented by `indent`. */
 function replyItem(indent: string, reply: NewMessage): string {
   return `${indent}- ${header(reply)}${plainText(reply.text.trim(), `${indent}${INDENT}`)}`;

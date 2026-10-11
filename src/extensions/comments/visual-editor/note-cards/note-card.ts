@@ -1,14 +1,16 @@
-// One margin note's card in the notes gutter. See NotesGutter in notes-gutter.ts.
+// One margin note's floating card. See NoteCardPopover in note-cards.ts.
 import { readThread, type NoteMessage } from '../../model/note-thread';
 import type { KeyedNote } from './note-list';
 
 /**
- * One note's card: what it highlights, its thread (name, date and text per
- * message, oldest first, long threads collapsed), and a reply box (Mod+Enter
- * sends). Messages of the current user (`me`, by name: a soft rule) and
- * anonymous ones (no name) can be edited in place (pencil; Mod+Enter or leaving saves,
- * Escape cancels); the last message, if it is the user's, can be deleted.
- * "Resolve" deletes the note.
+ * One note's card, a `role="dialog"`: what it highlights, its thread (name,
+ * date and text per message, oldest first, long threads collapsed), and a
+ * reply box (Mod+Enter sends; the box keeps the focus). Messages of the
+ * current user (`me`, by name: a soft rule) and anonymous ones (no name) can
+ * be edited in place (pencil; Mod+Enter or leaving saves, Escape cancels); the
+ * last message, if it is the user's, can be deleted. "Resolve" deletes the
+ * note. Escape (outside a message being edited) and "Close" close the card;
+ * Tab and Shift+Tab stay inside it.
  */
 export class NoteCard {
   readonly dom: HTMLElement;
@@ -27,6 +29,7 @@ export class NoteCard {
     this.dom.className = 'typst-comments__card';
     this.dom.dataset.testid = 'typst-note-card';
     this.dom.dataset.noteKey = key;
+    this.dom.setAttribute('role', 'dialog');
     this.dom.innerHTML = CARD_HTML;
     this.quote = this.dom.querySelector('.typst-comments__card-quote')!;
     this.thread = this.dom.querySelector('.typst-comments__card-thread')!;
@@ -34,22 +37,20 @@ export class NoteCard {
     // buttons must not take the focus from a field (resolving must not send a draft first)
     this.dom.addEventListener('mousedown', (event) => this.handleMouseDown(event));
     this.dom.addEventListener('click', (event) => this.handleClick(event));
-    this.dom.addEventListener('mouseenter', () => actions.hover(key));
-    this.dom.addEventListener('mouseleave', () => actions.hover(null));
-    this.dom.addEventListener('focusin', () => actions.activate(key));
-    this.field.addEventListener('input', () => actions.resized());
-    this.field.addEventListener('keydown', (event) => this.handleReplyKey(event));
-    this.field.addEventListener('blur', () => {
-      // a note's first message is sent when the box is left (a reply waits for Mod+Enter)
-      if (this.messages.length === 0) this.send();
+    this.dom.addEventListener('keydown', (event) => this.handleKey(event));
+    this.field.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      this.send();
     });
   }
 
   /** Shows `note`; the reply box and a message being edited keep what the user typed. */
   show(note: KeyedNote): void {
     this.dom.classList.toggle('typst-comments__card--range', note.kind === 'range');
-    this.quote.textContent = note.kind === 'range' ? note.text : 'Note';
+    this.quote.textContent = note.kind === 'range' ? note.text : 'Comment';
     this.quote.title = note.kind === 'range' ? note.text : '';
+    this.dom.setAttribute('aria-label', note.kind === 'range' ? `Comment on “${note.text}”` : 'Comment');
     if (note.note === this.markup) return;
     this.markup = note.note;
     this.messages = readThread(note.note);
@@ -58,19 +59,16 @@ export class NoteCard {
     if (!this.editing) this.renderThread();
   }
 
-  highlight(active: boolean, hover: boolean): void {
-    this.dom.classList.toggle('typst-comments__card--active', active);
-    this.dom.classList.toggle('typst-comments__card--hover', hover);
-  }
-
   /** Focuses the reply box. */
   focus(): void {
     this.field.focus();
     this.field.setSelectionRange(this.field.value.length, this.field.value.length);
   }
 
-  place(top: number): void {
-    this.dom.style.top = `${Math.round(top)}px`;
+  /** Before the card closes: saves a message being edited, and sends a new note's first message (the reply box keeps a reply). */
+  commit(): void {
+    this.finishEdit(true);
+    if (this.messages.length === 0) this.send();
   }
 
   private renderThread(): void {
@@ -87,7 +85,6 @@ export class NoteCard {
     }
     this.thread.replaceChildren(...items);
     this.thread.hidden = count === 0;
-    this.actions.resized();
   }
 
   private messageItem(doc: Document, message: NoteMessage, index: number): HTMLElement {
@@ -120,6 +117,7 @@ export class NoteCard {
   /** The buttons, by `data-action`; `index` is the message's (NaN outside a message). */
   private readonly buttonActions: Record<string, (index: number) => void> = {
     resolve: () => this.actions.remove(this.key),
+    close: () => this.actions.close(this.key),
     more: () => this.expand(),
     send: () => this.send(),
     edit: (index) => this.startEdit(index),
@@ -130,6 +128,21 @@ export class NoteCard {
     const button = (event.target as Element).closest<HTMLElement>('button[data-action]');
     const index = Number(button?.closest<HTMLElement>('[data-index]')?.dataset.index);
     if (button) this.buttonActions[button.dataset.action!]?.(index);
+  }
+
+  /** Escape closes the card; Tab and Shift+Tab go round its fields and buttons. */
+  private handleKey(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.actions.close(this.key);
+    } else if (event.key === 'Tab') {
+      const stops = [...this.dom.querySelectorAll<HTMLElement>('button, textarea')].filter((element) => !element.closest('[hidden]'));
+      const active = (this.dom.getRootNode() as Document | ShadowRoot).activeElement;
+      const next = event.shiftKey ? (active === stops[0] ? stops.at(-1) : null) : (active === stops.at(-1) ? stops[0] : null);
+      if (!next) return;
+      event.preventDefault();
+      next.focus();
+    }
   }
 
   private expand(): void {
@@ -145,18 +158,6 @@ export class NoteCard {
     this.actions.reply(this.key, text);
   }
 
-  private handleReplyKey(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      this.send();
-    } else if (event.key === 'Escape') {
-      this.field.value = '';
-    } else {
-      return;
-    }
-    event.preventDefault();
-    this.actions.done(this.key);
-  }
-
   /** Replaces message `index`'s text with a text area holding it. */
   private startEdit(index: number): void {
     const item = this.thread.querySelector<HTMLElement>(`[data-index="${index}"]`);
@@ -169,18 +170,18 @@ export class NoteCard {
     field.value = this.messages[index].text;
     text.replaceWith(field);
     this.editing = { index, field };
-    field.addEventListener('input', () => this.actions.resized());
     field.addEventListener('blur', () => this.finishEdit(true));
     field.addEventListener('keydown', (event) => {
       const save = event.key === 'Enter' && (event.metaKey || event.ctrlKey);
       if (!save && event.key !== 'Escape') return;
+      // Escape ends the edit, not the card
       event.preventDefault();
+      event.stopPropagation();
       this.finishEdit(save);
-      this.actions.done(this.key);
+      this.focus();
     });
     field.focus();
     field.setSelectionRange(field.value.length, field.value.length);
-    this.actions.resized();
   }
 
   private finishEdit(save: boolean): void {
@@ -193,7 +194,7 @@ export class NoteCard {
   }
 }
 
-/** What a card asks the gutter to do with its note (nothing happens if the note is gone). */
+/** What a card asks for its note (nothing happens if the note is gone). */
 export interface CardActions {
   /** Appends `text` as a message of the current user. */
   reply(key: string, text: string): void;
@@ -203,24 +204,24 @@ export interface CardActions {
   deleteMessage(key: string, index: number): void;
   /** Resolves the note: deletes it. */
   remove(key: string): void;
-  /** Editing is over: the text cursor goes after the note. */
-  done(key: string): void;
-  activate(key: string): void;
-  hover(key: string | null): void;
-  resized(): void;
+  /** Closes the card; the focus goes back to the text. */
+  close(key: string): void;
 }
 
 const ICON =
   '<svg class="typst-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 const CHECK =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
+const CROSS =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
 
 const SEND =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8l11-5-4 11-2-4.5z"/></svg>';
 
 const CARD_HTML =
   `<div class="typst-comments__card-head">${ICON}<span class="typst-comments__card-quote"></span>`
-  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
+  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button>`
+  + `<button type="button" class="typst-comments__card-close" data-action="close" aria-label="Close" title="Close (Escape)">${CROSS}</button></div>`
   + '<ol class="typst-comments__card-thread" hidden></ol>'
   + '<div class="typst-comments__card-compose"><textarea class="typst-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
   + `<button type="button" class="typst-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;

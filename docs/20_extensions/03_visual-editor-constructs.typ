@@ -220,7 +220,6 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
   [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-editor-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
-  [`registerGutter(provider)`], [A column beside the text, per editor (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands; hooks see `this.editor`],
   [`registerRawBoxCodeMirrorExtension(editor => extension)`], [CodeMirror extensions for the code of every raw box],

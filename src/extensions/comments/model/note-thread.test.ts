@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { parseNoteCall, printNoteCall } from './margin-note-syntax';
-import { addReply, deleteMessage, editMessage, localDate, readThread } from './note-thread';
+import { addReply, deleteMessage, editMessage, firstWords, localDate, readThread } from './note-thread';
 
 const anna = (text: string) => ({ author: 'Anna', date: '2026-10-10', text });
 const bob = (text: string) => ({ author: 'Bob', date: '2026-10-11', text });
@@ -138,6 +138,14 @@ describe('deleteMessage', () => {
 describe('localDate', () => {
   it('is the local date as YYYY-MM-DD', () => {
     expect(localDate(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
+  });
+});
+
+describe('firstWords', () => {
+  it('puts the text on one line and cuts it at a word', () => {
+    expect(firstWords('short\n text', 20)).toBe('short text');
+    expect(firstWords('one two three four', 12)).toBe('one two…');
+    expect(firstWords('abcdefghijklmnop', 8)).toBe('abcd…');
   });
 });
 
