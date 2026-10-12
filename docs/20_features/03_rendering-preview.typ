@@ -20,8 +20,9 @@ The preview on the right shows the pages as Typst compiles them, the whole docum
 
 - "Comments" (on by default): the margin notes. Off, the preview draws the document as if it had none (a range note's text stays); the Visual editor keeps its notes, and the PDF has its own choice (@features-comments).
 - "Page guides": dashed blue borders of the text area, the header and the footer (and column gutters), as LaTeX's `showframe`, for any page size and margins the document sets (`auto` ones too). A page background of the document's own stays; the guides are then drawn over the text.
-- "Box outlines": a thin magenta outline around every block and box (headings, figures, lists, equations, `#block`, `#box`), around the inset and widened by the outset. A stroke the document gives stays as it is. Each `v(…)` (`1fr` too) is shaded as a teal hatched band where Typst laid it out; weak spacing that merged with the spacing between blocks shows nothing. The inset and the spacing between blocks are not drawn on their own.
-- The pictures of raw boxes in the Visual editor are cut from the preview, so they show guides and outlines too.
+- "Box outlines": a thin magenta outline around every block and box (headings, figures, lists, equations, `#block`, `#box`), around the inset and widened by the outset. A stroke the document gives stays as it is. Each `v(…)` (`1fr` too) is shaded as a teal hatched band where Typst laid it out. The inset is not drawn on its own.
+- "Block spacing": the gaps between blocks and paragraphs shaded in teal, hatched the other way, as Typst laid them out. Slows the preview of long documents.
+- The pictures of raw boxes in the Visual editor are cut from the preview, so they show guides, outlines and bands too.
 - What other extensions offer for the preview is listed there, too.
 
 Settings (@reference-configuration-settings):

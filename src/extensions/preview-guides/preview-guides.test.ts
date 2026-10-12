@@ -28,6 +28,7 @@ function registered(): Record<string, PreviewViewOption> {
 const options = registered();
 const GUIDES = options['previewGuides.pageGuides'];
 const OUTLINES = options['previewGuides.boxOutlines'];
+const SPACING = options['previewGuides.blockSpacing'];
 
 /** The file the preview compiles with `on` applied in turn: their prelude, then `/main.typ` included. */
 function entry(on: readonly PreviewViewOption[]): string {
@@ -36,16 +37,17 @@ function entry(on: readonly PreviewViewOption[]): string {
 }
 
 describe('previewGuides', () => {
-  it('registers "Page guides" and "Box outlines", both off by default', () => {
+  it('registers "Page guides", "Box outlines" and "Block spacing", all off by default', () => {
     expect(Object.values(options).map(({ id, label, default: on }) => [id, label, on])).toEqual([
       ['previewGuides.pageGuides', 'Page guides', false],
       ['previewGuides.boxOutlines', 'Box outlines', false],
+      ['previewGuides.blockSpacing', 'Block spacing', false],
     ]);
     // drawn by the prelude itself: no package to download
     expect(entry([GUIDES])).not.toContain('#import');
     // off: nothing added
     const start = { prelude: [] };
-    expect([GUIDES.apply(start, false), OUTLINES.apply(start, false)]).toEqual([start, start]);
+    expect([GUIDES, OUTLINES, SPACING].map((option) => option.apply(start, false))).toEqual([start, start, start]);
   });
 });
 
@@ -77,7 +79,7 @@ describe('the view options compiled', () => {
     await compile(DOCUMENT, []);
     const before = engine.jumpFromCursor('/main.typ', offset);
     expect(before).toHaveLength(1);
-    await compile(DOCUMENT, [GUIDES, OUTLINES]);
+    await compile(DOCUMENT, [GUIDES, OUTLINES, SPACING]);
     expect(engine.jumpFromCursor('/main.typ', offset)).toEqual(before);
   });
 
@@ -156,10 +158,15 @@ describe('the view options compiled', () => {
     expect(svg).toMatch(/stroke="#ff4136"[^>]*stroke-width="1"/);
   });
 
-  /** The heights of a page's spacing bands (the paths filled with the hatch), in points, in the order drawn. */
-  function bandsOf(svg: string): number[] {
-    const bands = [...svg.matchAll(/<path fill="url\(#[^"]+\)"[^>]*d="M 0 0h [\d.]+v ([\d.]+)h/g)];
-    return bands.map((band) => Math.round(Number(band[1]) * 10) / 10);
+  /**
+   * The heights of a page's spacing bands (the paths filled with a hatch), in points, in the order drawn: `v` for the
+   * `v(…)` bands (hatched `/`), `gaps` for the gaps between blocks and paragraphs (hatched `\`).
+   */
+  function bandsOf(svg: string): { v: number[]; gaps: number[] } {
+    const gapHatches = new Set([...svg.matchAll(/<pattern id="([^"]+)"(?:(?!<\/pattern>).)*?d="M 0 0l 4 4"/g)].map((hatch) => hatch[1]));
+    const bands = [...svg.matchAll(/<path fill="url\(#([^)]+)\)"[^>]*d="M 0 0h [\d.]+v ([\d.]+)h/g)];
+    const heights = (gaps: boolean) => bands.filter((band) => gapHatches.has(band[1]) === gaps).map((band) => Math.round(Number(band[2]) * 10) / 10);
+    return { v: heights(false), gaps: heights(true) };
   }
 
   /**
@@ -181,22 +188,23 @@ describe('the view options compiled', () => {
   v(1fr)
   text(fill: blue, weight: "bold", size: 11pt, tracking: 0.12em, upper[Documentation])
   v(0.4em)
-  text(size: 34pt, weight: "bold", it)
-  v(0.2em)
+  block(below: 12pt, text(size: 34pt, weight: "bold", it))
   line(length: 3.2cm, stroke: 5pt + yellow)
   v(2fr)
   text(size: 9pt)[Company · #link("https://sandstorm.de")[sandstorm.de]]
 })
+#set document(title: [Book])
 #set page(paper: "a6", header: [Head], footer: [Foot])
 #set heading(numbering: "1.1")
+#show title: it => title-page(it)
 #show heading.where(level: 1): it => {
   pagebreak(weak: true)
   v(4cm)
-  it
-  line(length: 3.2cm, stroke: 5pt + yellow)
+  block(below: 16pt, text(size: 28pt, it))
+  block(above: 16pt, line(length: 3.2cm, stroke: 5pt + yellow))
 }
 #show heading.where(level: 2): it => pagebreak(weak: true) + v(1cm) + it
-#title-page[Book]
+#title()
 = Part
 Text #v(1em, weak: true) after weak.
 #v(10pt, weak: true)
@@ -224,27 +232,81 @@ After.
 Overflow.
 `;
 
-  it('shades vertical spacing as laid out, moving nothing: fixed, fr, weak, at a page top, in show rules', async () => {
+  it('shades vertical spacing as laid out, moving nothing, each option alone and both: fixed, fr, weak, at a page top, in show rules', async () => {
     // the document's own set rules take the outlines away, which are drawn shapes too
     const unstroked = `#set block(stroke: none)\n#set box(stroke: none)\n${SPACED}`;
     const plain = await layoutOf(unstroked, []);
     expect(plain.pages).toBe(5);
-    expect(await layoutOf(unstroked, [OUTLINES])).toEqual(plain);
-    expect(await layoutOf(unstroked, [GUIDES, OUTLINES])).toEqual(plain);
+    for (const on of [[OUTLINES], [GUIDES, OUTLINES], [SPACING], [OUTLINES, SPACING]]) expect(await layoutOf(unstroked, on)).toEqual(plain);
 
-    const bands = (await compile(SPACED, [OUTLINES])).pages.map((page) => bandsOf(page.svg));
-    // the title page: 1fr, 0.4em and 0.2em of 11pt, 2fr (twice the 1fr)
-    const [fr, , , twoFr] = bands[0];
-    expect(bands[0]).toEqual([fr, 4.4, 2.2, twoFr]);
+    // each option alone draws its own bands only
+    const alone = async (option: PreviewViewOption) => (await compile(SPACED, [option])).pages.map((page) => bandsOf(page.svg));
+    const bands = (await compile(SPACED, [OUTLINES, SPACING])).pages.map((page) => bandsOf(page.svg));
+    expect(await alone(OUTLINES)).toEqual(bands.map(({ v }) => ({ v, gaps: [] })));
+    expect(await alone(SPACING)).toEqual(bands.map(({ gaps }) => ({ v: [], gaps })));
+    // the title page: 1fr, 0.4em of the title's 18.7pt, 2fr (twice the 1fr); the gaps around the title are the
+    // title's own block spacing (1.125em of 18.7pt), set for all it shows: it wins over the paragraph's spacing (set
+    // beats auto) and over the 12pt below (the larger of two set ones)
+    const [fr, , twoFr] = bands[0].v;
+    expect(bands[0]).toEqual({ v: [fr, 7.5, twoFr], gaps: [21, 21] });
     expect(twoFr).toBeCloseTo(2 * fr, 0);
-    // a part: 4cm; its weak spacing collapsed into the paragraphs' spacing, nothing of its own laid out
-    expect(bands[1]).toEqual([113.4]);
-    // a chapter: 1cm, 4pt in the enum, the 1fr in the block, the 1em after it; not the weak v between list items nor
-    // the figure's caption gap (both collapsed into the spacing around blocks)
-    expect(bands[2]).toEqual([28.3, 4, expect.any(Number), 11]);
-    // dropped at the page top, then 40pt; the 1fr gets nothing as the 400pt runs past the page's bottom
-    expect(bands[3]).toEqual([40, 400]);
-    expect(bands[4]).toEqual([]);
+    // a part: 4cm, the heading's 16pt to the bar, the bar's 0.75em below (the heading's, too) to the text; weak spacing
+    // collapsed into the paragraphs' spacing shows as their gap: 1em, then the larger of 10pt and 20pt
+    expect(bands[1]).toEqual({ v: [113.4], gaps: [16, 8.3, 11, 20] });
+    // a chapter: 1cm, 4pt in the enum, the 1fr in the block, the 1em after it; the gaps: the heading's, a tight list's
+    // 0.65em after a paragraph, the weak 8pt between the lists it splits, the blocks' 1.2em, the figure's caption gap,
+    // the figure's and the quote's spacing and the attribution's
+    expect(bands[2]).toEqual({ v: [28.3, 4, expect.any(Number), 11], gaps: [8.3, 7.2, 8, 13.2, 13.2, 13.2, 13.2, 7.2, 26.4, 9.9, 19.8] });
+    // dropped at the page top, then 40pt; the 1fr gets nothing as the 400pt runs past the page's bottom; no gap
+    // across a fraction
+    expect(bands[3]).toEqual({ v: [40, 400], gaps: [] });
+    expect(bands[4]).toEqual({ v: [], gaps: [] });
+  });
+
+  // gaps around sticky and breakable blocks at a page break, lists, a table, a grid, a figure, a quote, a box
+  const GAPS = `#set page(paper: "a6", header: [Head], footer: [Foot])
+#set par(spacing: 10pt, leading: 5pt)
+#lorem(150)
+= Sticky heading at the page bottom
+#lorem(40)
+#block(breakable: true, inset: 2pt, below: 20pt)[#lorem(140)]
+After the breakable block.
+#table(columns: 2, [a], [b], [Cell with\\ two lines], [d])
+#grid(columns: 1, [first], [second])
+- tight
+- list
+#block(below: 12pt)[Set below]
+#line(length: 2cm)
+
+Wide
+
+- wide
+
+- list
+#figure(rect(height: 1cm), caption: [Caption])
+#quote(block: true, attribution: [Me])[Quoted]
+#block(above: 1fr)[Fr above]
+Text #box(block[in a box]) after.
+`;
+
+  it('shades the gaps between blocks and paragraphs as laid out, moving nothing, with and without the outlines', async () => {
+    const unstroked = `#set block(stroke: none)\n#set box(stroke: none)\n${GAPS}`;
+    const plain = await layoutOf(unstroked, []);
+    expect(plain.pages).toBe(4);
+    for (const on of [[OUTLINES], [SPACING], [OUTLINES, SPACING]]) expect(await layoutOf(unstroked, on)).toEqual(plain);
+
+    const bands = (await compile(GAPS, [SPACING])).pages.map((page) => bandsOf(page.svg).gaps);
+    expect((await compile(GAPS, [OUTLINES, SPACING])).pages.map((page) => bandsOf(page.svg).gaps)).toEqual(bands);
+    // the heading moved to the next page with the paragraph it sticks to: no gap left behind
+    expect(bands[0]).toEqual([]);
+    // below the heading (0.75em), above the breakable block
+    expect(bands[1]).toEqual([8.3, 10]);
+    // below the breakable block where it ends (20pt), around the table, the grid and the tight list (no 0.65em after a
+    // block), the set 12pt over the line's 10pt, a wide list, the figure's caption gap; not between the cells, the
+    // list items, nor across the page break after the figure
+    expect(bands[2]).toEqual([20, 10, 10, 10, 10, 12, 10, 10, 10, 7.2]);
+    // in the quote, below the block after a fraction above it; none in the box
+    expect(bands[3]).toEqual([9.9, 10]);
   });
 
   it.skipIf(!existsSync(merman))('lays out this documentation\'s book on as many pages with the outlines and bands', async () => {
@@ -258,17 +320,22 @@ Overflow.
     const packages = withPackages(engine, async () => new Uint8Array(readFileSync(merman)));
     const plain = await packages.compile('/main.typ');
     expect(plain.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
-    engine.setSource('/view.typ', entry([GUIDES, OUTLINES]));
+    engine.setSource('/view.typ', entry([GUIDES, OUTLINES, SPACING]));
     const viewed = await packages.compile('/view.typ');
     expect(viewed.diagnostics).toEqual(plain.diagnostics);
     expect(viewed.pages).toHaveLength(plain.pages.length);
-    expect(viewed.pages.filter((page) => bandsOf(page.svg).length > 0).length).toBeGreaterThan(10);
+    const bands = viewed.pages.map((page) => bandsOf(page.svg));
+    expect(bands.filter((page) => page.v.length > 0).length).toBeGreaterThan(10);
+    expect(bands.filter((page) => page.gaps.length > 0).length).toBeGreaterThan(viewed.pages.length / 2);
+    // the title page's gaps around the title (its own block spacing, see above), the first part's 16pt to the bar
+    expect(bands[0].gaps).toEqual([20.1, 20.1]);
+    expect(bands.find((page) => page.v[0] === 113.4)?.gaps[0]).toBe(16);
   }, 120_000);
 
   it('reports errors in the main file at the same place as without options', async () => {
     const broken = 'Text\n#unknown-thing\n';
     const plain = await compile(broken, []);
-    const guided = await compile(broken, [GUIDES, OUTLINES]);
+    const guided = await compile(broken, [GUIDES, OUTLINES, SPACING]);
     expect(guided.diagnostics.map(({ path, from, to, message }) => ({ path, from, to, message }))).toEqual(
       plain.diagnostics.map(({ path, from, to, message }) => ({ path, from, to, message })),
     );

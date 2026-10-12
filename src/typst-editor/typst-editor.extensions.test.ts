@@ -331,7 +331,7 @@ describe('the built-in extensions', () => {
       return host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
     };
     const entries = (menu: HTMLElement) => [...menu.children].map((child) => (child.getAttribute('role') === 'separator' ? '---' : `${child.textContent} ${child.getAttribute('aria-checked')}`));
-    expect(entries(open())).toEqual(['Invisible characters false', '---', '✓Comments true', 'Page guides false', 'Box outlines false']);
+    expect(entries(open())).toEqual(['Invisible characters false', '---', '✓Comments true', 'Page guides false', 'Box outlines false', 'Block spacing false']);
     [...open().children].find((child) => child.textContent === 'Page guides')!.dispatchEvent(new MouseEvent('click'));
     await Promise.resolve();
     expect(preview.viewValues).toEqual({ 'previewGuides.pageGuides': true });

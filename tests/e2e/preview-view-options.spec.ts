@@ -1,5 +1,5 @@
 // End-to-end tests (Playwright, against the demo build): the preview's view options in the View menu at the top right
-// of the editing area ("Comments", "Page guides", "Box outlines") change the preview's pages, are remembered, and
+// of the editing area ("Comments", "Page guides", "Box outlines", "Block spacing") change the preview's pages, are remembered, and
 // leave the PDF and the Visual editor alone.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -33,7 +33,7 @@ async function viewEntry(page: Page, name: string) {
 test('the View menu lists the editors\' options, then the preview\'s', async ({ page }) => {
   await viewEntry(page, 'Comments');
   const menu = page.getByRole('menu', { name: 'View' });
-  await expect(menu.getByRole('menuitemcheckbox')).toHaveText([/Invisible characters/, /Comments/, /Page guides/, /Box outlines/]);
+  await expect(menu.getByRole('menuitemcheckbox')).toHaveText([/Invisible characters/, /Comments/, /Page guides/, /Box outlines/, /Block spacing/]);
   await expect(menu.getByRole('separator')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
