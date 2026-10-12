@@ -1,7 +1,8 @@
 // The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ):
 // Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here but
-// `mermaid` for a diagram, `screenshot` for a picture of the editor and `example` for a Typst document
-// with its result: plain headings, `@label` references, raw blocks and tables.
+// `mermaid` for a diagram, `screenshot` for a picture of the editor and `example` (a block style:
+// `#example[```typ … ```]`) for a Typst document with its result: plain headings, `@label` references,
+// raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ` and the numbers that order the files, `/` → `-`
 // (`40_architecture/07_workbench.typ` → `<architecture-workbench>`); a section inside appends a word
@@ -81,45 +82,55 @@
   }
 }
 
-/// Typst's own look for `example`'s result, not the book's: its text, headings (numbered apart from the book's and
-/// left out of its outline), outline (listing the example's headings only), tables and links. `key` names the
-/// example: the metadata around it bound what its outline lists.
-#let plain-typst(key, body) = {
+/// `numbers` (a heading counter's value) after a heading of `level`, as Typst steps it.
+#let step-heading(numbers, level) = {
+  let numbers = numbers.slice(0, calc.min(level, numbers.len()))
+  numbers += (0,) * (level - numbers.len())
+  numbers.at(-1) += 1
+  numbers
+}
+
+/// The example's headings' own counter: they leave the book's `counter(heading)` alone.
+#let example-headings = counter("example-headings")
+
+/// Typst's own look for `example`'s result, not the book's: its text, headings (left out of the book's outline),
+/// outline (listing the example's headings only), tables and links. `key` names the example: the metadata around it
+/// bound what its outline lists. Its headings are numbered by `numbering` (its `#set heading(numbering: ..)`), from a
+/// counter of their own: a heading Typst numbers would step the book's heading counter, and restoring that after the
+/// example takes another layout pass (too many for the preview's guides, preview-guides.test.ts).
+#let plain-typst(key, numbering: none, body) = {
   set text(font: "Libertinus Serif", size: 11pt, fill: black, weight: "regular", lang: "en")
   set par(justify: false, leading: 0.65em, spacing: 1.2em, first-line-indent: 0pt)
-  set heading(offset: 0, numbering: none, outlined: true, bookmarked: false)
-  // the book's heading rules (a page per chapter, numbers in its color) replaced: none of them sees a heading here
-  show heading: it => block(above: 1.4em, below: 1em, sticky: true, text(
-    fill: black,
-    weight: "bold",
-    size: (15.4pt, 13.2pt).at(it.level - 1, default: 11pt),
-    if it.numbering == none { it.body } else { counter(heading).display(it.numbering) + h(0.3em) + it.body },
-  ))
+  set heading(offset: 0, outlined: true, bookmarked: false)
+  show heading: set heading(numbering: none)
+  let number(numbers) = if numbering != none { std.numbering(numbering, ..numbers) }
+  // the book's heading rules (a page per chapter, numbers in its color) replaced: none of them sees a heading here;
+  // numbered are the outlined ones (not an outline's title)
+  show heading: it => {
+    if it.outlined { example-headings.step(level: it.level) }
+    block(above: 1.4em, below: 1em, sticky: true, text(
+      fill: black,
+      weight: "bold",
+      size: (15.4pt, 13.2pt).at(it.level - 1, default: 11pt),
+      if numbering == none or not it.outlined { it.body } else { context number(example-headings.get()) + h(0.3em) + it.body },
+    ))
+  }
   show emph: set text(weight: "regular", fill: black, style: "italic")
   show link: set text(fill: black)
   show ref: set text(fill: black)
   show outline.entry: set block(above: 0.65em)
   show outline.entry: set text(weight: "regular", fill: black)
+  // the counter steps inside the heading, after the place the entry asks about
+  show outline.entry: it => it.indented(number(step-heading(example-headings.at(it.element.location()), it.level)), it.inner())
   set outline(target: selector(heading).after(metadata.where(value: key)).before(metadata.where(value: key + "/end")))
   set table(inset: 5pt, stroke: 0.5pt + black, fill: none)
   show table.cell: set text(fill: black)
-  // after the example, the book's numbers again: counted from the book's own headings (the example's are not
-  // bookmarked), as the counter's value before the example would depend on the examples before it
-  counter(heading).update(0)
+  example-headings.update(0)
   [#metadata(key)#body#metadata(key + "/end")]
-  context counter(heading).update(query(heading.where(bookmarked: auto).before(here())).fold((), (numbers, it) => {
-    if it.numbering == none { return numbers }
-    // a step at its level, as Typst counts
-    let numbers = numbers.slice(0, calc.min(it.level, numbers.len()))
-    numbers += (0,) * (it.level - numbers.len())
-    numbers.at(-1) += 1
-    numbers
-  }))
 }
 
 /// `example`'s result of a document setting its pages (`#set page(paper, width, height, margin, numbering,
-/// columns)`): its pages, cut at `#pagebreak()`, side by side at half size. Evaluated from its text, so it imports
-/// no files.
+/// columns)`): its pages, cut at `#pagebreak()`, side by side at half size.
 #let example-pages(source) = {
   let setting = source.match(regex("(?m)^#set page\((.*)\)[ \t]*$"))
   let args = eval("(" + setting.captures.at(0) + ",)")
@@ -144,26 +155,36 @@
   )
 }
 
-/// A real-world example: the Typst source of the document `main` (a path from the docs folder,
-/// `"/examples/custom-styles/main.typ"`), below it what Typst makes of it. `imports`: files it imports, shown above
-/// it. A document setting its pages shows them at half size (`example-pages`); any other, an excerpt of a page.
-#let example(main, imports: ()) = {
-  let file(path) = {
-    let name = path.split("/").last()
-    context if target() == "html" { html.div(class: "example-file", name) } else {
-      block(above: 1em, below: 0.4em, sticky: true, text(size: 8.5pt, weight: "bold", fill: colors.muted, name))
-    }
-    raw(read(path), block: true, lang: "typ")
+/// The first code block in `body` (```typ … ```), searched through the content around it; none without one.
+#let code-block(body) = {
+  if body.func() == raw { return body }
+  for child in body.at("children", default: ()) {
+    let found = code-block(child)
+    if found != none { return found }
   }
-  for path in imports { file(path) }
-  file(main)
-  let source = read(main)
-  let result = plain-typst(main, if source.contains(regex("(?m)^#set page\(")) {
+  if body.has("body") { code-block(body.body) }
+}
+
+/// A real-world example: the Typst code block in `body` (```typ … ```), highlighted, and below it what Typst makes of
+/// its text. A custom block style of the docs: the Visual editor shows it as a block "Example" with the code block in
+/// it to edit. Self-contained on purpose: the code is evaluated alone, without the chapter's imports and variables,
+/// so what the reader sees is the whole document and can be copied into an empty file (an example using styles
+/// declares them itself). A document setting its pages shows them at half size (`example-pages`); any other, an
+/// excerpt of a page. Its headings are numbered as its `#set heading(numbering: ..)` line says.
+/// @style block Example
+#let example(body) = {
+  let code = code-block(body)
+  if code == none { panic("example: put the example's Typst code in its body as a code block, ```typ … ```") }
+  let source = code.text
+  raw(source, block: true, lang: "typ")
+  let headings = source.match(regex("(?m)^#set heading\((.*)\)[ \t]*$"))
+  let numbering = if headings != none { eval("(" + headings.captures.at(0) + ",)").at("numbering", default: none) }
+  let result = plain-typst("example:" + source, numbering: numbering, if source.contains(regex("(?m)^#set page\(")) {
     example-pages(source)
   } else {
     block(width: 12cm, inset: 1cm, fill: white, stroke: 0.5pt + colors.line, {
       set align(start)
-      include main
+      eval(source, mode: "markup")
     })
   })
   context if target() == "html" { html.div(class: "example-result", html.frame(result)) } else {
@@ -184,13 +205,14 @@
   text(fill: colors.muted, size: 9pt)[#company · #link("https://sandstorm.de")[sandstorm.de]]
 })
 
-/// The current chapter (level 2) on pages that do not start one; the book's title before the first.
+/// The current chapter (level 2) on pages that do not start one; the book's title before the first. An `example`'s
+/// headings (not bookmarked) are not the book's.
 #let running-header(book-title) = context {
   let page = here().page()
-  let starts = query(heading.where(level: 1).or(heading.where(level: 2)))
+  let starts = query(heading.where(level: 1, bookmarked: auto).or(heading.where(level: 2, bookmarked: auto)))
     .any(h => h.location().page() == page)
   if starts { return }
-  let chapters = query(heading.where(level: 2).before(here()))
+  let chapters = query(heading.where(level: 2, bookmarked: auto).before(here()))
   set text(size: 8.5pt, fill: colors.muted)
   grid(
     columns: (1fr, auto),

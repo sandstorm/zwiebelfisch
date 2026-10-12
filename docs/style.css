@@ -77,7 +77,6 @@ nav[role="doc-toc"] > ol { padding-left: 0; }
 nav[role="doc-toc"] > ol > li { margin-top: 0.8rem; font-weight: 700; }
 nav[role="doc-toc"] > ol > li li { font-weight: 400; }
 nav[role="doc-toc"] a { text-decoration: none; }
-/* `example` in template.typ: a file's name over its source, the result (an SVG of Typst's own look) below */
-.example-file { margin: 1.25rem 0 -0.6rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+/* `example` in template.typ: below its source the result, an SVG of Typst's own look */
 .example-result { margin: 1rem 0 1.5rem; display: flex; justify-content: center; }
 .example-result svg { max-width: 100%; height: auto !important; }

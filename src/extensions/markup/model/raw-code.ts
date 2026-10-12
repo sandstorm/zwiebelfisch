@@ -28,6 +28,20 @@ export interface RawCode {
   block: boolean;
 }
 
+/**
+ * The indentation of a code block's lines that Typst removes, for a block whose opening fence is indented by it in a
+ * content block (`#note[\n  ```typ\n  a\n  ```\n]`): the whitespace before the fence on its line, if every further
+ * line of the text (but empty ones) and the closing fence's line start with it. Null otherwise: the text is shown as
+ * written.
+ */
+export function codeIndent(code: RawCode, raw: { from: number; to: number }, source: string): string | null {
+  const indent = source.slice(source.lastIndexOf('\n', raw.from - 1) + 1, raw.from);
+  if (!/^[ \t]+$/.test(indent) || !code.block) return null;
+  const [, ...further] = source.slice(code.from, code.to).split('\n');
+  const closingLine = source.slice(code.to, raw.to - code.fence).split('\n').at(-1)!;
+  return further.every((line) => line === '' || line.startsWith(indent)) && closingLine.startsWith(indent) ? indent : null;
+}
+
 /** What Typst reads as a language tag: the identifier at the start of `value` ('' if there is none). */
 export function codeLanguage(value: string): string {
   return /^[\p{ID_Start}_][\p{ID_Continue}-]*/u.exec(value)?.[0] ?? '';

@@ -9,7 +9,7 @@ import { callArguments, children, decodeString, namedArgument, quote, trailingCo
 import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { codeBlockView } from './code-block-view';
-import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
+import { codeBlockDelimiters, codeIndent, inlineCodeDelimiters, rawCode, type RawCode } from '../model/raw-code';
 
 // ------------------------------ strong, emph, underline, strike, highlight
 
@@ -211,6 +211,7 @@ const TypstCodeBlock = CodeBlock.extend({
       src: { default: null, rendered: false, keepOnSplit: false },
       sep: { default: null, rendered: false },
       fence: { default: 3, rendered: false },
+      indent: { default: null, rendered: false },
     };
   },
   addNodeView() {
@@ -221,9 +222,12 @@ const TypstCodeBlock = CodeBlock.extend({
 /**
  * Raw text Typst shows as a block (3+ backticks around a line break): a code
  * block whose text is the source between the delimiters, the language tag and
- * the whitespace Typst trims (not dedented). An edited one prints
- * ```` ```lang\ntext\n``` ````, keeping its fence unless the text needs a
- * longer one; the language is cut to what Typst reads as a tag.
+ * the whitespace Typst trims; a block indented in a content block
+ * (`#note[\n  ```typ\n  a\n  ```\n]`) without that indentation of its lines
+ * (`indent`, see `codeIndent`), otherwise not dedented. An edited one prints
+ * ```` ```lang\ntext\n``` ````, its lines indented by `indent` again, keeping
+ * its fence unless the text needs a longer one; the language is cut to what
+ * Typst reads as a tag.
  */
 export const CODE_BLOCK: TypstNodeSpec = {
   name: 'codeBlock',
@@ -235,25 +239,42 @@ export const CODE_BLOCK: TypstNodeSpec = {
           block: (p, node, sep) => {
             const code = rawCode(node, p.source);
             if (!code?.block) return null;
-            const text = p.source.slice(code.from, code.to);
-            const attrs = { language: code.lang, fence: code.fence, src: p.text(node), sep };
-            const content = text ? [{ node: p.schema.text(text), from: code.from, to: code.to }] : [];
-            return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
+            const indent = codeIndent(code, node, p.source);
+            const attrs = { language: code.lang, fence: code.fence, indent, src: p.text(node), sep };
+            return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, codeLines(p, code, indent ?? ''));
           },
         },
       },
     },
     toTypst: (state, block, pos) => {
       const text = block.textContent;
+      const indent: string = block.attrs.indent ?? '';
       const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
       state.hidden(open);
-      state.shown(text, 'text', pos + 1, pos + 1 + text.length);
+      let at = pos + 1;
+      for (const line of text ? text.split(/(?<=\n)/) : []) {
+        if (line !== '\n') state.hidden(indent);
+        state.shown(line, 'text', at, at + line.length);
+        at += line.length;
+      }
       state.endBlock(pos + block.nodeSize - 1, text.length === 0);
-      state.closing(close);
+      state.closing(close.replace('\n', `\n${indent}`));
     },
     labelled: true,
   },
 };
+
+/** A code block's text, each line placed at its source without the `indent` before it (the line ends shown, too). */
+function codeLines(p: TypstParseContext, code: RawCode, indent: string): PlacedNode[] {
+  const placed: PlacedNode[] = [];
+  let from = code.from;
+  for (const line of p.source.slice(code.from, code.to).split(/(?<=\n)/)) {
+    const start = from === code.from || line === '\n' ? from : from + indent.length;
+    if (from + line.length > start) placed.push({ node: p.schema.text(p.source.slice(start, from + line.length)), from: start, to: from + line.length });
+    from += line.length;
+  }
+  return placed;
+}
 
 // ------------------------------------------------------------------- quotes
 

@@ -4,7 +4,25 @@
 == What it does
 
 #import "../template.typ": example
-#example("/examples/table-of-contents/main.typ")
+
+#example[
+  ```typ
+  #set heading(numbering: "1.1")
+  #outline(depth: 2)
+
+  = Introduction
+  Why compile times matter.
+
+  == Goals
+  What we measure, and why.
+
+  = Method
+  How we measure.
+
+  == Setup
+  The machine and the documents.
+  ```
+]
 
 The Visual editor shows "Introduction" and "Goals" as headings of two sizes, their numbers 1 and 1.1 beside them, and the outline as a box headed "Table of contents" with the compiled outline in it; the preview shows the outline with its page numbers, as above.
 

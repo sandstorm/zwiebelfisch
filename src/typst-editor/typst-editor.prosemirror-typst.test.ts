@@ -523,6 +523,22 @@ describe('code blocks', () => {
     expect(parseTypst(serializeToTypst(doc)).child(0).textContent).toBe('a\n````');
   });
 
+  it('shows a code block indented in a content block without the indentation, and prints it back indented', () => {
+    const source = '#quote(block: true)[\n  ```typ\n  = Intro\n\n    #outline()\n  ```\n]\n';
+    const doc = parseTypst(source);
+    const block = doc.child(0).child(0);
+    expect(block.type.name).toBe('codeBlock');
+    expect(block.textContent).toBe('= Intro\n\n  #outline()');
+    expect(serializeToTypst(doc)).toBe(source);
+    expectPreciseMap(doc);
+    const edited = edit(doc, (s) => s.tr.insertText('\nText', after(s.doc, 'Intro')));
+    expect(serializeToTypst(edited)).toBe(source.replace('= Intro\n', '= Intro\n  Text\n'));
+    expectPreciseMap(edited);
+    // a line less indented than the fence: shown as written
+    const uneven = parseTypst('#quote(block: true)[\n  ```py\n  a\n b\n  ```\n]\n').child(0).child(0);
+    expect([uneven.attrs.indent, uneven.textContent]).toEqual([null, ' a\n b']);
+  });
+
   it('prints a code block created in the editor', () => {
     const block = schema.nodes.codeBlock.create({ language: 'js' }, schema.text('let a = `*`;\nb'));
     const doc = edit(parseTypst('Text\n'), (s) => s.tr.insert(s.doc.content.size, block));

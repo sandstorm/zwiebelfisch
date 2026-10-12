@@ -3,10 +3,38 @@
 
 == What it does
 
-A block or inline style is a Typst function with a `/// @style` doc comment, in any `.typ` file of the project (usually `styles.typ`). A tip box and a key cap, and a document using them:
+A block or inline style is a Typst function with a `/// @style` doc comment, in any `.typ` file of the project (usually `styles.typ`). A tip box and a key cap, and text using them (declared in the document itself here, so it is all in one place):
 
 #import "../template.typ": example
-#example("/examples/custom-styles/main.typ", imports: ("/examples/custom-styles/styles.typ",))
+
+#example[
+  ```typ
+  /// A hint set apart from the running text.
+  /// @style block Tip
+  #let tip(body) = block(
+    width: 100%,
+    inset: (x: 10pt, y: 8pt),
+    stroke: (left: 2.5pt + rgb("#3a8f4f")),
+    fill: rgb("#eaf5ec"),
+    [*Tip.* #body],
+  )
+
+  /// A key to press, like a key cap.
+  /// @style inline Key
+  #let key(body) = box(
+    inset: (x: 3pt),
+    outset: (y: 2pt),
+    radius: 2pt,
+    stroke: 0.5pt + luma(150),
+    fill: luma(245),
+    text(size: 0.85em, body),
+  )
+
+  Press #key[Ctrl] + #key[S] to save a copy; the editor keeps your changes anyway.
+
+  #tip[Press #key[Shift] twice to search everywhere: files, headings and commands.]
+  ```
+]
 
 - *block* wraps whole blocks (paragraphs, lists, headings). The Visual editor shows a named frame: *Tip* around the wrapped paragraphs, `#tip[…]` in the file.
 - *inline* wraps a run of text inside a paragraph. The Visual editor shows it underlined: *Key* wraps the selection in `#key[…]`.

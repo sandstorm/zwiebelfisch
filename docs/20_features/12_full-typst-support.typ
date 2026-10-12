@@ -6,7 +6,32 @@
 Every Typst document opens and compiles, also what the Visual editor has no construct for: math, function calls, set and show rules, scripting, packages. A report's measurements, a helper computing from them, a formula and a table built by a loop:
 
 #import "../template.typ": example
-#example("/examples/full-typst-support/main.typ")
+
+#example[
+  ```typ
+  #let runs = (
+    (pages: 1, cold: 41, incremental: 9),
+    (pages: 10, cold: 180, incremental: 11),
+    (pages: 100, cold: 1650, incremental: 14),
+  )
+  #let speedup(run) = calc.round(run.cold / run.incremental, digits: 1)
+
+  The speed-up of an incremental compile for a document of $p$ pages is
+
+  $ s(p) = (t_"cold" (p)) / (t_"incremental" (p)) $
+
+  #table(
+    columns: 4,
+    align: (left, right, right, right),
+    table.header[Pages][Cold (ms)][Incremental (ms)][Speed-up],
+    ..for run in runs {
+      (str(run.pages), str(run.cold), str(run.incremental), [#speedup(run) ×])
+    },
+  )
+
+  For #runs.last().pages pages, an edit compiles #speedup(runs.last()) times faster.
+  ```
+]
 
 The Visual editor shows each such piece as a *raw box*: here the `#let` lines, the formula and the table. A box shows its compiled look, cut from the preview, while the cursor is elsewhere; its Typst code, highlighted, while the cursor is in it. The two sentences around them stay text to edit. The preview shows the document as Typst compiles it.
 
