@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("files", width: 45%)
+#screenshot("files")
 
 The file panel on the left shows the project as a tree: folders first, the main file marked, collaborators' initials on the files they are in. A report with its chapters, images, data and fonts:
 

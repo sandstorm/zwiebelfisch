@@ -3,19 +3,12 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("page-layout")
+A report on A5 pages with numbers at the bottom, a rule, a page break and two columns:
 
-```typ
-#set page(paper: "a4", margin: 2.5cm)
-#outline()
-#pagebreak()
-= Introduction
-…
-#line(length: 100%)
-```
+#import "../template.typ": example
+#example("/examples/page-layout/main.typ")
 
-The Visual editor shows the page break as a dashed divider labelled "Page break" and the line as a horizontal rule; the preview starts a new page and draws the line.
+The Visual editor shows the page break as a dashed divider labelled "Page break", the line as a horizontal rule, and `#set page(..)` and the columns as raw boxes; the preview starts a new page and draws the line, as above.
 
 - Page break: Ctrl+Enter (⌘↩ on Mac), or Insert → Insert page break.
 - Horizontal rule: Insert → Horizontal rule, or `---` at the start of an empty paragraph.

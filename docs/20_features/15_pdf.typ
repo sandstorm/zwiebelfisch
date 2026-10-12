@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("pdf", width: 60%)
+#screenshot("pdf")
 
 "Download PDF" in the preview toolbar opens the export options; "Download" saves the document as a PDF, named after the main file (`main.pdf`).
 
