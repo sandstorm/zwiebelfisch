@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("visual-editor")
+#screenshot("styling-and-shortcuts")
 
 The Visual editor shows a Typst file as a word processor does: headings, paragraphs, lists, tables and figures as they read, the markup hidden. This source
 

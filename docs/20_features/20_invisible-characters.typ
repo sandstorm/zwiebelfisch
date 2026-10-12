@@ -3,8 +3,6 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("invisible-characters")
 
 Shows what is normally blank, as a word processor's formatting marks. The paragraph `Typst  is~fast.` (two spaces after "Typst") shows in the Visual editor as `Typst··is°fast.¶`.
 

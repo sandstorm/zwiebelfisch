@@ -3,8 +3,6 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("rendering-preview")
 
 The preview on the right shows the pages as Typst compiles them, the whole document from the main file on, and updates while you type.
 

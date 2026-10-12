@@ -3,8 +3,6 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("help")
 
 The question mark on the left rail opens the help, in the file panel's place: a cheat sheet for the kind of file shown, changing as you open another file. Writing a Mermaid diagram, it lists flowchart shapes and arrows; back in the chapter, it lists Typst's headings, lists and figures.
 

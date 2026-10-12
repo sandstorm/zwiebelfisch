@@ -3,8 +3,6 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("collaborative-editing")
 
 Several people edit the same project at once. Ada writes the method chapter while Bob fixes the introduction: each sees the other's cursor with a name, the other's edits as they type, and in the file panel the initials of who is in which file.
 

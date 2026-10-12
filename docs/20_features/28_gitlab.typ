@@ -3,8 +3,6 @@
 
 == What it does
 
-#import "../template.typ": screenshot
-#screenshot("gitlab")
 
 A room can be a branch of a GitLab repository: everyone in it edits the branch's files together (@features-collaborative-editing), and the changes go back to GitLab as commits.
 

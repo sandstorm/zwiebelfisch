@@ -11,11 +11,6 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: 'http://typst-editor.test',
     trace: 'retain-on-failure',
-    // The room pictures ask the playground server on 127.0.0.1 from the made-up (public, insecure) baseURL origin,
-    // which Chromium's Private Network Access blocks ("editing a local copy"): off for these pictures.
-    launchOptions: {
-      args: ['--disable-features=BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessSendPreflights,LocalNetworkAccessChecks'],
-    },
   },
   projects: [{ name: 'chromium' }],
 });

@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
-#MISE description="Pictures of the features for the docs: builds the demo, takes docs/assets/screenshots/<chapter>.png (tests/screenshots/features.spec.ts, Chromium; the playground server for the room pictures), then lists them in index.typ"
+#MISE description="Pictures of the features for the docs: builds the demo, takes docs/assets/screenshots/<chapter>.png (tests/screenshots/features.spec.ts, Chromium), then lists them in index.typ"
 #MISE depends=["build:demo", "build:packages"]
 #USAGE arg "[playwright_args]..." help="Passed on to Playwright (e.g. --grep tables; flags after --)" double_dash="automatic"
 # e.g. `mise run docs:screenshots -- --grep 'tables|help'`. A picture not taken keeps its last file, one without a
 # test is deleted; the book shows what index.typ lists and a "Screenshot pending" box for the rest (`screenshot` in
 # docs/template.typ).
 set -euo pipefail
-# the collaboration server with a fake GitLab, as for test:e2e-gitlab (a `mise run demo` already running serves too)
-node server/src/fake-gitlab-main.ts &
-server=$!
-trap 'kill "$server" 2>/dev/null' EXIT
-for _ in $(seq 100); do
-  if (exec 3<>/dev/tcp/127.0.0.1/1234) 2>/dev/null; then break; fi
-  sleep 0.1
-done
 status=0
-TYPST_SCREENSHOTS_SERVER=1 pnpm exec playwright test -c tests/screenshots/playwright.config.ts "$@" || status=$?
+pnpm exec playwright test -c tests/screenshots/playwright.config.ts "$@" || status=$?
 # the list is written in any case: a failed picture leaves the others. A picture no test takes any more goes.
 dir=docs/assets/screenshots
 tests=$(sed -n "s/^test('\([^']*\)'.*/\1/p" tests/screenshots/features.spec.ts)
