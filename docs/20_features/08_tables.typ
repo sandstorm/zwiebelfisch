@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("tables", width: 60%)
+#screenshot("tables")
 
 A Typst `#table`, edited cell by cell in the Visual editor:
 

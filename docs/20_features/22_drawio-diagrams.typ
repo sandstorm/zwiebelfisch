@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("drawio-diagrams", width: 60%)
+#screenshot("drawio-diagrams")
 
 A `.drawio.png` is a PNG with a diagrams.net diagram inside: Typst shows it as an image, the editor opens it in diagrams.net.
 

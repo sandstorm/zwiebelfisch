@@ -4,7 +4,7 @@
 == What it does
 
 #import "../template.typ": screenshot
-#screenshot("slash-commands", width: 60%)
+#screenshot("slash-commands")
 
 Type `/` in the Visual editor, at a line start or after a space, then part of a name: a list below the text offers what the Insert menu, the list and alignment buttons and the text style menu can do right there. Writing a report, `/table` on an empty line inserts a table, `/h2` makes the line a second-level heading, `/mermaid` asks for a new diagram file and puts its figure after the line.
 
