@@ -13,6 +13,7 @@ import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
+import { SharedMainFile } from './shared-main-file';
 import { SharedProject } from './shared-project';
 
 /**
@@ -20,15 +21,17 @@ import { SharedProject } from './shared-project';
  * host. No DOM, no editor library.
  *
  * SharedProject keeps a Y.Text per Typst file and binds each document to it (TextBinding). The editors never sync on
- * their own; they keep following their TypstDocument. RemoteCursors carries the users' places over awareness. In a room
- * backed by a GitLab branch (the server put a `baseSha` into the Y.Doc's `meta` map), SharedAssets shares the other
- * files too, and GitLabSourceControl commits to the branch. The widget reaches all this through CollaborationLink
+ * their own; they keep following their TypstDocument. SharedMainFile keeps everyone on the same main file. RemoteCursors
+ * carries the users' places over awareness. In a room backed by a GitLab branch (the server put a `baseSha` into the
+ * Y.Doc's `meta` map), SharedAssets shares the other files too, GitLabSourceControl commits to the branch, and the main
+ * file stays each user's own. The widget reaches all this through CollaborationLink
  * (../collaboration-link.ts). See docs/30_configuration/03_collaboration-server.typ.
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
+  private readonly mainFile: SharedMainFile | null = null;
   private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
   /** Every other user's place, in any file, whenever one changes. */
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
@@ -47,6 +50,8 @@ export class Collaboration {
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
+    // after the files, so the room's main file is there to take
+    if (!this.sourceControl && !project.mainLocked) this.mainFile = new SharedMainFile(project, ydoc);
     const text = (path: ProjectPath) => this.sharedProject.text(path);
     const onPresence = (presences: readonly PlacedPresence[]) => this.presenceChanged.fire(presences);
     this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
@@ -86,6 +91,7 @@ export class Collaboration {
     this.sourceControl?.dispose();
     this.cursors?.dispose();
     this.assets?.dispose();
+    this.mainFile?.dispose();
     this.sharedProject.dispose();
     this.server?.provider.destroy();
     this.server?.provider.document.destroy();
