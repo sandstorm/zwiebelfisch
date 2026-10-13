@@ -17,12 +17,12 @@ type User struct {
 // ErrInvalidToken refuses a client.
 var ErrInvalidToken = errors.New("collab: invalid token")
 
-// SharedToken is the check until there is a real one (GitLab sign-in, see docs/40_architecture/15_development.typ,
-// "Open work"): with expected empty every client may open every room; otherwise the client's token must
-// equal it.
-func SharedToken(expected string) Authenticate {
+// SharedToken is the check until there is a real one (GitLab sign-in, see docs/40_architecture/11_development.typ,
+// "Open work"): with expected nil every client may open every room; otherwise the client's token must
+// equal it (also when it is empty).
+func SharedToken(expected *string) Authenticate {
 	return func(token, _ string) (User, error) {
-		if expected != "" && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) != 1 {
+		if expected != nil && subtle.ConstantTimeCompare([]byte(token), []byte(*expected)) != 1 {
 			return User{}, ErrInvalidToken
 		}
 		return User{}, nil

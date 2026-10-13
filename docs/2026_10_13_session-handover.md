@@ -26,8 +26,8 @@ State at writing: HEAD `e4f7c1bf` (+ this note and the two concept notes), all u
 
 ## Waiting for the user
 
-- **GitLab projects** (`docs/2026_10_13_gitlab-projects.md`): chooser after OAuth (IntelliJ-like, recents, open from a pasted GitLab URL). Open questions there: branch part of the project? recents on server or browser? `api` scope vs service token? auto-commit after everyone left? one or several GitLab instances?
-- **Go server** (`docs/2026_10_13_go-server.md`): decided Go + Yjs via `reearth/ygo`, no fallback; server compile via wazero, module at the repo root, zerolog. No open questions left.
+- **GitLab projects** (`docs/2026_10_13_gitlab-projects.md`): chooser after OAuth (IntelliJ-like, recents, open from a pasted GitLab URL). All questions decided: branch is part of the project (dropdown); recents on the server per user; a bot token commits (editors as `Co-authored-by:`; the server checks the user's access before a save); no user tokens stored (memory only), auto-commit with the bot token; GitLab only, with provider seams; server in Go.
+- **Go server** (`docs/2026_10_13_go-server.md`): decided Go + Yjs via `reearth/ygo` with our own room layer (ygo's server can't carry it), no fallback; server compile via wazero, module at the repo root, zerolog. Spike (steps 0 and 1) merged; next steps in its §6 and in 11_development "Open work" (Server), then step 2 GitLab rooms.
 - **Find in files**: should the Source editor stop recording other origins' changes in its undo (⌘Z there also undoes a replace)?
 - **Paste**: a paste provider that throws drops the whole paste silently — harden?
 - **Docs**: merge draw.io + Mermaid into one "Diagrams" chapter? `docs/diagrams/comment-card.mmd` unused — delete? The `tables` screenshot has no spec.

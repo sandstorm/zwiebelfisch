@@ -6,7 +6,7 @@
 //	PORT                (default 1234)
 //	TYPST_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
 //	TYPST_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing)
-//	TYPST_COLLAB_TOKEN  (default empty: no check) the token clients must send
+//	TYPST_COLLAB_TOKEN  (default unset: no check) the token clients must send; set but empty, clients must send ""
 //	TYPST_LOG_LEVEL     (default info) debug, info, warn, error
 //	TYPST_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
 //
@@ -27,8 +27,9 @@ type Config struct {
 	Address string `koanf:"address"`
 	Port    int    `koanf:"port"`
 	Collab  struct {
-		DB    string `koanf:"db"`
-		Token string `koanf:"token"`
+		DB string `koanf:"db"`
+		// Token is nil when TYPST_COLLAB_TOKEN is unset (no check), as in the TypeScript server.
+		Token *string `koanf:"token"`
 	} `koanf:"collab"`
 	Log struct {
 		Level  string `koanf:"level"`
