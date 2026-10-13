@@ -5,7 +5,7 @@ import { EditorState, TextSelection, type Command } from '@tiptap/pm/state';
 import { addColumnAfter, addColumnBefore, addRowAfter, deleteColumn } from '@tiptap/pm/tables';
 import { describe, expect, it } from 'vitest';
 import { serializeToTypst, applyTypstChanges } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import { after, edit, expectPreciseMap, find, parseTypst } from '../../../testing/testing';
+import { after, edit, expectPreciseMap, parseTypst } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
   mixed: '#table(\n  columns: (auto, 2fr, 1fr),\n  table.header[A][B][C],\n  [a], [b], [c],\n)\n',
@@ -130,7 +130,10 @@ describe('track-size columns', () => {
       const doc = parseTypst(docs);
       expect(serializeToTypst(doc)).toBe(docs);
       expectPreciseMap(doc);
-      const { node } = find(doc, 'table');
+      const tables: Node[] = [];
+      doc.descendants((node) => (node.type.name === 'table' ? (tables.push(node), false) : true));
+      const node = tables.find((table) => table.child(0).textContent.startsWith('Extension'));
+      if (!node) throw new Error('no extension list');
       expect(node.child(0).child(0).type.name).toBe('tableHeader');
       expect(node.child(0).textContent).toBe('ExtensionWhat it addsThrough');
       expect(node.childCount).toBeGreaterThan(20);
@@ -138,7 +141,7 @@ describe('track-size columns', () => {
 
     it('editing a cell changes only that cell', () => {
       const doc = edit(parseTypst(docs), (s) => s.tr.insertText('!', after(s.doc, 'bulleted, numbered and task lists')));
-      expect(serializeToTypst(doc)).toBe(docs.replace('[bulleted, numbered and task lists]', '[bulleted, numbered and task lists!]'));
+      expect(serializeToTypst(doc)).toBe(docs.replace('[bulleted, numbered and task lists;', '[bulleted, numbered and task lists!;'));
     });
   });
 });
