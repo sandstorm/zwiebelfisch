@@ -3,9 +3,7 @@
 
 #import "../template.typ": example
 
-== What it does
-
-Every Typst document opens and compiles, also what the Visual editor has no construct for: math, function calls, set and show rules, scripting, packages. A report's measurements, a helper computing from them, a formula and a table built by a loop:
+Typst can do way more than what is supported in the visual editor, e.g. math, function calls, scripting. Examples:
 
 #example[
   ```typ
@@ -31,35 +29,116 @@ Every Typst document opens and compiles, also what the Visual editor has no cons
 
   For #runs.last().pages pages, an edit compiles #speedup(runs.last()) times faster.
   ```
+
+
 ]
 
-The Visual editor shows each such piece as a *raw box*: here the `#let` lines, the formula and the table. A box shows its compiled look, cut from the preview, while the cursor is elsewhere; its Typst code, highlighted, while the cursor is in it. The two sentences around them stay text to edit. The preview shows the document as Typst compiles it.
+The Visual Editor *falls back to raw typst markup* for everything it does not understand.
 
-- Math: type it as in Typst. `$a^1$` becomes inline math when the closing `$` is typed (Backspace right after gives the text back); `$ x^2 $` (spaces inside both dollars) alone on an empty line becomes display math, a block. Or Insert → Inline math / Display math (`/math`), which puts the cursor into the new formula. `\$` or a dollar with a space on one side only (`$5 and $10`) stays a dollar sign.
-- A box's code is edited in CodeMirror, as in the Source editor: Tab / Shift+Tab indent / outdent.
-- A box's picture leads where its code links to (a file, a diagram): Ctrl+click (⌘-click on Mac), or Alt+Enter on the selected box.
-- Untouched source stays byte for byte; the Source editor always shows all of it.
-- `#import "@preview/name:version"` works as on typst.app: the package is downloaded from `packages.typst.org` on first use and kept by the browser.
+*Math* works as follows: `$a^1$` becomes inline math $a^1$, and `$ x^2 $` a new math block:
 
-A document never has to be reduced to what a word processor can show: templates, packages and scripting keep working, and writers still edit the text around them.
+$ x^2 $
 
-== How to: the look of a document
+*Imports* like `#import "@preview/name:version"` are auto-downloaded from `packages.typst.org` and cached.
 
-The look of a whole document is set once, at its top, with *set rules* (`#set text(..)`: every text from here on) and *show rules* (`#show heading: ..`: how every heading looks). Put them in the main file, or in a template file the main file imports. The Visual editor shows them as raw boxes; the text below them stays text to edit. Each example below is a whole document: copy it into an empty file.
+== Customizing the look of a document
 
-=== Fonts and text
+The look of a whole document is configured at the beginning:
+
+- #strong[`#set` ]rules change the default arguments of element functions, e.g. `#set text(..)` targets every text from here on.
+
+- `#show`#strong[ ]rules (`#show heading: ..`: how every heading looks). Put them in the main file, or in a template file the main file imports. The Visual editor shows them as raw boxes; the text below them stays text to edit. Each example below is a whole document: copy it into an empty file.
+
+=== Fonts and text via \#set rules
+
+#strong[`#set`] rules change the default arguments of element functions, e.g. `#set text(..)` targets every text from here on:
+
+#example[```typ
+Default text
+
+#set text(font: "Gabarito", size: 20pt)
+Big text
+
+#set text(fill: blue)
+Different color
+```
+]
 
 #example[
   ```typ
   #set text(font: "Gabarito", size: 11pt, lang: "en")
-  #set par(justify: true, leading: 0.7em)
+  #set par(justify: true)
 
   Typst compiles a document in milliseconds, so the preview follows every keystroke. The font is one of the project's files: any `.ttf` or `.otf` uploaded counts.
   ```
 ]
 
-- `font`: a font of the project (any `.ttf`, `.otf`, `.ttc` or `.otc` file in it) or one of Typst's own (Libertinus Serif, New Computer Modern, DejaVu Sans Mono). A list tries each in turn: `("Gabarito", "Libertinus Serif")`.
-- `lang` also sets the spell check's language and the hyphenation.
+=== Adjust rendering via \#show rules 
+
+A `#show` rule basically says: _Whenever X appears, render Y instead_. 
+
+#example[```typst
+// whenever the string "Typst" appears, render it as red
+#show "TYPST": text(red, weight: "bold")[Typst]
+
+Hello TYPST Project
+```
+
+]
+
+This can also take arguments:
+
+#example[```typst
+#let shout(body) = text(red, weight: "bold", body)
+
+#shout[Hello] World
+```]
+
+
+
+You can also combine it with set rules:
+
+#example[```typst
+#let mystyle(body) = {
+  set text(font: "New Computer Modern", 11pt)
+  set heading(numbering: "1.")
+  show "TYPST": text(red)[Typst]
+
+  body
+}
+
+#mystyle[
+  = Intro
+  Hello TYPST
+]
+
+// Wrapping everything in [...] is ugly. #show: f means “pass everything below this line to f as body”:
+#show: mystyle
+
+= Intro
+Hello TYPST
+```]
+
+==== Currying / setting default parameters
+
+`.with(...)` pre-fills arguments and leaves `body` to be supplied by `show:`.
+
+#example[```typst
+#let note(title: none, author: none, body) = {
+  set heading(numbering: "1.")
+  show raw: set text(fill: maroon)
+
+  text(18pt, weight: "bold", title)
+  [\ #author]
+  line(length: 100%)
+
+  body
+}
+
+#show: note.with(title: [DB Migration Plan], author: "Jane Doe")
+
+Some contents here
+```]
 
 === Headings
 
@@ -80,24 +159,30 @@ The look of a whole document is set once, at its top, with *set rules* (`#set te
 - `numbering`: `"1."`, `"1.1"`, `"I.a"`, … or `none`.
 - `show heading: set ..` changes every heading; `show heading.where(level: 1): ..` only one level. A show rule with a function (`it => ..`) replaces the heading's look entirely.
 
-=== Lists
+=== List Styling
 
 #example[
   ```typ
+  *Default styles*
+
+  - ...
+    - ...
+
+  + ...
+  + ...
+
+  *Adjusted styles*
+
   #set list(marker: ([•], [–]), indent: 0.5em)
   #set enum(numbering: "a)")
 
-  - Measure cold compiles
-    - from 1 to 100 pages
-  - Measure incremental ones
+  - ...
+    - ...
 
-  + Generate the documents
-  + Compile each one twice
+  + ...
+  + ...
   ```
 ]
-
-- `list` is the bulleted list (`- `), `enum` the numbered one (`+ `). A marker per nesting level: `marker: ([•], [–])`.
-- `numbering` as for headings: `"1."`, `"a)"`, `"i."`.
 
 === Page size, margins and page numbers
 
@@ -105,30 +190,19 @@ The look of a whole document is set once, at its top, with *set rules* (`#set te
   ```typ
   #set page(paper: "a5", margin: (x: 2cm, y: 2.5cm), numbering: "1")
 
-  = Compile times
-  Writers want to see their document while they type. This report measures how long that takes.
-
-  #line(length: 100%)
-
-  The numbers are illustrative.
+  #lorem(30)
 
   #pagebreak()
 
-  = Results
   #columns(2)[
-    A cold compile grows with the length of the document.
+    #lorem(5)
 
     #colbreak()
-    An incremental compile stays short: it redoes only what an edit touches.
+
+      #lorem(10)
   ]
   ```
 ]
-
-The Visual editor shows the page break as a dashed divider labelled "Page break", the line as a horizontal rule, and `#set page(..)` and the columns as raw boxes; the preview starts a new page and draws the line, as above.
-
-- Page break: Ctrl+Enter (⌘↩ on Mac), or Insert → Insert page break.
-- Horizontal rule: Insert → Horizontal rule, or `---` at the start of an empty paragraph.
-- "Page guides" in the View menu draws the text area, header and footer in the preview.
 
 === A title page
 
@@ -136,27 +210,24 @@ The Visual editor shows the page break as a dashed divider labelled "Page break"
   ```typ
   #set page(paper: "a6", margin: 1.5cm)
 
+  // put the block in the middle of the page
   #align(center + horizon)[
     #text(size: 20pt, weight: "bold")[Compile times]
 
     A report on incremental compilation
 
+    // vertical space
     #v(2em)
+
     Ada Lovelace · October 2026
   ]
 
   #pagebreak()
 
   = Introduction
-  Writers want to see their document while they type.
+
+  #lorem(30)
   ```
 ]
 
-- `align(center + horizon)` puts the block in the middle of the page; `v(2em)` is vertical space.
-- To keep the page number off the title page, set the numbering after it: `#set page(numbering: "1")` below the `#pagebreak()`, and `#counter(page).update(1)` to start counting there.
-
 More: #link("https://typst.app/docs/tutorial/")[Typst's tutorial] and #link("https://typst.app/docs/reference/")[reference].
-
-== How to configure
-
-- Packages: a host's Content-Security-Policy must allow `connect-src https://packages.typst.org`.

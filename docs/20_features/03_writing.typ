@@ -127,37 +127,7 @@ A label (`<labelname>`) names a heading, figure or table; a reference (`@labelna
 ]
 
 
-The Visual editor shows `results` as a tag on the heading and each reference as a chip naming its target; the preview shows "Table 1" (its number), as above.
+- Insert → *Add label*: type the name into a new tag (`fig:`, `tab:` or `sec:` to start with).
 
-
-
-- Insert → Add label: type the name into a new tag (`fig:`, `tab:` or `sec:` to start with).
-- Select text in a block without a label: the selection's bar offers Add label, too.
-- Click a tag: "Rename…" (updates the references in every file), "Rename without updating references…", "Remove label".
-- Type `@` for a list of the project's labels, found by name or by what they label. Enter, Tab or a click inserts the reference; so does a space or punctuation right after a whole name (`@intro.`).
-- A reference to a missing label is marked.
-- A reference, and `#link(<label>)[..]`, leads to its label, in whichever file: hovering says where ("Go to Figure · The measurement setup in method.typ (⌘+click or Alt+Enter)"); Ctrl+click (⌘-click on Mac) on it, or Alt+Enter on the selected chip or with the cursor in it, opens that file at the label. In the Source editor and the Visual editor alike; a plain click edits.
-- Copy and paste never makes two labels of one name: a pasted label the project has already gets `-1`, `-2`, … (`<fig:setup-1>`), and the references to it inside the pasted text (`@fig:setup-1`) with it; references to labels not pasted keep pointing to the originals. A cut and pasted label keeps its name.
-- Search everywhere finds labels and figures: `@` and part of a name or caption.
-
-== Spelling
-
-The browser checks the spelling of the Visual editor's text with its own checker and dictionaries; its context menu offers the corrections. In a document starting with `#set text(lang: "de", region: "AT")`, the words are checked as Austrian German; Typst hyphenates and quotes as in German, too:
-
-#example[
-  ```typ
-  #set text(lang: "de", region: "AT")
-  #set par(justify: true)
-
-  Im Jänner wurden alle Dokumente zweimal übersetzt: „kalt“ und nach einer Änderung von einem Wort.
-  ```
-]
-
-- The language is the document's: the first `#set text(lang: ..)` in the shown file, else in the main file, with its `region`. Without one, the browser's default language.
-- Code is not checked: inline code, code blocks and raw boxes (math, labels, other Typst). Neither is the Source editor.
-- The browser knows no project words: what it flags wrongly, it flags in every document.
-
-== How to configure
-
-- A host can refuse image uploads with the option `allowFileChange`.
-- `spellcheck.enabled` (on by default) turns the spell check off.
+- Type `@` for adding a cross-reference.
+- Copy and paste re-labels if needed, and updates references.
