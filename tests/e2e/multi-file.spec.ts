@@ -49,5 +49,7 @@ test('reports a package that cannot be downloaded', async ({ page, context }) =>
     el.value = '#import "@preview/nope:1.0.0": x';
   });
   await expect(editor.getByTestId('typst-status')).toHaveText(/error/);
+  // the Visual editor is shown first; the Source editor is made when its tab is
+  await editor.getByRole('tab', { name: 'Source' }).click();
   await expect(editor.getByTestId('typst-source').locator('.cm-lintRange-error')).toHaveCount(1);
 });

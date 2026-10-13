@@ -80,6 +80,26 @@ describe('ToolbarMenu', () => {
     expect([...menu.element.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Key', 'Term']);
   });
 
+  it('a list taller than the room its clipping ancestor leaves below the trigger scrolls', () => {
+    const editor = document.createElement('div');
+    editor.style.overflow = 'hidden';
+    document.body.append(editor);
+    const items = Array.from({ length: 13 }, (_, i) => item(`Item ${i}`));
+    const menu = new ToolbarMenu(document, 'Insert', content(() => '', () => items));
+    editor.append(menu.element);
+    const list = menu.element.querySelector<HTMLElement>('[role="menu"]')!;
+    // jsdom lays nothing out: the editor ends at 300px, the list starts at 100px and is 390px tall
+    vi.spyOn(editor, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 190, 390));
+    vi.spyOn(list, 'scrollHeight', 'get').mockReturnValue(390);
+    trigger(menu).click();
+    expect(list.style.maxHeight).toBe('192px');
+    trigger(menu).click();
+    vi.spyOn(list, 'scrollHeight', 'get').mockReturnValue(150);
+    trigger(menu).click();
+    expect(list.style.maxHeight).toBe('');
+  });
+
   it('shows the icon given as of the last refresh (e.g. the current alignment)', () => {
     const { menu, trigger, setIcon } = setup();
     expect(trigger.innerHTML).toContain('left');

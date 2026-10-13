@@ -6,7 +6,8 @@ import type { ToolbarControl } from '../visual-editor';
  * A menu button of the toolbar: the trigger (icon, a small caret,
  * `aria-haspopup`) opens a `role="menu"` list of items below it. Choosing an
  * item, Escape, or a click elsewhere closes it; arrow keys move between the
- * items. The items are ordinary toolbar buttons (their enabled/pressed state
+ * items. A list taller than the room below the trigger (a short editor clips
+ * it) scrolls. The items are ordinary toolbar buttons (their enabled/pressed state
  * is the toolbar's business), asked for again each time the menu opens, so
  * they follow what the menu holds now (the project's inline styles); a menu
  * without items hides. The trigger shows `icon()` as of the last `refresh()`,
@@ -87,6 +88,7 @@ export class ToolbarMenu implements ToolbarControl {
     this.showItems();
     this.items.refresh();
     this.list.hidden = false;
+    this.fit();
     this.trigger.setAttribute('aria-expanded', 'true');
     this.element.ownerDocument.addEventListener('mousedown', this.outside, true);
   }
@@ -109,6 +111,15 @@ export class ToolbarMenu implements ToolbarControl {
     this.list.replaceChildren(...items.buttons);
   }
 
+  /** Limits the open list to the room below the trigger that shows: the nearest clipping ancestor's, the window's. */
+  private fit(): void {
+    this.list.style.maxHeight = '';
+    const view = this.element.ownerDocument.defaultView;
+    const bottom = Math.min(clipBottom(this.element), view?.innerHeight ?? Infinity);
+    const room = bottom - this.list.getBoundingClientRect().top - MENU_MARGIN;
+    if (room < this.list.scrollHeight) this.list.style.maxHeight = `${Math.max(room, MENU_MIN_HEIGHT)}px`;
+  }
+
   private close(): void {
     this.list.hidden = true;
     this.trigger.setAttribute('aria-expanded', 'false');
@@ -128,6 +139,26 @@ export class ToolbarMenu implements ToolbarControl {
       enabled[(at + step + enabled.length) % enabled.length]?.focus();
     }
   }
+}
+
+/** Room left below an open menu's list (px). */
+const MENU_MARGIN = 8;
+/** The least height of a list that has to scroll (px): a few items, however little room there is. */
+const MENU_MIN_HEIGHT = 96;
+
+/** The bottom edge of the nearest ancestor of `element` that clips what sticks out (through shadow roots); Infinity without. */
+function clipBottom(element: Element): number {
+  for (let node = parentOf(element); node; node = parentOf(node)) {
+    const style = getComputedStyle(node);
+    if (style.overflowX !== 'visible' || style.overflowY !== 'visible') return node.getBoundingClientRect().bottom;
+  }
+  return Infinity;
+}
+
+/** `element`'s parent element, or its shadow root's host. */
+function parentOf(element: Element): Element | null {
+  const parent = element.parentNode;
+  return parent instanceof Element ? parent : parent instanceof ShadowRoot ? parent.host : null;
 }
 
 /** What a menu holds: its trigger's icon and its items, as of now. */

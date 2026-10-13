@@ -19,7 +19,11 @@ test('expanding a folder and clicking a file opens it', async ({ page }) => {
 
 test('the tree works with the keyboard', async ({ page }) => {
   await fileRow(page, 'main.typ').focus();
-  await page.keyboard.press('Home'); // the first folder
+  await page.keyboard.press('End');
+  await expect(fileRow(page, 'main.typ')).not.toBeFocused();
+  await page.keyboard.press('Home'); // the main file, first
+  await expect(fileRow(page, 'main.typ')).toBeFocused();
+  await page.keyboard.press('ArrowDown'); // the first folder
   await expect(fileRow(page, 'assets')).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(fileRow(page, 'chapters')).toBeFocused();
@@ -52,10 +56,13 @@ test('a raw box in the Visual editor has no "Open …" row; its path shows the l
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
-test("an image box's path opens the image", async ({ page }) => {
+test("an image box's picture opens the image with ⌘/Ctrl+click", async ({ page }) => {
   await openFile(page, 'chapters/results.typ');
-  // the image box's path in its heading (or "Open …" on a raw box, should the figure stay raw)
-  await page.locator('[data-testid=typst-visual]:visible').getByRole('button', { name: /compile-times\.svg/ }).first().click();
+  // the box's picture follows its path's link, as every box's picture does
+  const picture = page.locator('[data-testid=typst-visual]:visible .typst-images__box img.typst-visual__rendering');
+  await picture.hover();
+  await expect(page.getByRole('tooltip')).toContainText('Open assets/compile-times.svg');
+  await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'assets/compile-times.svg')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('typst-asset')).toBeVisible();
 });

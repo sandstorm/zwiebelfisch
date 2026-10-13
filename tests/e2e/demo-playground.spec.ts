@@ -45,7 +45,7 @@ test('the name field reloads as that user', async ({ page }) => {
   await expect(name).toHaveValue('Demo user');
   await name.fill('Ada');
   await name.press('Enter');
-  await expect(page).toHaveURL(/[?&]user=Ada(&|$)/);
+  await expect(page).toHaveURL(/[?&]user=Ada(&|#|$)/); // the fragment names the shown file
   await expect(bar(page).getByRole('textbox', { name: 'Your name' })).toHaveValue('Ada');
 });
 
