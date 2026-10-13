@@ -83,6 +83,7 @@ func run() error {
 	// simulated pushes go to the server's webhook, so open rooms merge them right away
 	handler := playground.Handler(playground.Options{
 		GitLab: fake, AppendTo: "/chapters/introduction.typ", Webhook: server, WebhookSecret: webhookSecret,
+		Rooms: server.GitLab(),
 	}, server)
 
 	log.Info().Str("room", playground.Room).Bool("plainRooms", cfg.Rooms.Plain).Msg("playground server with the fake GitLab")

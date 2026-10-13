@@ -50,6 +50,7 @@ func TestPlaygroundBinary(t *testing.T) {
 
 	require.Equal(t, `{"project":"demo/report","room":"gitlab:demo/report@main"}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/playground", port)))
 	require.Contains(t, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/upstream?room=gitlab%%3Ademo%%2Freport%%40main", port)), "chapters/introduction.typ")
+	require.Equal(t, `{"autoCommit":false,"room":"gitlab:demo/report@other"}`, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/auto-commit?room=gitlab%%3Ademo%%2Freport%%40other", port)))
 	require.Equal(t, "Typst editor collaboration server", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", port)))
 	require.Equal(t, `{"plainRooms":false}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/api/info", port)))
 	jar, err := cookiejar.New(nil)

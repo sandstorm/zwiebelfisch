@@ -79,10 +79,11 @@ type Rooms struct {
 	ctx         context.Context // ends with Close: repository calls and waits
 	cancel      context.CancelFunc
 
-	mu     sync.Mutex
-	open   map[string]*room // by room name
-	closed bool
-	tasks  sync.WaitGroup
+	mu            sync.Mutex
+	open          map[string]*room // by room name
+	autoCommitOff map[string]bool  // rooms that never commit by themselves (SetAutoCommit), by room name
+	closed        bool
+	tasks         sync.WaitGroup
 }
 
 // New returns the GitLab rooms for opts.
@@ -106,7 +107,7 @@ func New(opts Options) *Rooms {
 	x := &Rooms{
 		opts: opts, prefix: opts.ID + ":", authorEmail: opts.AuthorEmail, autoCommit: opts.AutoCommit,
 		leaveDelay: LeaveDelay, blobs: newBlobCache(64 << 20), accessCache: accessCache{entries: map[accessKey]cachedAccess{}},
-		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel, open: map[string]*room{},
+		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel, open: map[string]*room{}, autoCommitOff: map[string]bool{},
 	}
 	x.http = http.NewServeMux()
 	x.http.HandleFunc("GET /rooms/{room}/files/{path...}", x.serveFile)
@@ -156,7 +157,7 @@ func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc) (*room, error) {
 	if !ok {
 		return nil, nil
 	}
-	g := &room{x: x, host: h, repo: x.opts.repository(project), project: project, branch: branch}
+	g := &room{x: x, host: h, repo: x.opts.repository(project), name: name, project: project, branch: branch}
 	if err := g.open(x.ctx, doc); err != nil {
 		return nil, fmt.Errorf("gitlab: open %s@%s: %w", project, branch, err)
 	}
@@ -164,6 +165,33 @@ func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc) (*room, error) {
 	x.open[name] = g
 	x.mu.Unlock()
 	return g, nil
+}
+
+// SetAutoCommit turns committing by itself off (or back to Options.AutoCommit) for the room name, open or
+// not (yet): its meta.autoCommit follows, so the widget asks before the last user leaves with changes. For
+// the demo playground, which tries both settings on one server.
+func (x *Rooms) SetAutoCommit(name string, off bool) {
+	x.mu.Lock()
+	if off {
+		x.autoCommitOff[name] = true
+	} else {
+		delete(x.autoCommitOff, name)
+	}
+	open := x.open[name]
+	x.mu.Unlock()
+	if open != nil {
+		open.host.Do(open.autoCommitChanged)
+	}
+}
+
+// autoCommitOf is the room name's auto-commit time (0: never).
+func (x *Rooms) autoCommitOf(name string) time.Duration {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.autoCommitOff[name] {
+		return 0
+	}
+	return x.autoCommit
 }
 
 // Paths are the URL path prefixes ServeHTTP answers (an http.ServeMux pattern each): the room files, and

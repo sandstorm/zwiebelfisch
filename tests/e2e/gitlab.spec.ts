@@ -28,8 +28,10 @@ const account = (page: Page) => page.locator('.typst-collaboration__account');
 /** Text in the Visual editor of the file shown (each opened file keeps a hidden Visual editor of its own). */
 const visualText = (page: Page, text: string) => page.getByTestId('typst-visual').getByText(text);
 
-async function users(browser: Browser, baseURL: string, project: string) {
-  const room = `gitlab:demo/report@e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+/** A fresh room: a branch of its own. */
+const newRoom = (project: string) => `gitlab:demo/report@e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+
+async function users(browser: Browser, baseURL: string, project: string, room = newRoom(project)) {
   return { room, ann: await join(browser, baseURL, room, 'Ann'), bob: await join(browser, baseURL, room, 'Bob') };
 }
 
@@ -146,9 +148,11 @@ test('a save that cannot reach GitLab stays a warning for everyone, also who joi
   for (const page of [ann, bob, cleo]) await expect(scmStatus(page)).toHaveText([/^Saved · [0-9a-f]{8}$/]);
 });
 
-test('leaving as the last user with unsaved changes asks first, when the server does not save by itself', async ({ browser, baseURL }, info) => {
-  test.skip(process.env.TYPST_GITLAB_AUTO_COMMIT !== 'off', 'needs the server without auto-commit: TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab');
-  const { ann, bob } = await users(browser, baseURL!, info.project.name);
+test('leaving as the last user with unsaved changes asks first, when the server does not save by itself', async ({ browser, baseURL, request }, info) => {
+  // this room never saves by itself (playground endpoint; the server's setting stays for the others)
+  const room = newRoom(info.project.name);
+  expect((await request.post(`${SERVER}/playground/auto-commit?room=${encodeURIComponent(room)}`)).ok()).toBe(true);
+  const { ann, bob } = await users(browser, baseURL!, info.project.name, room);
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
@@ -175,7 +179,7 @@ test('leaving as the last user with unsaved changes asks first, when the server 
 });
 
 test('leaving as the last user while a conflict blocks saving asks first, also when the server saves by itself', async ({ browser, baseURL, request }, info) => {
-  const room = `gitlab:demo/report@e2e-${info.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const room = newRoom(info.project.name);
   const ann = await join(browser, baseURL!, room, 'Ann');
   await openFile(ann, 'chapters/introduction.typ');
   await ann.getByRole('tab', { name: 'Source' }).click();
@@ -200,7 +204,7 @@ test('saving without changes says so', async ({ browser, baseURL }, info) => {
 });
 
 test('signed out: the widget offers to sign in, the fake GitLab signs in, back in the room; Sign out', async ({ page }, info) => {
-  const room = `gitlab:demo/report@e2e-${info.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const room = newRoom(info.project.name);
   await page.goto(`/?room=${encodeURIComponent(room)}`);
   await expect(messages(page)).toContainText('Sign in to join this room.');
   await expect(account(page)).toHaveText('Sign in');

@@ -2,6 +2,7 @@ package playground_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,7 @@ func files() fakegitlab.Files {
 
 type setup struct {
 	gitlab  *fakegitlab.GitLab
+	rooms   *rooms
 	handler http.Handler
 	hooks   []*http.Request
 	bodies  []map[string]any
@@ -40,7 +42,7 @@ type setup struct {
 }
 
 func newSetup(t *testing.T) *setup {
-	s := &setup{gitlab: fakegitlab.New(playground.Project, files())}
+	s := &setup{gitlab: fakegitlab.New(playground.Project, files()), rooms: &rooms{}}
 	s.gitlab.SetAutoBranches(true)
 	webhook := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var event map[string]any
@@ -48,8 +50,15 @@ func newSetup(t *testing.T) *setup {
 		s.hooks, s.bodies = append(s.hooks, r), append(s.bodies, event)
 	})
 	behind := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.behind++ })
-	s.handler = playground.Handler(playground.Options{GitLab: s.gitlab, AppendTo: intro, Webhook: webhook, WebhookSecret: "hook-secret"}, behind)
+	s.handler = playground.Handler(playground.Options{GitLab: s.gitlab, AppendTo: intro, Webhook: webhook, WebhookSecret: "hook-secret", Rooms: s.rooms}, behind)
 	return s
+}
+
+// rooms records SetAutoCommit (the GitLab rooms' own test checks what it does).
+type rooms struct{ calls []string }
+
+func (r *rooms) SetAutoCommit(room string, off bool) {
+	r.calls = append(r.calls, fmt.Sprintf("%s off=%t", room, off))
 }
 
 func (s *setup) request(t *testing.T, method, target string) (*httptest.ResponseRecorder, map[string]any) {
@@ -159,6 +168,22 @@ func TestOutage(t *testing.T) {
 	require.NoError(t, get())
 }
 
+func TestAutoCommit(t *testing.T) {
+	s := newSetup(t)
+	fresh := url.QueryEscape("gitlab:demo/report@fresh")
+	rec, body := s.request(t, "POST", "/playground/auto-commit?room="+fresh)
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	require.Equal(t, map[string]any{"room": "gitlab:demo/report@fresh", "autoCommit": false}, body)
+	_, body = s.request(t, "POST", "/playground/auto-commit?on=true&room="+fresh)
+	require.Equal(t, map[string]any{"room": "gitlab:demo/report@fresh", "autoCommit": true}, body)
+	require.Equal(t, []string{"gitlab:demo/report@fresh off=true", "gitlab:demo/report@fresh off=false"}, s.rooms.calls)
+
+	handler := playground.Handler(playground.Options{GitLab: s.gitlab, AppendTo: intro}, http.NotFoundHandler())
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest("POST", "/playground/auto-commit?room="+room, nil))
+	require.Equal(t, 404, rec.Code, "no GitLab rooms")
+}
+
 func TestRefusals(t *testing.T) {
 	for _, tc := range []struct {
 		method, target string
@@ -168,6 +193,9 @@ func TestRefusals(t *testing.T) {
 		{"POST", "/playground/outage?room=plain-room", 400},
 		{"POST", "/playground/upstream?room=" + url.QueryEscape("gitlab:demo/report@"), 400},
 		{"GET", "/playground/outage?room=" + room, 405},
+		{"POST", "/playground/auto-commit?room=plain-room", 400},
+		{"POST", "/playground/auto-commit?room=" + url.QueryEscape("gitlab:other/project@main"), 404},
+		{"GET", "/playground/auto-commit?room=" + room, 405},
 		{"POST", "/playground/upstream?room=" + url.QueryEscape("gitlab:other/project@main"), 404},
 		{"GET", "/playground/upstream?room=" + room, 405},
 		{"POST", "/playground", 405},
@@ -178,6 +206,7 @@ func TestRefusals(t *testing.T) {
 			require.Equal(t, tc.status, rec.Code)
 			require.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"))
 			require.Empty(t, s.hooks)
+			require.Empty(t, s.rooms.calls)
 		})
 	}
 }

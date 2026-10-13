@@ -650,6 +650,43 @@ func TestAutoCommit(t *testing.T) {
 		require.Equal(t, strings.Replace(strings.Replace(mainText, "Second paragraph.", "Theirs.", 1), "First", "Opening", 1), e.repo.texts()[mainTyp])
 	})
 
+	t.Run("SetAutoCommit turns it off for one open room and back on: the meta the clients read follows", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		parent := e.repo.head("main").sha
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.x.SetAutoCommit("gitlab:"+projectPath+"@other", true)
+		var minutes *float64
+		require.True(t, e.meta(metaAutoCommit, &minutes), "another room's setting")
+
+		e.x.SetAutoCommit(roomName, true)
+		require.False(t, e.meta(metaAutoCommit, &minutes), "null: the widget asks before the last user leaves")
+		e.clock.Advance(10 * time.Minute)
+		e.host.setEmpty(true)
+		<-e.left()
+		e.clock.Advance(LeaveDelay)
+		require.Equal(t, parent, e.repo.head("main").sha, "neither the pending idle commit nor one after leaving")
+
+		e.x.SetAutoCommit(roomName, false)
+		require.True(t, e.meta(metaAutoCommit, &minutes))
+		require.Equal(t, 10.0, *minutes)
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "Next") })
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, e.repo.head("main").parent)
+	})
+
+	t.Run("SetAutoCommit before the room opens: it opens with auto-commit off", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		e.x.SetAutoCommit(roomName, true)
+		host := &fakeHost{doc: ydoc.New()}
+		var opened *room
+		var err error
+		host.Do(func(doc *ydoc.Doc) { opened, err = e.x.openRoom(roomName, host, doc) })
+		require.NoError(t, err)
+		t.Cleanup(func() { host.Do(func(*ydoc.Doc) { opened.Close() }) })
+		var minutes *float64
+		host.Do(func(doc *ydoc.Doc) { require.False(t, readValue(doc, metaAutoCommit, &minutes), "null") })
+	})
+
 	t.Run("reads its setting", func(t *testing.T) {
 		for value, want := range map[string]time.Duration{"": DefaultAutoCommit, " ": DefaultAutoCommit, "off": 0, "OFF": 0, "false": 0, "0": 0, "5": 5 * time.Minute, "0.5": 30 * time.Second} {
 			got, err := ParseAutoCommit(value)
