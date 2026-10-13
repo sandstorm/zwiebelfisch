@@ -13,9 +13,13 @@ import { type FindOptions, SearchPanel } from './workbench/search-panel';
  * the one the user chose last), selected; one in a text file opens that file. The panel lying over a narrow widget's
  * editing area closes then.
  *
+ * It searches the whole project, the current file (the one shown, as it changes) or a folder and its subfolders. While
+ * shown it follows every change of the files; hidden, it drops its results and searches again when shown.
+ *
  * The command `workbench.action.findInFiles` (⌘⇧F) shows the panel and searches. It takes VS Code's arguments
  * (`query`, `isRegex`, `isCaseSensitive`, `matchWholeWord`); without a query it starts from the selection of the shown
- * Typst editor (its source text, one line), else from the query the panel has.
+ * Typst editor (its source text, one line), else from the query the panel has. `search.findInFolder` (the file panel's
+ * "Find in folder…" on a folder's row, `explorer/context`) does the same in that folder.
  *
  * The matching (model/text-query.ts) and the results that follow the files' changes (model/search-results.ts) are
  * pure; the view (workbench/search-panel.ts) gets them through its options, so it is tested without a workbench.
@@ -23,16 +27,19 @@ import { type FindOptions, SearchPanel } from './workbench/search-panel';
 export function search(): TypstExtension {
   return {
     id: 'search',
+    // search.findInFolder needs a folder: offered on the file panel's rows only, not in command search
     contributes: { commands: [{ command: FIND_IN_FILES, title: 'Find in files' }], keybindings: [{ command: FIND_IN_FILES, key: FIND_KEY }] },
     activate(context) {
       const { project, languages, workbench, commands, subscriptions } = context;
       const side = workbench.registerSidePanel('search', { label: 'Find in files', icon: magnifier(workbench.ownerDocument), order: 12 });
       const panel = new SearchPanel(side.body, {
-        search: (query) => new SearchResults({ project, query, scope: { kind: 'project' }, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
+        search: (query, scope) => new SearchResults({ project, query, scope, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
         open: (path, match) => {
           workbench.open(path, ProjectPath.isTypst(path) ? { selection: SourceRange.of(match) } : {});
           side.dismiss();
         },
+        view: side,
+        window: context.window,
         keys: [
           { label: 'Find in files', key: keyLabel(FIND_KEY) },
           { label: 'Search everywhere', key: 'Shift Shift' },
@@ -43,12 +50,18 @@ export function search(): TypstExtension {
         side,
         panel,
         commands.registerCommand(FIND_IN_FILES, (options?: FindOptions) => findInFiles(context, side, panel, options)),
+        commands.registerCommand(FIND_IN_FOLDER, (folder: ProjectPath) => {
+          side.show(true);
+          panel.find({}, { kind: 'folder', path: folder });
+        }),
+        workbench.registerMenuItem('explorer/context', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
       );
     },
   };
 }
 
 const FIND_IN_FILES = 'workbench.action.findInFiles';
+const FIND_IN_FOLDER = 'search.findInFolder';
 const FIND_KEY = 'Mod+Shift+KeyF';
 
 /** Shows the panel and searches for `options`, or (with no query given) for the selection of the shown Typst editor. */

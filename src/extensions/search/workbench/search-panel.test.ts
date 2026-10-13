@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // Tests for search-panel.ts with the real model over a project: the keys while there is no query; the result tree
 // (files, lines, the match marked, collapsed files); typing, the options, an invalid regular expression, too many
-// results; the keyboard and clicks; results following a file's change.
+// results; the keyboard and clicks; results following a file's change; the scopes (project, current file, folder);
+// a hidden panel dropping its results and searching again when shown.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project, type ProjectFiles } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
@@ -22,9 +24,20 @@ afterEach(() => {
 function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n', '/chapters/intro.typ': 'Say hello.\n', '/refs.bib': '@book{hello}', '/logo.png': new Uint8Array() }) {
   const project = new Project(path('/main.typ'), files);
   const opened: [ProjectPath, TextMatch][] = [];
+  const searches: SearchResults[] = [];
+  const visibility = new EventEmitter<void>();
+  const view = { visible: true, onDidChangeVisibility: visibility.event };
+  const activeFile = new EventEmitter<ProjectPath>();
+  const window = { activeFile: path('/main.typ'), onDidChangeActiveFile: activeFile.event };
   const panel = new SearchPanel(document.body, {
-    search: (query) => new SearchResults({ project, query, scope: { kind: 'project' }, isTextFile: (file) => file.endsWith('.bib') }),
+    search: (query, scope) => {
+      const results = new SearchResults({ project, query, scope, isTextFile: (file) => file.endsWith('.bib') });
+      searches.push(results);
+      return results;
+    },
     open: (file, match) => opened.push([file, match]),
+    view,
+    window,
     keys: [{ label: 'Find in files', key: 'Ctrl+Shift+F' }],
   });
   const root = document.querySelector<HTMLElement>('[data-testid=typst-search]')!;
@@ -34,6 +47,24 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
   return {
     project,
     panel,
+    searches,
+    /** Shows or hides the panel. */
+    setVisible: (visible: boolean) => {
+      view.visible = visible;
+      visibility.fire();
+    },
+    /** Shows `file` in the editing area. */
+    show: (file: string) => {
+      window.activeFile = path(file);
+      activeFile.fire(path(file));
+    },
+    scope: () => root.querySelector<HTMLSelectElement>('select')!,
+    /** What the scope line says beside the choice: the current file, or the folder chip. */
+    scopeTarget: () => {
+      const target = root.querySelector<HTMLElement>('.typst-search__scope-target')!;
+      return target.hidden ? '' : target.firstElementChild!.textContent;
+    },
+    clearScope: () => root.querySelector<HTMLButtonElement>('button[aria-label="Search the whole project"]')!,
     opened,
     input,
     rows,
@@ -165,5 +196,72 @@ describe('SearchPanel', () => {
     panel.find({ query: 'x' });
     await vi.runAllTimersAsync();
     expect(message()).toBe('Too many results — narrow the search (the first 5000 are shown)');
+  });
+
+  it('searches the current file, following the file shown', async () => {
+    const { panel, scope, scopeTarget, tree, show } = setup();
+    panel.find({ query: 'hello' });
+    scope().value = 'file';
+    scope().dispatchEvent(new Event('change'));
+    await vi.runAllTimersAsync();
+    expect(scopeTarget()).toBe('main.typ');
+    expect(tree()).toEqual(['▾ main.typ (2)', '  1: [Hello] world', '  2: [hello] again']);
+    show('/chapters/intro.typ');
+    await vi.runAllTimersAsync();
+    expect(scopeTarget()).toBe('chapters/intro.typ');
+    expect(tree()).toEqual(['▾ intro.typ chapters (1)', '  1: Say [hello].']);
+  });
+
+  it('searches a folder with its subfolders: picked, or the current file\'s; × goes back to the project', async () => {
+    const files = { '/main.typ': 'hello', '/a/one.typ': 'hello', '/a/b/two.typ': 'hello', '/ab.typ': 'hello' };
+    const { panel, scope, scopeTarget, tree, message, show, clearScope } = setup(files);
+    panel.find({ query: 'hello' }, { kind: 'folder', path: path('/a') });
+    await vi.runAllTimersAsync();
+    expect(scope().value).toBe('folder');
+    expect(scopeTarget()).toBe('a/');
+    expect(tree()).toEqual(['▾ two.typ a/b (1)', '  1: [hello]', '▾ one.typ a (1)', '  1: [hello]']);
+    show('/a/b/two.typ');
+    scope().value = 'folder';
+    scope().dispatchEvent(new Event('change'));
+    await vi.runAllTimersAsync();
+    expect(scopeTarget()).toBe('a/b/');
+    expect(message()).toBe('1 result in 1 file');
+    clearScope().click();
+    await vi.runAllTimersAsync();
+    expect([scope().value, scopeTarget()]).toEqual(['project', '']);
+    expect(message()).toBe('4 results in 4 files');
+    show('/main.typ');
+    scope().value = 'folder';
+    scope().dispatchEvent(new Event('change'));
+    expect(scope().value).toBe('project');
+  });
+
+  it('hidden, drops its results; shown, searches again keeping what was expanded', async () => {
+    const { project, panel, searches, setVisible, rows, tree } = setup({ '/main.typ': 'x\n'.repeat(11), '/b.typ': 'x' });
+    panel.find({ query: 'x' });
+    await vi.runAllTimersAsync();
+    rows()[0].click();
+    setVisible(false);
+    expect(searches).toHaveLength(1);
+    project.document(path('/b.typ'))!.change([{ ...SourceRange.of({ from: 1, to: 1 }), insert: ' x' }], 'test');
+    await vi.runAllTimersAsync();
+    expect(tree()).toHaveLength(14);
+    setVisible(true);
+    await vi.runAllTimersAsync();
+    expect(searches).toHaveLength(2);
+    expect(tree()).toHaveLength(15);
+    expect(tree().slice(-3)).toEqual(['▾ b.typ (2)', '  1: [x] x', '  1: x [x]']);
+  });
+
+  it('a search asked for while hidden waits until shown', async () => {
+    const { panel, searches, setVisible, message } = setup();
+    setVisible(false);
+    panel.find({ query: 'hello' });
+    expect(searches).toHaveLength(0);
+    setVisible(true);
+    panel.find();
+    await vi.runAllTimersAsync();
+    expect(searches).toHaveLength(1);
+    expect(message()).toBe('4 results in 3 files');
   });
 });

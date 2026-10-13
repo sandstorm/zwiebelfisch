@@ -1,24 +1,32 @@
 // The "Find in files" panel's view. See search in ../search.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { FileMatches, SearchResults } from '../model/search-results';
+import type { WindowApi } from '../../../hosts/window/window';
+import type { SidePanel } from '../../../hosts/workbench/workbench';
+import type { FileMatches, SearchResults, SearchScope } from '../model/search-results';
 import { type TextMatch, TextQuery } from '../model/text-query';
+import { type Choice, ScopePicker } from './scope-picker';
 
 /**
- * The query field with its three options (Match Case, Match Whole Word, Use Regular Expression), what the search found
- * in words ("23 results in 4 files", an invalid regular expression, too many results), and the matches as a tree: a
- * row per file (name, folder, count) with a row per match below (line number, the source line cut around the match,
- * the match marked). Files with many matches start collapsed (VS Code's `search.collapseResults: auto`), and only an
- * expanded file's rows are made. With no query it shows the keys that lead here instead.
+ * The query field with its three options (Match Case, Match Whole Word, Use Regular Expression), where to search
+ * (ScopePicker: the project, the current file or a folder), what the search found in words ("23 results in 4 files",
+ * an invalid regular expression, too many results), and the matches as a tree: a row per file (name, folder, count)
+ * with a row per match below (line number, the source line cut around the match, the match marked). Files with many
+ * matches start collapsed (VS Code's `search.collapseResults: auto`), and only an expanded file's rows are made. With
+ * no query it shows the keys that lead here instead.
  *
- * Typing searches after a short pause, the previous search stopped; the options and Enter search at once. Results
- * follow the files' changes, redrawn at most every few milliseconds. The tree is one tab stop (↑ / ↓, Home / End,
- * ← / → collapse and expand; ↓ from the field enters it); a click or Enter on a match opens it.
+ * Typing searches after a short pause, the previous search stopped; the options, the scope and Enter search at once.
+ * Results follow the files' changes, redrawn at most every few milliseconds, while the panel is shown: a hidden panel
+ * drops its results (nobody sees them go stale) and searches again when it is shown, keeping what was expanded. The
+ * tree is one tab stop (↑ / ↓, Home / End, ← / → collapse and expand; ↓ from the field enters it); a click or Enter on
+ * a match opens it.
  */
 export class SearchPanel {
   readonly #root: HTMLElement;
   readonly #input: HTMLInputElement;
   readonly #toggles: Record<ToggleName, HTMLButtonElement>;
+  readonly #scope: ScopePicker;
+  readonly #subscriptions: { dispose(): void }[];
   readonly #message: HTMLElement;
   readonly #empty: HTMLElement;
   readonly #tree: HTMLElement;
@@ -27,6 +35,8 @@ export class SearchPanel {
   #error: string | undefined;
   /** Whether `#results` are still being searched for. */
   #searching = false;
+  /** Whether results were dropped while the panel was hidden, to search again when it is shown. */
+  #stale = false;
   /** The files the viewer expanded (true) or collapsed (false) in this search; the others as `AUTO_COLLAPSE` says. */
   readonly #expanded = new Map<ProjectPath, boolean>();
   #rows: Row[] = [];
@@ -53,6 +63,7 @@ export class SearchPanel {
       isWordMatch: field.appendChild(toggle(doc, 'ab', 'Match Whole Word')),
       isRegExp: field.appendChild(toggle(doc, '.*', 'Use Regular Expression')),
     };
+    this.#scope = new ScopePicker(doc, options.window);
     this.#message = element(doc, 'p', 'typst-search__message');
     this.#message.setAttribute('role', 'status');
     this.#empty = element(doc, 'dl', 'typst-search__empty');
@@ -60,22 +71,24 @@ export class SearchPanel {
     this.#tree = element(doc, 'ul', 'typst-search__tree');
     this.#tree.setAttribute('role', 'tree');
     this.#tree.setAttribute('aria-label', 'Results');
-    this.#root.append(field, this.#message, this.#empty, this.#tree);
+    this.#root.append(field, this.#scope.element, this.#message, this.#empty, this.#tree);
     parent.append(this.#root);
     this.#input.addEventListener('input', () => this.#typed());
     this.#input.addEventListener('keydown', (event) => this.#inputKeydown(event));
     for (const button of Object.values(this.#toggles)) button.addEventListener('click', () => this.#toggle(button));
     this.#tree.addEventListener('click', (event) => this.#click(event));
     this.#tree.addEventListener('keydown', (event) => this.#treeKeydown(event));
+    this.#subscriptions = [this.#scope, this.#scope.onDidChange(() => this.#search()), options.view.onDidChangeVisibility(() => this.#visibilityChanged())];
     this.#render();
   }
 
   /**
-   * Searches for what `options` sets (the rest as it is) right away, and focuses the query field with its text
-   * selected, to type over.
+   * Searches for what `options` sets, in `scope` if given (the rest as it is) right away, and focuses the query field
+   * with its text selected, to type over.
    */
-  find(options: FindOptions = {}): void {
+  find(options: FindOptions = {}, scope?: Choice): void {
     if (options.query !== undefined) this.#input.value = options.query;
+    if (scope) this.#scope.pick(scope);
     const set: Record<ToggleName, boolean | undefined> = { isCaseSensitive: options.isCaseSensitive, isWordMatch: options.matchWholeWord, isRegExp: options.isRegex };
     for (const name of TOGGLES) if (set[name] !== undefined) this.#toggles[name].setAttribute('aria-pressed', String(set[name]));
     this.#search();
@@ -85,9 +98,8 @@ export class SearchPanel {
 
   dispose(): void {
     clearTimeout(this.#typing);
-    clearTimeout(this.#redraw);
-    this.#listener?.dispose();
-    this.#results?.dispose();
+    for (const subscription of this.#subscriptions) subscription.dispose();
+    this.#drop();
     this.#root.remove();
   }
 
@@ -101,19 +113,35 @@ export class SearchPanel {
     this.#search();
   }
 
-  /** Stops the previous search and starts one for the field and the options (none for an empty or invalid query). */
-  #search(): void {
+  #visibilityChanged(): void {
+    if (this.options.view.visible) {
+      // in a moment: whoever showed the panel may be about to search anyway (find)
+      if (this.#stale) this.#typing = setTimeout(() => this.#search(true));
+    } else if (this.#results) {
+      this.#drop();
+      this.#stale = true;
+    }
+  }
+
+  /**
+   * Stops the previous search and starts one for the field, the options and the scope (none for an empty or invalid
+   * query); `again`: the same search once more, keeping what was expanded and focused. While the panel is hidden, it
+   * only notes to search when it is shown.
+   */
+  #search(again = false): void {
     clearTimeout(this.#typing);
-    this.#listener?.dispose();
-    this.#results?.dispose();
-    this.#listener = this.#results = null;
-    this.#expanded.clear();
-    this.#current = null;
+    this.#drop();
+    this.#stale = !this.options.view.visible;
+    if (!again) {
+      this.#expanded.clear();
+      this.#current = null;
+    }
+    if (this.#stale) return;
     const pressed = (name: ToggleName) => this.#toggles[name].getAttribute('aria-pressed') === 'true';
     const query = new TextQuery({ pattern: this.#input.value, isCaseSensitive: pressed('isCaseSensitive'), isWordMatch: pressed('isWordMatch'), isRegExp: pressed('isRegExp') });
     this.#error = query.error;
     if (query.pattern && !query.error) {
-      const results = (this.#results = this.options.search(query));
+      const results = (this.#results = this.options.search(query, this.#scope.scope));
       this.#listener = results.onDidChange(() => this.#scheduleRender());
       this.#searching = true;
       void results.searched.then(() => {
@@ -123,6 +151,15 @@ export class SearchPanel {
       });
     }
     this.#render();
+  }
+
+  /** Stops the search and forgets its results. */
+  #drop(): void {
+    clearTimeout(this.#redraw);
+    this.#redraw = undefined;
+    this.#listener?.dispose();
+    this.#results?.dispose();
+    this.#listener = this.#results = null;
   }
 
   #scheduleRender(): void {
@@ -233,8 +270,12 @@ export class SearchPanel {
 }
 
 export interface SearchPanelOptions {
-  /** Starts searching for `query` (in the scope searched); the panel disposes the results with the next search. */
-  search(query: TextQuery): SearchResults;
+  /** Starts searching for `query` in `scope`; the panel disposes the results with the next search. */
+  search(query: TextQuery, scope: SearchScope): SearchResults;
+  /** The side panel it is in: it searches only while that is shown. */
+  readonly view: Pick<SidePanel, 'visible' | 'onDidChangeVisibility'>;
+  /** The file shown in the editing area: the current file to search in. */
+  readonly window: Pick<WindowApi, 'activeFile' | 'onDidChangeActiveFile'>;
   /** Shows `match` of file `path` (a click or Enter on its row). */
   open(path: ProjectPath, match: TextMatch): void;
   /** What the panel shows while there is no query: the ways here and their keys ("Find in files", "⌘⇧F"). */

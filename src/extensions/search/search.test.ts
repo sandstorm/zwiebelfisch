@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for search.ts in a workbench (preview mocked: no worker in jsdom): the panel on the rail; the key and the
 // command, with the selection or the arguments as query; a match opening in the editor shown now (Visual or Source),
-// a text file's match opening that file.
+// a text file's match opening that file; "Find in folder…" on a folder's row in the file panel.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
@@ -34,7 +34,7 @@ afterEach(() => {
 
 function setup(viewType?: string) {
   const host = document.body.appendChild(document.createElement('div'));
-  const project = new Project(path('/main.typ'), { '/main.typ': 'Hello world\n\nThe world is round.\n', '/notes.txt': 'world notes' });
+  const project = new Project(path('/main.typ'), { '/main.typ': 'Hello world\n\nThe world is round.\n', '/notes.txt': 'world notes', '/chapters/intro.typ': 'Round about.' });
   const workbench = new WorkbenchHost(host, project, { viewType });
   let window!: WindowApi;
   // a text file: one with a declared language
@@ -94,5 +94,17 @@ describe('search', () => {
     await vi.runAllTimersAsync();
     row('world notes').click();
     expect(window.activeFile).toBe('/notes.txt');
+  });
+
+  it('"Find in folder…" on a folder\'s row searches that folder and its subfolders', async () => {
+    const { workbench, panel, input } = setup();
+    expect(workbench.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
+    const [entry] = workbench.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
+    input.value = 'round';
+    await workbench.commands.executeCommand(entry.command, path('/chapters'));
+    await vi.runAllTimersAsync();
+    expect(document.activeElement).toBe(input);
+    expect(panel.querySelector('select')?.value).toBe('folder');
+    expect(panel.querySelector('[role=status]')?.textContent).toBe('1 result in 1 file');
   });
 });
