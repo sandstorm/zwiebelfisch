@@ -9,7 +9,7 @@ import type { VisualEditorPasteEdits } from './visual-editor';
 /**
  * The clipboard in Typst. Copy and cut put the selection's Typst source on the clipboard as text (`text/plain`, and
  * `text/x-typst` saying it is Typst): byte for byte where that source reads as what is selected, else the selection
- * printed anew (part of a bold word: `*bo*`). A cut with nothing selected cuts the paragraph at the caret, as IntelliJ
+ * printed anew (part of a bold word: `*bo*`); text within code (a code block's lines) is that text, without fences. A cut with nothing selected cuts the paragraph at the caret, as IntelliJ
  * cuts the line: a list item or quote that is only that paragraph goes along (`caretBlock`). ProseMirror's HTML goes along for rich targets (a mail, a word
  * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
  * source).
@@ -86,10 +86,13 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
 
 /**
  * The Typst source of the selection, whose content is `slice`: the source range it shows, if that reads as the same
- * document as the slice printed (`*bold* text`); else the slice printed (`*bo*` for the start of a bold word).
+ * document as the slice printed (`*bold* text`); else the slice printed (`*bo*` for the start of a bold word). Text
+ * within one block of code (a spec with `code`) is that text, as ProseMirror pastes into code: no fences.
  */
 function typstOfSelection(state: EditorState, slice: Slice): string {
   const { doc, schema, selection } = state;
+  const { $from, $to } = selection;
+  if ($from.sameParent($to) && $from.parent.type.spec.code) return doc.textBetween($from.pos, $to.pos);
   const { from, to } = selectionSource(state);
   const text = serializeToTypst(doc).slice(from, to);
   // a selection from between blocks (a whole paragraph) starts after the source before it: without the blank lines
