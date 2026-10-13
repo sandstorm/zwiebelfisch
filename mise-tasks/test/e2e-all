@@ -12,11 +12,12 @@ run() {
   echo "=== $name"
   "$@" || failed+=("$name")
 }
-run "test:e2e ($usage_browser)" mise run test:e2e "$usage_browser"
-run "test:e2e-collab ($usage_browser)" mise run test:e2e-collab "$usage_browser"
-run "test:e2e-gitlab ($usage_browser)" mise run test:e2e-gitlab "$usage_browser"
-run "test:e2e-gitlab (auto-commit off)" env TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab "$usage_browser" -- --grep "leave"
-run "test:e2e-docs ($usage_browser)" mise run test:e2e-docs "$usage_browser"
+# each suite its own results folder (test-results/<suite>/), so a later suite does not wipe an earlier one's failures
+run "test:e2e ($usage_browser)" mise run test:e2e "$usage_browser" -- --output=test-results/e2e
+run "test:e2e-collab ($usage_browser)" mise run test:e2e-collab "$usage_browser" -- --output=test-results/collab
+run "test:e2e-gitlab ($usage_browser)" mise run test:e2e-gitlab "$usage_browser" -- --output=test-results/gitlab
+run "test:e2e-gitlab (auto-commit off)" env TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab "$usage_browser" -- --grep "leave" --output=test-results/gitlab-auto-commit-off
+run "test:e2e-docs ($usage_browser)" mise run test:e2e-docs "$usage_browser" -- --output=test-results/docs
 if ((${#failed[@]})); then
   printf 'Failed: %s\n' "${failed[@]}"
   exit 1
