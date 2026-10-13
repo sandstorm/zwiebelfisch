@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Workbench <architecture-workbench>
+
+#unreviewed
 
 `src/hosts/workbench/` is the widget's frame, the extension API's entry and the composition of all hosts; VS Code's namespaces live in `src/hosts/{commands,window,scm,languages,workspace}/`. The frame knows no feature by name: a feature is a `TypstExtension` (@architecture-extensions).
 

@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = GitLab integration <configuration-gitlab-integration>
+
+#unreviewed
 
 A collaboration room (@configuration-collaboration-server) can be a branch of a GitLab repository: the room `gitlab:<project id or path>@<branch>` loads the branch and commits the changes back.
 

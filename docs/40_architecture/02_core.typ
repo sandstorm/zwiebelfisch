@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Core <architecture-core>
+
+#unreviewed
 
 The models everything builds on, in `src/core/`; tests run in Node. No DOM, editor library or Yjs (@architecture-conventions-layers), but `fetch`, `Blob` and streams are fine: workers have them.
 

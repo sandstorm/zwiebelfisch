@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Embedding <configuration-embedding>
+
+#unreviewed
 
 You embed the editor as the element `<typst-editor>` or with `createTypstEditor(host, options)`. Both take the same options (@configuration-options).
 

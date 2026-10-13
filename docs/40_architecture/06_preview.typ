@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Preview <architecture-preview>
+
+#unreviewed
 
 `Preview` in `src/hosts/preview/` compiles the project in a Web Worker (the Typst wasm, @architecture-core-engine) and shows the pages as SVG. It is what `ExtensionContext.preview` is; the host keeps the mechanism, extensions add the controls and decide when to use it.
 

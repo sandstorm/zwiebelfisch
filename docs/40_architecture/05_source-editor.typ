@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Source editor <architecture-source-editor>
+
+#unreviewed
 
 The plain Typst editor: #link("https://codemirror.net/")[CodeMirror] 6 bound to a `TypstDocument`, in `src/hosts/source-editor/`. It keeps only text and selection in sync with its document; highlighting, lint, links and other users' carets are contributions.
 

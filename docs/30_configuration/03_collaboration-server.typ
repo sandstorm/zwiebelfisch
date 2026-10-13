@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Collaboration server <configuration-collaboration-server>
+
+#unreviewed
 
 Several people can edit the same project at once (#link("https://yjs.dev/")[Yjs]). Add the `collaboration` extension with a connection and set `user`:
 

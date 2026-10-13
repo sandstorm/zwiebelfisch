@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Conventions <architecture-conventions>
+
+#unreviewed
 
 How code is written here. `mise run quality` checks what it can (@architecture-development); reviewers check the rest.
 

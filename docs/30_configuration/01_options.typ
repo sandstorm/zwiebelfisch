@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Configuration options <configuration-options>
+
+#unreviewed
 
 The _options_ are the object `createTypstEditor(host, options)` takes. They hold three parts; the settings are one of them.
 

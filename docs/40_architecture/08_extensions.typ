@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Extensions <architecture-extensions>
+
+#unreviewed
 
 Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `TypstExtension` in `src/hosts/workbench/workbench.ts`.
 

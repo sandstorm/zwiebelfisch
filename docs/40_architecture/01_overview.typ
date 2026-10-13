@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Architecture overview <architecture-overview>
+
+#unreviewed
 
 The widget is a few models, a few view hosts, and extensions for everything else.
 

@@ -1,4 +1,8 @@
+#import "/template.typ": unreviewed
+
 = Visual editor <architecture-visual-editor>
+
+#unreviewed
 
 The word-processor editor: a #link("https://tiptap.dev/")[Tiptap] 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-editor/`. It models a Typst construct only when an extension contributes it; *anything else shows as raw Typst in a box*. Why it is built so: the module comment of `visual-editor.ts`.
 

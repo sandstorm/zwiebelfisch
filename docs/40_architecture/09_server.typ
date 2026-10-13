@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Server <architecture-server>
+
+#unreviewed
 
 `server/` relays, authenticates and stores the collaboration rooms. It is a #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server in TypeScript, run by Node directly. It looks inside a room only when the room is a GitLab branch.
 

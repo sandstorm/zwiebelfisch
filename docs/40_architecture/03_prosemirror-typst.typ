@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Typst ↔ ProseMirror <architecture-prosemirror-typst>
+
+#unreviewed
 
 Turns Typst text into the Visual editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched: `src/hosts/prosemirror-typst/`, shaped like prosemirror-markdown (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`), no view, tested without a DOM.
 

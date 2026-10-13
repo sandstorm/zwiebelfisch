@@ -1,6 +1,8 @@
-#import "/template.typ": mermaid
+#import "/template.typ": mermaid, unreviewed
 
 = Getting started <getting-started>
+
+#unreviewed
 
 A Typst editor for the browser: a Visual editor, a Source editor and a live preview. The Typst compiler runs as WebAssembly in the browser, so *no server is needed* except for collaboration and GitLab.
 
