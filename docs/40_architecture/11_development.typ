@@ -48,7 +48,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 == Tests <architecture-development-tests>
 
 - *Unit* (vitest, `*.test.ts` next to the code) run in node. DOM tests opt in with `// @vitest-environment jsdom`.
-- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`) run against `dist/demo` and `dist/lib` through request interception, so no port is opened. A slow connection is a route that holds requests back (`slow-connection.spec.ts`).
+- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`) run against `dist/demo` and `dist/lib` through request interception, so no port is opened. The specs against the playground server (`test:e2e-collab`, `test:e2e-gitlab`) open the demo that server serves on :5199: Chromium lets only a page from a loopback address reach the server on 127.0.0.1 (Local Network Access). A slow connection is a route that holds requests back (`slow-connection.spec.ts`).
 - *Test packages* (`greet`, `drafting`, `cheq`) sit next to the tests that use them.
 - *Agents in the sandbox* cannot launch a browser or bind ports. They write Playwright specs; the user runs them.
 

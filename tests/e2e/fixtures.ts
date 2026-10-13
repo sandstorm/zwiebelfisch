@@ -1,4 +1,5 @@
-// Playwright fixtures: the static demo build served through request interception (no dev server, no port).
+// Playwright fixtures: the static demo build served through request interception (no dev server, no port), but by
+// the playground server for the specs against it.
 import { test as base, expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -24,12 +25,17 @@ export const test = base.extend({
  * Serves the build to `page` (for pages beyond the `page` fixture, e.g. a second user), and the Universe packages the
  * examples import from the downloads of `mise run build:packages` where they are there (the default example imports
  * three), else from packages.typst.org. A spec's own route for a package takes precedence.
+ *
+ * At SERVER_DEMO the server serves the build itself: Chromium's Local Network Access lets only a page that came from
+ * a loopback address reach the server on 127.0.0.1 (a page fulfilled by interception has no address: its requests
+ * there are refused, and the demo edits a local copy).
  */
 export async function serve(page: Page, baseURL: string): Promise<void> {
   await page.route('https://packages.typst.org/preview/*.tar.gz', (route) => {
     const file = join(PACKAGES, new URL(route.request().url()).pathname.slice('/preview/'.length));
     return existsSync(file) ? route.fulfill({ path: file, contentType: 'application/gzip' }) : route.fallback();
   });
+  if (baseURL === SERVER_DEMO) return;
   await page.route(`${baseURL}/**`, (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const dir = FROM_ROOT.some((prefix) => pathname.startsWith(prefix)) ? ROOT : DEMO;
@@ -72,8 +78,7 @@ export const SERVER = 'http://127.0.0.1:1234';
 
 /**
  * Where the specs against that server open the demo: another port of the server's host, so the session cookie goes
- * along to the server (same site). The server also serves the build there (TYPST_DEMO_DIST), for the browser coming
- * back from signing in.
+ * along to the server (same site). The server serves the build there (TYPST_DEMO_DIST), not interception (`serve`).
  */
 export const SERVER_DEMO = 'http://127.0.0.1:5199';
 
