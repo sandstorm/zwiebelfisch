@@ -1,0 +1,59 @@
+# What every job that builds needs, as a developer's checkout has it: the tools mise.toml pins, the JS dependencies,
+# and the engine (Rust → wasm) with its fonts. The workflows then run the same mise tasks a developer runs.
+#
+# The engine takes minutes to compile, so its output (src/core/typst-engine/wasm, …/fonts) is cached under a key of
+# everything it is built from; on a hit, cargo never runs. On a miss, cargo's registry and target folder come from the
+# cache of the last build with the same Cargo.lock (or any before it), so only what changed compiles.
+name: Setup
+description: Pinned tools (mise), JS dependencies (pnpm) and the built engine
+inputs:
+  engine:
+    description: Build the engine and its fonts (false for jobs that only need the tools)
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+      with:
+        # the mise version the Dockerfile installs (MISE_VERSION)
+        version: 2026.10.4
+
+    - name: Install JS dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Restore the built engine
+      if: inputs.engine == 'true'
+      id: engine
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          src/core/typst-engine/wasm
+          src/core/typst-engine/fonts
+        key: engine-${{ runner.os }}-${{ hashFiles('crates/typst-engine/src/**', 'crates/typst-engine/Cargo.toml', 'crates/typst-engine/Cargo.lock', 'mise.toml', 'mise-tasks/build/engine', 'mise-tasks/build/fonts') }}
+
+    - name: Restore cargo's registry and build folder
+      if: inputs.engine == 'true' && steps.engine.outputs.cache-hit != 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          crates/typst-engine/target
+        key: cargo-${{ runner.os }}-${{ hashFiles('crates/typst-engine/Cargo.lock') }}-${{ hashFiles('crates/typst-engine/src/**', 'mise.toml') }}
+        restore-keys: |
+          cargo-${{ runner.os }}-${{ hashFiles('crates/typst-engine/Cargo.lock') }}-
+          cargo-${{ runner.os }}-
+
+    - name: Build the engine and its fonts
+      if: inputs.engine == 'true'
+      shell: bash
+      run: |
+        # mise skips a task whose outputs are newer than its sources; a restored cache keeps the files' old times,
+        # older than this checkout's, so they are marked as just built (wasm first: it is a source of the fonts)
+        if [[ "${{ steps.engine.outputs.cache-hit }}" == true ]]; then
+          touch src/core/typst-engine/wasm/*
+          touch src/core/typst-engine/fonts/*
+        fi
+        mise run build:fonts

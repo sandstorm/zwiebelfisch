@@ -1,0 +1,60 @@
+# The checks a developer runs before a commit, on every push and pull request: the same mise tasks
+# (docs/40_architecture/15_development.typ). The end-to-end tests (Chromium) are a job of their own, next to the
+# checks, both after the job that builds the engine.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # builds the engine once and caches it (.github/actions/setup), so the jobs after it find it built
+  engine:
+    # a pull request from this repository's own branch is checked by its push already
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+  check:
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: mise run check:ci
+      - run: mise run typecheck
+      - run: mise run quality
+      - run: mise run test:unit
+      - run: mise run server:test
+      - run: mise run check:examples
+      - run: mise run docs:pdf
+      - run: mise run docs:html
+
+  e2e:
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      # Chromium only, with the system libraries it needs (mise run install takes all three browsers, without them)
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: mise run test:e2e chromium
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 14

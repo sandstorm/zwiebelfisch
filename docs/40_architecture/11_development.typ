@@ -118,3 +118,16 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only. Other file kinds would get VS Code's `languages.createDiagnosticCollection`.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
+
+== Releasing <architecture-development-release>
+
+GitHub runs the same mise tasks as a checkout (`.github/workflows/`; the tools come from `mise.toml` through `jdx/mise-action`). Every push and pull request runs CI: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` are kept when it fails). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
+
+A release is a version tag: `git tag v1.2.3 && git push origin v1.2.3`. It publishes, all on GitHub:
+
+- *Image*: `ghcr.io/<owner>/<repo>:1.2.3` (also `1.2` and `latest`), linux/amd64 and linux/arm64. Every push to `main` updates `:main`.
+- *npm package*: `@<owner>/typst-editor@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout only.
+- *Release*: generated notes, the book as PDF and the package's tarball.
+- *Site*: `https://<owner>.github.io/<repo>/`, the HTML docs, the PDF and the demo under `demo/`. The demo there has no server: Local mode works, Collaborate and GitLab do not.
+
+A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag `next`.

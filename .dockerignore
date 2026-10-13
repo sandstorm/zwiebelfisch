@@ -15,3 +15,4 @@ server/.data
 mise.local.toml
 **/*.log
 **/.DS_Store
+.github
