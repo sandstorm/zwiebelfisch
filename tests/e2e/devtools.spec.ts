@@ -13,8 +13,9 @@ test.beforeEach(async ({ page }) => {
 test('the devtools are on the right side in place of the preview, which keeps compiling', async ({ page }) => {
   await expect(page.locator('.typst-editor__side--right').getByTestId('typst-devtools')).toBeVisible();
   await expect(page.getByTestId('typst-preview')).toBeHidden();
-  await page.getByTestId('typst-visual').locator('h1').click();
+  await caretAtEnd(page.getByTestId('typst-visual').locator('h1'));
   await page.keyboard.type(' again');
+  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes again');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
   await page.getByTestId('typst-panel-toggle-preview').click();
   await expect(page.getByTestId('typst-devtools')).toBeHidden();

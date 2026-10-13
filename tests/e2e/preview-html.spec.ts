@@ -4,10 +4,7 @@
 import { expect, type FrameLocator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 
-/**
- * A document that compiles as pages and as HTML (the demo's does not: drafting's margin notes need a page; a bundle
- * is no paged document).
- */
+/** A document that compiles as pages and as HTML (a bundle is no paged document). */
 const PLAIN = '= Hello\n\nOne page, as pages or as HTML.\n';
 
 /** A bundle of two pages; the second is long, so it scrolls. A link to a label gets the target its `id`. */
@@ -28,6 +25,11 @@ const SITE = [
 
 const setSource = (page: Page, text: string) => page.evaluate((t) => ((window as unknown as { editor: { source: string } }).editor.source = t), text);
 const html = (page: Page): FrameLocator => page.frameLocator('[data-testid="typst-preview-html"]');
+/**
+ * The frame's top-level heading `name` (a `=` heading is an `h2` there). By name: until the test's source is
+ * compiled, the frame shows the demo's document, whose HTML has two `h2`s.
+ */
+const heading = (page: Page, name: string) => html(page).getByRole('heading', { level: 2, name, exact: true });
 const switchTo = (page: Page, name: 'Pages' | 'HTML') => page.getByTestId('typst-preview-renderers').getByRole('button', { name }).click();
 /** How far the frame's page is scrolled. */
 const scrollY = (page: Page) => html(page).locator('html').evaluate((element) => element.ownerDocument.defaultView!.scrollY);
@@ -43,7 +45,7 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
   await setSource(page, PLAIN);
   await switchTo(page, 'HTML');
   await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(html(page).locator('h2')).toHaveText('Hello');
+  await expect(heading(page, 'Hello')).toBeVisible();
   await expect(page.getByTestId('typst-preview')).toBeHidden();
   await expect(page.getByTestId('typst-preview-zoom')).toBeHidden();
   await expect(page.getByTestId('typst-preview-page-number')).toBeHidden();
@@ -53,7 +55,7 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
   await page.reload();
   await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
   await setSource(page, PLAIN);
-  await expect(html(page).locator('h2')).toHaveText('Hello');
+  await expect(heading(page, 'Hello')).toBeVisible();
   await switchTo(page, 'Pages');
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
   await expect(page.getByTestId('typst-preview-zoom')).toBeVisible();
@@ -63,9 +65,10 @@ test('shows a bundle page by page: links switch pages, URLs open a new tab', asy
   await context.route('https://typst.app/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Typst</title>' }));
   await switchTo(page, 'HTML');
   await setSource(page, SITE);
-  await expect(html(page).locator('h2')).toHaveText('Home');
+  await expect(heading(page, 'Home')).toBeVisible();
   await html(page).getByRole('link', { name: 'To the end of two' }).click();
-  await expect(html(page).locator('h2').first()).toHaveText('Two');
+  await expect(heading(page, 'Two')).toBeVisible();
+  await expect(heading(page, 'Home')).toBeHidden();
   await expect(html(page).getByText('Last words.')).toBeInViewport();
   // back to index.html through the cursor (the end of the line `= Home`), then out to the web
   await page.getByRole('tab', { name: 'Source' }).click();
@@ -73,18 +76,18 @@ test('shows a bundle page by page: links switch pages, URLs open a new tab', asy
   await page.keyboard.press('ControlOrMeta+Home');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('End');
-  await expect(html(page).locator('h2')).toHaveText('Home');
+  await expect(heading(page, 'Home')).toBeVisible();
   const opened = context.waitForEvent('page');
   await html(page).getByRole('link', { name: 'Typst' }).click();
   await expect(await opened).toHaveURL('https://typst.app/');
   // the frame itself never navigates
-  await expect(html(page).locator('h2')).toHaveText('Home');
+  await expect(heading(page, 'Home')).toBeVisible();
 });
 
 test('follows the cursor to the page and element its text made; a compile keeps the scroll position', async ({ page }) => {
   await switchTo(page, 'HTML');
   await setSource(page, SITE);
-  await expect(html(page).locator('h2')).toHaveText('Home');
+  await expect(heading(page, 'Home')).toBeVisible();
   // the end of `  Last words.`, the line before the closing `]` (the long source is not all in the DOM)
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-source').locator('.cm-content').click();
