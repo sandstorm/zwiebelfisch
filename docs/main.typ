@@ -26,9 +26,9 @@
   #include "20_features/08_spreadsheets.typ"
   #include "20_features/09_mermaid-diagrams.typ"
   #include "20_features/10_comments.typ"
-  #include "20_features/11_collaborative-editing.typ"
-  #include "20_features/12_gitlab.typ"
-  #include "20_features/13_find-in-files.typ"
+  #include "20_features/11_find-in-files.typ"
+  #include "20_features/12_collaborative-editing.typ"
+  #include "20_features/13_gitlab.typ"
 ]
 
 = Configuration
