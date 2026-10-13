@@ -1,22 +1,36 @@
-# A version tag v1.2.3 releases: the library (dist/lib) as the npm package @<owner>/typst-editor 1.2.3 on GitHub's npm
-# registry, and a GitHub release with generated notes, the documentation book (PDF) and the package's tarball.
-# docker.yml pushes the image and pages.yml publishes the site for the same tag. A tag with a pre-release part
-# (v1.2.3-rc.1) makes a pre-release, published under the npm dist-tag `next`.
+# A version tag v1.2.3 releases, once all of CI (ci.yml, end-to-end tests included) passed for it: the library
+# (dist/lib) as the npm package @<owner>/typst-editor 1.2.3 on GitHub's npm registry, a GitHub release with generated
+# notes, the documentation book (PDF) and the package's tarball, and the Docker image (docker.yml). A tag with a
+# pre-release part (v1.2.3-rc.1) makes a pre-release, published under the npm dist-tag `next`.
 name: Release
 
 on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
 
 jobs:
+  ci:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  docker:
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml
+
   release:
+    needs: ci
+    permissions:
+      contents: write
+      packages: write
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

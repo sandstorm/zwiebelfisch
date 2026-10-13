@@ -1,13 +1,14 @@
 # The Docker image (Dockerfile: the built demo served by the collaboration server) for linux/amd64 and linux/arm64,
-# pushed to GitHub's container registry as ghcr.io/<owner>/<repo>: on main (tags `main`, `sha-<short sha>`) and on a
-# version tag v1.2.3 (tags `1.2.3`, `1.2`, `latest`, `sha-…`). A pull request only builds it.
+# pushed to GitHub's container registry as ghcr.io/<owner>/<repo>: on main (tags `main`, `sha-<short sha>`) and, called
+# by release.yml once CI passed, for a version tag v1.2.3 (tags `1.2.3`, `1.2`, `latest`, `sha-…`). A pull request only
+# builds it.
 name: Docker
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
