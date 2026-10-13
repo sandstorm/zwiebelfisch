@@ -4,12 +4,18 @@
 import { expect, type FrameLocator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 
-/** A bundle of two pages; the second is long, so it scrolls. */
+/**
+ * A document that compiles as pages and as HTML (the demo's does not: drafting's margin notes need a page; a bundle
+ * is no paged document).
+ */
+const PLAIN = '= Hello\n\nOne page, as pages or as HTML.\n';
+
+/** A bundle of two pages; the second is long, so it scrolls. A link to a label gets the target its `id`. */
 const SITE = [
   '#document("index.html", title: "Home")[',
   '  = Home',
-  '  #link("two.html#end")[To the end of two]',
-  '  #link("https://typst.app")[Typst]',
+  '  #link(<end>)[To the end of two]',
+  '  #link("https://typst.app/")[Typst]',
   ']',
   '#document("two.html", title: "Two")[',
   '  = Two',
@@ -34,22 +40,27 @@ test.beforeEach(async ({ page }) => {
 test('switches to HTML and back: zoom and page number only with the pages, the choice remembered', async ({ page }) => {
   const switcher = page.getByTestId('typst-preview-renderers');
   await expect(switcher.getByRole('button', { name: 'Pages' })).toHaveAttribute('aria-pressed', 'true');
+  await setSource(page, PLAIN);
   await switchTo(page, 'HTML');
   await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(html(page).locator('h1, h2').first()).toBeVisible();
+  await expect(html(page).locator('h2')).toHaveText('Hello');
   await expect(page.getByTestId('typst-preview')).toBeHidden();
   await expect(page.getByTestId('typst-preview-zoom')).toBeHidden();
   await expect(page.getByTestId('typst-preview-page-number')).toBeHidden();
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
 
+  // the demo's document again (Local mode keeps no edits), shown as HTML
   await page.reload();
-  await expect(html(page).locator('h1, h2').first()).toBeVisible();
+  await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
+  await setSource(page, PLAIN);
+  await expect(html(page).locator('h2')).toHaveText('Hello');
   await switchTo(page, 'Pages');
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
   await expect(page.getByTestId('typst-preview-zoom')).toBeVisible();
 });
 
 test('shows a bundle page by page: links switch pages, URLs open a new tab', async ({ page, context }) => {
+  await context.route('https://typst.app/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Typst</title>' }));
   await switchTo(page, 'HTML');
   await setSource(page, SITE);
   await expect(html(page).locator('h2')).toHaveText('Home');
@@ -57,6 +68,7 @@ test('shows a bundle page by page: links switch pages, URLs open a new tab', asy
   await expect(html(page).locator('h2').first()).toHaveText('Two');
   await expect(html(page).getByText('Last words.')).toBeInViewport();
   // back to index.html through the cursor (the end of the line `= Home`), then out to the web
+  await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
   await page.keyboard.press('ArrowDown');
@@ -64,7 +76,7 @@ test('shows a bundle page by page: links switch pages, URLs open a new tab', asy
   await expect(html(page).locator('h2')).toHaveText('Home');
   const opened = context.waitForEvent('page');
   await html(page).getByRole('link', { name: 'Typst' }).click();
-  expect((await opened).url()).toContain('typst.app');
+  await expect(await opened).toHaveURL('https://typst.app/');
   // the frame itself never navigates
   await expect(html(page).locator('h2')).toHaveText('Home');
 });
@@ -73,13 +85,16 @@ test('follows the cursor to the page and element its text made; a compile keeps 
   await switchTo(page, 'HTML');
   await setSource(page, SITE);
   await expect(html(page).locator('h2')).toHaveText('Home');
-  const source = page.getByTestId('typst-source').locator('.cm-content');
-  await source.getByText('Last words.').click();
+  // the end of `  Last words.`, the line before the closing `]` (the long source is not all in the DOM)
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await page.getByTestId('typst-source').locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('End');
   await expect(html(page).getByText('Last words.')).toBeInViewport();
   const scrolled = await scrollY(page);
   expect(scrolled).toBeGreaterThan(0);
   // typing on the page keeps it where it is
-  await page.keyboard.press('End');
   await page.keyboard.type(' More.');
   await expect(html(page).getByText('Last words. More.')).toBeVisible();
   expect(Math.abs((await scrollY(page)) - scrolled)).toBeLessThan(40);
