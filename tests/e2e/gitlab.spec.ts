@@ -142,7 +142,8 @@ test('a save that cannot reach GitLab stays a warning for everyone, also who joi
 
   expect((await outage(false)).ok()).toBe(true);
   await saveToGitLab(ann, 'Try again');
-  for (const page of [ann, bob, cleo]) await expect(scmStatus(page)).toHaveText(/^Saved · [0-9a-f]{8}$/);
+  // the warning and the pending changes stay until the save is done: then only the saved version is left
+  for (const page of [ann, bob, cleo]) await expect(scmStatus(page)).toHaveText([/^Saved · [0-9a-f]{8}$/]);
 });
 
 test('leaving as the last user with unsaved changes asks first, when the server does not save by itself', async ({ browser, baseURL }, info) => {
@@ -207,7 +208,8 @@ test('signed out: the widget offers to sign in, the fake GitLab signs in, back i
   // the fake GitLab's page (on the server), then back to the room
   await expect(page.getByRole('heading', { name: 'Sign in to the fake GitLab' })).toBeVisible();
   await page.getByRole('button', { name: 'Cleo' }).click();
-  await expect(page).toHaveURL(`${SERVER_DEMO}/?room=${encodeURIComponent(room)}`);
+  // the fragment names the file shown
+  await expect(page).toHaveURL((url) => `${url.origin}${url.pathname}${url.search}` === `${SERVER_DEMO}/?room=${encodeURIComponent(room)}`);
   await expect(fileRow(page, 'chapters')).toBeVisible();
   await expect(account(page)).toHaveText('Cleo');
 
