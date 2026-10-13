@@ -8,32 +8,34 @@ import type { SourceOffset } from '../../core/typst-document/typst-document';
 import { posToSource, sourceToPos } from '../prosemirror-typst/prosemirror-typst';
 
 /**
- * Block gaps: a caret before or after a block that has no text of its own to put it in, as CKEditor 5 offers beside
- * its widgets. With it one can go explicitly behind a block style, a figure, a table or a raw box, and sees whether the
- * caret is inside the block or after it.
+ * Block gaps: a caret before or after a block that has no text of its own to put it in, or only code, as CKEditor 5
+ * offers beside its widgets. With it one can go explicitly behind a block style, a figure, a table, a raw box or a code
+ * block, and sees whether the caret is inside the block or after it.
  *
  * A gap is a place between two sibling blocks where at least one is a box (a block that is not a text block: a
- * container like a block style, a figure, a table, a list, or an atom like a raw box or an image), and before the
- * first or after the last block of the document or a container, beside a box. Only where a paragraph may go, and
- * never inside a list item. Between two paragraphs (or headings, code blocks) there is none.
+ * container like a block style, a figure, a table, a list, or an atom like a raw box or an image; or a code block,
+ * whose text takes Enter as a line break), and before the first or after the last block of the document or a
+ * container, beside a box. Only where a paragraph may go, and never inside a list item. Between two paragraphs (or
+ * headings) there is none.
  *
  * - Arrow keys go one stop at a time: from the end of the text in a box onto the gap after it (with nothing after
  *   the text in between), from there into the next block or the gap after the box around; backwards the same.
+ *   They come before a code block's own (Tiptap's ArrowDown at its end makes a paragraph after it).
  *   Leaving a raw box's code lands in the gap beside it (`blockGapAt`).
- * - At a gap, typing, Enter or a paste start a new paragraph there; Backspace selects the block before (a second one
- *   deletes it), Delete the block after.
+ * - At a gap, typing, Enter or a paste start a new paragraph there; Backspace selects the box before (a second one
+ *   deletes it), Delete the box after; beside text (a code block's) they go to its edge.
  * - A click into the space between such blocks, or below the last one, puts the caret there.
  * - It is drawn as a blinking line across the width of the content, in the accent colour.
  *
  * The gap is a selection of its own (`BlockGap`, JSON type `blockGap`), mapped through every change: it stays in
  * its gap while it is one, else goes to the nearest text. Its source offset lies between the two blocks'
- * sources; a caret revealed there is the gap again (`blockGapAtSource`).
+ * sources; a caret revealed there is the gap again (`caretAtSource`).
  * It replaces ProseMirror's gap cursor, which knows no gap beside a box ending in text (two block styles ending
  * in code blocks).
  */
 export const BlockGaps = Extension.create({
   name: 'typstBlockGaps',
-  // after the completion lists (1000), before the constructs' keys (a code block's ArrowDown makes a paragraph)
+  // after the completion lists (1000), before the constructs' keys (a code block's ArrowUp/ArrowDown make a paragraph)
   priority: 500,
   addKeyboardShortcuts() {
     const arrow = (dir: Direction) => () => move(this.editor, dir);
@@ -68,14 +70,18 @@ export function blockGapAt($pos: ResolvedPos): Selection | null {
 }
 
 /**
- * The caret in the gap whose source offset is `offset` of `doc`'s source (a caret revealed from the Source editor
- * where the editor's own selection there was): the gap before the text block `offset` maps to, or before the boxes
- * it starts; null: none.
+ * The caret at source offset `offset` of `doc`'s source (revealed from the Source editor, or where the editor's own
+ * selection there was): at the end of the text ending there (a paragraph's before a code block, whose gap has the
+ * same offset); else in the gap whose offset it is, before the text block `offset` maps to or before the boxes it
+ * starts; else in the text nearest.
  */
-export function blockGapAtSource(doc: Node, offset: SourceOffset): Selection | null {
-  for (let $pos = doc.resolve(sourceToPos(doc, offset)); ; $pos = doc.resolve($pos.before())) {
+export function caretAtSource(doc: Node, offset: SourceOffset): Selection {
+  const textEnd = sourceToPos(doc, offset, -1);
+  if (doc.resolve(textEnd).parent.inlineContent && posToSource(doc, textEnd) === offset) return TextSelection.create(doc, textEnd);
+  const $at = doc.resolve(sourceToPos(doc, offset));
+  for (let $pos = $at; ; $pos = doc.resolve($pos.before())) {
     if (isGap($pos) && posToSource(doc, $pos.pos) === offset) return new BlockGap($pos);
-    if ($pos.depth === 0 || $pos.parentOffset > 0) return null;
+    if ($pos.depth === 0 || $pos.parentOffset > 0) return TextSelection.between($at, $at);
   }
 }
 
@@ -131,9 +137,9 @@ function isGap($pos: ResolvedPos): boolean {
   return paragraph !== undefined && parent.canReplaceWith(index, index, paragraph);
 }
 
-/** A block without text of its own to put the caret in: a container or an atom. */
+/** A block a gap goes beside: one without text of its own (a container, an atom), or code (spec `code`). */
 function isBox(node: Node | null): boolean {
-  return node !== null && node.isBlock && !node.isTextblock;
+  return node !== null && node.isBlock && (!node.isTextblock || node.type.spec.code === true);
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -220,7 +226,7 @@ function selectBeside(view: EditorView, side: -1 | 1): boolean {
   const $gap = selection.$head;
   const node = side < 0 ? $gap.nodeBefore : $gap.nodeAfter;
   if (!node) return true;
-  if (isBox(node) && NodeSelection.isSelectable(node)) return select(view, NodeSelection.create(state.doc, side < 0 ? $gap.pos - node.nodeSize : $gap.pos));
+  if (!node.isTextblock && NodeSelection.isSelectable(node)) return select(view, NodeSelection.create(state.doc, side < 0 ? $gap.pos - node.nodeSize : $gap.pos));
   return select(view, Selection.near($gap, side));
 }
 

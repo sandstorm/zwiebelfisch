@@ -7,7 +7,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { blockGapAtSource, BlockGaps } from './block-gaps';
+import { BlockGaps, caretAtSource } from './block-gaps';
 import { BlockHandle } from './block-handle';
 import { clipboard } from './clipboard';
 import { hasHighlights, highlights, setHighlights } from './highlights';
@@ -118,9 +118,9 @@ export class VisualEditor {
   reveal({ from, to }: SourceRange): void {
     const { doc } = this.tiptap.state;
     const anchor = sourceToPos(doc, from);
-    const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
-    // a caret where a gap's source is (after a block style) is that gap, else in the text nearest
-    const selection = (to === from ? blockGapAtSource(doc, from) : null) ?? TextSelection.between(doc.resolve(anchor), doc.resolve(head));
+    const head = Math.max(anchor, sourceToPos(doc, to, -1));
+    // a caret: at the end of text ending there, in the gap whose source is there, else in the text nearest
+    const selection = to > from ? TextSelection.between(doc.resolve(anchor), doc.resolve(head)) : caretAtSource(doc, from);
     // focused first: ProseMirror scrolls to the DOM's selection, which it moves only while it has the focus
     this.tiptap.view.focus();
     const tr = this.tiptap.state.tr.setSelection(selection).scrollIntoView();

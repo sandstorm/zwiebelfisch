@@ -54,6 +54,56 @@ describe('the caret between blocks', () => {
     expect(gaps()).toBe(0);
   });
 
+  it('has a gap between a paragraph and a code block, where typing adds a paragraph', () => {
+    const source = 'Text\n\n```js\nlet a\n```\n';
+    const { doc, press, caret, gaps, view, tiptap } = setup(source);
+    caret(4);
+    expect(gaps()).toBe(0);
+    expect(press('ArrowDown')).toBe(true);
+    expect(gaps()).toBe(1);
+    expect(press('ArrowDown')).toBe(true);
+    expect(view.selection().from).toBe(source.indexOf('let a'));
+    expect(press('ArrowUp')).toBe(true);
+    expect(gaps()).toBe(1);
+    type(tiptap, 'z');
+    expect(doc.text).toBe('Text\n\nz\n\n```js\nlet a\n```\n');
+  });
+
+  it('takes ArrowDown at the end of the last code block, ArrowUp at the start of the first, before Tiptap (which makes a paragraph)', () => {
+    const source = '```js\nlet a\n```\n';
+    const { doc, press, caret, gaps, tiptap } = setup(source);
+    caret(source.indexOf('let a') + 'let a'.length);
+    expect(press('ArrowDown')).toBe(true);
+    expect(gaps()).toBe(1);
+    expect(tiptap.state.selection.toJSON()).toEqual({ type: 'blockGap', pos: tiptap.state.doc.content.size });
+    caret(source.indexOf('let a'));
+    expect(press('ArrowUp')).toBe(true);
+    expect(tiptap.state.selection.toJSON()).toEqual({ type: 'blockGap', pos: 0 });
+    expect(doc.text).toBe(source);
+  });
+
+  it('Delete at the gap before a code block goes into its code, selecting no node', () => {
+    const source = 'Text\n\n```js\nlet a\n```\n';
+    const { press, caret, gaps, view } = setup(source);
+    caret(4);
+    press('ArrowDown');
+    expect(press('Delete')).toBe(true);
+    expect(gaps()).toBe(0);
+    expect(view.selection().from).toBe(source.indexOf('let a'));
+  });
+
+  it('leaves a code block on triple Enter at its end as before (Tiptap\'s exitCode): a paragraph after it', () => {
+    const source = 'Text\n\n```js\nlet a\n```\n';
+    const { doc, press, caret, gaps, tiptap } = setup(source);
+    caret(source.indexOf('let a') + 'let a'.length);
+    press('Enter');
+    press('Enter');
+    press('Enter');
+    expect(gaps()).toBe(0);
+    type(tiptap, 'z');
+    expect(doc.text).toBe('Text\n\n```js\nlet a\n```\n\nz\n');
+  });
+
   it('has no gap between two paragraphs nor at a list\'s items', () => {
     const { press, caret, gaps } = setup('One\n\nTwo\n\n- a\n- b\n');
     caret(3);
