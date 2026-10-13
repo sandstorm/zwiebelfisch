@@ -12,7 +12,7 @@ const previewPage = (page: Page, number: string) => preview(page).locator(`.zwf-
 /** The section the references lead to, and words of its first paragraph (drawn once: not in the outline). */
 const TARGET = { path: '30_configuration/01_options.typ', label: 'configuration-options', words: 'They hold three parts' };
 /** Where the references are, and words of its first paragraph, pages before the section. */
-const FROM = { path: '10_getting-started/01_getting-started.typ', words: 'A Typst editor for the browser' };
+const FROM = { path: '10_getting-started/01_getting-started.typ', words: 'Zwiebelfisch is a Typst editor for the browser' };
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?example=docs');

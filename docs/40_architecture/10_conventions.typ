@@ -20,7 +20,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 == Modules and folders <architecture-conventions-modules>
 
-- *A module* is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `typst-editor/`, `typst-editor-element/` or `testing/`. From outside, import only its *entry file*.
+- *A module* is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `editor/`, `editor-element/` or `testing/`. From outside, import only its *entry file*.
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
 - *No re-exports*, except `src/index.ts`. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`).
@@ -33,10 +33,10 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
   columns: (auto, 1fr, 1fr),
   table.header[Layer][May use][Must not use],
   [`core/`], [other `core/` modules], [the DOM, editor libraries, Yjs, anything outside `core/`],
-  [`hosts/`], [the DOM, editor libraries, `core/`], [extensions, `typst-editor/`, `testing/`],
+  [`hosts/`], [the DOM, editor libraries, `core/`], [extensions, `editor/`, `testing/`],
   [`extensions/<name>/`], [hosts' entries, `core/`], [other extensions],
   [`extensions/<name>/model/`], [`core/`], [the DOM, editor libraries, hosts, the extension's view folders],
-  [`typst-editor/`, `typst-editor-element/`], [every module's entry], [—],
+  [`editor/`, `editor-element/`], [every module's entry], [—],
   [`testing/`], [every module's entry], [being imported by non-test code],
 )
 
@@ -52,9 +52,9 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *One disposal verb*: `dispose()`. Only what a library calls keeps its name (`destroy` in node views and view plugins).
 - *Competing contributions* have an explicit tie-breaker (@architecture-extensions-rules). Registration order counts only within one extension.
 - *Commands*: `executeCommand` returns a `Promise<T>`, but the handler runs synchronously, so user activation, selection and focus stay intact.
-- *Settings* work as VS Code's (@architecture-extensions-settings). `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
-- *CSS*: each host and extension brings its own `<name>.css` (an extension registers it with `registerStyleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. Order: tokens and frame, hosts, extensions.
-- *Class names*: an extension uses class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`) and colors from the `--te-*` tokens. It never styles a host's classes; `data-scheme` is the one shared hook.
+- *Settings* work as VS Code's (@architecture-extensions-settings). `createEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
+- *CSS*: each host and extension brings its own `<name>.css` (an extension registers it with `registerStyleSheet`). `editor.css` keeps only the `--zwf-*` tokens and the frame. Order: tokens and frame, hosts, extensions.
+- *Class names*: an extension uses class names of its own (`zwf-<extension>`, `zwf-<extension>__…`, `zwf-<extension>--…`) and colors from the `--zwf-*` tokens. It never styles a host's classes; `data-scheme` is the one shared hook.
 - *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu`), never hand-made popovers or menus.
 - *State an extension keeps* goes into `globalState` (per viewer) or `workspaceState` (per project), never straight into `localStorage`.
 
@@ -77,7 +77,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *API doc comments* say what a parameter, result or member means. Never restate the code.
 - *No history, no backwards compatibility*: no "was …", "renamed from", no shims. Code and docs describe only what is.
 - *Tests go through the exported interface* of the unit under test. Model tests run without jsdom.
-- *A host's tests* use the host's own minimum plus specs defined in the test. Tests that need the whole widget live in `typst-editor/` or use `testing/`.
+- *A host's tests* use the host's own minimum plus specs defined in the test. Tests that need the whole widget live in `editor/` or use `testing/`.
 
 == Process <architecture-conventions-process>
 

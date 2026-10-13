@@ -28,8 +28,8 @@ The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collabora
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
   [`build:engine`], [Rust → wasm; skipped when the Rust sources are unchanged],
   [`test:e2e`], [Playwright in chromium, firefox and webkit, or one (`test:e2e chromium`); `test:e2e-all` runs every suite],
-  [`server:dev`], [the collaboration server (Go) with SQLite in `server/.data/`; GitLab rooms need `TYPST_GITLAB_URL` and `TYPST_GITLAB_TOKEN`, the sign-in `TYPST_AUTH_CLIENT_ID` and `TYPST_AUTH_CLIENT_SECRET` (@architecture-server)],
-  [`docs:pdf`], [this book → `dist/docs/typst-editor.pdf`],
+  [`server:dev`], [the collaboration server (Go) with SQLite in `server/.data/`; GitLab rooms need `ZWF_GITLAB_URL` and `ZWF_GITLAB_TOKEN`, the sign-in `ZWF_AUTH_CLIENT_ID` and `ZWF_AUTH_CLIENT_SECRET` (@architecture-server)],
+  [`docs:pdf`], [this book → `dist/docs/zwiebelfisch.pdf`],
 )
 
 == Checks before a commit <architecture-development-checks>
@@ -103,6 +103,7 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 
 == Open work <architecture-development-open-work>
 
+- *Rename to Zwiebelfisch, outside the repository* (`docs/2026_10_13_rename-zwiebelfisch.md`): the remote `git@github.com:sandstorm/zwiebelfisch.git`, the GitHub settings of @architecture-development-release, the local folder `typst-experiment` → `zwiebelfisch` (with Claude's memory folder), and a user-set `TYPST_*` variable of ours (`.env`, `mise.local.toml`) as `ZWF_*`.
 - *Verification*: run every Playwright spec in all three browsers (`test:e2e-all`); many have never run in a browser. Try a real GitLab. Check by eye: IronCalc's dark palette, the diagrams.net embed parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and its export reply.
 - *Sign-in*: the user's tokens are kept (in memory) but not used yet: the project chooser (`read_api`) and refreshing them come with it. A sign-out does not end the connections already open. Cross-site embedding needs a short-lived ticket instead of the cookie (`POST /api/rooms/<room>/ticket`, @architecture-server). Not run yet: the e2e sign-in and `TestServerBinary` with a real issuer (they need ports); a real GitLab as the provider.
 - *GitLab rooms*: highlight conflict ranges in the editors (the data is sent); report an asset changed on both sides (the room's wins today); don't commit an empty main file when the repository lacks it.
@@ -121,7 +122,7 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only. Other file kinds would get VS Code's `languages.createDiagnosticCollection`.
-- *Server* (Go, `docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: a server image (`typst-server`; today's image is the playground); read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned); rename the module path `typst-editor` once the GitHub remote exists.
+- *Server* (Go, `docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: a server image (`zwiebelfisch`; today's image is the playground); read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned).
 
 == Releasing <architecture-development-release>
 
@@ -132,7 +133,7 @@ Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: th
 A release is a version tag: `git tag v1.2.3 && git push origin v1.2.3`. The tag first runs all of CI, end-to-end tests included (`release.yml` calls `ci.yml`); only when it passes does it publish, all on GitHub:
 
 - *Image*: `ghcr.io/<owner>/<repo>:1.2.3` (also `1.2` and `latest`), linux/amd64 and linux/arm64. Every push to `main` updates `:main`. It is the playground image (the Go server with the fake GitLab, distroless) for now.
-- *npm package*: `@<owner>/typst-editor@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout only.
+- *npm package*: `@<owner>/zwiebelfisch@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout only.
 - *Release*: generated notes, the book as PDF and the package's tarball.
 
 A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag `next`.

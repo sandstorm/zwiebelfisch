@@ -1,7 +1,7 @@
-# Typst editor
+# Zwiebelfisch
 
-A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst
-compiler runs as WebAssembly in a worker. Embed it as `<typst-editor>` or with `createTypstEditor`.
+Zwiebelfisch is a Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst
+compiler runs as WebAssembly in a worker. Embed it as `<zwiebelfisch-editor>` or with `createEditor`.
 Every feature is an extension. Real-time collaboration (optional) needs the server in `server/`.
 
 ## Features
@@ -47,8 +47,8 @@ This project is both an *authoring environment* and an *embeddable WYSIWYG edito
 ## Try it with Docker
 
 ```sh
-docker build -t typst-editor-demo .
-docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
+docker build -t zwiebelfisch-demo .
+docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 zwiebelfisch-demo
 ```
 
 Open http://127.0.0.1:5199/: the built demo plus a collaboration server with a fake GitLab. Nothing is saved.
@@ -71,7 +71,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 | `mise run demo:build` | the demo as in production (built bundle, `vite preview`) on the same ports, with the local server |
 | `mise run build:lib` | the library → `dist/lib` |
 | `mise run typecheck`, `mise run quality`, `mise run test:unit` | the checks before a commit |
-| `mise run docs:pdf` | the documentation as a book → `dist/docs/typst-editor.pdf` |
+| `mise run docs:pdf` | the documentation as a book → `dist/docs/zwiebelfisch.pdf` |
 | `mise run docs:html` | the documentation as HTML pages → `dist/docs/html/` |
 | `mise tasks ls` | every task |
 

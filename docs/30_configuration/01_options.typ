@@ -4,7 +4,7 @@
 
 #unreviewed
 
-The _options_ are the object `createTypstEditor(host, options)` takes. They hold three parts; the settings are one of them.
+The _options_ are the object `createEditor(host, options)` takes. They hold three parts; the settings are one of them.
 
 #table(
   columns: 3,
@@ -19,17 +19,17 @@ As in Monaco: `updateSettings` ≈ `updateOptions`, `files` ≈ models, `extensi
 == Setting values <configuration-options-setting>
 
 ```ts
-const editor = createTypstEditor(host, { settings: { 'files.panel': 'show' } });
+const editor = createEditor(host, { settings: { 'files.panel': 'show' } });
 editor.updateSettings({ 'workbench.theme': 'dark' });   // merges: other ids keep their value
 editor.updateSettings({ 'files.panel': undefined });    // back to the default
 ```
 
 ```html
-<typst-editor settings='{"files.panel": "show", "pdfExport.download": false}'></typst-editor>
+<zwiebelfisch-editor settings='{"files.panel": "show", "pdfExport.download": false}'></zwiebelfisch-editor>
 ```
 
 - The editor *follows a change at once*. `editor.settings` is the current values.
-- On `<typst-editor>`, the attribute is read on connect and on every change; a new value replaces the attribute's own ids. `element.updateSettings` merges, as on the editor.
+- On `<zwiebelfisch-editor>`, the attribute is read on connect and on every change; a new value replaces the attribute's own ids. `element.updateSettings` merges, as on the editor.
 - Unknown ids and values of the wrong type are ignored with a console warning.
 - An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-settings).
 
@@ -61,7 +61,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
 
 == Editor options <configuration-options-editor>
 
-`createTypstEditor(host, options)` takes `TypstEditorOptions`, all optional. On `<typst-editor>`, set the `options` property before the element connects (@configuration-embedding-element).
+`createEditor(host, options)` takes `EditorOptions`, all optional. On `<zwiebelfisch-editor>`, set the `options` property before the element connects (@configuration-embedding-element).
 
 #table(
   columns: 3,
@@ -87,9 +87,9 @@ Configured elsewhere:
 A thesis portal: one project per student, saved on the portal's server, its own diagram editor, no file deletes.
 
 ```ts
-import { createTypstEditor } from 'typst-editor';
+import { createEditor } from 'zwiebelfisch';
 
-const editor = createTypstEditor(document.getElementById('thesis')!, {
+const editor = createEditor(document.getElementById('thesis')!, {
   mainFile: { path: '/thesis.typ', locked: true },
   files: await loadProject(studentId),            // { '/thesis.typ': '…', '/figures/setup.png': Uint8Array, … }
   user: { name: 'Ada Example', color: '#1d5fa8' },

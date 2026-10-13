@@ -2,7 +2,7 @@
 // reading order) are written out, so the editor's links follow them; site.typ reads its HTML pages from this file.
 #import "template.typ": book
 
-#set document(title: "Typst editor")
+#set document(title: "Zwiebelfisch")
 #show: book
 
 #title()

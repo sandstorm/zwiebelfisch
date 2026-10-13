@@ -77,7 +77,7 @@ preview.registerRenderer({
 
 == View options <architecture-preview-view>
 
-A `PreviewViewOption`'s `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`, for the compiles in its `outputs` (default `['pages']`; `entry.output` says which). While the prelude has lines, the preview compiles `/.typst-preview-view.typ`: the prelude, then `#include` of the main file. Diagnostics, clicks and snippets stay in the project's files; exports never see it.
+A `PreviewViewOption`'s `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`, for the compiles in its `outputs` (default `['pages']`; `entry.output` says which). While the prelude has lines, the preview compiles `/.zwf-preview-view.typ`: the prelude, then `#include` of the main file. Diagnostics, clicks and snippets stay in the project's files; exports never see it.
 
 ```ts
 preview.registerViewOption({

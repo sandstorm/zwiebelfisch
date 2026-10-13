@@ -29,8 +29,8 @@
   html.footer[#company · #link("https://sandstorm.de")[sandstorm.de]]
 }
 
-#document("index.html", title: "Typst editor", site-page("")[
-  #title[Typst editor]
+#document("index.html", title: "Zwiebelfisch", site-page("")[
+  #title[Zwiebelfisch]
   #outline(depth: 3)
 ])
 

@@ -4,11 +4,11 @@
 
 #unreviewed
 
-`src/hosts/workbench/` is the widget's frame, the extension API's entry and the composition of all hosts; VS Code's namespaces live in `src/hosts/{commands,window,scm,languages,workspace}/`. The frame knows no feature by name: a feature is a `TypstExtension` (@architecture-extensions).
+`src/hosts/workbench/` is the widget's frame, the extension API's entry and the composition of all hosts; VS Code's namespaces live in `src/hosts/{commands,window,scm,languages,workspace}/`. The frame knows no feature by name: a feature is a `Extension` (@architecture-extensions).
 
 #figure(
   mermaid(read("../diagrams/workbench-composition.mmd"), width: 85%),
-  caption: [What `createTypstEditor` composes.],
+  caption: [What `createEditor` composes.],
 )
 
 #table(
@@ -30,7 +30,7 @@ Competing contributions are ordered as @architecture-extensions-rules says.
 - *Namespaces are hosts*: each is a module with an interface and a host class implementing it. No facade.
 - *The frame*: `WorkbenchLayout` (a `SideBar` left and right, the editing area between, the status bar) and `EditorTabs`. One panel shows per side, sizes kept in the session; narrower than 720 px the left panel lies over the editing area.
 - *The preview is the right side's built-in panel* (`preview`). It compiles whether shown or not.
-- *`TypstEditors`* keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`), with cursor, scroll and undo history. One `TextEditor` per document spans both; the one shown gets the other's selection.
+- *`DocumentEditors`* keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`), with cursor, scroll and undo history. One `TextEditor` per document spans both; the one shown gets the other's selection.
 - *Editors and side panels never draw menus or popups of their own*: they talk to the user through `window`.
 
 == Lifecycle <architecture-workbench-lifecycle>
@@ -48,7 +48,7 @@ Nothing in the editing area waits for the engine.
 #table(
   columns: (auto, 1fr),
   table.header[Arrived][Shown],
-  [the JS], [the frame and the shown file's text, editable (`createTypstEditor` is synchronous)],
+  [the JS], [the frame and the shown file's text, editable (`createEditor` is synchronous)],
   [the worker, then the wasm (streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB"],
   [the engine, compiling], ["Compiling…", then packages and fonts as they download],
   [the first pages], [the pages; raw boxes swap their code for their pictures],
@@ -139,7 +139,7 @@ window.registerSearchProvider({
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`],
   [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button; returns `SidePanel` (see the d.ts)],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
-  [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--te-*` color tokens],
+  [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--zwf-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],
   [`workbench.user`], [Who works here, as the host said or an extension set since; `undefined`: anonymous. Read it when needed],
   [`workbench.setUser(user)`], [Replaces it (the collaboration extension: the account signed in at the server)],
@@ -156,7 +156,7 @@ window.registerSearchProvider({
 
 === Custom editors <architecture-workbench-custom-editors>
 
-Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by `TypstEditors` before any extension, as VS Code's built-in text editor.
+Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by `DocumentEditors` before any extension, as VS Code's built-in text editor.
 
 - *`filenamePattern`:* a case-insensitive glob over the name (`*.{png,jpg}`), over the path if it has a `/`.
 - *`priority`:* a number, `'default'` (100), `'fallback'` (files no other editor opens) or `'option'` (only when chosen).

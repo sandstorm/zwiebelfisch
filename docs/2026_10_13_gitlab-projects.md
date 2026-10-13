@@ -10,7 +10,7 @@ and 15 "Open work") and delete once built. Legend: (v) verified in code or on th
 | Project identity | Only the room name, chosen by the client: `gitlab:<project id or path>@<branch>` (`server/lib/gitlab/rooms.go: parseRoomName`). Always the whole repository; no subfolder. |
 | Demo "GitLab (fake)" | `?room=gitlab:demo/report@main` in the URL (`demo/playground.ts`, `GITLAB_ROOM`). The fake GitLab is in-memory (`server/lib/fakegitlab`); another branch name starts a fresh branch from `main`. The playground bar switches modes. |
 | Auth | OpenID Connect sign-in (`server/lib/auth`), sessions in memory; GitLab rooms check Developer+ and push rights with the bot token (`server/lib/gitlab/access.go`). Built 2026-10-13 (plan step 1). |
-| GitLab access | One server-wide token with `api` scope (`TYPST_GITLAB_TOKEN`) does everything: tree, files, blobs, commits (`gitlab-api.ts`). Users never sign in to GitLab; commits name co-editors as `Co-authored-by:`. |
+| GitLab access | One server-wide token with `api` scope (`ZWF_GITLAB_TOKEN`) does everything: tree, files, blobs, commits (`gitlab-api.ts`). Users never sign in to GitLab; commits name co-editors as `Co-authored-by:`. |
 | Persistence | SQLite: one Y.Doc per room, GitLab rooms included (`collab-server.ts`, `@hocuspocus/extension-sqlite`). Browser: localStorage/sessionStorage mementos for UI state (`hosts/workbench/memento`). Nothing per user on the server. |
 | Main file | GitLab rooms: per user (the client's `mainFile` option); other rooms share it (`project` map, `shared-main-file.ts`). |
 | Widget side | `collaboration` extension; GitLab branch shown via the `scm` API → `source-control` extension (status bar "Not in GitLab: …", "Save to GitLab…", M/A decorations). |
@@ -49,7 +49,7 @@ project URL (shared link) ──no session──▶ OAuth ──▶ back to that
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ Typst Editor                                   Ada Lovelace ▾ (Sign out)
+│ Zwiebelfisch                                   Ada Lovelace ▾ (Sign out)
 │                                                                      │
 │  [ Search projects…                           ]  [ Open from GitLab… ]│
 │                                                                      │
@@ -184,7 +184,7 @@ httpOnly SameSite=Lax cookie; tokens never reach the browser.
   the saving user's token, so GitLab enforces protected branches).
 - Commit author: the user who saves (their token, real identity) — this closes the "Auth" open item. Auto-commit: the
   token of whoever edited most and still has a valid session; else stays uncommitted and the status bar says so. A
-  service token (today's `TYPST_GITLAB_TOKEN`) becomes optional (webhooks, fallback; open question 4).
+  service token (today's `ZWF_GITLAB_TOKEN`) becomes optional (webhooks, fallback; open question 4).
 - Server endpoints for the chooser (thin GitLab proxies, paginated): `GET /api/me`,
   `GET /api/projects?search=&page=` (→ `/projects?membership=true&min_access_level=30&order_by=last_activity_at&simple=true`),
   `GET /api/projects/:id/branches?search=`, `GET /api/projects/:id/folders?ref=` (recursive tree → folders with `.typ`),

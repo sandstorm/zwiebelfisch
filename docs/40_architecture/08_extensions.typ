@@ -4,10 +4,10 @@
 
 #unreviewed
 
-Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `TypstExtension` in `src/hosts/workbench/workbench.ts`.
+Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `Extension` in `src/hosts/workbench/workbench.ts`.
 
 ```ts
-interface TypstExtension {
+interface Extension {
   readonly id: string;                           // unique in the list, e.g. 'word-count'
   readonly contributes?: ExtensionContributions; // settings, commands, key bindings, languages: declared before any extension activates
   activate(context: ExtensionContext): void;     // registers what it adds, once
@@ -34,9 +34,9 @@ extensions/<name>/
 The words of the shown file in the status bar, with a setting for its label and a command the host can run.
 
 ```ts
-import { createTypstEditor, type TypstExtension } from 'typst-editor';
+import { createEditor, type Extension } from 'zwiebelfisch';
 
-export function wordCount(): TypstExtension {
+export function wordCount(): Extension {
   return {
     id: 'word-count',
     contributes: {
@@ -64,7 +64,7 @@ export function wordCount(): TypstExtension {
   };
 }
 
-const editor = createTypstEditor(host, {
+const editor = createEditor(host, {
   source: '= Hello\n\nSome words here.',
   settings: { 'wordCount.label': 'Wörter' },
   extensions: (builtinExtensions) => [...builtinExtensions, wordCount()],
@@ -126,7 +126,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
 
 == Built-in extensions <architecture-extensions-built-in>
 
-`createTypstEditor` activates them in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`); `devtools` is not in the list: it wraps the final list, last, and records every contribution in a right side panel (@configuration-embedding-devtools).
+`createEditor` activates them in this order (`builtinExtensions()` in `src/editor/editor.ts`); `devtools` is not in the list: it wraps the final list, last, and records every contribution in a right side panel (@configuration-embedding-devtools).
 
 === The list <architecture-extensions-list>
 

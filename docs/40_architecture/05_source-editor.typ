@@ -37,7 +37,7 @@ new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.
 - *Live:* a contribution reaches every editor, open ones included (they reconfigure a `Compartment`); disposing removes it from all. No feature tracks editors.
 - *Shared* contributions are for any text, never a language. They reach the Source editors, the raw boxes and the text files' editor. Raw boxes take Typst ones through `visualEditor.registerRawBoxCodeMirrorExtension`.
 - *Precedence* is CodeMirror's own (`Prec.highest` … `Prec.lowest`).
-- *`codeColors`* (exported by the entry) is the only look of every CodeMirror in the widget: the default highlight style colored by the `--te-syn-*` tokens, light or dark following the color scheme around the editor. No editor restyles on top of it.
+- *`codeColors`* (exported by the entry) is the only look of every CodeMirror in the widget: the default highlight style colored by the `--zwf-syn-*` tokens, light or dark following the color scheme around the editor. No editor restyles on top of it.
 - *Sync:* the editor's own edits become `TextChange[]` with the editor as `origin`; changes of another origin arrive annotated `fromDocument.of({ origin })` and are not written back.
 - *Undo* is CodeMirror's history, and changes from elsewhere enter it. A contribution keeps edits out: `perUserUndo` reads `fromDocument` and drops other users' edits. No `Y.UndoManager`.
 - *Tab* indents, Shift+Tab outdents (`indentWithTab`); Escape, then Tab leaves the editor.

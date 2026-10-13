@@ -45,7 +45,7 @@ Legend: (v) checked in the source given, (r) from memory, not checked.
 
 Notes:
 - (b) is a narrower grant on paper (no API write), but it fails against the "Reject unsigned commits" push rule. It also adds a git object store and go-git shallow-clone risk, and the API reading of tree/blob/branches stays anyway. It does not pay off.
-- (c) is what `TYPST_GITLAB_TOKEN` does today. GitLab itself calls it creating commits "on behalf of other users" (F4). It breaks on projects with web-based signing on. It also bypasses per-user branch protection, which is the worst property here.
+- (c) is what `ZWF_GITLAB_TOKEN` does today. GitLab itself calls it creating commits "on behalf of other users" (F4). It breaks on projects with web-based signing on. It also bypasses per-user branch protection, which is the worst property here.
 - (d) is the closest GitLab has to a GitHub App: a bot token per project or group, with the user only in trailers. There is no installation model and no tokens that act as the user. It suits optional server-side work (webhooks, auto-commit fallback) where a Maintainer sets it up per project. It is not a good default author.
 - GitHub, if a second provider comes later (r, not verified): GitHub App user-to-server tokens with `contents:write` limited to selected repos are narrower than GitLab's `api`. GraphQL `createCommitOnBranch` creates commits marked Verified, but sources disagree on whether user-token commits are signed. https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/
 
@@ -62,7 +62,7 @@ Notes:
 
 #### Starting point (v, code)
 - `gitlab-room.ts` already auto-commits in two cases: when the room has been idle for `autoCommit` minutes, and `LEAVE_DELAY` after the last user left (`left()`).
-- The commit author is whoever made the most edits (`automaticCommit` in `editors.ts`); the other editors go in as `Co-authored-by:`. Every commit uses the one server token `TYPST_GITLAB_TOKEN` and passes `author_name`/`author_email`.
+- The commit author is whoever made the most edits (`automaticCommit` in `editors.ts`); the other editors go in as `Co-authored-by:`. Every commit uses the one server token `ZWF_GITLAB_TOKEN` and passes `author_name`/`author_email`.
 - If upstream moved, the room merges it (diff3) and tries again. A conflict stops the commit and stays visible as `meta.conflict`. A failed commit stays visible as `meta.commitFailure`.
 - The room's Y.Doc is stored in SQLite, so nothing is lost while it is uncommitted. Option (d) therefore already exists today.
 - Once each user has an OAuth sign-in, the only open question is whose credential the server uses when nobody is connected.
@@ -86,9 +86,9 @@ Notes:
 
 #### Comparison
 
-| | (a) Last editors' stored OAuth tokens | (b) Service / bot token | (c) Side branch `typst-editor/autosave/<room>` | (d) No auto-commit; durable room + "unsaved" marker |
+| | (a) Last editors' stored OAuth tokens | (b) Service / bot token | (c) Side branch `zwiebelfisch/autosave/<room>` | (d) No auto-commit; durable room + "unsaved" marker |
 |---|---|---|---|---|
-| Credential | Already there: the server keeps each session's access + refresh token anyway (confidential client). Store one token row per user, AES-GCM with a deployment key. Refresh under a per-user lock. | Per deployment: one service account added to every project, or `TYPST_GITLAB_TOKEN`. Per project: owner creates a project access token and pastes it in, which is extra UX. | Still the user's token (or a bot's), so it does **not** solve the credential problem | None |
+| Credential | Already there: the server keeps each session's access + refresh token anyway (confidential client). Store one token row per user, AES-GCM with a deployment key. Refresh under a per-user lock. | Per deployment: one service account added to every project, or `ZWF_GITLAB_TOKEN`. Per project: owner creates a project access token and pastes it in, which is extra UX. | Still the user's token (or a bot's), so it does **not** solve the credential problem | None |
 | Expiry | GitLab: refresh token has no expiry, works until revoked. GitHub: 6 months. | PAT/PrAT up to 365/400 d, then someone must rotate it | as (a) or (b) | – |
 | Revoked / lost access | Try the next editor by edit count; if none works, fall back to (d) and record `commitFailure` | One broken token stops auto-commit for everyone it covers | as (a) | – |
 | Authorship | Real: author and committer are the editor whose token is used, the others as `Co-authored-by` | Committer is the bot. Setting `author_name` to the human is possible but **impersonation**: the user never signed this commit. | as (a) or (b) | Real, at the next manual save |
@@ -110,7 +110,7 @@ Notes:
 **(a) on top of (d), no (b), no (c).**
 1. Keep (d) as the guaranteed baseline. It exists already: the room is durable, and the status bar shows "Not in GitLab: … (Ann, Bob)", `meta.conflict` and `meta.commitFailure`. Also show it on the welcome screen's recents entry ("unsaved changes" badge).
 2. Auto-commit with the stored OAuth tokens of the room's editors, tried in edit-count order, each committing as itself. If none works (revoked, no access, protected branch, conflict), fall back to (d) silently, with the reason in `commitFailure`.
-3. Drop the server-wide `TYPST_GITLAB_TOKEN` for commits. That removes the impersonation and permission bypass. Keep a token or webhook secret only for webhooks, if needed.
+3. Drop the server-wide `ZWF_GITLAB_TOKEN` for commits. That removes the impersonation and permission bypass. Keep a token or webhook secret only for webhooks, if needed.
 4. Revisit (b), as a per-deployment service account, only if a customer requires commits independent of user grants, and then with bot authorship, not impersonation.
 
 This matches the Google Docs expectation: nothing is lost, and the repo catches up shortly after people leave. It uses only credentials the confidential-client design already holds.

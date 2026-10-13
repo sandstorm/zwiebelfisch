@@ -145,7 +145,7 @@ const CALLOUT: TypstNodeSpec = {
   typst: { parseTypst: { calls: { callout: { block: parseCallout } } }, toTypst: calloutToTypst, anchors: ['layout'], labelled: true },
 };
 
-export function callout(): TypstExtension {
+export function callout(): Extension {
   return {
     id: 'callout',
     activate({ workbench, visualEditor, subscriptions }) {

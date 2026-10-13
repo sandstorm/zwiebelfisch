@@ -7,9 +7,9 @@
 Several people can edit the same project at once (#link("https://yjs.dev/")[Yjs]). Add the `collaboration` extension with a connection:
 
 ```ts
-import { collaboration, createTypstEditor } from 'typst-editor';
+import { collaboration, createEditor } from 'zwiebelfisch';
 
-createTypstEditor(host, {
+createEditor(host, {
   source,                                    // seeds a new room; a room's text wins
   user: { name: 'Ada', color: '#6c71c4' },   // the name until signed in; color optional
   extensions: (builtinExtensions) => [
@@ -19,7 +19,7 @@ createTypstEditor(host, {
 });
 ```
 
-On `<typst-editor>`, put `extensions` and `user` into `options` before the element connects.
+On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before the element connects.
 
 == Connections <configuration-collaboration-server-connections>
 
@@ -42,11 +42,11 @@ mise run server:dev    # ws://127.0.0.1:1234
   columns: 2,
   [Variable], [Meaning],
   [`PORT`], [Default `1234`.],
-  [`TYPST_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
-  [`TYPST_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
-  [`TYPST_PLAIN_ROOMS`], [`1`: also open plain rooms, to anyone signed in. Default off: a client asking for one is refused, and the widget says why.],
-  [`TYPST_AUTH_…`], [The sign-in, required (@configuration-collaboration-server-sign-in).],
-  [`TYPST_LOG_LEVEL`, `TYPST_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
+  [`ZWF_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
+  [`ZWF_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
+  [`ZWF_PLAIN_ROOMS`], [`1`: also open plain rooms, to anyone signed in. Default off: a client asking for one is refused, and the widget says why.],
+  [`ZWF_AUTH_…`], [The sign-in, required (@configuration-collaboration-server-sign-in).],
+  [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
 A server without sign-in, or with neither GitLab nor plain rooms, does not start. `GET /api/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
@@ -58,10 +58,10 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 #table(
   columns: 2,
   [Variable], [Meaning],
-  [`TYPST_AUTH_CLIENT_ID`], [Required: the application's id.],
-  [`TYPST_AUTH_CLIENT_SECRET`], [Required: its secret (never commit it).],
-  [`TYPST_AUTH_REDIRECT_URL`], [The callback registered with the application, e.g. `https://editor.example.org/auth/callback`. Default: `/auth/callback` on the host the browser named.],
-  [`TYPST_AUTH_ISSUER`], [The provider (default `TYPST_GITLAB_URL`). Another one signs people in, but GitLab rooms refuse them: their GitLab account is unknown.],
+  [`ZWF_AUTH_CLIENT_ID`], [Required: the application's id.],
+  [`ZWF_AUTH_CLIENT_SECRET`], [Required: its secret (never commit it).],
+  [`ZWF_AUTH_REDIRECT_URL`], [The callback registered with the application, e.g. `https://editor.example.org/auth/callback`. Default: `/auth/callback` on the host the browser named.],
+  [`ZWF_AUTH_ISSUER`], [The provider (default `ZWF_GITLAB_URL`). Another one signs people in, but GitLab rooms refuse them: their GitLab account is unknown.],
 )
 
 - The server keeps who signed in in memory, with the user's tokens: nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise.

@@ -1,5 +1,5 @@
 # The documentation as a GitHub Pages site, https://<owner>.github.io/<repo>/: the HTML pages (mise run docs:html) at
-# the top, the book as typst-editor.pdf next to them, and the demo, built as a static site, under demo/. Published on every
+# the top, the book as zwiebelfisch.pdf next to them, and the demo, built as a static site, under demo/. Published on every
 # push to main and by hand (Actions → Pages → Run workflow).
 #
 # The demo there is the static site (vite --mode static, demo/static-site.ts): it opens the Documentation example, this
@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p dist/pages
           cp -R dist/docs/html/. dist/pages/
-          cp dist/docs/typst-editor.pdf dist/pages/
+          cp dist/docs/zwiebelfisch.pdf dist/pages/
           cp -R dist/demo dist/pages/demo
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

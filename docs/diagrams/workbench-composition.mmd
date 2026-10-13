@@ -1,5 +1,5 @@
 flowchart TD
-  create["createTypstEditor"] --> host["`WorkbenchHost(host, project, options)
+  create["createEditor"] --> host["`WorkbenchHost(host, project, options)
   .activate(extensions)`"]
   host --> namespaces["`namespaces
   CommandsHost
@@ -14,7 +14,7 @@ flowchart TD
   host --> frame["`frame
   WorkbenchLayout
   EditorTabs
-  TypstEditors
+  DocumentEditors
   Menus
   StyleSheets
   FileDrops

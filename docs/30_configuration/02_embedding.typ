@@ -4,31 +4,31 @@
 
 #unreviewed
 
-You embed the editor as the element `<typst-editor>` or with `createTypstEditor(host, options)`. Both take the same options (@configuration-options).
+You embed the editor as the element `<zwiebelfisch-editor>` or with `createEditor(host, options)`. Both take the same options (@configuration-options).
 
-- *`<typst-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
-- *`createTypstEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and its events.
+- *`<zwiebelfisch-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
+- *`createEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and its events.
 
 == A first editor <configuration-embedding-first-editor>
 
 Run `mise run build:lib`, then copy `dist/lib` into your site (it is not on npm yet):
 
 ```html
-<script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
+<script type="module" src="/vendor/zwiebelfisch/zwiebelfisch.js"></script>
 
-<typst-editor style="height: 600px">
+<zwiebelfisch-editor style="height: 600px">
   = Hello
 
   Some *Typst*.
-</typst-editor>
+</zwiebelfisch-editor>
 ```
 
-Or from JavaScript, with the repository folder as dependency (its `package.json` exports it as `typst-editor`):
+Or from JavaScript, with the repository folder as dependency (its `package.json` exports it as `zwiebelfisch`):
 
 ```ts
-import { createTypstEditor } from 'typst-editor';
+import { createEditor } from 'zwiebelfisch';
 
-const editor = createTypstEditor(document.getElementById('editor')!, { source: '= Hello\n' });
+const editor = createEditor(document.getElementById('editor')!, { source: '= Hello\n' });
 editor.onDidChangeFiles((change) => save(change));
 ```
 
@@ -41,7 +41,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
 #table(
   columns: 2,
   [File], [Content],
-  [`typst-editor.js`], [The ES module, all dependencies bundled. Importing it registers `<typst-editor>`.],
+  [`zwiebelfisch.js`], [The ES module, all dependencies bundled. Importing it registers `<zwiebelfisch-editor>`.],
   [`typst_engine_bg.<hash>.wasm`], [The Typst compiler (about 22 MB, 9 MB gzipped).],
   [`fonts/<name>.<hash>.otf`, `.ttf`], [Typst's default fonts, each downloaded on first use.],
   [other `*-<hash>.js`], [Chunks loaded on demand (e.g. collaboration).],
@@ -52,22 +52,22 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
 *Keep the folder together* and serve it from any path. Your server should send:
 
 - the wasm as `Content-Type: application/wasm`;
-- the hashed files with `Cache-Control: public, max-age=31536000, immutable`, and `typst-editor.js` with `no-cache` and an `ETag`;
+- the hashed files with `Cache-Control: public, max-age=31536000, immutable`, and `zwiebelfisch.js` with `no-cache` and an `ETag`;
 - compressed files if you like (gzip or brotli); the wasm shrinks most.
 - *Content-Security-Policy:* `connect-src https://packages.typst.org` for `@preview` packages, and `frame-src https://embed.diagrams.net` (or your `diagrams.editorUrl`) for the diagram editor.
 
-*Bundlers:* in Vite, add the package to `optimizeDeps.exclude`, as pre-bundling breaks the relative asset URLs. Webpack 5 and Rollup pick up the `new URL(…)` assets. Anything else: copy `dist/lib` and import `typst-editor.js` from there.
+*Bundlers:* in Vite, add the package to `optimizeDeps.exclude`, as pre-bundling breaks the relative asset URLs. Webpack 5 and Rollup pick up the `new URL(…)` assets. Anything else: copy `dist/lib` and import `zwiebelfisch.js` from there.
 
 == Custom element <configuration-embedding-element>
 
 ```html
-<script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
+<script type="module" src="/vendor/zwiebelfisch/zwiebelfisch.js"></script>
 
-<typst-editor id="doc" settings='{"workbench.theme": "dark"}'>
+<zwiebelfisch-editor id="doc" settings='{"workbench.theme": "dark"}'>
   = Hello
 
   The initial source is the element's text, common indentation removed.
-</typst-editor>
+</zwiebelfisch-editor>
 
 <script type="module">
   const doc = document.getElementById('doc');
@@ -94,10 +94,10 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
 
 - Set `options` *before appending the element*. Setting `value` or `files` dispatches no events.
 - The element is `display: block` with a default height of `24rem`; set `height` on it.
-- Another tag name: `defineTypstEditorElement('my-editor')`.
+- Another tag name: `defineEditorElement('my-editor')`.
 
 ```js
-const editor = document.createElement('typst-editor');
+const editor = document.createElement('zwiebelfisch-editor');
 editor.options = { mainFile: { path: '/thesis.typ' }, files, viewType: 'sourceEditor', user: { name: 'Ada' } };
 editor.setAttribute('settings', JSON.stringify({ 'files.panel': 'show' }));
 document.body.append(editor);   // options are read now
@@ -108,18 +108,18 @@ document.body.append(editor);   // options are read now
 The element renders into a shadow root, so your page's CSS and the editor's stay apart. Colors are CSS custom properties, which inherit into it:
 
 ```css
-typst-editor { --te-accent: rebeccapurple; }   /* also --te-border, --te-bg, --te-text, … */
+zwiebelfisch-editor { --zwf-accent: rebeccapurple; }   /* also --zwf-border, --zwf-bg, --zwf-text, … */
 ```
 
 - *Dark mode follows the page's `color-scheme`*; the setting `workbench.theme` overrides it.
 - In dark mode the preview shows the pages inverted. The exported PDF is unchanged.
 
-== createTypstEditor <configuration-embedding-api>
+== createEditor <configuration-embedding-api>
 
 ```ts
-import { createTypstEditor } from 'typst-editor';
+import { createEditor } from 'zwiebelfisch';
 
-const editor = createTypstEditor(host, {   // attach host to the document first, give it a height
+const editor = createEditor(host, {   // attach host to the document first, give it a height
   mainFile: { path: '/thesis.typ' },
   files: {
     '/thesis.typ': '#include "chapters/intro.typ"\n#image("logo.png")',
@@ -132,7 +132,7 @@ const editor = createTypstEditor(host, {   // attach host to the document first,
 const saving = editor.onDidChangeFiles((change) => save(change));
 ```
 
-It returns a `TypstEditor`:
+It returns a `Editor`:
 
 #table(
   columns: 2,
@@ -150,7 +150,7 @@ It returns a `TypstEditor`:
 
 === Events <configuration-embedding-events>
 
-The handle's events have VS Code's shape: `editor.onDid…(listener)` subscribes and returns a `Disposable`; `dispose()` on it unsubscribes. They fire only for changes after `createTypstEditor` returned: the files you passed are not reported.
+The handle's events have VS Code's shape: `editor.onDid…(listener)` subscribes and returns a `Disposable`; `dispose()` on it unsubscribes. They fire only for changes after `createEditor` returned: the files you passed are not reported.
 
 #table(
   columns: 2,
@@ -186,9 +186,9 @@ It takes the export options (@configuration-options-pdf) and rejects when the do
 Every feature is an extension, the built-in ones too. Make your list from the built-ins:
 
 ```ts
-createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, wordCount()] });                             // add
-createTypstEditor(host, { extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'pdf-export') });          // leave out
-createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
+createEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, wordCount()] });                             // add
+createEditor(host, { extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'pdf-export') });          // leave out
+createEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
 
 - Collaboration is not built in: add `collaboration(…)` (@configuration-collaboration-server).
