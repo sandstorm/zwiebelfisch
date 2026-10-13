@@ -41,8 +41,6 @@ export interface TextSearchOptions {
   readonly workbench: Pick<Workbench, 'open'>;
   /** Whether `path` is a text file (searched besides the Typst files). */
   isTextFile(path: ProjectPath): boolean;
-  /** Selects `from..to` in the open editor of text file `path` (after `workbench.open`). */
-  reveal(path: ProjectPath, from: number, to: number): void;
 }
 
 /** Shorter queries find too much to be useful. */
@@ -59,15 +57,11 @@ function textOf(content: FileContent | undefined): string {
 /** Lines listed at most. */
 const LIMIT = 200;
 
-function textItem(path: ProjectPath, match: TextMatch, { workbench, reveal }: TextSearchOptions): SearchItem {
+function textItem(path: ProjectPath, match: TextMatch, { workbench }: TextSearchOptions): SearchItem {
   return {
     label: match.preview,
     description: `${ProjectPath.displayName(path)}:${match.line}`,
     highlights: { label: match.highlights },
-    accept: () => {
-      if (ProjectPath.isTypst(path)) return workbench.open(path, { selection: SourceRange.of(match) });
-      workbench.open(path);
-      reveal(path, match.from, match.to);
-    },
+    accept: () => workbench.open(path, { selection: SourceRange.of(match) }),
   };
 }

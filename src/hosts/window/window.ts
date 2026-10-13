@@ -376,6 +376,11 @@ export interface CustomEditorPanel {
   /** `visible` changed. */
   readonly onDidChangeViewState: Event<void>;
   /**
+   * A range of the file is to be shown (`workbench.open(path, { selection })`, offsets into its text), right after the
+   * panel is shown: the editor selects it, scrolls it into view and takes the focus.
+   */
+  readonly onDidRequestReveal: Event<SourceRange>;
+  /**
    * Fires once, right before the panel goes: another file (or this one again) is shown (unless retained), the file is
    * deleted (retained), the provider is disposed, or the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
    */
@@ -526,10 +531,11 @@ export class WindowHost implements WindowApi {
 
   /**
    * Shows `file` in its custom editor (`viewType` if it matches, else the one chosen last or the one its name picks)
-   * in the editing area; returns that editor's view type, undefined when none matches (nothing is shown).
+   * in the editing area, revealing `selection` there; returns that editor's view type, undefined when none matches
+   * (nothing is shown).
    */
-  showCustomEditor(file: CustomDocument, viewType?: string): string | undefined {
-    return this.#customEditors.show(file, viewType);
+  showCustomEditor(file: CustomDocument, viewType?: string, selection?: SourceRange): string | undefined {
+    return this.#customEditors.show(file, viewType, selection);
   }
 
   /** The element of the custom editor's panel shown in the editing area; null while none is shown. */

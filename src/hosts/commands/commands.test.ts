@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Tests for commands.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CommandsHost, keyLabel } from './commands';
+import { CommandsHost, keyLabel, type Platform } from './commands';
 
-function setup({ mac = false } = {}) {
+function setup({ platform = 'win' as Platform } = {}) {
   const root = document.body.appendChild(document.createElement('div'));
   const inner = root.appendChild(document.createElement('div'));
-  return { root, inner, commands: new CommandsHost(root, { mac }) };
+  return { root, inner, commands: new CommandsHost(root, { platform }) };
 }
 
 function press(target: HTMLElement, init: KeyboardEventInit) {
@@ -77,7 +77,7 @@ describe('CommandsHost', () => {
     press(other.inner, { code: 'KeyK', ctrlKey: true });
     expect(run).toHaveBeenCalledTimes(2);
 
-    const mac = setup({ mac: true });
+    const mac = setup({ platform: 'mac' });
     mac.commands.registerCommand('test.run', run);
     mac.commands.registerKeybinding('Mod+KeyK', 'test.run');
     expect(press(mac.inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(false);
@@ -94,7 +94,7 @@ describe('CommandsHost', () => {
     other.commands.declareKeybindings(declared);
     other.commands.registerKeybinding('F3', 'test.find');
     expect([other.commands.keybindingLabel('test.find'), other.commands.keybindingLabel('test.files'), other.commands.keybindingLabel('test.none')]).toEqual(['Ctrl+Shift+F', 'Alt+1', undefined]);
-    const mac = setup({ mac: true });
+    const mac = setup({ platform: 'mac' });
     mac.commands.declareKeybindings(declared);
     expect([mac.commands.keybindingLabel('test.find'), mac.commands.keybindingLabel('test.files')]).toEqual(['⌘⇧F', '⌃1']);
     const run = vi.fn();
@@ -102,6 +102,27 @@ describe('CommandsHost', () => {
     press(mac.inner, { code: 'Digit1', altKey: true });
     press(mac.inner, { code: 'Digit1', ctrlKey: true });
     expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds a platform's own key, none where it is '', and passes a binding's argument", () => {
+    const declared = [
+      { command: 'test.files', key: 'Alt+Digit1', mac: 'Ctrl+Digit1', linux: '' },
+      { command: 'test.open', key: 'Mod+Shift+KeyO', args: '/' },
+    ];
+    const run = vi.fn();
+    const keysOn = (platform: Platform) => {
+      const { commands } = setup({ platform });
+      commands.declareKeybindings(declared);
+      return commands.keybindingLabel('test.files');
+    };
+    expect([keysOn('mac'), keysOn('win'), keysOn('linux')]).toEqual(['⌃1', 'Alt+1', undefined]);
+    const { inner, commands } = setup();
+    commands.declareKeybindings(declared);
+    commands.registerCommand('test.open', run);
+    commands.registerKeybinding('Mod+KeyP', 'test.open');
+    press(inner, { code: 'KeyO', ctrlKey: true, shiftKey: true });
+    press(inner, { code: 'KeyP', ctrlKey: true });
+    expect(run.mock.calls).toEqual([['/'], []]);
   });
 
   it('labels keys of bindings and of the toolbar alike', () => {

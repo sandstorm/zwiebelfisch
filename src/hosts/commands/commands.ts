@@ -27,24 +27,36 @@ export interface Commands {
    */
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
   /**
-   * Runs `command` (without arguments) on `key` anywhere in the widget, before the editors see the key (they never
-   * do; a failing command is logged). `key`: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM`
+   * Runs `command` (with `args` as its one argument, if given) on `key` anywhere in the widget, before the editors see
+   * the key (they never do; a failing command is logged). `key`: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM`
    * (Mod: Cmd on the Mac, else Ctrl). The modifiers must be exactly those (as VS Code's): `Alt+Digit1` is not
    * AltGr+1 (Ctrl+Alt on Windows), `Ctrl+Minus` not Ctrl+Shift+Minus. For a command people run: declare the key
    * (`contributes.keybindings`) instead.
    */
-  registerKeybinding(key: string, command: string): Disposable;
+  registerKeybinding(key: string, command: string, args?: unknown): Disposable;
 }
 
-/** A key that runs a command (VS Code's `contributes.keybindings` entry), as `registerKeybinding` takes it. */
+/**
+ * A key that runs a command (VS Code's `contributes.keybindings` entry), as `registerKeybinding` takes it. A
+ * platform's own key replaces `key` there; '' is no key there.
+ */
 export interface KeybindingContribution {
-  /** The command's id; it runs without arguments. */
+  /** The command's id. */
   readonly command: string;
   /** The key (`Mod+Shift+KeyF`). */
   readonly key: string;
-  /** The key on the Mac instead, if another. */
+  /** The key on the Mac instead. */
   readonly mac?: string;
+  /** The key on Windows instead. */
+  readonly win?: string;
+  /** The key on Linux (and any other system) instead. */
+  readonly linux?: string;
+  /** The command's one argument (none if not given). */
+  readonly args?: unknown;
 }
+
+/** The systems whose keys differ (VS Code's `mac`, `win`, `linux`). */
+export type Platform = 'mac' | 'win' | 'linux';
 
 /** A command as data (VS Code's Command), e.g. what a document link's hover offers to do. */
 export interface Command {
@@ -57,19 +69,21 @@ export interface Command {
 }
 
 /**
- * The `Commands` of one widget. Keys are handled on `root` in the capture phase: no editor sees a bound key. `mac`:
- * whether keys are the Mac's (Mod is Cmd; labels such as ⌘⇧F); default: as the browser says.
+ * The `Commands` of one widget. Keys are handled on `root` in the capture phase: no editor sees a bound key.
+ * `platform`: whose keys these are (on the Mac Mod is Cmd, labels read ⌘⇧F); default: as the browser says.
  */
 export class CommandsHost implements Commands {
   readonly #handlers = new Map<string, CommandHandler>();
-  readonly #keybindings = new Set<{ key: string; matches(event: KeyboardEvent): boolean; command: string }>();
+  readonly #keybindings = new Set<{ key: string; matches(event: KeyboardEvent): boolean; command: string; args: unknown[] }>();
+  readonly #platform: Platform;
   readonly #mac: boolean;
 
   constructor(
     private readonly root: HTMLElement,
-    options: { mac?: boolean } = {},
+    options: { platform?: Platform } = {},
   ) {
-    this.#mac = options.mac ?? IS_MAC;
+    this.#platform = options.platform ?? PLATFORM;
+    this.#mac = this.#platform === 'mac';
     root.addEventListener('keydown', this.#handleKey, true);
   }
 
@@ -94,15 +108,18 @@ export class CommandsHost implements Commands {
     return this.#handlers.has(id);
   }
 
-  registerKeybinding(key: string, command: string): Disposable {
-    const binding = { key, matches: parseKey(key, this.#mac), command };
+  registerKeybinding(key: string, command: string, args?: unknown): Disposable {
+    const binding = { key, matches: parseKey(key, this.#mac), command, args: args === undefined ? [] : [args] };
     this.#keybindings.add(binding);
     return new Disposable(() => this.#keybindings.delete(binding));
   }
 
-  /** Binds the keys the extensions declare (`contributes.keybindings`), each the Mac's on the Mac, for the widget's life. */
+  /** Binds the keys the extensions declare (`contributes.keybindings`), each the platform's own if it has one, for the widget's life. */
   declareKeybindings(keybindings: readonly KeybindingContribution[]): void {
-    for (const { command, key, mac } of keybindings) this.registerKeybinding((this.#mac && mac) || key, command);
+    for (const keybinding of keybindings) {
+      const key = keybinding[this.#platform] ?? keybinding.key;
+      if (key) this.registerKeybinding(key, keybinding.command, keybinding.args);
+    }
   }
 
   /** The key that runs command `id`, as people read it (`⌘⇧F`, `Ctrl+Shift+F`): the first bound; undefined: none. */
@@ -123,7 +140,7 @@ export class CommandsHost implements Commands {
       // decided now, while the event is dispatched; the command's outcome comes later
       event.preventDefault();
       event.stopPropagation();
-      this.executeCommand(binding.command).catch((error: unknown) => console.error(`Command ${binding.command} failed:`, error));
+      this.executeCommand(binding.command, ...binding.args).catch((error: unknown) => console.error(`Command ${binding.command} failed:`, error));
       return;
     }
   };
@@ -158,7 +175,8 @@ function parseKey(key: string, mac: boolean): (event: KeyboardEvent) => boolean 
     event.code === code && event.ctrlKey === wanted.has('Ctrl') && event.metaKey === wanted.has('Meta') && event.altKey === wanted.has('Alt') && event.shiftKey === wanted.has('Shift');
 }
 
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const PLATFORM: Platform = typeof navigator === 'undefined' ? 'linux' : /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : /Win/.test(navigator.platform) ? 'win' : 'linux';
+const IS_MAC = PLATFORM === 'mac';
 
 /** The modifiers as people read them, outside the Mac and on it. */
 const LABELS: Record<string, string> = { Mod: 'Ctrl', Ctrl: 'Ctrl', Meta: 'Meta', Alt: 'Alt', Shift: 'Shift' };

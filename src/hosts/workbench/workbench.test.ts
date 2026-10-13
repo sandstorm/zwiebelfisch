@@ -483,6 +483,17 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(field().value).toBe('');
   });
 
+  it('opens on Mod+P, with the files prefix on Mod+Shift+O and the commands prefix on Mod+Shift+A', () => {
+    const { host, field } = setupSearch();
+    const press = (code: string, shiftKey = false) => host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey, bubbles: true, cancelable: true }));
+    expect(press('KeyP')).toBe(false);
+    expect(field().value).toBe('');
+    press('KeyO', true);
+    expect(field().value).toBe('/');
+    press('KeyA', true);
+    expect(field().value).toBe('>');
+  });
+
   it("puts its rail button among the left rail's panels by order 15: after Files (10), before Help (20)", () => {
     const { host } = setup(({ workbench }) => {
       const icon = () => workbench.ownerDocument.createElement('span');

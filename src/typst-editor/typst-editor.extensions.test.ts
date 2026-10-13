@@ -578,7 +578,7 @@ describe('the built-in extensions', () => {
     await editor.executeCommand('workbench.action.searchEverywhere', 'results');
     await vi.waitFor(() => expect(host.querySelector('.typst-quick-pick__progress')!.hasAttribute('hidden')).toBe(true));
     const headings = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
-    expect(headings).toEqual(['Headings', 'Labels', 'Comments', 'Text']);
+    expect(headings).toEqual(['Headings', 'Labels', 'Comments', 'Text', 'Find in files']);
     await editor.executeCommand('workbench.action.searchEverywhere', '');
     const all = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
     expect(all).toEqual(['Files', 'Headings', 'Labels', 'Figures', 'Commands', 'Styles', 'Comments', 'Settings']);

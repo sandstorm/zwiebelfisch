@@ -12,8 +12,8 @@ commands.registerKeybinding('Mod+Alt+KeyW', 'wordCount.count');
 
 - `registerCommand`: an id registered twice throws.
 - `executeCommand<T>(id, ...args)` calls the handler synchronously (the user's gesture, selection and focus are as now) and resolves to its result. It rejects for an unknown id and when the handler throws or rejects.
-- `registerKeybinding(key, command)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Cmd on the Mac, else Ctrl). The modifiers must be exactly those (VS Code's matching): `Alt+Digit1` is not AltGr+1, `Ctrl+Minus` not Ctrl+Shift+Minus. The command runs without arguments, before any editor sees the key.
-- Keys of commands for people are declared: `contributes.keybindings: [{ command, key, mac? }]` (VS Code's; `mac`: the Mac's key, if another). The workbench binds them and shows a command's key wherever it offers the command: search everywhere's command rows, menu entries, tab bar tooltips, and a side panel's rail tooltip (the key of `workbench.view.<id>`).
+- `registerKeybinding(key, command, args?)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Cmd on the Mac, else Ctrl). The modifiers must be exactly those (VS Code's matching): `Alt+Digit1` is not AltGr+1, `Ctrl+Minus` not Ctrl+Shift+Minus. The command runs with `args` as its one argument (none if not given), before any editor sees the key.
+- Keys of commands for people are declared: `contributes.keybindings: [{ command, key, mac?, win?, linux?, args? }]` (VS Code's; a platform's own key replaces `key` there, `''` is no key there: the file panel's `Alt+Digit1` is `Ctrl+Digit1` on the Mac and none on Linux, whose browsers take Alt+1). The workbench binds them and shows a command's key wherever it offers the command: search everywhere's command rows, menu entries, tab bar tooltips, and a side panel's rail tooltip (the key of `workbench.view.<id>`).
 - The host runs commands too: `editor.executeCommand(id, ...args)`.
 - Commands for people get a name in `contributes.commands` (VS Code's): search everywhere lists them while they are registered, as "Category: Title", and runs them without arguments. Declare only commands that work without any.
 
@@ -28,7 +28,7 @@ export const wordCount = (): TypstExtension => ({
 });
 ```
 
-- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`); `workbench.view.<id>` per side panel (VS Code's `workbench.view.explorer`) shows and focuses it, or hides it when it is shown and has the focus (the focus goes back where it was).
+- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`), on ⌘P, ⌘⇧O (`'/'`, files) and ⌘⇧A (`'>'`, commands) too; `workbench.view.<id>` per side panel (VS Code's `workbench.view.explorer`) shows and focuses it, or hides it when it is shown and has the focus (the focus goes back where it was).
 
 == Menus <architecture-workbench-api-menus>
 
@@ -178,6 +178,7 @@ window.registerCustomEditorProvider('csv.table', {
 - Of the editors matching a file: the one the user chose last (a tab, or `workbench.open(path, { viewType })`), else the highest `priority`, then the most specific pattern (more literal characters: `*.drawio.png` over `*.png` over `*`; `*.csv` over `*.{csv,json,…}`), then the first registered.
 - `icon`: SVG markup, 16×16 view box, strokes in `currentColor`; the file panel shows it on the rows of the files it opens.
 - Every open gets a new panel. Fill `panel.element`; store edits with `workspace.applyEdit({ kind: 'update', path, content })`; store what is pending in `panel.onDidDispose`.
+- `panel.onDidRequestReveal(range)`: `workbench.open(path, { selection })` asks the editor to select a range of the file (offsets into its text), right after the panel is shown; the text file editor selects it, as the Visual and Source editors do.
 - `retainContextWhenHidden: true` keeps a file's panel, hidden, while something else is shown (`panel.visible`, `panel.onDidChangeViewState`), and shows it again when the file opens in this editor again; it follows a rename and is disposed when the file is deleted.
 
 The built-in ones, to beat or to leave alone:

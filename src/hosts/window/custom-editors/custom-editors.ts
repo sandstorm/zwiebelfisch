@@ -3,6 +3,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, FileContent } from '../../../core/project/project';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } from '../window';
 import { FilenamePattern } from './filename-pattern';
 
@@ -49,25 +50,32 @@ export class CustomEditors {
   }
 
   /**
-   * Shows `file` in its editor (`viewType` if it matches the file, else the one chosen as above). Resolves to the view
-   * type shown; undefined (nothing shown) for a file no editor matches.
+   * Shows `file` in its editor (`viewType` if it matches the file, else the one chosen as above), then asks it to
+   * reveal `selection` (`onDidRequestReveal`). Resolves to the view type shown; undefined (nothing shown) for a file no
+   * editor matches.
    */
-  show(file: { path: ProjectPath; content: FileContent }, viewType?: string): string | undefined {
+  show(file: { path: ProjectPath; content: FileContent }, viewType?: string, selection?: SourceRange): string | undefined {
     const registration = this.#choose(file.path, viewType);
     if (registration && viewType === registration.viewType) this.#choice(viewType);
     const retained = registration && this.#retained.find((p) => p.registration === registration && p.path === file.path);
     if (this.#shown && this.#shown !== retained) this.#hide(this.#shown);
     if (!registration) return undefined;
+    const panel = retained ?? this.#open(registration, file);
     if (retained) {
       this.#shown = retained;
       retained.setVisible(true);
-      return registration.viewType;
     }
+    if (selection) panel.reveal(selection);
+    return registration.viewType;
+  }
+
+  /** A new panel for `file`, shown, filled by `registration`'s editor. */
+  #open(registration: Registration, file: { path: ProjectPath; content: FileContent }): Panel {
     const panel = new Panel(this.parent, registration, file.path);
     if (registration.retainContextWhenHidden) this.#retained.push(panel);
     this.#shown = panel;
     registration.provider.resolveCustomEditor({ path: file.path, content: file.content }, panel);
-    return registration.viewType;
+    return panel;
   }
 
   /** The element of the panel shown; null while none is. */
@@ -172,8 +180,10 @@ class Panel implements CustomEditorPanel {
   readonly element: HTMLElement;
   readonly #viewState = new EventEmitter<void>();
   readonly #disposed = new EventEmitter<void>();
+  readonly #reveal = new EventEmitter<SourceRange>();
   readonly onDidChangeViewState = this.#viewState.event;
   readonly onDidDispose = this.#disposed.event;
+  readonly onDidRequestReveal = this.#reveal.event;
 
   constructor(
     parent: HTMLElement,
@@ -197,10 +207,15 @@ class Panel implements CustomEditorPanel {
     this.#viewState.fire();
   }
 
+  reveal(range: SourceRange): void {
+    this.#reveal.fire(range);
+  }
+
   dispose(): void {
     this.#disposed.fire();
     this.#disposed.dispose();
     this.#viewState.dispose();
+    this.#reveal.dispose();
     this.element.remove();
   }
 }

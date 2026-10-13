@@ -137,7 +137,8 @@ export interface Workbench {
    * Shows `path` in the editing area (if the project has it), in a custom editor (`window.registerCustomEditorProvider`;
    * a Typst file's are the Visual and the Source editor): the one `viewType` names, else the one the user chose last,
    * else the default one; nothing without one. Opening the shown file again shows it again (an editor without
-   * `retainContextWhenHidden` gets the current content in a new panel). `selection` reveals a range of a Typst file.
+   * `retainContextWhenHidden` gets the current content in a new panel). `selection` is revealed in that editor
+   * (offsets into the file's text; a custom editor gets it as `onDidRequestReveal`).
    */
   open(path: ProjectPath, options?: OpenOptions): void;
 
@@ -213,7 +214,7 @@ export interface MenuItem {
 export type MenuContext = Readonly<Record<string, unknown>>;
 
 export interface OpenOptions {
-  /** A range of the Typst file to reveal. */
+  /** A range of the file to reveal (offsets into its text). */
   selection?: SourceRange;
   /**
    * The custom editor to open the file in, if it matches the file (its view type, e.g. `sourceEditor`); it is
@@ -480,8 +481,7 @@ export class WorkbenchHost implements Workbench {
     if (!this.project.has(path)) return;
     const changed = path !== this.#active;
     this.#active = path;
-    this.#activeCustomEditorId = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType);
-    if (options.selection) this.#typstEditors.activeTextEditor?.revealRange(options.selection);
+    this.#activeCustomEditorId = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType, options.selection);
     this.#tabs.update(this.window.customEditorChoices(path), this.#activeCustomEditorId);
     this.#placeFrame();
     this.#shown.fire(path);
@@ -609,8 +609,9 @@ export class WorkbenchHost implements Workbench {
 
   /**
    * Search everywhere's ways in besides double Shift: the command `workbench.action.searchEverywhere` (its argument:
-   * the text to start with, e.g. a prefix) and a button among the left rail's side panels (`SEARCH_EVERYWHERE_ORDER`);
-   * and its built-in groups, the declared commands and the settings.
+   * the text to start with, e.g. a prefix), its keys (⌘P; ⌘⇧O for files, ⌘⇧A for commands, as IntelliJ's) and a
+   * button among the left rail's side panels (`SEARCH_EVERYWHERE_ORDER`); and its built-in groups, the declared
+   * commands and the settings.
    */
   #registerSearch(): Disposable {
     const command = 'workbench.action.searchEverywhere';
@@ -625,6 +626,9 @@ export class WorkbenchHost implements Workbench {
     return Disposable.from(
       new Disposable(() => button.remove()),
       this.commands.registerCommand(command, (value?: string) => this.window.showSearchEverywhere(typeof value === 'string' ? value : '')),
+      this.commands.registerKeybinding('Mod+KeyP', command),
+      this.commands.registerKeybinding('Mod+Shift+KeyO', command, '/'),
+      this.commands.registerKeybinding('Mod+Shift+KeyA', command, '>'),
       this.window.registerSearchProvider(
         commandSearch({
           declared: () => this.#declaredCommands,

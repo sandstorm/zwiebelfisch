@@ -12,9 +12,8 @@ function setup() {
     '/logo.png': new Uint8Array([1, 2]),
   });
   const open = vi.fn();
-  const reveal = vi.fn();
-  const search = textSearch({ project, workbench: { open }, isTextFile: (path) => path.endsWith('.csv'), reveal });
-  return { search, open, reveal };
+  const search = textSearch({ project, workbench: { open }, isTextFile: (path) => path.endsWith('.csv') });
+  return { search, open };
 }
 
 describe('textSearch', () => {
@@ -27,14 +26,13 @@ describe('textSearch', () => {
     ]);
   });
 
-  it('opens a Typst file with the match selected, a text file then selected in its editor', async () => {
-    const { search, open, reveal } = setup();
+  it('opens the file with the match selected', async () => {
+    const { search, open } = setup();
     const [typst, csv] = await search.provideItems('compile', new CancellationTokenSource().token);
     typst.accept();
     expect(open).toHaveBeenCalledWith('/main.typ', { selection: { from: 2, to: 9 } });
     csv.accept();
-    expect(open).toHaveBeenLastCalledWith('/data/runs.csv');
-    expect(reveal).toHaveBeenCalledWith('/data/runs.csv', 6, 13);
+    expect(open).toHaveBeenLastCalledWith('/data/runs.csv', { selection: { from: 6, to: 13 } });
   });
 
   it('waits for 2 characters, and gives nothing once cancelled', async () => {

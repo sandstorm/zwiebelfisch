@@ -79,6 +79,14 @@ describe('SearchEverywhere', () => {
     expect(rows()).toEqual(['# Headings', 'Heading 8']);
   });
 
+  it('narrows a prefix to every provider sharing it, and names it once in the hint', () => {
+    const { host, search, type, rows } = setup(provider('Text', ['a quick fox'], { prefix: '%', order: 90 }), provider('More', ['quick, everywhere'], { prefix: '%', order: 91 }));
+    search.show();
+    expect(host.querySelector('.typst-quick-pick__hint')!.textContent).toBe('Narrow with % Text');
+    type('%quick');
+    expect(rows()).toEqual(['# Text', 'a quick fox', '# More', 'quick, everywhere']);
+  });
+
   it('opens with a value, e.g. a prefix', () => {
     const { search, field, rows } = setup(provider('Commands', ['Add comment'], { prefix: '>' }), provider('Files', ['a.typ']));
     search.show('>');

@@ -89,11 +89,12 @@ export class SearchEverywhere {
     return { providers: all.filter((provider) => provider.prefix === prefix), query: text.slice(prefix.length).trim(), narrowed: true };
   }
 
-  /** The line below the list: how to narrow the search. */
+  /** The line below the list: how to narrow the search (a prefix several providers share by the first one's label). */
   #hint(): string | undefined {
-    const prefixes = [...this.#providers].sort(byOrder).filter((provider) => provider.prefix);
-    if (prefixes.length === 0) return undefined;
-    return `Narrow with ${prefixes.map((provider) => `${provider.prefix} ${provider.label}`).join(' · ')}`;
+    const prefixes = new Map<string, string>();
+    for (const { prefix, label } of [...this.#providers].sort(byOrder)) if (prefix && !prefixes.has(prefix)) prefixes.set(prefix, label);
+    if (prefixes.size === 0) return undefined;
+    return `Narrow with ${[...prefixes].map(([prefix, label]) => `${prefix} ${label}`).join(' · ')}`;
   }
 }
 

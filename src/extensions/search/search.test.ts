@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 // Tests for search.ts in a workbench (preview mocked: no worker in jsdom): the panel on the rail; the key and the
 // command, with the selection or the arguments as query; a match opening in the editor shown now (Visual or Source),
-// a match inside a raw box opening in its code, a text file's match opening that file; the matches highlighted in the
-// shown editor; "Find in folder…" on a folder's row in the file panel; Replace mode by key, Replace all confirmed in a
-// notification, a text file changed through the host (and its veto).
+// a match inside a raw box opening in its code, a text file's match opening in that file's editor, selected; the
+// matches highlighted in the shown editor; "Find in folder…" on a folder's row in the file panel; search everywhere's
+// row "Find in files: …"; Replace mode by key, Replace all confirmed in a notification, a text file changed through the
+// host (and its veto).
 import { EditorView as CodeView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
@@ -12,7 +13,7 @@ import { Project } from '../../core/project/project';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
-import type { WindowApi } from '../../hosts/window/window';
+import type { CustomEditorPanel, WindowApi } from '../../hosts/window/window';
 import { type TypstExtension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { search } from './search';
 
@@ -40,13 +41,22 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
   const project = new Project(path('/main.typ'), { '/main.typ': main, '/notes.txt': 'world notes', '/chapters/intro.typ': 'Round about.' });
   const workbench = new WorkbenchHost(host, project, { viewType, allowFileChange });
   let window!: WindowApi;
-  // a text file: one with a declared language
-  const probe: TypstExtension = { id: 'probe', contributes: { languages: [{ id: 'plaintext', extensions: ['.txt'] }] }, activate: (context) => void (window = context.window) };
+  const revealed: SourceRange[] = [];
+  // a text file: one with a declared language; its editor notes what it is to reveal
+  const probe: TypstExtension = {
+    id: 'probe',
+    contributes: { languages: [{ id: 'plaintext', extensions: ['.txt'] }] },
+    activate: (context) => {
+      window = context.window;
+      const editor = { resolveCustomEditor: (_: unknown, panel: CustomEditorPanel) => void panel.onDidRequestReveal((range) => revealed.push(range)) };
+      context.subscriptions.push(window.registerCustomEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }));
+    },
+  };
   workbench.activate([search(), probe]);
   const panel = host.querySelector<HTMLElement>('[data-testid=typst-search]')!;
   const input = panel.querySelector('input')!;
   const row = (text: string) => [...panel.querySelectorAll<HTMLElement>('[role=treeitem]')].find((item) => item.textContent?.includes(text))!;
-  return { host, project, workbench, window, panel, input, row };
+  return { host, project, workbench, window, panel, input, row, revealed };
 }
 
 describe('search', () => {
@@ -122,12 +132,24 @@ describe('search', () => {
     expect([code.hasFocus, code.state.sliceDoc(from, to)]).toEqual([true, 'world']);
   });
 
-  it('a match in a text file opens that file', async () => {
-    const { workbench, window, row } = setup();
+  it("a match in a text file opens in that file's editor, selected", async () => {
+    const { workbench, window, row, revealed } = setup();
     await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'notes' });
     await vi.runAllTimersAsync();
     row('world notes').click();
     expect(window.activeFile).toBe('/notes.txt');
+    expect(revealed).toEqual([{ from: 6, to: 11 }]);
+  });
+
+  it('search everywhere ends the group "Text" (%) with a row that shows the query in the panel', async () => {
+    const { host, workbench, input, panel } = setup();
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '%round');
+    const option = [...host.querySelectorAll<HTMLElement>('[role=option]')].at(-1)!;
+    expect(option.textContent).toBe('Find in files: round Ctrl+Shift+F');
+    option.click();
+    await vi.runAllTimersAsync();
+    expect(input.value).toBe('round');
+    expect(panel.querySelector('[role=status]')?.textContent).toBe('2 results in 2 files');
   });
 
   it('"Find in folder…" on a folder\'s row searches that folder and its subfolders', async () => {

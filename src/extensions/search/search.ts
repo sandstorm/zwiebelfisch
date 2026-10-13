@@ -1,6 +1,7 @@
-import { ProjectPath } from '../../core/paths/paths';
+import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
-import { keyLabel } from '../../hosts/commands/commands';
+import { type Commands, keyLabel } from '../../hosts/commands/commands';
+import type { SearchProvider } from '../../hosts/window/window';
 import type { ExtensionContext, SidePanel, TypstExtension } from '../../hosts/workbench/workbench';
 import { Replacement } from './model/replace';
 import { SearchResults } from './model/search-results';
@@ -12,8 +13,8 @@ import { type FindOptions, type Mode, SearchPanel } from './workbench/search-pan
  * "Find in files": the left side panel (the magnifier on the rail, after Files) that finds every occurrence of a text
  * or regular expression in the Typst source of the project's files and in its text files (those with a declared
  * language), listed by file and line. A match picked in a Typst file opens in the editor shown now (Visual or Source:
- * the one the user chose last), selected; one in a text file opens that file. The panel lying over a narrow widget's
- * editing area closes then.
+ * the one the user chose last), selected; one in a text file in that file's editor, selected too. The panel lying
+ * over a narrow widget's editing area closes then.
  *
  * It searches the whole project, the current file (the one shown, as it changes) or a folder and its subfolders. While
  * shown it follows every change of the files, and the Visual and Source editors highlight every match it lists, the
@@ -30,7 +31,8 @@ import { type FindOptions, type Mode, SearchPanel } from './workbench/search-pan
  * (`query`, `replace`, `isRegex`, `isCaseSensitive`, `matchWholeWord`); without a query they start from the selection
  * of the shown Typst editor (its source text, one line) unless the panel has the focus, else from the query the panel
  * has. `search.findInFolder` (the file panel's "Find in folder…" on a folder's row, `explorer/context`) does the same
- * in that folder.
+ * in that folder, and search everywhere's row "Find in files: ‹query›" (after its group "Text", `%`) with its query.
+ * Alt+3 (⌃3 on the Mac, none on Linux) shows and focuses the panel as it is (`workbench.view.search`).
  *
  * The matching (model/text-query.ts), the results that follow the files' changes (model/search-results.ts) and a
  * replace with its undo (model/replace.ts) are pure; the view (workbench/search-panel.ts) gets them through its
@@ -48,6 +50,8 @@ export function search(): TypstExtension {
       keybindings: [
         { command: FIND_IN_FILES, key: FIND_KEY },
         { command: REPLACE_IN_FILES, key: REPLACE_KEY },
+        // as the file panel's Alt+1 / ⌃1 (IntelliJ's 3 for its Find window)
+        { command: 'workbench.view.search', key: 'Alt+Digit3', mac: 'Ctrl+Digit3', linux: '' },
       ],
     },
     activate(context) {
@@ -57,7 +61,7 @@ export function search(): TypstExtension {
       const panel = new SearchPanel(side.body, {
         search: (query, scope) => new SearchResults({ project, query, scope, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
         open: (path, match) => {
-          workbench.open(path, ProjectPath.isTypst(path) ? { selection: SourceRange.of(match) } : {});
+          workbench.open(path, { selection: SourceRange.of(match) });
           side.dismiss();
         },
         view: side,
@@ -86,6 +90,7 @@ export function search(): TypstExtension {
           panel.find({}, { scope: { kind: 'folder', path: folder } });
         }),
         workbench.registerMenuItem('explorer/context', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
+        context.window.registerSearchProvider(findInFilesRow(commands)),
       );
     },
   };
@@ -107,6 +112,24 @@ function findInFiles({ window }: ExtensionContext, side: SidePanel, panel: Searc
   const seed = selected && !selected.includes('\n') ? { query: selected } : {};
   side.show(true);
   panel.find({ ...seed, ...options }, { mode });
+}
+
+/**
+ * Search everywhere's way into the panel: a row "Find in files: ‹query›" after the group "Text" (prefix `%`, a
+ * glance at the lines holding the query), which shows the panel with the query.
+ */
+function findInFilesRow(commands: Commands): SearchProvider {
+  return {
+    id: 'search.findInFiles',
+    label: 'Find in files',
+    prefix: '%',
+    // right after "Text" (90)
+    order: 91,
+    provideItems: (query) =>
+      query
+        ? [{ label: `Find in files: ${query}`, highlights: {}, keybinding: keyLabel(FIND_KEY), accept: () => commands.executeCommand(FIND_IN_FILES, { query }) }]
+        : [],
+  };
 }
 
 /** The rail button's icon: a magnifier. */

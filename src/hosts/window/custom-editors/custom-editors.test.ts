@@ -2,6 +2,7 @@
 // Tests for custom-editors.ts and filename-pattern.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
+import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CustomDocument, CustomEditorPanel, CustomEditorProvider } from '../window';
 import { CustomEditors } from './custom-editors';
 import { FilenamePattern } from './filename-pattern';
@@ -189,6 +190,20 @@ describe('CustomEditors', () => {
     expect(typst.opened).toHaveLength(2);
     expect(first.disposed).toBe(false);
     expect(parent.querySelectorAll('[data-view-type="a.typst"]')).toHaveLength(2);
+  });
+
+  it('asks the editor shown to reveal a selection, once its panel is shown again', () => {
+    const editors = new CustomEditors(document.createElement('div'));
+    const typst = provider();
+    const revealed: string[] = [];
+    editors.register('a.typst', typst.provider, { displayName: 'Typst', filenamePattern: '*.typ', retainContextWhenHidden: true });
+    const showAt = (from: number, to: number) => editors.show({ path: path('/a.typ'), content: new Uint8Array([1]) }, undefined, SourceRange.of({ from, to }));
+    showAt(1, 3);
+    typst.opened[0].panel.onDidRequestReveal(({ from, to }) => revealed.push(`${from}-${to}:${typst.opened[0].panel.visible}`));
+    show(editors, '/a.typ');
+    showAt(4, 5);
+    expect(revealed).toEqual(['4-5:true']);
+    expect(typst.opened).toHaveLength(1);
   });
 
   it('keeps a retained panel with its file: on a rename it follows, on a delete it goes', () => {
