@@ -1,0 +1,120 @@
+/* The search extension's styles: the "Find in files" panel (query field and options, message, keys, result tree).
+   See search in search.ts, which registers it. */
+.typst-search {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--te-text-2);
+  font-size: 13px;
+}
+.typst-search__field {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 8px 8px 4px;
+  padding: 2px 3px 2px 0;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: var(--te-control);
+}
+.typst-search__field:focus-within { border-color: var(--te-accent); }
+.typst-search__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 4px 7px;
+  background: none;
+  color: var(--te-text);
+  font: inherit;
+  outline: none;
+}
+.typst-search__toggle {
+  flex: none;
+  min-width: 22px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 3px;
+  background: none;
+  color: var(--te-muted);
+  font: 600 11px/16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  cursor: pointer;
+}
+.typst-search__toggle:hover { background: var(--te-hover); color: var(--te-text); }
+.typst-search__toggle[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); color: var(--te-text); }
+.typst-search__message { margin: 0; padding: 2px 10px 4px; color: var(--te-muted); font-size: 12px; }
+.typst-search__message:empty { display: none; }
+.typst-search__message--error { color: var(--te-danger); }
+.typst-search__empty {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  margin: 8px 10px;
+  color: var(--te-muted);
+  font-size: 12px;
+}
+.typst-search__empty[hidden] { display: none; }
+.typst-search__empty-key { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.typst-search__tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 0;
+  padding: 0 0 24px;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.typst-search__file,
+.typst-search__match {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 22px;
+  line-height: 22px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.typst-search__file { padding: 0 8px; color: var(--te-text); }
+.typst-search__match { padding: 0 8px 0 28px; }
+.typst-search__file:hover,
+.typst-search__match:hover { background: var(--te-hover); }
+.typst-search__file:focus,
+.typst-search__match:focus { outline: none; background: var(--te-selected); }
+.typst-search__file:focus-visible,
+.typst-search__match:focus-visible { box-shadow: inset 0 0 0 2px var(--te-accent); }
+.typst-search__chevron {
+  flex: none;
+  align-self: center;
+  width: 0;
+  height: 0;
+  margin: 0 3px;
+  border-block: 4px solid transparent;
+  border-left: 5px solid var(--te-faint);
+  transition: transform 0.1s;
+}
+.typst-search__file[aria-expanded='true'] .typst-search__chevron { transform: rotate(90deg); }
+.typst-search__name { flex: none; font-weight: 500; }
+.typst-search__folder { flex: 1; min-width: 0; overflow: hidden; color: var(--te-muted); font-size: 12px; text-overflow: ellipsis; }
+.typst-search__count {
+  flex: none;
+  min-width: 1.6em;
+  border-radius: 0.8em;
+  padding: 0 5px;
+  background: var(--te-chip);
+  color: var(--te-text-2);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+.typst-search__line { flex: none; min-width: 2em; color: var(--te-faint); font-size: 11px; text-align: right; }
+.typst-search__preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+.typst-search__hit { border-radius: 2px; background: var(--te-highlight); color: var(--te-text); }

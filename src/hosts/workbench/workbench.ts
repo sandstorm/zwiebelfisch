@@ -757,9 +757,9 @@ function previewIcon(doc: Document): SVGSVGElement {
 /** Search everywhere's place among the left rail's side panels (their `order`): after Files (10), before Help (20). */
 const SEARCH_EVERYWHERE_ORDER = 15;
 
-/** Search everywhere's rail button: a magnifier. */
+/** Search everywhere's rail button: a field over a list. */
 const SEARCH_ICON =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="5" rx="1.5"/><path d="M4 4h4M3 9.5h10M3 12h7M3 14.5h8.5"/></svg>';
 
 /** The schemes of the external links the widget opens. */
 const EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
