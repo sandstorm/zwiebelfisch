@@ -64,14 +64,6 @@ describe('WorkbenchHost', () => {
     expect(workbench.window.activeFile).toBe('/a.typ');
   });
 
-  it('reports a change of the shown file to the host (onOpen), not the same file again', () => {
-    const onOpen = vi.fn();
-    const { workbench } = setup(undefined, { onOpen });
-    workbench.open(path('/main.typ'));
-    workbench.open(path('/a.typ'));
-    expect(onOpen.mock.calls).toEqual([['/a.typ']]);
-  });
-
   it("gives extensions the host's veto on changes (workspace.applyEdit)", async () => {
     const allowFileChange = vi.fn(async () => false);
     const { project, context } = setup(undefined, { allowFileChange });

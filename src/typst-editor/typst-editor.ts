@@ -39,6 +39,7 @@ import type { Settings } from '../hosts/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
+import { type Event, EventEmitter } from '../core/event-emitter/event-emitter';
 import widgetStyles from './typst-editor.css?inline';
 
 /**
@@ -50,8 +51,9 @@ import widgetStyles from './typst-editor.css?inline';
  * devtools wrap the final list, so they record every extension's contributions, the host's too.
  *
  * A Typst document is a project of files, and the main file is one of them. So the host gives and gets every file
- * through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's text, and `mainFile`
- * says which file that is. What a feature lets
+ * through one map (`files`, `onDidChangeFiles`); `source` is only a shortcut for the main file's text, and `mainFile`
+ * says which file that is. What the widget tells the host are events on the returned handle (VS Code's shape:
+ * `onDid…` subscribes, the result unsubscribes). What a feature lets
  * the host configure is a setting its extension declares (`settings: { 'pdfExport.download': false }`), so the
  * options stay the same when features come and go. `<typst-editor>` wraps this function as a custom element.
  *
@@ -67,17 +69,12 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     user: options.user,
     settings: options.settings,
     allowFileChange: options.allowFileChange,
-    onOpen: options.onOpen,
     // the tokens and the frame; the workbench adds the hosts', each extension its own (registerStyleSheet)
     styleSheet: widgetStyles,
   });
   const builtins = builtinExtensions();
   workbench.activate(devtools(options.extensions?.(builtins) ?? builtins));
-  // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
-  const subscriptions = [
-    project.onDidChangeFile((change) => options.onFilesChange?.(change)),
-    project.onDidChangeMain((path) => options.onMainFileChange?.(path)),
-  ];
+  const events = hostEvents(project, workbench);
   return {
     get files() {
       return project.files();
@@ -106,12 +103,45 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
+    onDidChangeFiles: events.onDidChangeFiles,
+    onDidChangeMainFile: events.onDidChangeMainFile,
+    onDidChangeActiveFile: events.onDidChangeActiveFile,
     executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
     exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
     dispose: () => {
-      for (const subscription of subscriptions) subscription.dispose();
+      events.dispose();
       workbench.dispose();
       project.dispose();
+    },
+  };
+}
+
+/**
+ * The handle's events, from the project's and the window's. Subscribed after the workbench's and the extensions'
+ * listeners, so the host hears about a change once the widget shows it. Nothing is reported for the files the host
+ * gave, so a listener added once createTypstEditor returned misses nothing. `dispose` drops every listener.
+ */
+function hostEvents(project: Project, workbench: WorkbenchHost): Pick<TypstEditor, 'onDidChangeFiles' | 'onDidChangeMainFile' | 'onDidChangeActiveFile' | 'dispose'> {
+  const filesChanged = new EventEmitter<FileChange>();
+  const mainFileChanged = new EventEmitter<ProjectPath>();
+  const activeFileChanged = new EventEmitter<ProjectPath>();
+  let shown = workbench.window.activeFile;
+  const subscriptions = [
+    project.onDidChangeFile((change) => filesChanged.fire(change)),
+    project.onDidChangeMain((path) => mainFileChanged.fire(path)),
+    workbench.window.onDidChangeActiveFile((path) => {
+      if (path === shown) return; // shown again: not another file
+      shown = path;
+      activeFileChanged.fire(path);
+    }),
+  ];
+  return {
+    onDidChangeFiles: filesChanged.event,
+    onDidChangeMainFile: mainFileChanged.event,
+    onDidChangeActiveFile: activeFileChanged.event,
+    dispose: () => {
+      for (const subscription of subscriptions) subscription.dispose();
+      for (const emitter of [filesChanged, mainFileChanged, activeFileChanged]) emitter.dispose();
     },
   };
 }
@@ -143,15 +173,6 @@ export interface TypstEditorOptions {
    * the file panel may happen (default: all may). May be async, e.g. to ask a server.
    */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
-  /**
-   * Called after every change to any file, the main file included: edits (`update`, with the full text),
-   * create / rename / delete, the collaborators' changes and assignments to `files` / `source`.
-   */
-  onFilesChange?(change: FileChange): void;
-  /** Called with the new main file's path when another file became the main file, a collaborator's change included. */
-  onMainFileChange?(path: ProjectPath): void;
-  /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
-  onOpen?(path: ProjectPath): void;
   /** Who works here: the name (and cursor color) others see when collaborating, who commits to GitLab and signs comments. */
   user?: User;
   /**
@@ -172,13 +193,13 @@ export interface TypstEditorOptions {
 export interface TypstEditor {
   /**
    * Every file of the project, the main file included, with its current content. Assigning replaces them all
-   * (reported through `onFilesChange`) and recompiles; the main file cannot be deleted, so without an entry
+   * (reported through `onDidChangeFiles`) and recompiles; the main file cannot be deleted, so without an entry
    * for it it keeps its text.
    */
   files: ProjectFiles;
   /**
    * Shortcut for the text of the main file, whichever it is now. Assigning replaces it as one minimal edit (only
-   * the differing middle changes), reported through `onFilesChange` as an `update`.
+   * the differing middle changes), reported through `onDidChangeFiles` as an `update`.
    */
   source: string;
   /**
@@ -190,6 +211,15 @@ export interface TypstEditor {
   readonly activeFile: ProjectPath;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
+  /**
+   * Fires after every change to any file, the main file included: edits (`update`, with the full text),
+   * create / rename / delete, the collaborators' changes and assignments to `files` / `source`.
+   */
+  readonly onDidChangeFiles: Event<FileChange>;
+  /** Fires with the new main file's path when another file became the main file, a collaborator's change included. */
+  readonly onDidChangeMainFile: Event<ProjectPath>;
+  /** Fires with `activeFile` when another file is shown in the editing area (e.g. to put it into the page URL). */
+  readonly onDidChangeActiveFile: Event<ProjectPath>;
   /**
    * Runs the command `id` an extension registered (e.g. `comments.addComment`), with `args`; resolves to its result,
    * rejects for an unknown id or when the command fails.
@@ -203,6 +233,7 @@ export interface TypstEditor {
    * problem when the document has errors.
    */
   exportPdf(options?: Record<string, boolean>): Promise<Blob>;
+  /** Removes the widget; the events' listeners are dropped. */
   dispose(): void;
 }
 

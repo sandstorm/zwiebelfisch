@@ -109,42 +109,36 @@ describe('<typst-editor>', () => {
 
   it('forwards `open`, and runs commands', async () => {
     const el = element();
-    const onOpen = vi.fn();
-    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' }, onOpen };
+    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' } };
     document.body.append(el);
     const opened: unknown[] = [];
     el.addEventListener('open', (event) => opened.push((event as CustomEvent).detail));
     await el.executeCommand('documentLinks.createFile', '/b.typ');
     expect(el.files['/b.typ']).toBe('');
     expect(opened).toEqual([{ path: '/b.typ' }]);
-    expect(onOpen).toHaveBeenCalledWith('/b.typ');
   });
 
   it('fires `change` per edited file with its path and content, and `files-change` with the change', () => {
     const el = element();
-    const onFilesChange = vi.fn();
-    el.options = { viewType: SOURCE_EDITOR, files: { '/main.typ': '= Main', '/a.typ': 'A' }, onFilesChange };
+    el.options = { viewType: SOURCE_EDITOR, files: { '/main.typ': '= Main', '/a.typ': 'A' } };
     document.body.append(el);
     const { changes, fileChanges } = events(el);
     const view = EditorView.findFromDOM(el.shadowRoot!.querySelector<HTMLElement>('.cm-editor')!)!;
     view.dispatch({ changes: { from: view.state.doc.length, insert: '!' } });
     expect(changes).toEqual([{ path: '/main.typ', content: '= Main!' }]);
     expect(fileChanges).toEqual([{ kind: 'update', path: '/main.typ', content: '= Main!' }]);
-    expect(onFilesChange).toHaveBeenCalledWith({ kind: 'update', path: '/main.typ', content: '= Main!' });
   });
 
-  it('fires `main-file-change` with the path when another file becomes the main file, and calls `onMainFileChange`', () => {
+  it('fires `main-file-change` with the path when another file becomes the main file', () => {
     const el = element();
     let project: Project | undefined;
-    const onMainFileChange = vi.fn();
     const probe = { id: 'probe', activate: (context: { project: Project }) => void (project = context.project) };
-    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' }, onMainFileChange, extensions: (builtins) => [...builtins, probe] };
+    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' }, extensions: (builtins) => [...builtins, probe] };
     document.body.append(el);
     const details: unknown[] = [];
     el.addEventListener('main-file-change', (event) => details.push((event as CustomEvent).detail));
     project!.setMain(ProjectPath.of('/a.typ'));
     expect(details).toEqual([{ path: '/a.typ' }]);
-    expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
     expect(el.value).toBe('A');
   });
 

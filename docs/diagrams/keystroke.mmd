@@ -21,5 +21,5 @@ flowchart TD
   fromDocument({ origin })`" --> source
   document -- "`4: into the shared Y.Text`" --> binding
   project -- "`onDidChangeFile({ kind: 'update', … })`" --> workbench
-  project -- onFilesChange --> host
+  project -- onDidChangeFiles --> host
   workbench -- "`preview.update(project.files(), main)`" --> worker

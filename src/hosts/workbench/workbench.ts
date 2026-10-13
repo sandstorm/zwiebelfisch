@@ -299,8 +299,6 @@ export interface WorkbenchOptions {
   settings?: Settings;
   /** The host's veto on a change someone asked for (`workspace.applyEdit`); default: all may happen. */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
-  /** Another file is shown in the editing area. */
-  onOpen?(path: ProjectPath): void;
   /**
    * The widget's color tokens and frame (CSS), put where it renders before the frame is built (the color scheme reads
    * the resolved colors), as `<style id="typst-editor-styles">` together with the workbench's own CSS. The other
@@ -489,13 +487,11 @@ export class WorkbenchHost implements Workbench {
 
   open(path: ProjectPath, options: OpenOptions = {}): void {
     if (!this.project.has(path)) return;
-    const changed = path !== this.#active;
     this.#active = path;
     this.#activeCustomEditorId = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType, options.selection);
     this.#tabs.update(this.window.customEditorChoices(path), this.#activeCustomEditorId);
     this.#placeFrame();
     this.#shown.fire(path);
-    if (changed) this.options.onOpen?.(path);
   }
 
   /** Opens a link's web or mail address in a new tab, cut off from this page; any other scheme (`javascript:`) is ignored. */

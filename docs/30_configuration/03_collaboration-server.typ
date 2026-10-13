@@ -24,7 +24,7 @@ On `<typst-editor>`, put `extensions` and `user` into `options` before the eleme
 - *`{ url, room, token? }`*: a #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server, e.g. this repository's (@configuration-collaboration-server-running).
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
-The collaboration code loads on demand. `onFilesChange` and `change` also fire for the others' edits.
+The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
 
 == The server <configuration-collaboration-server-running>
 

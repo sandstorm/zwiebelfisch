@@ -119,12 +119,13 @@ describe('a project file dropped into the Visual editor', () => {
 
   it('an image is inserted where it is dropped, without an upload', () => {
     const host = document.body.appendChild(document.createElement('div'));
-    const onFilesChange = vi.fn();
-    const editor = createTypstEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' }, onFilesChange });
+    const filesChanged = vi.fn();
+    const editor = createTypstEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' } });
+    editor.onDidChangeFiles(filesChanged);
     vi.spyOn(ProseMirrorView.prototype, 'posAtCoords').mockReturnValue({ pos: 2, inside: -1 });
     host.querySelector('[contenteditable]')!.dispatchEvent(rowDrop('/img/logo.png'));
     expect(editor.source).toBe('One\n\n#image("img/logo.png")\n\nTwo\n');
-    expect(onFilesChange.mock.calls.map(([change]) => change.path)).toEqual(['/main.typ']);
+    expect(filesChanged.mock.calls.map(([change]) => change.path)).toEqual(['/main.typ']);
   });
 });
 
@@ -135,7 +136,8 @@ describe('a file from the computer dropped into the text', () => {
   function setup(viewType: string, main: string, options: Partial<Parameters<typeof createTypstEditor>[1]> = {}) {
     const host = document.body.appendChild(document.createElement('div'));
     const changes: string[] = [];
-    const editor = createTypstEditor(host, { viewType, files: { ...FILES, ...SPREADSHEET, '/main.typ': main }, onFilesChange: (change) => changes.push(change.path), ...options });
+    const editor = createTypstEditor(host, { viewType, files: { ...FILES, ...SPREADSHEET, '/main.typ': main }, ...options });
+    editor.onDidChangeFiles((change) => changes.push(change.path));
     return { host, editor, changes };
   }
 

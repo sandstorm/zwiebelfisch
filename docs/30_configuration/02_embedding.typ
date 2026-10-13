@@ -3,7 +3,7 @@
 You embed the editor as the element `<typst-editor>` or with `createTypstEditor(host, options)`. Both take the same options (@configuration-options).
 
 - *`<typst-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
-- *`createTypstEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and callbacks.
+- *`createTypstEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and its events.
 
 == A first editor <configuration-embedding-first-editor>
 
@@ -24,10 +24,8 @@ Or from JavaScript, with the repository folder as dependency (its `package.json`
 ```ts
 import { createTypstEditor } from 'typst-editor';
 
-const editor = createTypstEditor(document.getElementById('editor')!, {
-  source: '= Hello\n',
-  onFilesChange: (change) => save(change),
-});
+const editor = createTypstEditor(document.getElementById('editor')!, { source: '= Hello\n' });
+editor.onDidChangeFiles((change) => save(change));
 ```
 
 A complete page is `examples/plain-html/index.html`: serve the repository root and open `/examples/plain-html/`.
@@ -84,7 +82,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
   [`executeCommand(id, ...args)`], [Runs an extension's command.],
   [`exportPdf(options?)`], [The PDF as a `Blob` (@configuration-embedding-pdf).],
   [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
-  [`files-change` event], [`detail`: the `FileChange`, as `onFilesChange` gets it.],
+  [`files-change` event], [`detail`: the `FileChange`, as `onDidChangeFiles` fires it.],
   [`main-file-change` event], [`detail: { path }`: another file became the main file, also by a collaborator.],
   [`open` event], [`detail: { path }`: another file is shown.],
 )
@@ -125,8 +123,8 @@ const editor = createTypstEditor(host, {   // attach host to the document first,
   },
   user: { name: 'Ada' },
   allowFileChange: async (change) => confirmWithServer(change),
-  onFilesChange: (change) => save(change),
 });
+const saving = editor.onDidChangeFiles((change) => save(change));
 ```
 
 It returns a `TypstEditor`:
@@ -141,7 +139,19 @@ It returns a `TypstEditor`:
   [`open(path)`], [Shows `path`.],
   [`executeCommand(id, ...args)`], [Runs a command and resolves to its result.],
   [`exportPdf(options?)`], [The PDF (@configuration-embedding-pdf).],
-  [`dispose()`], [Removes the editor.],
+  [`dispose()`], [Removes the editor and drops every listener.],
+)
+
+=== Events <configuration-embedding-events>
+
+The handle's events have VS Code's shape: `editor.onDid…(listener)` subscribes and returns a `Disposable`; `dispose()` on it unsubscribes. They fire only for changes after `createTypstEditor` returned: the files you passed are not reported.
+
+#table(
+  columns: 2,
+  [Event], [Fires with],
+  [`onDidChangeFiles`], [Each `FileChange` (@configuration-embedding-files).],
+  [`onDidChangeMainFile`], [The new main file's path: another file became the main file, also by a collaborator.],
+  [`onDidChangeActiveFile`], [The path of the file now shown (`activeFile`), e.g. to keep it in the URL.],
 )
 
 === Files <configuration-embedding-files>
@@ -152,7 +162,7 @@ editor.open('/chapters/outro.typ');
 ```
 
 - Paths are *absolute*: they start with `/`.
-- *`onFilesChange` is the one place to hear about changes*: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It covers edits, the file panel, collaborators and your own assignments.
+- *`onDidChangeFiles` is the one place to hear about changes*: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It covers edits, the file panel, collaborators and your own assignments.
 - Reuse the `Uint8Array` of unchanged files: only a new array is sent to the compiler again.
 - `#import "@preview/…"` works without configuration: packages are downloaded from `packages.typst.org` and cached.
 

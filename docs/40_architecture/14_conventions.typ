@@ -49,7 +49,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *One disposal verb*: `dispose()`. Only what a library calls keeps its name (`destroy` in node views and view plugins).
 - *Competing contributions* have an explicit tie-breaker (@architecture-extensions-overview-rules). Registration order counts only within one extension.
 - *Commands*: `executeCommand` returns a `Promise<T>`, but the handler runs synchronously, so user activation, selection and focus stay intact.
-- *Settings*: declared in `contributes.configuration` (`<extension>.<key>`), read with `getConfiguration`, followed with `onDidChangeConfiguration`, as VS Code's settings. `createTypstEditor` takes content and host wiring only.
+- *Settings*: declared in `contributes.configuration` (`<extension>.<key>`), read with `getConfiguration`, followed with `onDidChangeConfiguration`, as VS Code's settings. `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
 - *CSS*: each host and extension brings its own `<name>.css` (an extension registers it with `registerStyleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. Order: tokens and frame, hosts, extensions.
 - *Class names*: an extension uses class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`) and colors from the `--te-*` tokens. It never styles a host's classes; `data-scheme` is the one shared hook.
 - *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu`), never hand-made popovers or menus.

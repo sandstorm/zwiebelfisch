@@ -47,20 +47,22 @@ afterEach(() => {
 });
 
 describe('files and source', () => {
-  it('`mainFile` names the main file; `source` and `onMainFileChange` follow when another becomes it, unless locked', async () => {
-    const onMainFileChange = vi.fn();
+  it('`mainFile` names the main file; `source` and `onDidChangeMainFile` follow when another becomes it, unless locked', async () => {
+    const mainFileChanged = vi.fn();
     const files = { '/thesis.typ': '= Thesis', '/a.typ': 'A' };
-    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files, onMainFileChange });
+    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files });
+    editor.onDidChangeMainFile(mainFileChanged);
     expect(editor.source).toBe('= Thesis');
     await editor.executeCommand('files.setMainFile', '/a.typ');
-    expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
+    expect(mainFileChanged).toHaveBeenCalledWith('/a.typ');
     expect(editor.source).toBe('A');
     editor.source = 'A!';
     expect(editor.files['/a.typ']).toBe('A!');
-    const locked = setup({ mainFile: { path: '/thesis.typ', locked: true }, files, onMainFileChange }).editor;
+    const locked = setup({ mainFile: { path: '/thesis.typ', locked: true }, files }).editor;
+    locked.onDidChangeMainFile(mainFileChanged);
     await locked.executeCommand('files.setMainFile', '/a.typ');
     expect(locked.source).toBe('= Thesis');
-    expect(onMainFileChange).toHaveBeenCalledTimes(1);
+    expect(mainFileChanged).toHaveBeenCalledTimes(1);
   });
 
   it('`files` holds every file, the main one included; `source` is the main file\'s text', () => {
@@ -71,11 +73,12 @@ describe('files and source', () => {
   });
 
   it('assigning `files` replaces them all, the main file too, and reports each change', () => {
-    const onFilesChange = vi.fn();
-    const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' }, onFilesChange });
+    const filesChanged = vi.fn();
+    const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' } });
+    editor.onDidChangeFiles(filesChanged);
     editor.files = { '/main.typ': '= New', '/b.typ': 'B' };
     expect(editor.files).toEqual({ '/main.typ': '= New', '/b.typ': 'B' });
-    expect(onFilesChange.mock.calls.map(([change]) => change)).toEqual([
+    expect(filesChanged.mock.calls.map(([change]) => change)).toEqual([
       { kind: 'delete', path: '/a.typ' },
       { kind: 'update', path: '/main.typ', content: '= New' },
       { kind: 'create', path: '/b.typ', content: 'B' },
@@ -85,10 +88,39 @@ describe('files and source', () => {
   });
 
   it('assigning `source` is an update of the main file', () => {
-    const onFilesChange = vi.fn();
-    const { editor } = setup({ source: '= Hello', onFilesChange });
+    const filesChanged = vi.fn();
+    const { editor } = setup({ source: '= Hello' });
+    editor.onDidChangeFiles(filesChanged);
     editor.source = '= Bye';
-    expect(onFilesChange).toHaveBeenLastCalledWith({ kind: 'update', path: '/main.typ', content: '= Bye' });
+    expect(filesChanged).toHaveBeenLastCalledWith({ kind: 'update', path: '/main.typ', content: '= Bye' });
+  });
+});
+
+describe('events', () => {
+  it('`onDidChangeActiveFile` fires when another file is shown, not for the same one again', () => {
+    const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' } });
+    const shown = vi.fn();
+    editor.onDidChangeActiveFile(shown);
+    editor.open('/main.typ');
+    editor.open('/a.typ');
+    editor.open('/a.typ');
+    expect(shown.mock.calls).toEqual([['/a.typ']]);
+  });
+
+  it('a disposed subscription hears nothing more, nor does any once the editor is disposed', () => {
+    const { editor } = setup({ source: '= Hello', files: { '/a.typ': 'A' } });
+    const dropped = vi.fn();
+    const kept = vi.fn();
+    editor.onDidChangeFiles(dropped).dispose();
+    editor.onDidChangeFiles(kept);
+    editor.source = '= Bye';
+    expect(dropped).not.toHaveBeenCalled();
+    expect(kept).toHaveBeenCalledTimes(1);
+    const opened = vi.fn();
+    editor.onDidChangeActiveFile(opened);
+    editor.dispose();
+    editor.open('/a.typ');
+    expect(opened).not.toHaveBeenCalled();
   });
 });
 

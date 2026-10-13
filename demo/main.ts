@@ -42,8 +42,8 @@ async function start(): Promise<void> {
     extensions: (builtinExtensions) => [...builtinExtensions, openFileHash(), ...(room ? [collaboration(room)] : [])],
     user: { name: state.user },
     allowFileChange: (change) => docs?.allowFileChange(change) ?? true,
-    onFilesChange: (change) => docs?.filesChanged(change),
   });
+  if (docs) editor.onDidChangeFiles((change) => docs.filesChanged(change));
   docs?.attach(editor);
   Object.assign(window, { editor });
   if (server) watchServer(server !== 'offline');

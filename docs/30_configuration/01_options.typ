@@ -60,9 +60,6 @@ editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };   // replac
   [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them. `color` is their cursor color.],
   [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings).],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
-  [`onFilesChange(change)`], [callback], [Every change to any file (@configuration-embedding-files).],
-  [`onMainFileChange(path)`], [callback], [Another file became the main file, also by a collaborator.],
-  [`onOpen(path)`], [callback], [Another file is shown, e.g. to keep it in the URL.],
   [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],
 )
 
@@ -91,9 +88,9 @@ const editor = createTypstEditor(document.getElementById('thesis')!, {
     'diagrams.editorUrl': 'https://drawio.uni.example/',
   },
   allowFileChange: (change) => change.kind !== 'delete',
-  onFilesChange: (change) => saveChange(studentId, change),
-  onOpen: (path) => history.replaceState(null, '', `#${path}`),
 });
+editor.onDidChangeFiles((change) => saveChange(studentId, change));
+editor.onDidChangeActiveFile((path) => history.replaceState(null, '', `#${path}`));
 
 const finalPdf = await editor.exportPdf({ 'comments.include': false });
 ```

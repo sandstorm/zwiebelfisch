@@ -57,7 +57,7 @@ export class DocsSync {
     }
   }
 
-  /** The editor's `onFilesChange`: what differs from the disk is written, after a pause for an edit. */
+  /** Each of the editor's `onDidChangeFiles`: what differs from the disk is written, after a pause for an edit. */
   filesChanged(change: FileChange): void {
     if (change.kind === 'update' || change.kind === 'create') {
       if (!same(change.content, this.#disk.get(change.path))) this.#schedule(change.path);

@@ -1,6 +1,8 @@
 import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
+import type { Disposable } from '../core/disposable/disposable';
+import type { Event } from '../core/event-emitter/event-emitter';
 import type { Settings } from '../hosts/workspace/workspace';
 
 /**
@@ -9,14 +11,14 @@ import type { Settings } from '../hosts/workspace/workspace';
  * It works from plain HTML and from any framework that renders elements (React, Vue, server templates): the text goes
  * inside the tag, settings in an attribute, changes come back as DOM events, and the editor lives and dies with the
  * element (connect, move, remove). An open shadow root keeps the page's CSS and the editor's apart. Code that wants
- * the editor itself (the handle, callbacks instead of events, styles in the page's document) calls createTypstEditor.
+ * the editor itself (the handle and its `onDid…` events, styles in the page's document) calls createTypstEditor.
  *
  * It is a thin adapter, so it never lists createTypstEditor's options one by one (and so never forgets one): one
  * `options` property passes through, one `settings` attribute maps onto the settings the extensions declare, and the
- * callbacks become events from one table. Only the content (`value`, `files`) is known by name, as with `<input>`.
+ * handle's events become DOM events from one table. Only the content (`value`, `files`) is known by name, as with `<input>`.
  *
  * - `options` (`Partial<TypstEditorOptions>`): everything `createTypstEditor` takes, read when the element
- *   connects. Its callbacks are called as well as the events below.
+ *   connects.
  * - `settings` attribute: JSON of settings by full id (`settings='{"pdfExport.download": false}'`), over
  *   `options.settings` id by id; read on connect and whenever it changes. The `settings` property is the current
  *   settings; setting it replaces them.
@@ -25,8 +27,8 @@ import type { Settings } from '../hosts/workspace/workspace';
  * - `files` (all files, the main one included) and `value` (the main file's text, a shortcut) are the
  *   current content; setting them replaces it without events, as with `<input>`.
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
- *   `files-change` with every `FileChange` (`onFilesChange`), `main-file-change` with `{ path }` (`onMainFileChange`),
- *   `open` with `{ path }` (`onOpen`).
+ *   `files-change` with every `FileChange` (`onDidChangeFiles`), `main-file-change` with `{ path }`
+ *   (`onDidChangeMainFile`), `open` with `{ path }` (`onDidChangeActiveFile`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
  *
  * See docs/30_configuration/02_embedding.typ, "Custom element".
@@ -36,6 +38,8 @@ export class TypstEditorElement extends Base() {
 
   #options: Partial<TypstEditorOptions> = {};
   #editor: TypstEditor | null = null;
+  /** The subscriptions to the editor's events (EVENTS), while connected. */
+  #subscriptions: Disposable[] = [];
   /** The text, files and settings set while not connected, or kept from the last connection. */
   #source: string | null = null;
   #files: ProjectFiles | null = null;
@@ -114,11 +118,11 @@ export class TypstEditorElement extends Base() {
     root.replaceChildren(style, container);
     this.#editor = createTypstEditor(container, {
       ...this.options,
-      ...this.#forwardedEvents(),
       source: this.#source ?? this.#initialSource(),
       files: this.#files ?? this.options.files,
       settings: this.#settings ?? this.#initialSettings(),
     });
+    this.#subscriptions = this.#forwardEvents(this.#editor);
   }
 
   disconnectedCallback(): void {
@@ -128,6 +132,8 @@ export class TypstEditorElement extends Base() {
       this.#files = this.#editor.files;
       this.#settings = this.#editor.settings;
     }
+    for (const subscription of this.#subscriptions) subscription.dispose();
+    this.#subscriptions = [];
     this.#editor?.dispose();
     this.#editor = null;
     this.shadowRoot?.replaceChildren();
@@ -138,17 +144,13 @@ export class TypstEditorElement extends Base() {
     else if (this.#editor) this.settings = this.#initialSettings();
   }
 
-  /** The callbacks of EVENTS: the host's own (from `options`), then the event. */
-  #forwardedEvents(): Partial<TypstEditorOptions> {
-    const options = this.options as Record<string, ((value: unknown) => void) | undefined>;
-    const forwarded: Record<string, (value: never) => void> = {};
-    for (const [name, events] of Object.entries(EVENTS)) {
-      forwarded[name] = (value: never) => {
-        options[name]?.(value);
+  /** Subscribes to the events of EVENTS on `editor`, each dispatching its DOM events. */
+  #forwardEvents(editor: TypstEditor): Disposable[] {
+    return Object.entries(EVENTS).map(([name, events]) =>
+      (editor[name as EventName] as Event<never>)((value) => {
         for (const [type, detail] of events(value, () => this.files)) this.#dispatch(type, detail);
-      };
-    }
-    return forwarded;
+      }),
+    );
   }
 
   #quietly(set: (editor: TypstEditor) => void): void {
@@ -200,15 +202,19 @@ function Base(): typeof HTMLElement {
 
 const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { display: none; }';
 
-/** The editor's callbacks the element forwards as DOM events. */
-const EVENTS: Record<string, Forward> = {
-  onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
-  onMainFileChange: (path: ProjectPath) => [['main-file-change', { path }]],
-  onOpen: (path: ProjectPath) => [['open', { path }]],
+/** The editor's events the element forwards as DOM events. */
+const EVENTS: { [Name in EventName]: Forward<EventValue<TypstEditor[Name]>> } = {
+  onDidChangeFiles: (change, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
+  onDidChangeMainFile: (path) => [['main-file-change', { path }]],
+  onDidChangeActiveFile: (path) => [['open', { path }]],
 };
 
-/** The events (type, `detail`) a call of the editor's callback makes; `files`: every file now. */
-type Forward = (value: never, files: () => ProjectFiles) => [type: string, detail: unknown][];
+/** The handle's events (`onDid…`). */
+type EventName = { [Name in keyof TypstEditor]: TypstEditor[Name] extends Event<infer _Value> ? Name : never }[keyof TypstEditor];
+type EventValue<E> = E extends Event<infer T> ? T : never;
+
+/** The DOM events (type, `detail`) one firing of the editor's event makes; `files`: every file now. */
+type Forward<T> = (value: T, files: () => ProjectFiles) => [type: string, detail: unknown][];
 
 /** What each path touched by `change` holds now (`files`: every file now). */
 function changedFiles(change: FileChange, files: () => ProjectFiles): TypstEditorChangeDetail[] {
