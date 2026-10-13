@@ -51,7 +51,6 @@
   #include "40_architecture/06_preview.typ"
   #include "40_architecture/07_workbench.typ"
   #include "40_architecture/08_built-in-extensions.typ"
-  #include "40_architecture/09_extensions-overview.typ"
   #include "40_architecture/13_server.typ"
   #include "40_architecture/14_conventions.typ"
   #include "40_architecture/15_development.typ"

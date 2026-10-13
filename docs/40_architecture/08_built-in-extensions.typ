@@ -1,6 +1,19 @@
-= Built-in extensions <architecture-built-in-extensions>
+= Extensions <architecture-extensions-overview>
 
-Every feature lives in `src/extensions/<name>/`; no host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes it with `extensions: (builtinExtensions) => […]`; `devtools` wraps the final list, last.
+Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `TypstExtension` in `src/hosts/workbench/workbench.ts`.
+
+```ts
+interface TypstExtension {
+  readonly id: string;                           // unique in the list, e.g. 'word-count'
+  readonly contributes?: ExtensionContributions; // settings, commands, key bindings, languages: declared before any extension activates
+  activate(context: ExtensionContext): void;     // registers what it adds, once
+}
+```
+
+- *`activate` runs once*, in list order. Every `Disposable` goes into `context.subscriptions`; they are disposed with the editor, in reverse order.
+- *Factories take no options* (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection. Factories and independence: @architecture-conventions-api, @architecture-conventions-layers.
+- *Command ids* are `<extension>.<name>` (`pdfExport.export`).
+- *Every type an extension implements or declares* is exported from the package.
 
 == Shape of an extension <architecture-built-in-extensions-shape>
 
@@ -12,9 +25,106 @@ extensions/<name>/
   workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
-- *Factories take no options* (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection.
+== Example: word count <architecture-extensions-overview-example>
 
-== The list <architecture-built-in-extensions-list>
+The words of the shown file in the status bar, with a setting for its label and a command the host can run.
+
+```ts
+import { createTypstEditor, type TypstExtension } from 'typst-editor';
+
+export function wordCount(): TypstExtension {
+  return {
+    id: 'word-count',
+    contributes: {
+      configuration: {
+        properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' } },
+      },
+    },
+    activate({ project, commands, window, workspace, workbench, subscriptions }) {
+      const item = workbench.ownerDocument.createElement('span');
+      const count = () => (window.activeTextEditor?.document.text ?? '').split(/\s+/).filter(Boolean).length;
+      const show = () => {
+        item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`;
+      };
+      show();
+      subscriptions.push(
+        window.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
+        window.onDidChangeActiveFile(show),
+        project.onDidChangeFile(show),
+        workspace.onDidChangeConfiguration((event) => {
+          if (event.affectsConfiguration('wordCount.label')) show();
+        }),
+        commands.registerCommand('wordCount.count', () => count()),
+      );
+    },
+  };
+}
+
+const editor = createTypstEditor(host, {
+  source: '= Hello\n\nSome words here.',
+  settings: { 'wordCount.label': 'Wörter' },
+  extensions: (builtinExtensions) => [...builtinExtensions, wordCount()],
+});
+await editor.executeCommand<number>('wordCount.count'); // 5
+```
+
+== The extension context <architecture-extensions-overview-context>
+
+What `activate` gets (`ExtensionContext`):
+
+#table(
+  columns: 2,
+  table.header[Member][What],
+  [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-workbench-api-state)],
+  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-workbench-api-files)],
+  [`commands`], [Commands by id, key bindings (@architecture-workbench-api-commands)],
+  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor (@architecture-workbench-api)],
+  [`workspace`], [`applyEdit`, settings (@architecture-workbench-api-settings)],
+  [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user` (@architecture-workbench-api)],
+  [`scm`], [Source controls (@architecture-workbench-api-scm)],
+  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help)],
+  [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights; experimental (@architecture-visual-editor-constructs)],
+  [`sourceEditor`], [CodeMirror extensions, for the Source editors or shared by every CodeMirror (@architecture-source-editor-host)],
+  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics (@architecture-source-editor-and-preview-preview)],
+)
+
+== Settings <architecture-extensions-overview-settings>
+
+- *As VS Code's*: declare each in `contributes.configuration.properties` as `<section>.<key>`, with `type`, `default`, `description` and an optional `enum`.
+- *Read* with `workspace.getConfiguration(section).get(key)` and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.updateSettings`).
+- *A wrong value* (wrong type, outside `enum`) counts as unset; an undeclared setting is ignored. Both log a warning. An id declared twice is an error.
+
+== Competing contributions <architecture-extensions-overview-rules>
+
+Each has an explicit tie-breaker; registration order counts only within one extension.
+
+#table(
+  columns: 2,
+  table.header[Contribution][Ordered by],
+  [Menu items, preview toolbar items], [`group` (by name, `navigation` first), then `order`],
+  [Visual editor toolbar items], [their group's `order`, then the item's `order`],
+  [Status bar items], [`alignment`, then `priority` (higher further left)],
+  [Box renderers, document links, PDF export options], [`priority`, default 100, higher first],
+  [Custom editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
+  [Search providers' groups], [`order` (default 100, lower first), then `id`],
+  [Visual editor nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
+  [Side panels' rail buttons], [`side`, then `alignment`, then `order`],
+  [Source editor extensions], [CodeMirror's `Prec`],
+)
+
+== Five vocabularies <architecture-extensions-overview-vocabularies>
+
+Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`, `onDidChange…`, `registerNode`, `TypstParseContext`), Tiptap's (`Node.create`, `priority`, `addProseMirrorPlugins`; ProseMirror only through Tiptap), CodeMirror's (`Extension`, `EditorView`), Lezer's with the grammar of codemirror-lang-typst (`SyntaxNode`, node names `FuncCall`, `Heading`; for parse rules), and the Typst language (what parse rules read and `toTypst` writes).
+
+- *A member that takes a framework object names the framework* (`registerTiptapExtension`, `registerCodeMirrorExtension`). Framework types are never renamed.
+- *Pinned versions are part of the API*: codemirror-lang-typst 0.6.0, Tiptap 3.31.
+- *Take ProseMirror objects* (schema, state, transactions) from the editor, never from a copy of your own.
+
+== Built-in extensions <architecture-built-in-extensions>
+
+`createTypstEditor` activates them in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`); `devtools` is not in the list: it wraps the final list, last, and records every contribution in a right side panel (@configuration-embedding-devtools).
+
+=== The list <architecture-built-in-extensions-list>
 
 #table(
   columns: (auto, 2fr, 1fr),
@@ -24,72 +134,53 @@ extensions/<name>/
   [`markdown`], [Markdown pasted as Typst (`typst.markdown`, a small lossy converter); first where the text is surely Markdown, else in the "Paste as" chip], [paste edit],
   [`wordProcessors`], [HTML from Word, Google Docs, LibreOffice cleaned before the Visual editor reads it (lists, Office tags, empty paragraphs)], [Tiptap extension (`transformPastedHTML`)],
   [`documentLinks`], [file paths in Typst text as links; `documentLinks.createFile`], [document links],
-  [`files`], [the file panel (Alt+1 / ⌃1) and its commands, "Set as main file" among them; the read-only fallback editor; search group "Files"], [side panel, menus, custom editor, search],
-  [`search`], [the side panel "Find in files" (magnifier): text or regex in the project, current file or a folder; Replace mode with one Undo; matches highlighted in both editors; ⌘⇧F, ⌘⇧H, Alt+3 / ⌃3, "Find in folder…"; search everywhere's row "Find in files: …"], [side panel, commands, keys, menu, highlights, search],
+  [`files`], [the file panel (Alt+1 / ⌃1) and its commands, "Set as main file" among them; the read-only fallback editor], [side panel, menus, custom editor, search],
+  [`search`], [the side panel "Find in files": text or regex in the project, current file or a folder; Replace mode with one Undo; matches highlighted in both editors; "Find in folder…"], [side panel, commands, keys, menu, highlights, search],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
   [`help`], [the side panel "Help" with the shown file's help sheets; rows drag or insert into the editor], [side panel, commands, menu, Tiptap extension],
   [`spreadsheets`], [`.ic` in IronCalc, written also as `name.ic.gen.typ`; "New spreadsheet…", "Insert spreadsheet"], [custom editor, menus, toolbar, languages, help, links, drop edit],
-  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror; search group "Text"], [custom editor, search, languages, help],
+  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror], [custom editor, search, languages, help],
   [`diagrams`], [`.drawio.png` in diagrams.net; "New diagram…", "Insert diagram", "Edit diagram"], [custom editor, toolbar, links, drop edit],
   [`mermaid`], ["Insert Mermaid diagram" (a `.mmd` drawn by `@preview/merman`), "Edit diagram", "Mermaid basics"], [toolbar, links, help, known import, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to _label_…" and status bar entries for the registered source controls], [`editor/title`, status bar, file decorations],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, toolbar, links],
   [`math`], [the closing `$` makes a math box; Insert → "Inline math", "Display math"], [Tiptap input rule, toolbar],
-  [`headings`], [headings and their numbering; search group "Headings"], [node, text styles, search],
+  [`headings`], [headings and their numbering], [node, text styles, search],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
   [`images`], [image boxes, "Insert image", pasted and dropped images, the image viewer], [node, toolbar, custom editor, drop edit],
-  [`figures`], [`#figure(..)` around any `figureBody` node; search group "Figures"], [nodes, search],
+  [`figures`], [`#figure(..)` around any `figureBody` node], [nodes, search],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
-  [`outline`], [`#outline(..)` as a box, "Table of contents"], [node, toolbar],
-  [`pageLayout`], [page breaks, horizontal rules], [nodes, toolbar],
-  [`lists`], [bulleted, numbered and task lists], [nodes, toolbar],
-  [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
-  [`comments`], [margin notes with threads in cards; PDF option `comments.include`, view option `comments.show`; search group "Comments"], [node, mark, command, PDF and view option, search],
-  [`labels`], [`LabelIndex`, reference chips, label tags, the `@` list; pasted labels renamed; search group "Labels"], [nodes, toolbar, completion, search, links, paste edit],
-  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"; search group "Styles"], [node, mark, text styles, toolbar menu, search],
+  [`lists`, `pageLayout`, `outline`, `alignment`], [bulleted, numbered and task lists; page breaks, horizontal rules; `#outline(..)` as a box, "Table of contents"; `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
+  [`comments`], [margin notes with threads in cards; PDF option `comments.include`, view option `comments.show`], [node, mark, command, PDF and view option, search],
+  [`labels`], [`LabelIndex`, reference chips, label tags, the `@` list; pasted labels renamed], [nodes, toolbar, completion, search, links, paste edit],
+  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"], [node, mark, text styles, toolbar menu, search],
   [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, shared CodeMirror extension, menu, command],
   [`slashCommands`], [`/` lists the Insert menu and the text styles; the hint "Type / for commands"], [completion, Tiptap decoration],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`],
   [`previewControls`], [zoom, page number; a View menu entry per view option], [preview toolbar, menu `view`, commands],
   [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-built-in-extensions-guides)], [view options],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [command, preview toolbar],
-  [`devtools`], [not in the list: wraps the final list and records every contribution; a right side panel (@configuration-embedding-devtools)], [right side panel, every contribution point],
 )
 
 === Optional extension <architecture-built-in-extensions-optional>
 
-Exported from the package, not in the list; a host adds it.
+`collaboration(options)` is exported, not in the list; a host adds it. It shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server).
 
-- *`collaboration(options)`* shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server).
-
-== How they meet <architecture-built-in-extensions-meeting>
+=== How they meet <architecture-built-in-extensions-meeting>
 
 #table(
   columns: (auto, auto, auto),
   table.header[Contribution point][Provided by][Read by],
   [document links], [`documentLinks`, `labels`, `markup`, `diagrams`, `mermaid`], [the Visual and Source editors, `textFiles`, `images`],
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
-  [help providers], [`typstLanguage`, `mermaid`, `spreadsheets`, `textFiles`], [`help`],
   [known imports], [`mermaid`], [`imports`],
   [paste edit providers], [`markdown`, `imports`, `labels`], [the Visual and Source editors (the "Paste as" chip)],
   [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`, `help`],
-  [source controls], [`collaboration`], [`sourceControl`],
-  [PDF export options], [`comments`], [`pdfExport`],
   [view options], [`previewGuides`, `comments`], [`previewControls`],
-  [menu `view`], [`invisibles`, `previewControls`], [the workbench ("View ▾")],
-  [text style menu], [`headings`, `styles`], [the Visual editor toolbar, `slashCommands`],
-  [Insert menu], [`images`, `diagrams`, `mermaid`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual editor toolbar, `slashCommands`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
-  [menu `file/newFile`], [`files`, `spreadsheets`, `diagrams`], [`files`],
-  [search providers], [`files`, `headings`, `labels`, `figures`, `styles`, `comments`, `textFiles`, `search`; the workbench], [search everywhere],
-  [`contributes.commands`], [`files`, `headings`, `comments`, `diagrams`, `spreadsheets`, `invisibles`, `search`], [the "Commands" search group],
-  [`contributes.keybindings`], [`comments`, `files`, `search`], [the workbench],
   [menu `explorer/context`], [`files`, `search`], [`files`],
-  [shared CodeMirror extensions], [`invisibles`], [every CodeMirror],
 )
-
-- *Other extensions' schema names* are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @architecture-visual-editor-constructs.
 
 == Page guides and box outlines <architecture-built-in-extensions-guides>
 
