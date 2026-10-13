@@ -43,7 +43,8 @@ Size (today): `typst-editor` 556 hits / 131 files; `TypstEditor*` 164 / 37; `cre
 - Web component: `<zwiebelfisch-editor>`.
 - Env prefix: `ZWF_` (`ZWF_GITLAB_TOKEN`, `ZWF_PLAIN_ROOMS`, …); not `ZF_` (reads as Zend Framework).
 - CSS class and `data-testid` prefix: `zwf-` (`zwf-visual`, `zwf-preview__page`); storage keys `zwf:…`.
-- Open: `TypstExtension` → `Extension` or keep.
+- `TypstExtension` → `Extension`.
+- When: right after the open jobs are merged and the user's E2E run is green.
 
 ## Questions for the user (original)
 
