@@ -36,17 +36,15 @@ Code blocks work with \`\`\`, as you know from Markdown.
 
 == Copy and paste
 
-Copying copies the Typst source. A paste reads what the clipboard holds:
+Copying copies the Typst source. Pasting tries to determine intelligently what format the pasted text is, and converts it accordingly. The following formats are supported:
 
-- *Typst*, from here, a text editor, a Typst code block on GitHub or in the Typst docs: as Typst.
-- *Code in another language*, from VS Code or a highlighted block on a web page: a code block of that language (```` ```python ````).
-- *Markdown*, from a chat's "Copy" button or a `.md` file: converted (`## Setup` → `== Setup`, `**bold**` → `*bold*`, lists, links, code, tables).
-- *Web pages and word processors* (Word, Google Docs, LibreOffice): headings, bold, italic, links and lists as Typst. Word's bullet paragraphs become lists, text in a monospace font becomes code, empty lines are dropped.
-- ⌘⇧V pastes plain text: `#`, `*`, `$` and the like escaped.
+- *Typst*
+- *Code in another language*
+- *Markdown*
+- *Web pages and word processors* (Word, Google Docs, LibreOffice)
+- ⌘⇧V pastes as plain text
 
-When the paste could go in another way, a *Paste as* chip ("Typst ▾") sits above its end: click it or press ⌘. to pick Typst, Markdown, Code block, HTML or Text. One ⌘Z undoes the paste. The chip goes away when you type on.
-
-In the Source editor a paste goes in as it is; the same chip offers the conversions (Markdown → Typst, Code block, Text).
+After pasting, a *Paste as* floating menu ("Paste as: Typst ▾") appears; and you can pick the format manually in case the wrong format was chosen. You can also *paste as plain text* via this menu.
 
 == Slash commands
 

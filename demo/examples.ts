@@ -54,7 +54,7 @@ const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../d
 });
 
 /** Binary files (IronCalc spreadsheets, images such as draw.io diagrams, fonts) as `data:` URLs: `?raw` would decode them as UTF-8. */
-const binaries = import.meta.glob<string>(['./examples/**/*.{ic,png}','../docs/**/*.{png,jpg,jpeg,gif,webp,ttf}'], {
+const binaries = import.meta.glob<string>(['./examples/**/*.{ic,png}','../docs/**/*.{ic,png,jpg,jpeg,gif,webp,ttf}'], {
   query: '?inline',
   import: 'default',
   eager: true,

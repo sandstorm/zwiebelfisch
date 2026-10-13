@@ -1,0 +1,6 @@
+flowchart LR
+  A[Start the timer] --> B[Compile the document]
+  B --> C[Stop the timer]
+  C --> D{Five runs?}
+  D -- no --> A
+  D -- yes --> E[Take the median]

@@ -1,9 +1,21 @@
+#import "../template.typ": example
+
 = Custom styles <features-custom-styles>
 #set heading(outlined: false)
 
-#import "../template.typ": example
+#strong[A Typst function with a `/// @style` doc comment becomes an entry in the text style menu.] This can be used for use cases like:
 
-*A Typst function with a `/// @style` doc comment* becomes an entry in the text style menu. Put it in any `.typ` file of the project, usually `styles.typ`:
+- custom *Notes* block elements (similar for warning, danger, tip)
+- custom inline styles, e.g. for displaying text as Keyboard Shortcut
+- \... anything else you can build with Typst :-)
+
+== Discovery of Styles
+
+
+
+All Typst sources of the project are scanned for comments like `/// @style (block|inline) <NameOfStyle>` , directly in front of a variable declaration, like in the following example.
+
+By convention, these styles reside in `styles.typ`, but any file is supported:
 
 #example[
   ```typ
@@ -38,8 +50,6 @@
 
 The Visual editor shows a block style as a named frame, an inline style underlined; the preview shows the real look.
 
-- Pick a style from the text style menu, or from Styles in the bar above a selection. The import is added where needed.
+- Pick a style from the text style menu, or from Styles in the bar above a selection.
 - *Normal text* removes a block style.
-- "New style…" adds a block style to `styles.typ`.
-- Search everywhere: `*` and the style's name applies it to the selection.
-- Calls of functions not declared as styles stay raw boxes.
+- "New style…" adds a block style to `styles.typ`, you can then customize.

@@ -11,6 +11,7 @@ Mermaid diagrams are written as text and drawn by the #link("https://typst.app/u
 
 == Diagrams from a file
 
+#example[
 ```typ
 #import "@preview/merman:0.4.0": mermaid
 
@@ -20,6 +21,7 @@ Mermaid diagrams are written as text and drawn by the #link("https://typst.app/u
   caption: [One round of the measurement.],
 ) <fig:measurement>
 ```
+]
 
 == Inline diagrams
 

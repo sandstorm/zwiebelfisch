@@ -2,7 +2,9 @@
 #let screenshots = (
   "bidirectional-navigation",
   "comments",
+  "drawio-diagrams",
   "files",
+  "find-in-files",
   "images",
   "labels-and-references",
   "multi-file-projects",

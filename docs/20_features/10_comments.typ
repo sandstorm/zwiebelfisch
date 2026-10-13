@@ -7,9 +7,9 @@ Comments are notes in the margin, as in a word processor. They are stored in the
 
 #screenshot("comments")
 
-*Select some text and press ⌘⌥M*, or click "Comment" in the toolbar, then type your note. Without a selection, the note sits at the cursor.
+*Select some text and click the comment icon in the balloon toolbar, or press ⌘⌥M*.
 
-The file then holds:
+The file then contains:
 
 ```typ
 #import "@preview/drafting:0.2.2": margin-note
