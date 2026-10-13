@@ -1,4 +1,4 @@
-//! Typst compiler, SVG renderer, PDF export and source <-> preview
+//! Typst compiler, SVG renderer, PDF and HTML export and source <-> preview
 //! hit-testing, packaged for the browser.
 //!
 //! The JS-facing contract:
@@ -14,6 +14,7 @@
 //!   later call fails. `onPanic` tells JS the panic's message first.
 
 mod highlight;
+mod html;
 mod world;
 
 use std::collections::HashMap;
@@ -40,6 +41,8 @@ pub struct Engine {
     /// SVGs of the pages of the last compilation, keyed by frame hash, so
     /// unchanged pages are not re-exported.
     svg_cache: HashMap<u128, String>,
+    /// Where the elements of the last `compileHtml` are, for `elementsAtCursor`.
+    html_elements: Option<html::ElementIndex>,
 }
 
 /// The faces of a font file as `FaceInfo[]` JSON (empty if `data` is not a
@@ -142,6 +145,52 @@ impl PdfExport {
     }
 }
 
+/// What `compileHtml` reports besides the files' data.
+#[derive(Serialize)]
+struct HtmlReportJson {
+    /// Empty if compilation failed.
+    files: Vec<HtmlFileJson>,
+    diagnostics: Vec<DiagnosticJson>,
+    #[serde(rename = "missingPackages")]
+    missing_packages: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct HtmlFileJson {
+    path: String,
+    /// Changes iff the file's data changes.
+    hash: String,
+    /// Whether it is an HTML document (else an asset or a paged document).
+    document: bool,
+}
+
+/// The outcome of `Engine::compileHtml`: an `HtmlReportJson` string and the
+/// data of its files, by their index in the report.
+#[wasm_bindgen]
+pub struct HtmlExport {
+    data: Vec<typst::foundations::Bytes>,
+    report: String,
+}
+
+#[wasm_bindgen]
+impl HtmlExport {
+    /// The data of the report's file `index`.
+    pub fn data(&self, index: usize) -> Option<Vec<u8>> {
+        self.data.get(index).map(|bytes| bytes.to_vec())
+    }
+
+    /// The `HtmlReportJson` string.
+    pub fn report(&self) -> String {
+        self.report.clone()
+    }
+}
+
+#[derive(Serialize)]
+struct ElementLocationJson<'a> {
+    path: &'a str,
+    element: Option<&'a str>,
+}
+
 #[derive(Serialize)]
 struct PageJson {
     /// Changes iff the page's content changes; lets the preview skip DOM work.
@@ -195,7 +244,7 @@ impl Engine {
     #[wasm_bindgen(constructor)]
     #[allow(clippy::new_without_default)]
     pub fn new() -> Engine {
-        Engine { world: MemoryWorld::new(), document: None, svg_cache: HashMap::new() }
+        Engine { world: MemoryWorld::new(), document: None, svg_cache: HashMap::new(), html_elements: None }
     }
 
     /// Adds all faces of a font file. Returns how many were added (0 for
@@ -289,6 +338,57 @@ impl Engine {
         let missing_packages = self.world.take_missing_packages();
         typst::comemo::evict(CACHE_MAX_AGE);
         PdfExport { pdf, report: to_json(&PdfReportJson { diagnostics, missing_packages }) }
+    }
+
+    /// Compiles `main` to HTML: the files of its bundle (one `index.html` for
+    /// a document that makes no `document(..)`), each element with a source
+    /// span marked `data-typst-element`. Keeps where those elements are for
+    /// `elementsAtCursor`; leaves the paged document (hit-testing) untouched.
+    #[wasm_bindgen(js_name = compileHtml)]
+    pub fn compile_html(&mut self, main: &str) -> HtmlExport {
+        let Some(id) = file_id(main) else {
+            let report = HtmlReportJson { files: vec![], diagnostics: vec![], missing_packages: vec![] };
+            return HtmlExport { data: vec![], report: to_json(&report) };
+        };
+        self.world.set_main(id);
+        let warned = html::compile(&self.world);
+        let mut diagnostics: Vec<_> = warned.warnings.iter().map(|d| self.diagnostic(d)).collect();
+        let (files, data) = match warned.output {
+            Ok(export) => {
+                self.html_elements = Some(export.elements);
+                export
+                    .files
+                    .into_iter()
+                    .map(|file| {
+                        let hash = format!("{:032x}", hash128(&file.data));
+                        (HtmlFileJson { path: file.path, hash, document: file.document }, file.data)
+                    })
+                    .unzip()
+            }
+            Err(errors) => {
+                diagnostics.extend(errors.iter().map(|d| self.diagnostic(d)));
+                self.html_elements = None;
+                (vec![], vec![])
+            }
+        };
+        let missing_packages = self.world.take_missing_packages();
+        typst::comemo::evict(CACHE_MAX_AGE);
+        HtmlExport { data, report: to_json(&HtmlReportJson { files, diagnostics, missing_packages }) }
+    }
+
+    /// The elements of the last `compileHtml` the cursor at `offset` in
+    /// `path` produced, the first of each HTML document that has one, as
+    /// `ElementLocationJson[]` JSON; empty if it produced none.
+    #[wasm_bindgen(js_name = elementsAtCursor)]
+    pub fn elements_at_cursor(&self, path: &str, offset: usize) -> String {
+        let locations = (|| {
+            let elements = self.html_elements.as_ref()?;
+            let source = self.world.loaded_source(file_id(path)?)?;
+            let byte = source.lines().utf16_to_byte(offset)?;
+            Some(elements.at_cursor(source, byte))
+        })()
+        .unwrap_or_default();
+        to_json(&locations.iter().map(|l| ElementLocationJson { path: l.path, element: l.element }).collect::<Vec<_>>())
     }
 
     /// Resolves a click on `page` at (`x`, `y`) points to a `JumpJson`

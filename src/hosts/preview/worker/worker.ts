@@ -1,8 +1,9 @@
 import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../../core/project/project';
-import type { CompileResult } from '../../../core/typst-engine/typst-engine';
+import type { CompileResult, HtmlResult } from '../../../core/typst-engine/typst-engine';
 import { FileSender } from './project-files';
 import { PageReceiver } from './page-svgs';
+import { HtmlFileReceiver } from './html-files';
 import type { EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } from './protocol';
 
 /**
@@ -26,6 +27,7 @@ export class EngineWorker {
   private nextId = 0;
   private sender = new FileSender();
   private readonly receiver = new PageReceiver();
+  private readonly htmlReceiver = new HtmlFileReceiver();
 
   /** Starts the worker; `listener` hears how loading goes and when the engine crashed. */
   constructor(private readonly listener: EngineWorkerListener) {
@@ -54,7 +56,7 @@ export class EngineWorker {
     const worker = this.worker;
     const id = this.nextId++;
     if (!worker) return Promise.resolve({ id, type: 'error', message: 'The Typst compiler is not running.', crashed: false });
-    const message: EngineRequest = request.type === 'compile' ? { ...request, files: this.sender.encode(request.files), id } : { ...request, id };
+    const message: EngineRequest = request.type === 'compile' || request.type === 'html' ? { ...request, files: this.sender.encode(request.files), id } : { ...request, id };
     return new Promise((resolve) => {
       this.pending.set(id, resolve);
       worker.postMessage(message);
@@ -72,8 +74,14 @@ export class EngineWorker {
     }
     const resolve = this.pending.get(message.id);
     this.pending.delete(message.id);
-    resolve?.(message.type === 'compile' ? { ...message, result: { ...message.result, pages: this.receiver.decode(message.result.pages) } } : message);
+    resolve?.(this.decode(message));
     if (message.type === 'error' && message.crashed) this.crashed(message.message);
+  }
+
+  private decode(message: EngineResponse): EngineAnswer {
+    if (message.type === 'compile') return { ...message, result: { ...message.result, pages: this.receiver.decode(message.result.pages) } };
+    if (message.type === 'html') return { ...message, result: { ...message.result, files: this.htmlReceiver.decode(message.result.files) } };
+    return message;
   }
 
   private crashed(message: string): void {
@@ -99,9 +107,14 @@ export interface EngineWorkerListener {
 }
 
 /** A request without its id; a compile with the project's files as they are. */
-export type EngineCall = { type: 'compile'; files: Record<string, FileContent>; main: string } | WithoutId<Exclude<EngineRequest, { type: 'compile' }>>;
+export type EngineCall =
+  | { type: 'compile' | 'html'; files: Record<string, FileContent>; main: string }
+  | WithoutId<Exclude<EngineRequest, { type: 'compile' | 'html' }>>;
 
 type WithoutId<R> = R extends unknown ? Omit<R, 'id'> : never;
 
-/** An answer of the engine; a compile's with every page's SVG. */
-export type EngineAnswer = Exclude<EngineResponse, { type: 'compile' }> | { id: number; type: 'compile'; result: CompileResult; memoryInUse: number };
+/** An answer of the engine; a compile's with every page's SVG, an HTML compile's with every file's data. */
+export type EngineAnswer =
+  | Exclude<EngineResponse, { type: 'compile' | 'html' }>
+  | { id: number; type: 'compile'; result: CompileResult; memoryInUse: number }
+  | { id: number; type: 'html'; result: HtmlResult; memoryInUse: number };

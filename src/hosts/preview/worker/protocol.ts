@@ -1,8 +1,9 @@
 // The messages between the preview and the engine worker. See EngineWorker in worker.ts.
-import type { PageRect, CompileResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
+import type { PageRect, CompileResult, ElementLocation, HtmlResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';
 import type { EncodedPage } from './page-svgs';
+import type { EncodedHtmlFile } from './html-files';
 import type { FontFile } from '../../../core/engine-assets/engine-assets';
 
 /**
@@ -20,6 +21,10 @@ export interface Init {
 /** Messages between Preview (main thread) and the engine worker. */
 export type EngineRequest =
   | { id: number; type: 'compile'; files: EncodedFiles; main: string }
+  /** `main` compiled to HTML (the preview's HTML renderers), with the files as `compile`'s. */
+  | { id: number; type: 'html'; files: EncodedFiles; main: string }
+  /** The elements of the last HTML compile the cursor produced. */
+  | { id: number; type: 'elements'; path: string; offset: SourceOffset }
   | { id: number; type: 'click'; page: PageIndex; x: Pt; y: Pt }
   | { id: number; type: 'cursor'; path: string; offset: SourceOffset }
   | { id: number; type: 'boxes'; path: string; ranges: SourceRange[] }
@@ -50,6 +55,8 @@ export type LoadEvent =
 export type EngineResponse =
   /** `memoryInUse`: the engine's `TypstEngine.memoryInUse` after the compile. */
   | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: EncodedPage[] }; memoryInUse: number }
+  | { id: number; type: 'html'; result: Omit<HtmlResult, 'files'> & { files: EncodedHtmlFile[] }; memoryInUse: number }
+  | { id: number; type: 'elements'; elements: ElementLocation[] }
   | { id: number; type: 'click'; jump: SourceJump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
   | { id: number; type: 'boxes'; boxes: PageRect[] }
