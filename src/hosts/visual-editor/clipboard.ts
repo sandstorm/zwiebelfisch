@@ -4,6 +4,9 @@ import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
+import { sortPasteEdits, type DocumentPasteEdit } from '../languages/languages';
+import { pasteWith, type PasteAlternative } from './paste-as';
+import { TYPST, typstPasteEdits } from './pasted-typst';
 import type { VisualEditorPasteEdits } from './visual-editor';
 
 /**
@@ -14,12 +17,15 @@ import type { VisualEditorPasteEdits } from './visual-editor';
  * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
  * source).
  *
- * Pasted Typst, plain text, and code from a code editor (HTML that is one preformatted block, as VS Code copies) are
- * read with the editor's specs and go in place of the selection, as one step: a paragraph's inline content into the
- * text there, blocks as blocks (what no spec models: raw boxes). The paste edit providers (`pasteEdits`) may change
- * the text before and make other changes of the document's text in the same step (a copy gave them the clipboard).
- * Mod+Shift+V pastes the text as plain characters, written escaped. Other HTML (a web page, a word processor) goes
- * through ProseMirror's paste and the schema's HTML rules. Its priority puts its text serializer before Tiptap's.
+ * A paste goes in as one of the paste edits the clipboard offers (`pasteEditsOf`): the paste edit providers' (`pasteEdits`;
+ * Markdown as Typst), the editor's own (`typstPasteEdits`: pasted Typst, plain text, and code, VS Code's or HTML that is code only, another language
+ * than Typst as a code block of it; the text as plain characters, escaped, a paragraph per line, first after
+ * Mod+Shift+V), other HTML (a web page, a word processor) as ProseMirror reads it with the schema's HTML rules, printed
+ * as Typst; each as the providers resolve it (a copy gave them the
+ * clipboard): its Typst read with the editor's specs, in place of the selection, as one step with its other changes of
+ * the document's text: a paragraph's inline content into the text there, blocks as blocks (what no spec models: raw
+ * boxes). Where there are others, the "Paste as" chip lets the user change it (`pasteWith`). Text into code (a code
+ * block) goes in as it is (ProseMirror's). Its priority puts its text serializer before Tiptap's.
  * See docs/40_architecture/04_visual-editor.typ.
  */
 export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
@@ -62,19 +68,14 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
               literal = (event.metaKey || event.ctrlKey) && event.shiftKey && (event.code === 'KeyV' || event.key.toLowerCase() === 'v');
               return false;
             },
-            handlePaste: (view, event) => {
+            handlePaste: (view, event, slice) => {
               const data = event.clipboardData;
-              const text = literal ? null : typstText(data);
+              const plain = literal;
               literal = false;
-              if (text === null || !data || view.state.selection.$from.parent.type.spec.code) return false;
-              const { state } = view;
-              const { parent } = state.selection.$from;
-              const edit = pasteEdits?.provideDocumentPasteEdits(document, [selectionSource(state)], text, data) ?? { insertText: text, additionalEdits: [] };
-              const tr = edit.additionalEdits.length === 0
-                ? state.tr
-                : applyTypstChanges(state.tr, parseTypst(applyChanges(document.text, edit.additionalEdits), state.schema));
-              tr.replaceSelection(typstSlice(edit.insertText, state.schema, parent.isTextblock && parent.content.size > 0));
-              view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
+              if (!data || view.state.selection.$from.parent.type.spec.code) return false;
+              const edits = pasteEditsOf({ state: view.state, slice, data, document, pasteEdits }, plain);
+              if (edits.length === 0) return false;
+              pasteWith(view, edits.map((edit) => alternative(edit, document)));
               return true;
             },
           },
@@ -82,6 +83,52 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
       ];
     },
   });
+}
+
+/** What a paste is made in: the editor's state, ProseMirror's reading of the clipboard (`slice`), the clipboard. */
+interface PasteContext {
+  readonly state: EditorState;
+  readonly slice: Slice;
+  readonly data: DataTransfer;
+  readonly document: TypstDocument;
+  readonly pasteEdits: VisualEditorPasteEdits | null;
+}
+
+/**
+ * The ways a paste can go in, the one it goes in as first (`sortPasteEdits`; after Mod+Shift+V, `literal`: as plain
+ * characters): the providers' (as VS Code's, before the editor's: an edit not yielding to them goes in first), the
+ * editor's own (Typst, code, plain text), the HTML as ProseMirror reads it with the schema's HTML rules (`slice`; not
+ * with Typst a Visual editor copied, which the HTML lacks, nor `literal`); each as
+ * the providers resolve it (asked now, while the clipboard can be read).
+ */
+function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext, literal: boolean): DocumentPasteEdit[] {
+  const ranges = [selectionSource(state)];
+  const html = data.getData('text/html') && !data.getData(TYPST) && !literal;
+  const printed = () => {
+    const { content } = unwrapped(slice);
+    // inline content alone (a `<span>`'s): a paragraph's
+    const blocks = content.firstChild?.isInline ? Fragment.from(state.schema.nodes.paragraph.create(null, content)) : content;
+    return serializeToTypst(state.schema.topNodeType.create({ trail: '' }, blocks));
+  };
+  const offered = [
+    ...(pasteEdits?.provideDocumentPasteEdits(document, ranges, data) ?? []),
+    ...typstPasteEdits.provideDocumentPasteEdits(document, ranges, data),
+    ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : []),
+  ];
+  return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => pasteEdits?.resolveDocumentPasteEdit(edit, document, ranges, data) ?? edit);
+}
+
+/** Pasting `edit` into `document`: its text read with the editor's specs, its additional edits made in the same step. */
+function alternative({ kind, title, insertText, additionalEdit = [] }: DocumentPasteEdit, document: TypstDocument): PasteAlternative {
+  return {
+    kind,
+    title,
+    paste: (at) => {
+      const { parent } = at.selection.$from;
+      const tr = additionalEdit.length === 0 ? at.tr : applyTypstChanges(at.tr, parseTypst(applyChanges(document.text, additionalEdit), at.schema));
+      return tr.replaceSelection(typstSlice(insertText, at.schema, parent.isTextblock && parent.content.size > 0));
+    },
+  };
 }
 
 /**
@@ -145,30 +192,6 @@ function unwrapped(slice: Slice): Slice {
 /** `source` read and every node printed anew (none unchanged since parsed): equal for sources that read the same. */
 function reprinted(source: string, schema: Schema): string {
   return serializeToTypst(Node.fromJSON(schema, parseTypst(source, schema).toJSON())).trim();
-}
-
-/**
- * The type of the Typst a Visual editor copied, next to the same text as `text/plain`: what a paste reads as Typst
- * although HTML comes along (ProseMirror's HTML leaves out what is never rendered, as raw boxes' source).
- */
-const TYPST = 'text/x-typst';
-
-/**
- * The clipboard's text to read as Typst: Typst a Visual editor copied, or plain text without HTML or with HTML that is
- * one code block; null: none.
- */
-function typstText(data: DataTransfer | null): string | null {
-  if (!data) return null;
-  const [typst, text, html] = [TYPST, 'text/plain', 'text/html'].map((type) => data.getData(type));
-  const read = typst || (text && (!html || isCode(html)) ? text : null);
-  return read && read.replace(/\r\n?/g, '\n');
-}
-
-/** Whether `html` is one preformatted block (`<pre>`, or an element styled `white-space: pre`, as code editors copy). */
-function isCode(html: string): boolean {
-  const roots = [...new DOMParser().parseFromString(html, 'text/html').body.children].filter((element) => element.tagName !== 'META');
-  const [root] = roots;
-  return roots.length === 1 && (root.tagName === 'PRE' || /white-space:\s*pre\b/.test(root.getAttribute('style') ?? ''));
 }
 
 /**

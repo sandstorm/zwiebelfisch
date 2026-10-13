@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { children } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { VisualEditor, VisualEditorHost, type VisualEditorContribution } from './visual-editor';
+import type { PasteChoice } from '../languages/languages';
+import { VisualEditor, VisualEditorHost, type VisualEditorContribution, type VisualEditorPasteEdits } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
@@ -19,11 +20,16 @@ const strong = { id: 'strong', activate: ({ visualEditor, subscriptions }) => su
 
 const FIGURE = '#figure(\n  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),\n  caption: [The editor: …],\n)';
 
-/** A Visual editor of `text`; `select` selects a source range (`reveal`), `paste`, `copy`, `cut` and `key` go to its text. */
-function setup(text: string) {
+/**
+ * A Visual editor of `text`; `select` selects a source range (`reveal`), `paste`, `copy`, `cut` and `key` go to its
+ * text. With `pasteEdits`, a paste's choice shows (the paste edit providers leave the text as it is).
+ */
+function setup(text: string, pasteEdits: VisualEditorPasteEdits | null = null) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(parent, doc, VisualEditorHost.from([strong]));
+  const host = new VisualEditorHost(null, pasteEdits);
+  strong.activate({ visualEditor: host, subscriptions: [] });
+  const view = new VisualEditor(parent, doc, host);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   const select = (from: number, to = from) => view.reveal(SourceRange.of({ from, to }));
   const key = (init: KeyboardEventInit) => editable.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));
@@ -123,6 +129,207 @@ describe('paste', () => {
     expect(doc.text).toBe('Text \\*bold\\*\n');
     paste({ 'text/plain': ' *again*' });
     expect(doc.text).toBe('Text \\*bold\\* *again*\n');
+  });
+});
+
+/** Typst copied from elsewhere, with what reads it wrongly as plain text: `#`, `=`, `*`, `$`. */
+const TYPST_CODE = '#set text(lang: "de")\n= Title\n\nSome *bold* $x^2$';
+const MONO = 'font-family: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, monospace; font-size: 13.6px;';
+
+/** Clipboard HTML of code as browsers copy it (Chromium: elements with their computed style inline). */
+const SOURCES: Record<string, string> = {
+  'a GitHub Markdown fence': `<meta charset='utf-8'><div class="highlight highlight-source-typst notranslate position-relative" dir="auto" style="color: rgb(31, 35, 40); font-family: -apple-system, &quot;Segoe UI&quot;, sans-serif;"><pre style="${MONO} white-space: pre; padding: 16px;"><span class="pl-k" style="color: rgb(207, 34, 46);">#set</span> text(lang: <span class="pl-s">"de"</span>)\n<span class="pl-mh">= Title</span>\n\nSome *bold* $x^2$</pre></div>`,
+  'a documentation site <pre> without a language': `<div class="previewed-code"><pre><code><span class="typ-key">#set</span> <span class="typ-func">text</span>(lang: <span class="typ-str">"de"</span>)\n= Title\n\nSome *bold* $x^2$</code></pre></div>`,
+  'a part of a highlighted block (spans only)': `<meta charset='utf-8'><span style="color: rgb(31, 35, 40); ${MONO} white-space: pre; background-color: rgb(246, 248, 250);"><span class="pl-k">#set</span> text(lang: "de")\n= Title\n\nSome *bold* $x^2$</span>`,
+  'spans and line breaks in a monospace font': `<span style="${MONO}">#set text(lang: "de")</span><br><span style="${MONO}">= Title</span><br><br><span style="${MONO}">Some *bold* $x^2$</span>`,
+  'a web code editor (a <div> per line)': `<div class="cm-line">#set text(lang: "de")</div><div class="cm-line">= Title</div><div class="cm-line"><br></div><div class="cm-line">Some *bold* $x^2$</div>`,
+  'an editor of a <p> per line in a monospace font': `<p style="font-family: &quot;JetBrains Mono&quot;, monospace;">#set text(lang: "de")</p><p style="font-family: &quot;JetBrains Mono&quot;, monospace;">= Title</p><p style="font-family: &quot;JetBrains Mono&quot;, monospace;">Some *bold* $x^2$</p>`,
+  'VS Code in Typst mode': `<meta charset="utf-8"><div style="color: #d4d4d4; font-family: Menlo, monospace; white-space: pre;"><div><span>#set text(lang: "de")</span></div></div>`,
+};
+
+/** No providers' paste edits, the open paste choice kept; `picked`: the choices the chip asked about. */
+function choices() {
+  const state = { open: null as PasteChoice | null, picked: [] as PasteChoice[] };
+  const edits: VisualEditorPasteEdits = {
+    prepareDocumentPaste: () => undefined,
+    provideDocumentPasteEdits: () => [],
+    resolveDocumentPasteEdit: (edit) => edit,
+    openPasteChoice: (choice) => void (state.open = choice),
+    closePasteChoice: (choice) => void (state.open = state.open === choice ? null : state.open),
+    pickPasteKind: (choice) => void state.picked.push(choice),
+  };
+  return { state, edits };
+}
+
+describe('paste as', () => {
+  it('offers the other kinds of a paste: changing it replaces the paste, and one undo takes it back', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste, undo } = setup('Text\n', edits);
+    select(4);
+    paste({ 'text/plain': ' *bold* $x$' });
+    expect(doc.text).toBe('Text *bold* $x$\n');
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }]);
+    expect(state.open?.kind).toBe('typst');
+    state.open!.change('text.plain');
+    expect(doc.text).toBe('Text \\*bold\\* \\$x\\$\n');
+    expect(state.open?.kind).toBe('text.plain');
+    state.open!.change('typst');
+    expect(doc.text).toBe('Text *bold* $x$\n');
+    undo();
+    expect(doc.text).toBe('Text\n');
+    expect(state.open).toBeNull();
+  });
+
+  it('shows the kind in a chip above the paste, whose click asks for another', () => {
+    const { state, edits } = choices();
+    const { parent, select, paste } = setup('Text\n', edits);
+    select(4);
+    paste({ 'text/plain': ' *bold*' });
+    const chip = parent.querySelector<HTMLButtonElement>('[role="toolbar"][aria-label="Paste as"] button')!;
+    expect(chip.textContent).toBe('Typst ▾');
+    chip.click();
+    expect(state.picked).toEqual([state.open]);
+    state.open!.change('text.plain');
+    expect(chip.textContent).toBe('Text ▾');
+  });
+
+  it('closes on the next edit, a selection outside the paste, and Escape', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste, key } = setup('Text and more\n', edits);
+    const pasteAgain = () => {
+      select(4);
+      paste({ 'text/plain': ' *x*' });
+      expect(state.open).not.toBeNull();
+    };
+    pasteAgain();
+    doc.setText(`${doc.text}End.\n`, 'elsewhere');
+    expect(state.open).toBeNull();
+    pasteAgain();
+    select(0);
+    expect(state.open).toBeNull();
+    pasteAgain();
+    const choice = state.open!;
+    key({ key: 'Escape' });
+    expect(state.open).toBeNull();
+    // a closed choice changes nothing
+    const text = doc.text;
+    choice.change('text.plain');
+    expect(doc.text).toBe(text);
+  });
+
+  it('opens no choice where every kind puts in the same (prose without markup characters)', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste } = setup('Text\n', edits);
+    select(4);
+    paste({ 'text/plain': ' and more' });
+    expect(doc.text).toBe('Text and more\n');
+    expect(state.open).toBeNull();
+  });
+
+  it('pastes HTML through the schema first, and offers its text as Typst (plain text puts in the same)', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste } = setup('Text\n', edits);
+    select(4);
+    paste({ 'text/plain': 'and *x*', 'text/html': '<p>and *x*</p>' });
+    expect(doc.text).toBe('Textand \\*x\\*\n');
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.html', 'typst']);
+    state.open!.change('typst');
+    expect(doc.text).toBe('Textand *x*\n');
+  });
+
+  it('pastes code of another language as a code block first, and offers it as Typst or HTML (plain text puts in the same)', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste } = setup('Intro\n', edits);
+    select(5);
+    paste({ 'text/plain': '#x', 'text/html': '<pre><code class="language-python">#x</code></pre>' });
+    expect(doc.text).toBe('Intro\n\n```python\n#x\n```\n');
+    expect(state.open?.kinds.map(({ title }) => title)).toEqual(['Code block', 'Typst', 'HTML']);
+    state.open!.change('typst');
+    expect(doc.text).toBe('Intro#x\n');
+  });
+
+  it("offers the providers' edits after the editor's own where they yield to them, each as the providers resolve it", () => {
+    const { state, edits } = choices();
+    const provided: VisualEditorPasteEdits = {
+      ...edits,
+      provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*', yieldTo: ['typst'] }],
+      resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: `${edit.insertText}!` }),
+    };
+    const { doc, select, paste } = setup('Text\n', provided);
+    select(4);
+    paste({ 'text/plain': ' x' });
+    expect(doc.text).toBe('Text x!\n');
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.loud', title: 'Loud' }]);
+    state.open!.change('typst.loud');
+    expect(doc.text).toBe('Text *LOUD*!\n');
+  });
+
+  it("pastes a provider's edit first where it yields to none", () => {
+    const { state, edits } = choices();
+    const provided: VisualEditorPasteEdits = { ...edits, provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }] };
+    const { doc, select, paste } = setup('Text\n', provided);
+    select(4);
+    paste({ 'text/plain': ' x' });
+    expect(doc.text).toBe('Text *LOUD*\n');
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.loud', 'typst']);
+  });
+
+  it('pastes plain characters first after Mod+Shift+V, a paragraph per line, and offers Typst', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste, key } = setup('Intro\n', edits);
+    select(0);
+    key({ key: 'V', code: 'KeyV', ctrlKey: true, shiftKey: true });
+    paste({ 'text/plain': '= A\n*b* ' });
+    expect(doc.text).toBe('\\= A\n\n\\*b\\*Intro\n');
+    state.open!.change('typst');
+    expect(doc.text).toBe('= A\n*b* Intro\n');
+  });
+});
+
+describe('paste of code from other sources', () => {
+  for (const [source, html] of Object.entries(SOURCES)) {
+    it(`reads code of Typst or no language as Typst: ${source}`, () => {
+      const { doc, select, paste } = setup('Intro\n');
+      select(5);
+      const items: Record<string, string> = { 'text/plain': TYPST_CODE.replace(/\n/g, '\r\n'), 'text/html': html };
+      if (source.startsWith('VS Code')) items['vscode-editor-data'] = '{"version":1,"isFromEmptySelection":false,"mode":"typst"}';
+      paste(items);
+      expect(doc.text).toBe(`Intro\n\n${TYPST_CODE}\n`);
+    });
+  }
+
+  it('pastes code of another language as a code block of it (a GitHub fence)', () => {
+    const { doc, select, paste } = setup('Intro\n');
+    select(5);
+    const html = `<div class="highlight highlight-source-python notranslate"><pre style="${MONO}"><span class="pl-k">def</span> f(x):\n    <span class="pl-k">return</span> x ** 2\n</pre></div>`;
+    paste({ 'text/plain': 'def f(x):\n    return x ** 2\n', 'text/html': html });
+    expect(doc.text).toBe('Intro\n\n```python\ndef f(x):\n    return x ** 2\n```\n');
+  });
+
+  it("pastes code VS Code copied in another language mode as a code block of it, its fence longer than the code's backticks", () => {
+    const { doc, select, paste } = setup('Intro\n');
+    select(5);
+    const html = '<meta charset="utf-8"><div style="white-space: pre;"><div><span>s = """```"""</span></div></div>';
+    paste({ 'text/plain': 's = """```"""', 'text/html': html, 'vscode-editor-data': '{"version":1,"mode":"python"}' });
+    expect(doc.text).toBe('Intro\n\n````python\ns = """```"""\n````\n');
+  });
+
+  it('reads code a language class names Typst or plain text as Typst', () => {
+    for (const language of ['typ', 'typst', 'text']) {
+      const { doc, select, paste } = setup('Text\n');
+      select(4);
+      paste({ 'text/plain': ' *bold*', 'text/html': `<pre><code class="language-${language}"> *bold*</code></pre>` });
+      expect(doc.text).toBe('Text *bold*\n');
+    }
+  });
+
+  it('pastes HTML with text outside code (prose with inline code, text only wrapped) through the schema', () => {
+    for (const html of ['<p>Use <code>*x*</code> here</p>', '<span style="white-space: pre-wrap;">*x*</span>']) {
+      const { doc, select, paste } = setup('Text\n');
+      select(4);
+      paste({ 'text/plain': '*x*', 'text/html': html });
+      expect(doc.text).toContain('\\*x\\*');
+    }
   });
 });
 

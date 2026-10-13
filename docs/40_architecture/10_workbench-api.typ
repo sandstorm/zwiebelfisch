@@ -29,6 +29,7 @@ export const wordCount = (): TypstExtension => ({
 
 - *`workbench.action.searchEverywhere(text?)`* opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
 - *`workbench.view.<id>`*: per side panel, shows and focuses it, or hides it when shown and focused. Search everywhere also opens with ⌘P, ⌘⇧O (`/`) and ⌘⇧A (`>`).
+- *`editor.action.pasteAs({ kind? })`* switches the last paste, while its chip shows, to `kind` (`typst`, `text.plain`, `typst.code`, `typst.html`, `typst.markdown`), or asks.
 
 == Menus <architecture-workbench-api-menus>
 
@@ -237,23 +238,34 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 
 == Copy and paste <architecture-workbench-api-paste>
 
-Take part in copy and paste with a paste edit provider, as VS Code's `DocumentPasteEditProvider`:
+Take part in copy and paste with a paste edit provider, in the shape of VS Code's `DocumentPasteEditProvider`: offer other ways a paste can go in (alternative edits, each of a `kind`), or resolve whatever goes in. The editors offer the alternatives in a "Paste as" chip.
 
 ```ts
+// offers a kind: Markdown on the clipboard as Typst
+languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
+  provideDocumentPasteEdits(document, ranges, dataTransfer) {
+    const text = dataTransfer.getData('text/plain');
+    return looksLikeMarkdown(text) ? [{ kind: 'typst.markdown', title: 'Markdown', insertText: markdownToTypst(text), yieldTo: ['typst.code'] }] : [];
+  },
+}, { providedPasteEditKinds: ['typst.markdown'], pasteMimeTypes: ['text/plain'] });
+
+// resolves every paste: what it needs from the copy, what goes in besides
 languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
   prepareDocumentPaste(document, copied, dataTransfer) {
     dataTransfer.setData('application/x-my-data', JSON.stringify(whatAPasteNeeds(document, copied)));
   },
-  provideDocumentPasteEdits(document, ranges, text, dataTransfer) {
-    return { insertText: text.replaceAll('<old>', '<new>'), additionalEdits: [{ from: 0, to: 0, insert: '#import "x.typ": y\n' }] };
+  resolveDocumentPasteEdit(edit, document, ranges, dataTransfer) {
+    return { ...edit, additionalEdit: [...(edit.additionalEdit ?? []), { from: 0, to: 0, insert: '#import "x.typ": y\n' }] };
   },
-});
+}, { providedPasteEditKinds: [] });
 ```
 
 - *`prepareDocumentPaste?`* runs on copy or cut and adds what a paste will need.
-- *`provideDocumentPasteEdits`* returns what goes in instead of `text`, plus `additionalEdits` elsewhere, in one undo step.
-- *Chain:* providers run in registration order, each on the text the ones before left. Overlapping additional edits are dropped.
-- *Built-in:* `imports` (the imports a paste needs), `labels` (new names for clashing labels).
+- *`provideDocumentPasteEdits?`* returns alternatives `{ title, kind, insertText, additionalEdit?, yieldTo? }`. Register with `{ providedPasteEditKinds, pasteMimeTypes? }`; only providers whose mime types the clipboard has are asked.
+- *Kinds* are dot-separated (`typst` covers `typst.html`). The editors' own: `typst`, `typst.code`, `text.plain`, and the Visual editor's `typst.html`.
+- *Order* (`sortPasteEdits`): providers' edits first, then the editors'; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
+- *`resolveDocumentPasteEdit?`* of every provider runs on the edit that goes in, in registration order: a post-step whatever the kind. Built-in: `imports` (the imports a paste needs), `labels` (new names for clashing labels). Overlapping additional edits are dropped.
+- All edits are asked and resolved at paste time; the clipboard can't be read later.
 
 == File decorations <architecture-workbench-api-decorations>
 

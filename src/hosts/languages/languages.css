@@ -31,3 +31,17 @@
 .typst-file-link__note { color: var(--te-muted); }
 .typst-file-link__error { color: var(--te-danger); }
 .typst-file-link__error:empty { display: none; }
+/* The "Paste as" chip above a paste in a CodeMirror editor (paste-extension.ts), as the Visual editor's floating bar */
+.cm-tooltip:has(> .typst-paste-chip) { border: 0; background: none; }
+.typst-paste-chip {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: var(--te-surface);
+  color: var(--te-text-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font: 12px system-ui, sans-serif;
+  cursor: pointer;
+}
+.typst-paste-chip:hover { background: var(--te-hover); }

@@ -8,6 +8,8 @@ import { files } from '../extensions/files/files';
 import { help } from '../extensions/help/help';
 import { search } from '../extensions/search/search';
 import { imports } from '../extensions/imports/imports';
+import { markdown } from '../extensions/markdown/markdown';
+import { wordProcessors } from '../extensions/word-processors/word-processors';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -207,6 +209,8 @@ function builtinExtensions(): TypstExtension[] {
   return [
     typstLanguage(),
     imports(),
+    markdown(),
+    wordProcessors(),
     documentLinks(),
     files(),
     fileNavigation(),

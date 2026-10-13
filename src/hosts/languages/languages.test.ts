@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
 // through their provider; a document's primary link and the link at an offset; the declared languages by ending; the
-// help sheets by language; the drop edit of a dropped file; the paste edit providers.
+// help sheets by language; the drop edit of a dropped file; the paste edit providers and the order of paste edits.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import { type DocumentLink, type DocumentLinkProvider, type FollowableLink, LanguagesHost } from './languages';
+import { type DocumentLink, type DocumentLinkProvider, type FollowableLink, LanguagesHost, sortPasteEdits } from './languages';
 
 /** What `link`'s hint says when it is hovered (after the hover delay); it goes when the pointer leaves. */
 function hintOf(link: FollowableLink): string {
@@ -178,23 +178,59 @@ describe('LanguagesHost', () => {
     expect(languages.provideUploadFolder(document, ProjectPath.of('/notes.txt'))).toBe('/');
   });
 
-  it('runs the paste edit providers of the language in order, each on the text the one before left; drops edits that collide', () => {
+  it('gives the paste edits of the providers of the language that read a type the clipboard has, of their declared kinds', () => {
+    const languages = new LanguagesHost(targets);
+    const edit = (kind: string) => ({ kind, title: kind, insertText: kind });
+    const offering = (...kinds: string[]) => ({ provideDocumentPasteEdits: () => kinds.map(edit) });
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, offering('typst.markdown', 'typst.markdown.gfm', 'other'), { providedPasteEditKinds: ['typst.markdown'], pasteMimeTypes: ['text/*'] });
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, offering('typst.word'), { providedPasteEditKinds: ['typst.word'], pasteMimeTypes: ['text/rtf'] });
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, offering('typst.any'), { providedPasteEditKinds: ['typst.any'] });
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, offering('resolving'), { providedPasteEditKinds: [] });
+    languages.registerDocumentPasteEditProvider({ language: 'json' }, offering('json'), { providedPasteEditKinds: ['json'] });
+    const data = { types: ['text/plain', 'text/html'] } as unknown as DataTransfer;
+    const kinds = languages.provideDocumentPasteEdits(document, [SourceRange.of({ from: 0, to: 0 })], data).map(({ kind }) => kind);
+    expect(kinds).toEqual(['typst.markdown', 'typst.markdown.gfm', 'typst.any']);
+  });
+
+  it('resolves the paste edit that goes in by every provider of the language in order, each given the one before; drops edits that collide', () => {
     const languages = new LanguagesHost(targets);
     const change = (from: number, to: number, insert: string) => ({ from: SourceOffset.of(from), to: SourceOffset.of(to), insert });
     const prepared: string[] = [];
-    languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
-      prepareDocumentPaste: (_document, copied) => void prepared.push(copied),
-      provideDocumentPasteEdits: (_document, _ranges, text) => ({ insertText: text.toUpperCase(), additionalEdits: [change(0, 0, 'top '), change(6, 7, 'x'), change(10, 12, 'cc')] }),
-    });
-    languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
-      provideDocumentPasteEdits: (_document, _ranges, text) => ({ insertText: `${text}!`, additionalEdits: [change(11, 13, 'CC'), change(14, 14, 'end')] }),
-    });
-    languages.registerDocumentPasteEditProvider({ language: 'json' }, { provideDocumentPasteEdits: () => ({ insertText: 'json' }) });
+    languages.registerDocumentPasteEditProvider(
+      { language: 'typst' },
+      {
+        prepareDocumentPaste: (_document, copied) => void prepared.push(copied),
+        resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: edit.insertText.toUpperCase(), additionalEdit: [...(edit.additionalEdit ?? []), change(0, 0, 'top '), change(6, 7, 'x'), change(10, 12, 'cc')] }),
+      },
+      { providedPasteEditKinds: [] },
+    );
+    languages.registerDocumentPasteEditProvider(
+      { language: 'typst' },
+      { resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: `${edit.insertText}!`, additionalEdit: [...(edit.additionalEdit ?? []), change(11, 13, 'CC'), change(14, 14, 'end')] }) },
+      { providedPasteEditKinds: [] },
+    );
+    languages.registerDocumentPasteEditProvider({ language: 'json' }, { resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: 'json' }) }, { providedPasteEditKinds: [] });
     const data = {} as DataTransfer;
     languages.prepareDocumentPaste(document, 'bb', data);
     expect(prepared).toEqual(['bb']);
     // pasted over `bbbb` (5..9): an edit inside it (6..7) and one overlapping an earlier one (11..13) are dropped
     const ranges = [SourceRange.of({ from: 5, to: 9 })];
-    expect(languages.provideDocumentPasteEdits(document, ranges, 'pasted', data)).toEqual({ insertText: 'PASTED!', additionalEdits: [change(0, 0, 'top '), change(10, 12, 'cc'), change(14, 14, 'end')] });
+    const edit = { kind: 'typst', title: 'Typst', insertText: 'pasted' };
+    expect(languages.resolveDocumentPasteEdit(edit, document, ranges, data)).toEqual({ ...edit, insertText: 'PASTED!', additionalEdit: [change(0, 0, 'top '), change(10, 12, 'cc'), change(14, 14, 'end')] });
+  });
+});
+
+describe('sortPasteEdits', () => {
+  const edit = (kind: string, insertText = kind, yieldTo?: string[]) => ({ kind, title: kind, insertText, yieldTo });
+
+  it('puts each edit after the kinds it yields to (a kind covers those below it), else keeps the order', () => {
+    const edits = [edit('text.plain', 'p', ['typst']), edit('typst', 't', ['typst.html']), edit('typst.html', 'h'), edit('typst.markdown', 'm', ['typst.code'])];
+    expect(sortPasteEdits(edits).map(({ kind }) => kind)).toEqual(['typst.html', 'typst', 'typst.markdown', 'text.plain']);
+  });
+
+  it('puts the preferred kinds (exactly those) first, and leaves out an edit putting in the same text as one before', () => {
+    const edits = [edit('typst.code', 'c'), edit('typst', 't', ['typst.code']), edit('text.plain', 't', ['typst']), edit('typst.html', 'h')];
+    expect(sortPasteEdits(edits, ['text.plain']).map(({ kind }) => kind)).toEqual(['text.plain', 'typst.code', 'typst.html']);
+    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['typst', 'typst.code', 'typst.html']);
   });
 });

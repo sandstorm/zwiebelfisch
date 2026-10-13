@@ -6,6 +6,9 @@ import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
+import googleDocs from '../extensions/word-processors/visual-editor/fixtures/google-docs.html?raw';
+import libreOffice from '../extensions/word-processors/visual-editor/fixtures/libreoffice.html?raw';
+import word from '../extensions/word-processors/visual-editor/fixtures/word.html?raw';
 import { createTypstEditor, type TypstEditor } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -54,7 +57,9 @@ function setup(b = 'Intro\n', viewType?: string) {
 /** Fires a clipboard event of `type` on `target` with `items` (type → text) as its data; returns the data after it. */
 function clipboard(target: HTMLElement, type: 'copy' | 'cut' | 'paste', items: Record<string, string> = {}): Record<string, string> {
   const data = new Map(Object.entries(items));
-  const clipboardData = { getData: (t: string) => data.get(t) ?? '', setData: (t: string, v: string) => void data.set(t, v), clearData: () => data.clear(), files: [], types: [] };
+  const clipboardData = { getData: (t: string) => data.get(t) ?? '', setData: (t: string, v: string) => void data.set(t, v), clearData: () => data.clear(), files: [], get types() {
+    return [...data.keys()];
+  } };
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(event, 'clipboardData', { value: clipboardData });
   target.dispatchEvent(event);
@@ -176,5 +181,132 @@ describe('pasted labels', () => {
     b.dispatch({ selection: { anchor: b.state.doc.length } });
     clipboard(b.contentDOM, 'paste', { 'text/plain': LABELLED });
     expect(text('/book/two/b.typ')).toBe(`\n\nSee @fig:b.\n${LABELLED}`);
+  });
+});
+
+describe('paste as', () => {
+  it('editor.action.pasteAs changes the last paste of the Source editor to plain text, escaped, in its undo step', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': ' *x* = $y$' });
+    expect(text('/book/two/b.typ')).toBe('Intro *x* = $y$\n');
+    expect(b.dom.querySelector('.typst-paste-chip')?.textContent).toBe('Typst ▾');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
+    expect(text('/book/two/b.typ')).toBe('Intro \\*x\\* = \\$y\\$\n');
+    undo(b.contentDOM);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+
+  it('pastes code of another language into the Source editor as it is first, and offers it as a code block', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro\n'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': 'x = 1', 'vscode-editor-data': '{"version":1,"mode":"python"}' });
+    expect(text('/book/two/b.typ')).toBe('Intro\nx = 1');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.code' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n```python\nx = 1\n```');
+  });
+
+  it('editor.action.pasteAs changes the last paste of the Visual editor, its imports with it', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': FIGURE });
+    expect(text('/book/two/b.typ')).toBe(`#import "@preview/merman:0.4.0": mermaid\n\nIntro\n\n${FIGURE}\n`);
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
+    // escaped, a paragraph per line, the first joining the paragraph pasted into; no import
+    expect(text('/book/two/b.typ')).toMatch(/^Intro\\#figure\(\n\nmermaid\(read/);
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst' });
+    expect(text('/book/two/b.typ')).toBe(`#import "@preview/merman:0.4.0": mermaid\n\nIntro\n\n${FIGURE}\n`);
+    undo(b.view.dom);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+});
+
+describe('Markdown pasted', () => {
+  const MARKDOWN = '## Setup\n\nRun **pnpm** and see [the docs](https://typst.app/docs).\n\n- [ ] open\n- [x] done\n';
+
+  it('goes into the Visual editor as Typst where it is clearly Markdown; the chip offers it as it is, in its undo step', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': MARKDOWN });
+    expect(text('/book/two/b.typ')).toContain('== Setup\n\nRun *pnpm* and see #link("https://typst.app/docs")[the docs].\n\n- [ ] open\n- [x] done');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst' });
+    expect(text('/book/two/b.typ')).toContain('Run **pnpm** and see [the docs](https://typst.app/docs).');
+    undo(b.view.dom);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+
+  it('ambiguous text (`*x*`) goes in as Typst; Markdown reads it as emphasis', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection('Intro'.length + 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': ' a *x* b' });
+    expect(text('/book/two/b.typ')).toBe('Intro a *x* b\n');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro a _x_ b\n');
+  });
+
+  it("VS Code's Markdown goes into the Visual editor as Typst, not as a code block of Markdown", () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': '# Title\n\n*x*', 'vscode-editor-data': '{"version":1,"mode":"markdown"}' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n\n= Title\n\n_x_\n');
+  });
+
+  it('goes into the Source editor as it is; the chip offers it as Typst', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro\n'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': '## Setup' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n## Setup');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n== Setup');
+  });
+
+  it("a web page's HTML is not read as Markdown", async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection('Intro'.length + 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': '**a**', 'text/html': '<span>**a**</span>' });
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro\\*\\*a\\*\\*\n');
+  });
+});
+
+describe('word processor HTML pasted into the Visual editor', () => {
+  /** The Typst of `/book/two/b.typ` after `html` (with its text) is pasted at its end. */
+  const pasted = (html: string) => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': 'Results', 'text/html': html });
+    return text('/book/two/b.typ');
+  };
+
+  it('Word: its list paragraphs as nested and numbered lists, no empty paragraphs', () => {
+    expect(pasted(word)).toBe(
+      'Intro\n\n= Results\n\nThe run took *18\u00a0ms* and _4 ms_ warm, see *Table 1*.\n\n- Cold start\n  - With fonts\n- Incremental\n\n+ Compile\n+ Measure\n',
+    );
+  });
+
+  it("Google Docs: the heading's bold and the empty lines dropped, monospace text as code", () => {
+    expect(pasted(googleDocs)).toBe('Intro\n\n== Results\n\nThe run took *18 ms* and _4 ms_ warm.\n\n- Cold start\n- #underline[Incremental]\n\n`typst compile` builds it.\n');
+  });
+
+  it("LibreOffice: the heading's bold and the empty paragraph dropped, monospace text as code", () => {
+    expect(pasted(libreOffice)).toBe('Intro\n\n== Results\n\nThe run took *18 ms* and _4 ms_ warm, plain.\n\n- Cold start\n- #underline[Incremental]\n\n`typst compile` builds it.\n');
   });
 });

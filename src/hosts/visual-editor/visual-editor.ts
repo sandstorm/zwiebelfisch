@@ -6,10 +6,13 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { DocumentPasteEdit, DocumentPasteEditProvider, PasteChoices } from '../languages/languages';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { BlockGaps, caretAtSource } from './block-gaps';
 import { BlockHandle } from './block-handle';
 import { clipboard } from './clipboard';
+import { pasteChoice } from './paste-as';
+import { typstPasteEdits } from './pasted-typst';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -53,6 +56,7 @@ export class VisualEditor {
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualEditorHost) {
     const contributed = contributions.contributed();
+    const choice = pasteChoice(contributions.pasteEdits);
     const views = nodeViewSpecs(contributed.nodes);
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
@@ -71,6 +75,7 @@ export class VisualEditor {
         BlockGaps,
         ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         clipboard(document, contributions.pasteEdits),
+        ...choice.extensions,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
@@ -98,7 +103,7 @@ export class VisualEditor {
         plugins: this.tiptap.state.plugins,
       }),
     );
-    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
+    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: [...contributed.toolbarGroups, ...choice.bars], items: [...contributed.toolbarItems, ...choice.items], textStyles: contributed.textStyles });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -389,6 +394,8 @@ export interface VisualEditorContributions {
  * The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
+  /** The editor's own paste edits of Typst (Typst, code, plain text), for the Source editors to offer the same. */
+  readonly typstPasteEdits: DocumentPasteEditProvider = typstPasteEdits;
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
@@ -576,22 +583,20 @@ export interface VisualEditorLinks {
 
 /**
  * Who takes part in copy and paste of Typst in the Visual editor (the workbench's `languages`: the paste edit
- * providers of Typst): a copy or cut adds to the clipboard, a paste changes the text that goes in and may change the
- * document elsewhere, in the paste's step. The workbench gives it to the host.
+ * providers of Typst): a copy or cut adds to the clipboard, a paste may go in as other kinds and what goes in may
+ * change, and change the document elsewhere, in the paste's step; a paste that may go in as another kind shows its
+ * choice there (the "Paste as" chip asks which). The workbench gives it to the host.
  */
-export interface VisualEditorPasteEdits {
+export interface VisualEditorPasteEdits extends PasteChoices {
   /** On a copy or cut of `copied` (Typst) from `document`: adds what a paste will need to the clipboard `dataTransfer`. */
   prepareDocumentPaste(document: TypstDocument, copied: string, dataTransfer: DataTransfer): void;
+  /** The providers' edits of a paste of the clipboard `dataTransfer` into `document` in place of `ranges`, besides the editor's own. */
+  provideDocumentPasteEdits(document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
   /**
-   * The text a paste of Typst `text` into `document` in place of `ranges` puts in, and the other changes of the
-   * document's text it makes (of the text before the paste, overlapping neither the ranges nor each other).
+   * `edit` as it goes in, as the providers resolve it: its text, and the other changes of the document's text it makes
+   * (of the text before the paste, overlapping neither the ranges nor each other).
    */
-  provideDocumentPasteEdits(
-    document: TypstDocument,
-    ranges: readonly SourceRange[],
-    text: string,
-    dataTransfer: DataTransfer,
-  ): { readonly insertText: string; readonly additionalEdits: readonly TextChange[] };
+  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
 }
 
 /** Where a link of the Visual editor leads. */
@@ -654,8 +659,9 @@ export interface ToolbarControl {
  * floating in the text above its anchor. The row is sorted by `order`; of the
  * floating bars, only the first (by `order`) with an anchor shows. The host's
  * own: `history` (undo/redo, order 10), `text-style` (the text style menu, 20;
- * see `TextStyle`), the `insert` menu ("Insert", 50) and the `selection` bar
- * (above a text selection, 10). A menu without items is left out.
+ * see `TextStyle`), the `insert` menu ("Insert", 50), the `selection` bar
+ * (above a text selection, 10) and the `paste` bar (the "Paste as" chip above
+ * a paste's end, 1). A menu without items is left out.
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }

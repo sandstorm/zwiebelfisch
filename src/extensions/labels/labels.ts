@@ -15,7 +15,7 @@ import { labelSearch } from './workbench/label-search';
  * reference, or remove), and `@` lists the labels. Search everywhere lists them as "Labels". References and
  * `#link(<label>)` are document links to their label, in every editor (⌘/Ctrl+click or Alt+Enter). A label pasted
  * (in either editor) that the project has already gets a new name (`<fig:setup-1>`), and so do the references to it
- * in the pasted text: a copy never makes two labels of one name (a paste edit provider).
+ * in the pasted text: a copy never makes two labels of one name (a paste edit provider resolving every paste).
  *
  * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
  * through the figures extension, by caption. See docs/20_features/03_writing.typ.
@@ -32,7 +32,8 @@ export function labels(): TypstExtension {
         context.languages.registerDocumentLinkProvider({ language: 'typst' }, new LabelLinks(index, context.project)),
         context.languages.registerDocumentPasteEditProvider(
           { language: 'typst' },
-          { provideDocumentPasteEdits: (document, ranges, text) => ({ insertText: renamePastedLabels(text, document, ranges, index.labels()) }) },
+          { resolveDocumentPasteEdit: (edit, document, ranges) => ({ ...edit, insertText: renamePastedLabels(edit.insertText, document, ranges, index.labels()) }) },
+          { providedPasteEditKinds: [] },
         ),
       );
       references({ labels: index, prompts: context.window }).activate(context);

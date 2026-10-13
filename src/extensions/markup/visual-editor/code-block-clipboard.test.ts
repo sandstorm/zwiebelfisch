@@ -39,6 +39,7 @@ function setup(text: string) {
   };
   return {
     doc,
+    parent,
     select: (from: number, to = from) => view.reveal(SourceRange.of({ from, to })),
     copy: () => clipboardEvent('copy', new FakeClipboard()),
     paste: (items: Record<string, string>) => clipboardEvent('paste', new FakeClipboard(items)),
@@ -88,5 +89,14 @@ describe('a code block in a Visual editor', () => {
     target.select(5);
     target.paste({ 'text/plain': '```py\ny\n```', 'text/x-typst': '```py\ny\n```' });
     expect(target.doc.text).toBe('````\nx```py\ny\n```\n````\n');
+  });
+
+  it('is what code of another language than Typst pastes as (VS Code in Python mode), in the middle of a paragraph', () => {
+    const target = setup('Some text.\n');
+    target.select(4);
+    const html = '<meta charset="utf-8"><div style="white-space: pre;"><div><span>def f(x):</span></div><div><span>    return x</span></div></div>';
+    target.paste({ 'text/plain': 'def f(x):\r\n    return x', 'text/html': html, 'vscode-editor-data': '{"version":1,"mode":"python"}' });
+    expect(target.doc.text).toBe('Some\n\n```python\ndef f(x):\n    return x\n```\n\n text.\n');
+    expect(target.parent.querySelector('.typst-markup__code-block')?.textContent).toContain('return x');
   });
 });

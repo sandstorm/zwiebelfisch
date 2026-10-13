@@ -34,7 +34,7 @@
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
   [`window`], [messages, input box, quick pick, save dialog, menus (`showContextMenu`), `withProgress`, search providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority`, then pattern specificity; search: `order`, then `id`],
   [`scm`], [source controls], [all listed; a duplicate id throws],
-  [`languages`], [document links, drop edits, paste edits, help providers by `DocumentSelector`; `getLanguageId`], [links, drop edits: `priority`; help, paste edits: all],
+  [`languages`], [document links, drop edits, paste edits, help providers by `DocumentSelector`; `getLanguageId`], [links, drop edits: `priority`; help: all; paste edits: by `yieldTo`, then registration order],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
   [`workbench`], [`open`, side panels, editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order`],
 )

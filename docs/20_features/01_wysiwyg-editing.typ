@@ -34,6 +34,20 @@ Code blocks work with \`\`\`, as you know from Markdown.
 
 *Before and after a block:* the arrow keys stop between a block style, figure, table, code box or code block and what follows (one level at a time: after a code block inside a block style, then after the block style) (a blinking line across the text), so you can write right after it; lists are text here: the arrows go straight between a paragraph and a list's items; a click into the space between blocks does the same. Backspace there selects the block before.
 
+== Copy and paste
+
+Copying copies the Typst source. A paste reads what the clipboard holds:
+
+- *Typst*, from here, a text editor, a Typst code block on GitHub or in the Typst docs: as Typst.
+- *Code in another language*, from VS Code or a highlighted block on a web page: a code block of that language (```` ```python ````).
+- *Markdown*, from a chat's "Copy" button or a `.md` file: converted (`## Setup` → `== Setup`, `**bold**` → `*bold*`, lists, links, code, tables).
+- *Web pages and word processors* (Word, Google Docs, LibreOffice): headings, bold, italic, links and lists as Typst. Word's bullet paragraphs become lists, text in a monospace font becomes code, empty lines are dropped.
+- ⌘⇧V pastes plain text: `#`, `*`, `$` and the like escaped.
+
+When the paste could go in another way, a *Paste as* chip ("Typst ▾") sits above its end: click it or press ⌘. to pick Typst, Markdown, Code block, HTML or Text. One ⌘Z undoes the paste. The chip goes away when you type on.
+
+In the Source editor a paste goes in as it is; the same chip offers the conversions (Markdown → Typst, Code block, Text).
+
 == Slash commands
 
 #screenshot("slash-commands")

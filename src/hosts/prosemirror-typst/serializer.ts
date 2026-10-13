@@ -300,7 +300,7 @@ function atomSource(grammar: TypstConversions, atom: Node): string {
 }
 
 /** Escapes text so Typst reads it back as exactly this text. */
-function escapeMarkup(text: string, lineStart: boolean): string {
+export function escapeMarkup(text: string, lineStart: boolean): string {
   const escaped = text.replace(INLINE_HAZARD, (c) => `\\${c}`);
   if (!lineStart) return escaped;
   return escaped.replace(LINE_START_MARKER, '\\$1').replace(ENUM_NUMBER, '$1\\.');

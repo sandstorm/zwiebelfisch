@@ -28,9 +28,10 @@ The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual edi
 
 - *Copy, cut:* `text/plain` and `text/x-typst` hold the selection's Typst: its source as written where that reads as what is selected, else printed anew. `text/html` goes along for rich targets.
 - *Cut with nothing selected* cuts the block at the caret (`caretBlock`), as IntelliJ cuts the line.
-- *Paste:* Typst, plain text, and HTML that is one code block (as VS Code copies) are read with the editor's specs (`parseTypst`) and replace the selection in one undo step.
-- *Other HTML* (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML rules. Our own HTML is not read back.
-- *⌘⇧V* pastes plain characters. In raw boxes and code blocks the text goes in as is.
+- *Paste:* Typst, plain text and code are read with the editor's specs (`parseTypst`) and replace the selection in one undo step. Code is what VS Code copies, or HTML whose text is all code (`pre`, `code`, monospace: GitHub, documentation sites); code of another language becomes a code block of it (`pasted-typst.ts`).
+- *Other HTML* (a web page, a word processor) is read by the schema's HTML rules, printed as Typst (`typst.html`) and read back. Extensions may clean it first (`transformPastedHTML`: `wordProcessors`). Our own HTML is not read back.
+- *⌘⇧V* pastes plain characters, escaped. In raw boxes and code blocks the text goes in as is.
+- *Paste as* (`paste-as.ts`): a paste goes in as the first of its alternative edits (`sortPasteEdits`); with more than one, a chip above its end ("Typst ▾", Mod+., `editor.action.pasteAs`) switches the kind, in one undo step.
 - *Paste edit providers* (`languages.registerDocumentPasteEditProvider`, @architecture-workbench-api-paste) change the pasted Typst (a label already taken gets a new name) and the rest of the text (the imports it needs), in the paste's transaction.
 
 == VisualEditorHost <architecture-visual-editor-host>
