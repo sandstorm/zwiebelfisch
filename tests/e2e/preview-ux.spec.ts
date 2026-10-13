@@ -55,23 +55,26 @@ test('clicking keeps working when zoomed in', async ({ page }) => {
 
 test('highlights the clicked text in the preview', async ({ page }) => {
   await clickGlyph(pages(page).locator('svg use').first());
-  const highlight = pages(page).first().locator('.typst-preview__highlight');
-  await expect(highlight).toBeVisible();
-  const box = (await highlight.boundingBox())!;
+  // every place the clicked text is drawn: the heading, and its entry in the demo's outline
+  const highlights = pages(page).first().locator('.typst-preview__highlight');
+  await expect(highlights.first()).toBeVisible();
+  const boxes = await highlights.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect));
   // the glyph's origin, not its bounding box: Firefox reports a size-less <use> as large as the page
   const origin = await pages(page).locator('svg use').first().evaluate((use: SVGUseElement) => {
     const local = new DOMPoint(use.x.baseVal.value + 3, use.y.baseVal.value);
     return local.matrixTransform((use.parentNode as SVGGraphicsElement).getScreenCTM()!).x;
   });
-  expect(box.x).toBeLessThanOrEqual(origin);
-  expect(box.x + box.width).toBeGreaterThan(origin);
+  expect(boxes.some((box) => box.x <= origin && box.x + box.width > origin)).toBe(true);
   // regression: the outline must be the clicked text, never the whole page
   const pageBox = (await pages(page).first().boundingBox())!;
-  expect(box.height).toBeLessThan(pageBox.height / 4);
-  expect(box.width).toBeLessThan(pageBox.width * 0.9);
+  for (const box of boxes) {
+    expect(box.height).toBeLessThan(pageBox.height / 4);
+    expect(box.width).toBeLessThan(pageBox.width * 0.9);
+  }
 });
 
 test("a double click's highlights go with the next edit or once the selection moves, in either editor", async ({ page }) => {
+  // the heading's outline, the first of its highlights (its entry in the demo's outline has one, too)
   const outline = pages(page).first().locator('.typst-preview__highlight');
   const jump = page.getByTestId('typst-source').locator('.typst-source__jump');
   const heading = pages(page).locator('svg use').first();
@@ -80,7 +83,7 @@ test("a double click's highlights go with the next edit or once the selection mo
   await page.getByRole('tab', { name: 'Source' }).click();
   await clickGlyph(heading, { clickCount: 2 });
   await expect(jump).toHaveText('Typst in five minutes');
-  await expect(outline).toBeVisible();
+  await expect(outline.first()).toBeVisible();
   await page.keyboard.press('End');
   await page.keyboard.type('!');
   await expect(jump).toHaveCount(0);
@@ -89,11 +92,11 @@ test("a double click's highlights go with the next edit or once the selection mo
   // Visual editor: moving the selection away removes the outline; so does an edit
   await page.getByRole('tab', { name: 'Visual' }).click();
   await clickGlyph(heading, { clickCount: 2 });
-  await expect(outline).toBeVisible();
+  await expect(outline.first()).toBeVisible();
   await page.keyboard.press('ArrowRight');
   await expect(outline).toHaveCount(0);
   await clickGlyph(heading, { clickCount: 2 });
-  await expect(outline).toBeVisible();
+  await expect(outline.first()).toBeVisible();
   await page.keyboard.type('?');
   await expect(outline).toHaveCount(0);
 });
@@ -149,15 +152,20 @@ test.describe('a 30-page document', () => {
 
 test('dragging the separator between editor and preview resizes both', async ({ page }) => {
   const preview = page.getByTestId('typst-preview');
+  const editingArea = page.locator('.typst-editor__editor-area');
   const before = (await preview.boundingBox())!;
+  const editingBefore = (await editingArea.boundingBox())!;
   const split = page.getByRole('separator', { name: 'Right panel width' });
   const box = (await split.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x - 150, box.y + box.height / 2, { steps: 5 });
+  // to the right: the preview narrows (to the left it may not grow far: the editing area keeps a minimum width
+  // beside the demo's file panel)
+  await page.mouse.move(box.x + 150, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
   const after = (await preview.boundingBox())!;
-  expect(after.width).toBeGreaterThan(before.width + 100);
+  expect(after.width).toBeLessThan(before.width - 100);
+  expect((await editingArea.boundingBox())!.width).toBeGreaterThan(editingBefore.width + 100);
 });
 
 test("the preview's rail button hides the right side (the editor takes its room); hidden, it keeps compiling", async ({ page }) => {

@@ -305,8 +305,13 @@ function cardsPlugin(createPopover: (view: EditorView) => NoteCardPopover): Plug
       },
       handleClick: (view, pos) => {
         // a click into highlighted text shows its note, the focus stays in the text
-        const note = noteNear(cardsKey.getState(view.state)!.notes, TextSelection.near(view.state.doc.resolve(pos)));
-        if (note?.kind === 'range' && popover) popover.open(note.key, false);
+        const caret = TextSelection.near(view.state.doc.resolve(pos));
+        const note = noteNear(cardsKey.getState(view.state)!.notes, caret);
+        if (note?.kind !== 'range' || !popover) return false;
+        // the caret first: ProseMirror reads a click's caret from the DOM only after this, and opening the card
+        // (a transaction) would draw the caret from before the click back over it
+        view.dispatch(view.state.tr.setSelection(caret));
+        popover.open(note.key, false);
         return false;
       },
       handleKeyDown: (view, event) => {

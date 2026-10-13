@@ -10,7 +10,7 @@ const preview = (page: Page) => page.getByTestId('typst-preview');
 const previewPage = (page: Page, number: string) => preview(page).locator(`.typst-preview__page[data-number="${number}"]`);
 
 /** The section the references lead to, and words of its first paragraph (drawn once: not in the outline). */
-const TARGET = { path: '20_features/09_mermaid-diagrams.typ', label: 'features-mermaid-diagrams', words: 'Mermaid diagrams are text' };
+const TARGET = { path: '30_configuration/01_options.typ', label: 'configuration-options', words: 'They hold three parts' };
 /** Where the references are, and words of its first paragraph, pages before the section. */
 const FROM = { path: '10_getting-started/01_getting-started.typ', words: 'A Typst editor for the browser' };
 
