@@ -52,7 +52,6 @@
   #include "40_architecture/07_workbench.typ"
   #include "40_architecture/08_built-in-extensions.typ"
   #include "40_architecture/09_extensions-overview.typ"
-  #include "40_architecture/10_workbench-api.typ"
   #include "40_architecture/11_visual-editor-constructs.typ"
   #include "40_architecture/12_source-editor-and-preview.typ"
   #include "40_architecture/13_server.typ"
