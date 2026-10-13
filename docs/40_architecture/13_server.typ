@@ -20,7 +20,7 @@ type Authenticate = (token: string, room: string) => Promise<AuthenticatedUser>;
 - *Extensions*, in order: storage, `GitLabExtension` (when `gitlab` is set), then `extensions`.
 - *Storage*: any Hocuspocus extension with `onLoadDocument` / `onStoreDocument`. Default: SQLite at `database` (`:memory:` when unset). It stores every room, GitLab rooms included.
 - *`Authenticate`*: the only one today is the stub `sharedToken(expected)`. Without `expected`, everyone opens every room.
-- *`FakeGitLab`* (`gitlab/fake-gitlab.ts`) and `playground/` are an in-memory GitLab and dev endpoints for the demo and the e2e specs. `main.ts` never loads them.
+- *`FakeGitLab`* and `playground/`: an in-memory GitLab and dev endpoints for the demo and the e2e specs. `main.ts` never loads them.
 
 #table(
   columns: (auto, 1fr, auto),
@@ -42,13 +42,11 @@ A room named `gitlab:<project id or path>@<branch>` is that branch (`GitLabExten
 )
 
 - *Optimistic concurrency per file*: update, move and delete carry the file's `last_commit_id`, so GitLab refuses them when the file changed upstream.
-- *Commit actions*: a deleted + created pair with at least half the content equal is a `move`, as git detects renames.
-- *Merge* (`merge.ts`): per path, take the side that changed; both changed → `merge3` by lines. Any conflict: nothing is applied and `meta.conflict` is set. Otherwise minimal text edits, so cursors stay put.
-- *Uncommitted changes* (`meta.changes`): the files that differ from the base, since when, and who edited them.
-- *Editors* (`editors.ts`): every change not made by the room is an edit by the connection's user. A commit names the others as `Co-authored-by:`.
-- *Auto-commit* (`GitLabOptions.autoCommit`, default 10 minutes idle): the author is who edited most.
-- *Failure*: a failed commit sets `meta.commitFailure`, so everyone sees it. The next commit or merge clears it and `meta.conflict`.
+- *Merge of an upstream push*: per path, three-way by lines. Any conflict: nothing is applied and `meta.conflict` is set until a merge succeeds. Otherwise minimal text edits, so cursors stay put.
+- *Editors*: every change not made by the room is an edit by the connection's user; a commit names the others as `Co-authored-by:`, and an auto-commit (`GitLabOptions.autoCommit`, default 10 minutes idle) is authored by who edited most.
 - *Files endpoint*: `GET /rooms/<room>/files/<path>` with the room token as Bearer returns a repository file's bytes, from a shared `BlobCache`.
+
+Depth (commit actions, `meta.changes`, `meta.commitFailure`, the operation queue): `GitLabRoom` in `server/src/gitlab/gitlab-room.ts`.
 
 == Entry points <architecture-server-entry-points>
 

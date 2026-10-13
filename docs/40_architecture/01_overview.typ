@@ -17,18 +17,11 @@ The widget is a few models, a few view hosts, and extensions for everything else
   [`src/testing/`], [Test helpers composing the built-ins; only `*.test.ts` files import it.],
 )
 
-It is model, view and controller:
-
 - *Model:* `core/` and each extension's `model/` folder. No DOM.
 - *View:* the hosts and an extension's view folders (`visual-editor/`, `source-editor/`, `preview/`, `workbench/`).
 - *Controller:* an extension's `activate`. It subscribes views to model events and turns input into `TextChange`s and `FileChange`s.
 
-*Import rules* (checked by `mise run quality`, @architecture-conventions):
-
-- `core/` imports only `core/`.
-- Hosts never import extensions.
-- Extensions never import each other. They meet through core models or a host's contribution point.
-- From outside a module, import only its entry file.
+Who may import whom, and why extensions never depend on each other: @architecture-conventions.
 
 == A keystroke's journey <architecture-overview-keystroke>
 
@@ -41,6 +34,4 @@ The way back is the same: a Source editor edit reaches the Visual editor through
 
 == One edit format, one source of truth <architecture-overview-truth>
 
-- *One text:* every `.typ` file is one `TypstDocument`. Editors never talk to each other.
-- *One edit format:* `TextChange[]` (`from`, `to`: UTF-16 `SourceOffset`s; `insert`) with an `origin`.
-- *Echo suppression:* an editor passes itself as `origin` and skips its own notifications (@architecture-core-document).
+Every `.typ` file is one `TypstDocument`; editors never talk to each other. Every edit is a `TextChange[]` with an `origin` (echo suppression: @architecture-core-document).
