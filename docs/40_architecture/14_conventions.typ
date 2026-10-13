@@ -11,7 +11,6 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *Information hiding*: expose what callers need. No member exists only for tests or one caller's convenience.
 - *No pass-through layers*: a host does not take data from an extension only to hand it back.
 - *Files read general to specific*: the main element (the export the file is named after) first, then the other exports, then private helpers in the order they are used. A constant needed while the module loads sits directly above its user (`no-use-before-define`).
-- *The _why_ is the main element's doc comment* (@architecture-conventions-comments).
 - *Remove what does not work* rather than polish it.
 - *Editing stays inline*: popovers, tags and bars at the content, as in Notion. No inspector panel.
 
@@ -49,7 +48,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *One disposal verb*: `dispose()`. Only what a library calls keeps its name (`destroy` in node views and view plugins).
 - *Competing contributions* have an explicit tie-breaker (@architecture-extensions-overview-rules). Registration order counts only within one extension.
 - *Commands*: `executeCommand` returns a `Promise<T>`, but the handler runs synchronously, so user activation, selection and focus stay intact.
-- *Settings*: declared in `contributes.configuration` (`<extension>.<key>`), read with `getConfiguration`, followed with `onDidChangeConfiguration`, as VS Code's settings. `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
+- *Settings* work as VS Code's (@architecture-extensions-overview-settings). `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
 - *CSS*: each host and extension brings its own `<name>.css` (an extension registers it with `registerStyleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. Order: tokens and frame, hosts, extensions.
 - *Class names*: an extension uses class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`) and colors from the `--te-*` tokens. It never styles a host's classes; `data-scheme` is the one shared hook.
 - *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu`), never hand-made popovers or menus.
@@ -66,16 +65,6 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *No "main file vs. the rest" special cases* in the API.
 - *Notifications instead of manual repair*: a model tells its listeners every change; nobody calls `refresh()`.
 
-```ts
-// core/paths/paths.ts
-export type ProjectPath = string & { readonly __type: 'ProjectPath' };
-export const ProjectPath = {
-  parse(value: string): ProjectPath | null { … },
-  resolve(file: ProjectPath, reference: PathReference): ProjectPath | null { … },
-  …
-};
-```
-
 == Comments and tests <architecture-conventions-comments>
 
 - *One why comment per concept*: the doc comment of the main element of a module's entry. A file inside a module gets one only when it is a concept of its own (a value type, the worker, a deep class).
@@ -88,6 +77,5 @@ export const ProjectPath = {
 
 == Process <architecture-conventions-process>
 
-- Every operation is a mise task with tools pinned to exact versions (@architecture-development).
 - Commit per step, all checks green. Docs change in the same commit as the code.
 - Open work is listed in @architecture-development-open-work. Research and plans live in `docs/YYYY_MM_DD_slug.md` until they are distilled into these chapters.

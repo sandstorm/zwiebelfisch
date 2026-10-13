@@ -2,9 +2,7 @@
 
 = Typst ↔ ProseMirror <architecture-prosemirror-typst>
 
-Turns Typst text into the Visual editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched. Module `src/hosts/prosemirror-typst/`.
-
-It is shaped like prosemirror-markdown: a schema, a parser (`TypstToProseMirrorParser`) and a serializer (`ProseMirrorToTypstSerializer`). Plain ProseMirror: no view, no Tiptap editor, tested without a DOM.
+Turns Typst text into the Visual editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched: `src/hosts/prosemirror-typst/`, shaped like prosemirror-markdown (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`), no view, tested without a DOM.
 
 #figure(
   mermaid(read("../diagrams/typst-prosemirror.mmd"), width: 60%),
@@ -28,8 +26,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 )
 
 - *Attaching:* `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual editor) put the specs on the schema, where `parseTypst` and `serializeToTypst` find them.
-- *Order:* by the priority of each spec's Tiptap extension (default 100, higher first).
-- A second spec of the same name extends the first.
+- A second spec of the same name extends the first; order between specs: @architecture-extensions-overview-rules.
 - Writing a spec: @architecture-visual-editor-constructs.
 
 == Parsing <architecture-prosemirror-typst-parse>
@@ -37,7 +34,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - *Segments:* syntax whose rule `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break.
 - *Runs:* a run with prose becomes a paragraph; a run that is exactly one call goes to the `calls` rules; what no rule takes becomes `rawBlock` / `rawInline` holding its source verbatim.
 - *Labels:* a label right after a heading, or ending a run, becomes the block's `label` attribute.
-- *Context:* rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `itemBlocks`, `textblock`, `raw`).
+- *Context:* rules get a `TypstParseContext` (see the d.ts).
 - *List items* are read without their common indentation and printed with it again.
 
 == Source anchors and nodes unchanged since parsed <architecture-prosemirror-typst-anchors>
@@ -57,7 +54,6 @@ posToSource(doc, pos: number, bias?) → SourceOffset
 The only conversion between source offsets and document positions, character-exact, for any document.
 
 - *Built while printing:* each stretch of output records the document range showing it (text one to one, atoms as a whole, hidden syntax to the next visible position).
-- Cached per document (documents are immutable).
 - `bias: -1` maps a range end to just after the visible character before it.
 
 == Sync <architecture-prosemirror-typst-sync>
