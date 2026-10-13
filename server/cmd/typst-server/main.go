@@ -1,24 +1,23 @@
-// Command typst-server is the collaboration server in Go: `mise run server:go:dev`. It reads the same
-// environment as the TypeScript server (server/src/main.ts, see package config) and serves the Hocuspocus
-// protocol on ws://ADDRESS:PORT (any path). On SIGINT/SIGTERM it stores every open room before exiting.
-//
-// Not yet here (the TypeScript server still has them): GitLab-backed rooms and the room files endpoint.
+// Command typst-server is the collaboration server: `mise run server:dev`. It reads its settings from the
+// environment (package config: GitLab rooms, plain rooms, the sign-in, the database) and serves the
+// Hocuspocus protocol on ws://ADDRESS:PORT (any path), next to the HTTP endpoints of package app. On
+// SIGINT/SIGTERM it stores every open room before exiting.
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
-	"time"
+	"strings"
 
-	"typst-editor/server/lib/collab"
+	"github.com/rs/zerolog"
+
+	"typst-editor/server/lib/app"
+	"typst-editor/server/lib/auth"
 	"typst-editor/server/lib/config"
+	"typst-editor/server/lib/gitlab"
 	"typst-editor/server/lib/logging"
 	"typst-editor/server/lib/store"
 )
@@ -39,40 +38,63 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	gitlabRooms, err := gitlabOptions(cfg)
+	if err != nil {
+		return err
+	}
+	signIn, err := signInWith(cfg, log)
+	if err != nil {
+		return err
+	}
 	st, err := store.Open(cfg.Collab.DB)
 	if err != nil {
 		return err
 	}
 	defer st.Close()
-	rooms := collab.New(collab.Options{
-		Store:        st,
-		Authenticate: collab.SharedToken(cfg.Collab.Token),
-		Log:          log.With().Str("module", "collab").Logger(),
+	server, err := app.New(app.Options{
+		Store: st, Auth: signIn, PlainRooms: cfg.Rooms.Plain,
+		GitLab: gitlabRooms, Log: log,
 	})
-
-	listener, err := net.Listen("tcp", net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)))
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Handler: rooms, ReadHeaderTimeout: 10 * time.Second}
-	served := make(chan error, 1)
-	go func() { served <- server.Serve(listener) }()
-	log.Info().Str("db", cfg.Collab.DB).Bool("token", cfg.Collab.Token != nil).
-		Msgf("collaboration server on ws://%s", listener.Addr())
+	log.Info().Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).
+		Str("gitlab", cfg.GitLab.URL).Msg("collaboration server")
+	return app.Run(log, server.Close, app.Site{
+		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: server,
+	})
+}
 
-	stop, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-	select {
-	case err := <-served:
-		return err
-	case <-stop.Done():
+// signInWith is the sign-in cfg configures. With the GitLab instance as the issuer (the default), a user's
+// subject is their GitLab user id: identities are GitLab's, which GitLab rooms check. Another issuer's
+// identities are its own ("oidc"), which GitLab rooms refuse.
+func signInWith(cfg config.Config, log zerolog.Logger) (*auth.Auth, error) {
+	a := cfg.Auth
+	if a.Issuer == "" || a.ClientID == "" || a.ClientSecret == "" {
+		return nil, errors.New("sign-in is not configured: set TYPST_AUTH_CLIENT_ID and TYPST_AUTH_CLIENT_SECRET (an OAuth application on the GitLab instance; another provider with TYPST_AUTH_ISSUER)")
 	}
-	log.Info().Msg("shutting down: storing open rooms")
-	ctx, done := context.WithTimeout(context.Background(), 10*time.Second)
-	defer done()
-	// Shutdown stops accepting; the WebSockets (hijacked, so not waited for) end in rooms.Close.
-	if err := server.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+	o := auth.Options{
+		Provider: "oidc", Issuer: a.Issuer, ClientID: a.ClientID, ClientSecret: a.ClientSecret, RedirectURL: a.RedirectURL,
+		Log: log.With().Str("module", "auth").Logger(),
 	}
-	return rooms.Close(ctx)
+	if cfg.GitLab.URL != "" && strings.TrimSuffix(a.Issuer, "/") == strings.TrimSuffix(cfg.GitLab.URL, "/") {
+		o.Provider = gitlab.DefaultID
+		o.Scopes = []string{"openid", "profile", "email", "read_api"} // read_api: the project chooser, later
+	}
+	return auth.New(o), nil
+}
+
+// gitlabOptions are the GitLab rooms cfg configures (nil: none, without URL or token).
+func gitlabOptions(cfg config.Config) (*gitlab.Options, error) {
+	if cfg.GitLab.URL == "" || cfg.GitLab.Token == "" {
+		return nil, nil
+	}
+	autoCommit, err := gitlab.ParseAutoCommit(cfg.GitLab.AutoCommit)
+	if err != nil {
+		return nil, err
+	}
+	return &gitlab.Options{
+		URL: cfg.GitLab.URL, Token: cfg.GitLab.Token, WebhookSecret: cfg.GitLab.WebhookSecret,
+		AuthorEmail: cfg.GitLab.AuthorEmail, AutoCommit: autoCommit,
+	}, nil
 }

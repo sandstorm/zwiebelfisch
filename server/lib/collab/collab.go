@@ -1,11 +1,12 @@
 // Package collab is the collaboration server: it speaks the Hocuspocus protocol to the widget's
 // HocuspocusProvider and keeps one Yjs document per room (= project).
 //
-// People who edit one project together need its document in one place. A client opens a room by name and
-// token (Authenticate decides); the server syncs the room's document with it, relays every change and
+// People who edit one project together need its document in one place. A client opens a room by name
+// (Authenticate decides, from the connection's upgrade request: who signed in); the server syncs the room's document with it, relays every change and
 // presence (awareness) update to the room's other clients, and stores the document (debounced, and when
-// the last client leaves, after which the room is unloaded). It does not look inside a room; GitLab rooms
-// will (Stateless and the Peer's user are their hooks).
+// the last client leaves, after which the room is unloaded). It does not look inside a room; an Extension
+// does (GitLab rooms, package gitlab): it opens a room, gets its clients' stateless messages, and decides
+// when a room the last client left may unload.
 //
 // Each room runs on its own goroutine, which owns its document: everything that touches a room (a client's
 // message, joining, leaving, storing) is a function queued to it, so rooms need no locks and see events in
@@ -31,13 +32,13 @@ import (
 type Options struct {
 	// Store loads and saves room states.
 	Store Store
-	// Authenticate decides whether a client with token may open room (see SharedToken).
+	// Authenticate decides whether a client may open a room.
 	Authenticate Authenticate
 	// Debounce is the quiet time after a change before the room is stored (default 2 s); MaxDebounce bounds
 	// how long changes stay unstored while edits keep coming (default 10 s). As in Hocuspocus.
 	Debounce, MaxDebounce time.Duration
-	// Stateless, if set, receives the stateless messages clients send (called on the room's goroutine).
-	Stateless func(p *Peer, payload string)
+	// Extension, if set, adds behaviour to rooms (see Extension).
+	Extension Extension
 	Log       zerolog.Logger
 }
 
@@ -99,13 +100,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Typst editor collaboration server\n"))
 		return
 	}
-	// Any origin, like Hocuspocus: the widget is embedded anywhere, and the token decides who gets in.
+	// Any origin here: Authenticate decides per room, from r (the session cookie, which other sites' pages
+	// do not get to send).
 	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
 		return // Accept has answered
 	}
 	ws.SetReadLimit(maxMessage)
-	s.Serve(r.Context(), webSocket{ws})
+	s.Serve(r.Context(), webSocket{ws}, r)
 }
 
 // maxMessage bounds one incoming message (a whole document state when a client syncs a large project).
@@ -120,8 +122,9 @@ type Transport interface {
 	Close(code int, reason string)
 }
 
-// Serve runs one connection until it ends (the client closes, ctx or the server is done).
-func (s *Server) Serve(ctx context.Context, t Transport) {
+// Serve runs one connection until it ends (the client closes, ctx or the server is done). r is the request
+// that opened it (Authenticate reads it).
+func (s *Server) Serve(ctx context.Context, t Transport, r *http.Request) {
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
@@ -135,7 +138,7 @@ func (s *Server) Serve(ctx context.Context, t Transport) {
 	defer cancel()
 	stop := context.AfterFunc(s.ctx, cancel)
 	defer stop()
-	newConn(s, t, ctx, cancel).run()
+	newConn(s, t, r, ctx, cancel).run()
 }
 
 // webSocket is a Transport over github.com/coder/websocket.

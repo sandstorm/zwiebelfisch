@@ -87,4 +87,4 @@ Typst knowledge several extensions need, read from the Lezer tree of `codemirror
 - `calculateImportChange`, `importedNames`: the change that imports a name, and the names imports bind.
 - Helpers specs read calls with (`calleeName`, …): see the d.ts.
 
-*Also in core:* `Disposable`, `EventEmitter`, `CancellationToken` (VS Code's), `User`, `uploads` (files from the computer as `create` changes), `room-protocol` (the rooms' Y.Doc layout, shared with @architecture-server), `color-scheme`.
+*Also in core:* `Disposable`, `EventEmitter`, `CancellationToken` (VS Code's), `User`, `uploads` (files from the computer as `create` changes), `room-protocol` (the rooms' Y.Doc layout; the server mirrors it, @architecture-server), `color-scheme`.

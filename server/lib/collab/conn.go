@@ -2,6 +2,9 @@ package collab
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -12,6 +15,7 @@ import (
 type conn struct {
 	s       *Server
 	t       Transport
+	req     *http.Request // that opened the connection: who it is (Authenticate)
 	ctx     context.Context
 	cancel  context.CancelFunc
 	log     zerolog.Logger
@@ -32,9 +36,9 @@ const (
 	maxQueued = 1024
 )
 
-func newConn(s *Server, t Transport, ctx context.Context, cancel context.CancelFunc) *conn {
+func newConn(s *Server, t Transport, req *http.Request, ctx context.Context, cancel context.CancelFunc) *conn {
 	return &conn{
-		s: s, t: t, ctx: ctx, cancel: cancel, log: s.opts.Log,
+		s: s, t: t, req: req, ctx: ctx, cancel: cancel, log: s.opts.Log,
 		out: make(chan []byte, maxQueued), peers: map[string]*Peer{}, pending: map[string][][]byte{},
 	}
 }
@@ -100,16 +104,21 @@ func (c *conn) authenticate(address string, d *decoder) {
 	}
 	room := roomOf(address)
 	authType := d.uint()
-	token := d.string()
+	d.string() // the token: unused, the connection's request says who it is
 	if d.err != nil || authType != authToken {
 		c.log.Debug().Str("room", room).Msg("bad auth message")
 		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
 		return
 	}
-	user, err := c.s.opts.Authenticate(token, room)
+	user, err := c.s.opts.Authenticate(c.req, room)
 	if err != nil {
+		reason := "permission-denied"
+		var refusal Refusal
+		if errors.As(err, &refusal) {
+			reason = refusal.Reason
+		}
 		c.log.Info().Str("room", room).Err(err).Msg("permission denied")
-		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
+		c.send(frame(address, msgAuth).uint(authPermissionDenied).string(reason).buf)
 		return
 	}
 	c.send(frame(address, msgAuth).uint(authAuthenticated).string("read-write").buf)
@@ -171,10 +180,31 @@ type Peer struct {
 	room    string
 	user    User
 	r       *room
+	named   string // the name the client publishes in the awareness (owned by the room's goroutine)
 }
 
 // User is who the client authenticated as.
 func (p *Peer) User() User { return p.user }
+
+// Name is who the client is, by name: the user it authenticated as, else the name it publishes in the
+// room's awareness (`user.name`, as the widget's collaboration extension does), else "". Read it on the
+// room's goroutine (in a Handler method, an update listener of the document, or Room.Do).
+func (p *Peer) Name() string {
+	if p.user.Name != "" {
+		return p.user.Name
+	}
+	return p.named
+}
+
+// noteAwareness remembers the name in the awareness states the client sent (the last one it named).
+func (p *Peer) noteAwareness(states []map[string]any) {
+	for _, s := range states {
+		user, _ := s["user"].(map[string]any)
+		if name, _ := user["name"].(string); strings.TrimSpace(name) != "" {
+			p.named = strings.TrimSpace(name)
+		}
+	}
+}
 
 // Room is the room's name.
 func (p *Peer) Room() string { return p.room }

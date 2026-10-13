@@ -22,11 +22,28 @@ describe('playground bar', () => {
     const { link, status, button, root } = render('?example=simple');
     expect(link('Examples', 'Simple').getAttribute('aria-current')).toBe('page');
     expect(link('Mode', 'Local').getAttribute('aria-current')).toBe('page');
-    expect(new URLSearchParams(link('Mode', 'Collaborate').search).get('room')).toBe('playground-simple');
     expect(new URLSearchParams(link('Mode', 'GitLab (fake)').search).get('room')).toBe(GITLAB_ROOM);
+    expect(link('Mode', 'Collaborate').hidden).toBe(true);
     expect(status().textContent).toMatch(/no server needed/);
     expect(button()).toBeUndefined();
-    expect(root.querySelector('[data-testid="second-window"]')).toBeNull();
+    expect(root.querySelector('[data-testid="second-user"]')).toBeNull();
+  });
+
+  it('GitLab comes first; Collaborate (a plain room) only once the server says it has plain rooms', () => {
+    const { link, bar, root } = render(`?example=simple&room=${encodeURIComponent(GITLAB_ROOM)}`);
+    expect([...root.querySelectorAll('nav[aria-label="Mode"] a')].map((a) => a.textContent)).toEqual(['Local', 'GitLab (fake)', 'Collaborate']);
+    const collaborate = link('Mode', 'Collaborate');
+    bar.setServer('gitlab', false);
+    expect(collaborate.hidden).toBe(true);
+    bar.setServer('gitlab', true);
+    expect(collaborate.hidden).toBe(false);
+    expect(new URLSearchParams(collaborate.search).get('room')).toBe('playground-simple');
+  });
+
+  it('in a plain room, Collaborate stays shown (it is where the page is)', () => {
+    const { link, bar } = render('?room=r1&user=Ann');
+    bar.setServer('server', false);
+    expect(link('Mode', 'Collaborate').hidden).toBe(false);
   });
 
   it('without a server (the static site): Collaborate and GitLab are shown, unavailable', () => {
@@ -49,12 +66,10 @@ describe('playground bar', () => {
     expect(new URLSearchParams(navigate.mock.calls[0][0]).get('user')).toBe('Ada');
   });
 
-  it('in a room: a second window joins as another user, and the status follows the server', () => {
+  it('in a room: no name field (the sign-in names the user), how to be a second user, and the status follows the server', () => {
     const { root, bar, status } = render('?room=r1&user=Ann');
-    const second = root.querySelector<HTMLAnchorElement>('[data-testid="second-window"]')!;
-    expect(second.target).toBe('_blank');
-    expect(Object.fromEntries(new URLSearchParams(second.search))).toEqual({ room: 'r1', user: 'Bob' });
-    expect(second.textContent).toContain('Bob');
+    expect(root.querySelector('input[name="user"]')).toBeNull();
+    expect(root.querySelector('[data-testid="second-user"]')!.textContent).toContain('private window');
     expect(status().textContent).toMatch(/Connecting/);
     bar.setServer('offline');
     expect(status().textContent).toContain('mise run demo');

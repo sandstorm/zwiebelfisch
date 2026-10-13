@@ -1,7 +1,7 @@
 // Tests for playground.ts.
 import { describe, expect, it } from 'vitest';
 import { exampleFiles } from './examples';
-import { GITLAB_ROOM, SERVER, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';
+import { GITLAB_ROOM, SERVER, editorOptions, exampleLink, modeQuery, playgroundFromQuery, userQuery } from './playground';
 
 const query = (search: string) => new URLSearchParams(search);
 const parsed = (search: string) => Object.fromEntries(new URLSearchParams(search));
@@ -16,8 +16,8 @@ describe('playgroundFromQuery', () => {
     expect(playgroundFromQuery(query(`?room=${encodeURIComponent(GITLAB_ROOM)}`))).toMatchObject({ mode: 'gitlab', room: GITLAB_ROOM });
   });
 
-  it('a room without ?user joins as Ann', () => {
-    expect(playgroundFromQuery(query('?room=r1')).user).toBe('Ann');
+  it('without ?user, the name is Demo user (in a room, the sign-in names the user)', () => {
+    expect(playgroundFromQuery(query('?room=r1')).user).toBe('Demo user');
   });
 
   it('keeps the example', () => {
@@ -54,15 +54,9 @@ describe('exampleLink', () => {
   });
 });
 
-describe('users', () => {
-  it('the second window is another user in the same room', () => {
-    expect(parsed(userQuery(otherUser('Ann'), query('?room=r1&user=Ann')))).toEqual({ room: 'r1', user: 'Bob' });
-  });
-
-  it('otherUser cycles through a few names and falls back to Bob', () => {
-    expect(otherUser('Bob')).toBe('Cleo');
-    expect(otherUser('Dan')).toBe('Ann');
-    expect(otherUser('Zoë')).toBe('Bob');
+describe('userQuery', () => {
+  it('names the user, keeping the rest', () => {
+    expect(parsed(userQuery('Bob', query('?example=simple&user=Ann')))).toEqual({ example: 'simple', user: 'Bob' });
   });
 });
 
@@ -74,7 +68,7 @@ describe('editorOptions', () => {
   });
 
   it('collaborate mode seeds the room with the example', () => {
-    expect(editorOptions(state('?room=r1'), 'plain')).toEqual({
+    expect(editorOptions(state('?room=r1'), 'server')).toEqual({
       files: exampleFiles('simple'),
       collaboration: { url: SERVER.ws, room: 'r1' },
     });

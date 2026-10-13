@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -21,16 +22,16 @@ import (
 func TestRealHocuspocusProvider(t *testing.T) {
 	st := memStore(t)
 	s := newServer(t, st)
-	result := runClients(t, s, "edit", "secret")
+	result := runClients(t, s, "edit", "session=secret")
 	want := map[string]any{"/main.typ": "» Hello 😀 and B 𝄞"}
 	require.Equal(t, want, result["texts"])
 	require.Equal(t, "permission-denied", result["denied"])
-	require.Equal(t, map[string]any{}, result["intruderTexts"], "the refused client got nothing")
+	require.Equal(t, map[string]any{}, result["intruderTexts"], "the refused client (no session) got nothing")
 	require.Equal(t, false, result["intruderSynced"])
 
 	// a restart: the next server loads what the first stored
 	require.NoError(t, s.Close(context.Background()))
-	result = runClients(t, newServer(t, st), "read", "secret")
+	result = runClients(t, newServer(t, st), "read", "session=secret")
 	require.Equal(t, want, result["texts"])
 }
 
@@ -39,12 +40,14 @@ type line struct {
 	T       string `json:"t"`
 	D       string `json:"d,omitempty"`
 	Code    int    `json:"code,omitempty"`
+	Cookie  string `json:"cookie,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
-// runClients runs a scenario of hocuspocus-clients.ts against s and returns its result.
-func runClients(t *testing.T, s *collab.Server, scenario, token string) map[string]any {
-	cmd := testutil.Node(t, "hocuspocus-clients.ts", scenario, token)
+// runClients runs a scenario of hocuspocus-clients.ts against s, the clients sending cookie, and returns its
+// result.
+func runClients(t *testing.T, s *collab.Server, scenario, cookie string) map[string]any {
+	cmd := testutil.Node(t, "hocuspocus-clients.ts", scenario, cookie)
 	stdin, err := cmd.StdinPipe()
 	require.NoError(t, err)
 	stdout, err := cmd.StdoutPipe()
@@ -72,8 +75,12 @@ func runClients(t *testing.T, s *collab.Server, scenario, token string) map[stri
 		case "open":
 			p := newPipe()
 			sockets[l.C] = p
+			upgrade := httptest.NewRequest("GET", "/", nil)
+			if l.Cookie != "" {
+				upgrade.Header.Set("Cookie", l.Cookie)
+			}
 			wg.Add(2)
-			go func() { defer wg.Done(); s.Serve(context.Background(), p) }()
+			go func() { defer wg.Done(); s.Serve(context.Background(), p, upgrade) }()
 			go func(id int) { // server → client
 				defer wg.Done()
 				for {

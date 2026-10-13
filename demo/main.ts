@@ -2,7 +2,8 @@
 //
 // Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
 // `?example=simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
-// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), and `&user=<name>`. Without `room`
+// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`, which signs people in at its fake
+// GitLab: the widget's status bar has "Sign in"), and `&user=<name>` (Local mode). Without `room`
 // (Local mode, the default and what the static e2e build uses) it never talks to a server. The shown file and the cursor's line are the URL's fragment (open-file-hash.ts, an
 // extension of the demo's own). The playground bar above the editor switches all of this (playground-bar.ts).
 //
@@ -12,9 +13,9 @@
 import { collaboration, createTypstEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';
-import { editorOptions, playgroundFromQuery, userQuery } from './playground';
+import { editorOptions, playgroundFromQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
-import { probeServer, simulateUpstream } from './server-status';
+import { probeServer, simulateUpstream, type ServerProbe } from './server-status';
 import { readOnlyBanner, readOnlySave, STATIC_SITE } from './static-site';
 
 const params = new URLSearchParams(location.search);
@@ -25,11 +26,6 @@ if (STATIC_SITE && (params.has('room') || !params.has('example'))) {
   history.replaceState(null, '', `?${params}${location.hash}`);
 }
 const state = playgroundFromQuery(params);
-// In a room the name goes into the URL, so a reload stays the same user and the second window is someone else.
-if (state.room !== null && !params.has('user')) {
-  params.set('user', state.user);
-  history.replaceState(null, '', userQuery(state.user, params));
-}
 
 const bar = renderPlaygroundBar(
   document.getElementById('playground')!,
@@ -46,10 +42,8 @@ if (STATIC_SITE) document.body.prepend(readOnlyBanner(document));
 void start();
 
 async function start(): Promise<void> {
-  // Local mode asks no server, so the editor is there at once.
-  const server = state.mode === 'local' ? null : await probeServer();
-  if (server) bar.setServer(server);
-  const { files, collaboration: room } = editorOptions(state, server);
+  const server = await probe();
+  const { files, collaboration: room } = editorOptions(state, server?.kind ?? null);
   const docs = state.example === 'docs' && state.mode === 'local' && !STATIC_SITE ? docsSync(files ?? {}) : null;
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
@@ -65,7 +59,15 @@ async function start(): Promise<void> {
   if (docs) editor.onDidChangeFiles((change) => docs.filesChanged(change));
   docs?.attach(editor);
   Object.assign(window, { editor });
-  if (server) watchServer(server !== 'offline');
+  if (server) watchServer(server.kind !== 'offline');
+}
+
+/** What the server offers, shown in the bar; null in Local mode, which asks no server, so the editor is there at once. */
+async function probe(): Promise<ServerProbe | null> {
+  if (state.mode === 'local') return null;
+  const server = await probeServer();
+  bar.setServer(server.kind, server.plainRooms);
+  return server;
 }
 
 /** The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved (static build). */
@@ -78,8 +80,8 @@ function docsSync(files: ProjectFiles): DocsSync | null {
 /** Keeps the status current while in a room (`joined`) or after falling back to the local copy. */
 function watchServer(joined: boolean): void {
   setInterval(async () => {
-    const server = await probeServer();
-    if (joined) bar.setServer(server === 'offline' ? 'lost' : server);
-    else bar.setServer(server === 'offline' ? 'offline' : 'reload');
+    const { kind, plainRooms } = await probeServer();
+    if (joined) bar.setServer(kind === 'offline' ? 'lost' : kind, plainRooms);
+    else bar.setServer(kind === 'offline' ? 'offline' : 'reload', plainRooms);
   }, 5000);
 }

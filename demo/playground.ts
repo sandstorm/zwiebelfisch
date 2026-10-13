@@ -12,22 +12,26 @@ export function playgroundFromQuery(params: URLSearchParams): PlaygroundState {
     example: exampleFromQuery(params),
     mode: room === null ? 'local' : room.startsWith(GITLAB_PREFIX) ? 'gitlab' : 'collab',
     room,
-    user: params.get('user') || (room === null ? 'Demo user' : USERS[0]),
+    user: params.get('user') || 'Demo user',
   };
 }
 
 export type Mode = 'local' | 'collab' | 'gitlab';
 
+/**
+ * The modes the bar offers. GitLab first: rooms are GitLab branches. Collaborate (a plain room) only where the server
+ * has plain rooms (`GET /api/info`, see playground-bar.ts); the playground server enables them.
+ */
 export const MODES: readonly { mode: Mode; label: string }[] = [
   { mode: 'local', label: 'Local' },
-  { mode: 'collab', label: 'Collaborate' },
   { mode: 'gitlab', label: 'GitLab (fake)' },
+  { mode: 'collab', label: 'Collaborate' },
 ];
 
-/** The playground server (server/src/fake-gitlab-main.ts, PORT 1234). */
+/** The playground server (server/cmd/fake-gitlab, PORT 1234). */
 export const SERVER = { ws: 'ws://127.0.0.1:1234', http: 'http://127.0.0.1:1234' } as const;
 
-/** The fake GitLab's repository (server/src/playground/playground.ts: PLAYGROUND_ROOM). */
+/** The fake GitLab's repository (server/lib/playground: Room). */
 export const GITLAB_ROOM = 'gitlab:demo/report@main';
 
 /**
@@ -38,9 +42,10 @@ export const GITLAB_ROOM = 'gitlab:demo/report@main';
  * |------------|---|
  * | `example`  | simple / advanced / docs (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
- * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
+ * | `user`     | the name in Local mode (comments); in a room, you are whom you signed in as |
  *
- * The rooms live on the local collaboration server (`mise run demo`).
+ * The rooms live on the local collaboration server (`mise run demo`), which signs people in at its fake GitLab
+ * (any name, no password). A second user is a second browser session: a private window.
  */
 export interface PlaygroundState {
   example: ExampleName;
@@ -50,7 +55,7 @@ export interface PlaygroundState {
 }
 
 /** Whether the playground server answered: with its fake GitLab, without it (`mise run server:dev`), or not at all. */
-export type ServerKind = 'gitlab' | 'plain' | 'offline';
+export type ServerKind = 'gitlab' | 'server' | 'offline';
 
 /** The query that switches to `mode`, keeping example and user. */
 export function modeQuery(mode: Mode, params: URLSearchParams): string {
@@ -73,12 +78,6 @@ export function userQuery(user: string, params: URLSearchParams): string {
   return `?${next}`;
 }
 
-/** Someone else to be in the second window. */
-export function otherUser(name: string): string {
-  const at = USERS.indexOf(name);
-  return at < 0 ? USERS[1] : USERS[(at + 1) % USERS.length];
-}
-
 /**
  * The widget options for `state`, once it is known whether the server is
  * there (`null` in Local mode, which never asks). Without a server a room
@@ -94,8 +93,6 @@ export function editorOptions(state: PlaygroundState, server: ServerKind | null)
 }
 
 const GITLAB_PREFIX = 'gitlab:';
-
-const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
 
 const ROOM_PREFIX = 'playground-';
 

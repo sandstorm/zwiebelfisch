@@ -56,6 +56,17 @@ func (a *Awareness) Encode() []byte {
 	return a.a.EncodeUpdate(ids)
 }
 
+// States returns the states of the present clients that origin added (each a JSON object).
+func (a *Awareness) States(origin any) []map[string]any {
+	var states []map[string]any
+	for id, s := range a.a.GetStates() {
+		if o, ok := a.owners[id]; ok && o == origin && s.State != nil {
+			states = append(states, s.State)
+		}
+	}
+	return states
+}
+
 // Remove takes out the clients that origin added and returns the update that tells the others (nil if
 // origin had none).
 func (a *Awareness) Remove(origin any) []byte {

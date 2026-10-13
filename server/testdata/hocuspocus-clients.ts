@@ -2,24 +2,28 @@
 // for the Go tests: TestRealHocuspocusProvider (in-process, over stdio) and TestServerBinary (the built
 // binary on a port).
 //
-//   node server/testdata/hocuspocus-clients.ts <scenario> <token> [ws://host:port]
+//   node server/testdata/hocuspocus-clients.ts <scenario> <cookie> [ws://host:port]
 //
-// Without a URL the WebSockets are bridged over stdin/stdout (one JSON line per event, see StdioSocket), so
-// the test needs no port: the sandbox the tests run in cannot bind one. The scenario's result is printed as
-// a line {"t":"result",...}; failures exit with status 1.
-//   edit: two clients edit one room and see each other's text and presence; a third with a wrong token is
+// <cookie> is the Cookie header the clients' WebSockets send (a session: who signed in; the server reads
+// it from the upgrade request). Without a URL the WebSockets are bridged over stdin/stdout (one JSON line
+// per event, see StdioSocket; "open" carries the cookie), so the test needs no port: the sandbox the tests
+// run in cannot bind one. The scenario's result is printed as a line {"t":"result",...}; failures exit with
+// status 1.
+//   edit: two clients edit one room and see each other's text and presence; a third without the cookie is
 //         refused and gets nothing.
 //   read: one client prints what the room holds (after a server restart).
+//   refused: one client is refused (a plain room on a server without them) and prints the reason it got.
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createInterface } from 'node:readline';
 import * as Y from 'yjs';
 
-const [scenario, token, url] = process.argv.slice(2);
+const [scenario, cookie, url] = process.argv.slice(2);
 const room = 'spike';
 
 const print = (line: object) => process.stdout.write(`${JSON.stringify(line)}\n`);
 
-// A WebSocket whose bytes travel as JSON lines: {"c":id,"t":"open"|"msg"|"close","d":base64,"code":n}.
+// A WebSocket whose bytes travel as JSON lines: {"c":id,"t":"open"|"msg"|"close","d":base64,"code":n}; "open"
+// has the cookie, which the provider's URL carries (?cookie=) as a page's WebSocket carries the page's.
 class StdioSocket {
   static readonly all = new Map<number, StdioSocket>();
   static next = 1;
@@ -32,7 +36,7 @@ class StdioSocket {
   constructor(url: string) {
     this.url = url;
     StdioSocket.all.set(this.id, this);
-    print({ c: this.id, t: 'open' });
+    print({ c: this.id, t: 'open', cookie: new URL(url).searchParams.get('cookie') ?? '' });
     setTimeout(() => {
       this.readyState = 1;
       this.emit('open', {});
@@ -81,14 +85,24 @@ if (!url) {
   });
 }
 
+/** A real WebSocket (Node's, undici's) sending `cookie` with the upgrade, as a browser sends the page's. */
+function cookieSocket(cookie: string) {
+  return class extends WebSocket {
+    constructor(address: string | URL, protocols?: string | string[]) {
+      // undici takes { protocols, headers } in place of the protocols (not in the DOM's type)
+      super(address, { protocols, headers: cookie ? { cookie } : {} } as unknown as string[]);
+    }
+  };
+}
+
 const providers: HocuspocusProvider[] = [];
-function client(token: string, events: { onAuthenticationFailed?: (data: { reason: string }) => void } = {}) {
+function client(cookie: string, events: { onAuthenticationFailed?: (data: { reason: string }) => void } = {}) {
   const provider = new HocuspocusProvider({
-    url: url ?? 'ws://stdio',
+    url: url ?? `ws://stdio/?${new URLSearchParams({ cookie })}`,
     name: room,
-    token,
     document: new Y.Doc(),
-    ...(url ? {} : { WebSocketPolyfill: StdioSocket }),
+    // passed on to the provider's own WebSocket provider (not in the provider's type)
+    ...{ WebSocketPolyfill: url ? cookieSocket(cookie) : StdioSocket },
     ...events,
   });
   providers.push(provider);
@@ -107,8 +121,8 @@ async function until(what: string, ok: () => boolean, ms = 10_000) {
 }
 
 async function edit() {
-  const a = client(token);
-  const b = client(token);
+  const a = client(cookie);
+  const b = client(cookie);
   await until('both are synced', () => a.synced && b.synced);
 
   a.document.transact(() => files(a).set('/main.typ', new Y.Text('Hello 😀')));
@@ -122,8 +136,8 @@ async function edit() {
   await until('the server acknowledged every update', () => !a.hasUnsyncedChanges && !b.hasUnsyncedChanges);
 
   let denied = '';
-  const intruder = client('wrong', { onAuthenticationFailed: ({ reason }) => (denied = reason) });
-  await until('the wrong token is refused', () => denied !== '');
+  const intruder = client('', { onAuthenticationFailed: ({ reason }) => (denied = reason) });
+  await until('the client without a session is refused', () => denied !== '');
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   b.destroy();
@@ -132,13 +146,20 @@ async function edit() {
 }
 
 async function read() {
-  const d = client(token);
+  const d = client(cookie);
   await until('synced', () => d.synced);
   return { texts: texts(d) };
 }
 
+async function refused() {
+  let denied = '';
+  client(cookie, { onAuthenticationFailed: ({ reason }) => (denied = reason) });
+  await until('refused', () => denied !== '');
+  return { denied };
+}
+
 try {
-  const result = await ({ edit, read } as Record<string, () => Promise<object>>)[scenario]();
+  const result = await ({ edit, read, refused } as Record<string, () => Promise<object>>)[scenario]();
   print({ t: 'result', ...result });
 } catch (error) {
   print({ t: 'error', message: String(error) });

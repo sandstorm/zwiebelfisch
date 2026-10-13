@@ -1,23 +1,29 @@
 // End-to-end tests (Playwright, against the demo build): GitLab-backed rooms (needs the fake GitLab server: mise run test:e2e-gitlab).
 import { expect, type Browser, type Page } from '@playwright/test';
-import { fileRow, openFile, serve, test } from './fixtures';
+import { SERVER, SERVER_DEMO, fileRow, openFile, serve, signIn, test } from './fixtures';
 
 // A room backed by a (fake, in-memory) GitLab branch. Needs the server with
 // the fake GitLab: run through `mise run test:e2e-gitlab`, which starts it
 // (ws://127.0.0.1:1234; every test gets a fresh branch of demo/report, which
-// holds the demo's advanced example: template, chapters, SVG images).
+// holds the demo's advanced example: template, chapters, SVG images). Everyone
+// signs in at the fake GitLab first (any name; everyone is a Developer).
 test.skip(!process.env.TYPST_GITLAB_E2E, 'needs the collaboration server with a fake GitLab: mise run test:e2e-gitlab');
+test.use({ baseURL: SERVER_DEMO });
 
-const SERVER = 'http://127.0.0.1:1234';
-
-/** Opens the room as `user` (main.typ shown). */
+/** Opens the room as `user`, signed in in a browser session of their own (main.typ shown). */
 async function join(browser: Browser, baseURL: string, room: string, user: string): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
+  const context = await browser.newContext();
+  await signIn(context, user);
+  const page = await context.newPage();
   await serve(page, baseURL);
-  await page.goto(`/?room=${encodeURIComponent(room)}&user=${user}`);
+  await page.goto(`/?room=${encodeURIComponent(room)}`);
   await expect(fileRow(page, 'chapters')).toBeVisible();
+  await expect(account(page)).toHaveText(user);
   return page;
 }
+
+/** The account's status bar entry ("Sign in", or the user's name). */
+const account = (page: Page) => page.locator('.typst-collaboration__account');
 
 /** Text in the Visual editor of the file shown (each opened file keeps a hidden Visual editor of its own). */
 const visualText = (page: Page, text: string) => page.getByTestId('typst-visual').getByText(text);
@@ -190,4 +196,30 @@ test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await saveToGitLab(ann, 'Nothing');
   await expect(messages(ann).getByRole('status').filter({ hasText: 'No changes to save' })).toBeVisible();
+});
+
+test('signed out: the widget offers to sign in, the fake GitLab signs in, back in the room; Sign out', async ({ page }, info) => {
+  const room = `gitlab:demo/report@e2e-${info.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  await page.goto(`/?room=${encodeURIComponent(room)}`);
+  await expect(messages(page)).toContainText('Sign in to join this room.');
+  await expect(account(page)).toHaveText('Sign in');
+  await messages(page).getByRole('button', { name: 'Sign in' }).click();
+  // the fake GitLab's page (on the server), then back to the room
+  await expect(page.getByRole('heading', { name: 'Sign in to the fake GitLab' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cleo' }).click();
+  await expect(page).toHaveURL(`${SERVER_DEMO}/?room=${encodeURIComponent(room)}`);
+  await expect(fileRow(page, 'chapters')).toBeVisible();
+  await expect(account(page)).toHaveText('Cleo');
+
+  await account(page).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await expect(account(page)).toHaveText('Sign in');
+  await expect(messages(page)).toContainText('Sign in to join this room.');
+});
+
+test('a plain room on this server (plain rooms off): the bar and the widget say it opens only GitLab rooms', async ({ page }) => {
+  await signIn(page.context(), 'Ann');
+  await page.goto('/?room=plain-e2e');
+  await expect(page.locator('#playground').getByRole('status')).toContainText('only GitLab rooms');
+  await expect(messages(page)).toContainText('Cannot join the room: This server opens only GitLab rooms');
 });

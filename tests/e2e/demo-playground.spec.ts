@@ -3,8 +3,8 @@ import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 
 // The demo's playground bar without a server: Local mode (the default) never
-// talks to one; the room modes are checked against an unreachable server and a
-// stubbed playground endpoint (WebSockets are not stubbed: the widget keeps
+// talks to one; the room modes are checked against an unreachable server and
+// stubbed server endpoints (/api/info, /playground) (WebSockets are not stubbed: the widget keeps
 // waiting for its room there, which these tests do not need). The real
 // server is covered by collab.spec.ts and gitlab.spec.ts.
 
@@ -19,24 +19,41 @@ async function noServer(page: Page): Promise<void> {
   await page.route(`${SERVER}/**`, (route) => route.abort('connectionrefused'));
 }
 
+/** The playground server's answers: what it offers, and the fake GitLab's endpoint. */
+async function playgroundServer(page: Page, info: { plainRooms: boolean }): Promise<void> {
+  const cors = { 'Access-Control-Allow-Origin': '*' };
+  await page.route(`${SERVER}/api/info`, (route) => route.fulfill({ json: info, headers: cors }));
+  await page.route(`${SERVER}/playground`, (route) => route.fulfill({ json: { project: 'demo/report', room: GITLAB_ROOM }, headers: cors }));
+}
+
 test('Local mode is the default and needs no server', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('/');
   await expect(modes(page).getByRole('link', { name: 'Local' })).toHaveAttribute('aria-current', 'page');
   await expect(status(page)).toContainText('no server needed');
+  await expect(modes(page).getByRole('link', { name: 'Collaborate' })).toBeHidden();
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(bar(page).getByRole('button', { name: 'Simulate upstream commit' })).toHaveCount(0);
-  await expect(bar(page).getByTestId('second-window')).toHaveCount(0);
+  await expect(bar(page).getByTestId('second-user')).toHaveCount(0);
   expect(requests.filter((url) => url.startsWith(SERVER))).toEqual([]);
 });
 
-test('the mode links keep the example and join the matching room', async ({ page }) => {
-  await page.goto('/?example=simple');
+test('the mode links keep the example and join the matching room; Collaborate once the server has plain rooms', async ({ page }) => {
+  await playgroundServer(page, { plainRooms: true });
+  await page.goto(`/?example=simple&room=${encodeURIComponent(GITLAB_ROOM)}&user=Ann`);
+  await expect(modes(page).getByRole('link')).toHaveText(['Local', 'GitLab (fake)', 'Collaborate']);
   const href = async (name: string) => new URL((await modes(page).getByRole('link', { name }).getAttribute('href'))!, 'http://x').searchParams;
   expect((await href('Collaborate')).get('room')).toBe('playground-simple');
   expect((await href('Collaborate')).get('example')).toBe('simple');
   expect((await href('GitLab (fake)')).get('room')).toBe(GITLAB_ROOM);
+});
+
+test('a server without plain rooms offers no Collaborate', async ({ page }) => {
+  await playgroundServer(page, { plainRooms: false });
+  await page.goto(`/?room=${encodeURIComponent(GITLAB_ROOM)}&user=Ann`);
+  await expect(status(page)).toContainText('fake GitLab');
+  await expect(modes(page).getByRole('link', { name: 'Collaborate' })).toBeHidden();
 });
 
 test('the name field reloads as that user', async ({ page }) => {
@@ -52,21 +69,16 @@ test('the name field reloads as that user', async ({ page }) => {
 test('Collaborate without a server: says how to start it and edits a local copy', async ({ page }) => {
   await noServer(page);
   await page.goto('/?room=playground-simple');
-  await expect(page).toHaveURL(/user=Ann/);
   await expect(status(page)).toContainText('not reachable');
   await expect(status(page).locator('code')).toHaveText('mise run demo');
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
-  const second = bar(page).getByTestId('second-window');
-  await expect(second).toHaveText('Open a second window as Bob');
-  await expect(second).toHaveAttribute('href', /room=playground-simple/);
-  await expect(second).toHaveAttribute('href', /user=Bob/);
+  await expect(bar(page).getByRole('textbox', { name: 'Your name' })).toHaveCount(0);
+  await expect(bar(page).getByTestId('second-user')).toContainText('private window');
 });
 
 test('GitLab mode: examples are fixed, the upstream simulation calls the playground endpoint', async ({ page }) => {
   const posted: string[] = [];
-  await page.route(`${SERVER}/playground`, (route) =>
-    route.fulfill({ json: { project: 'demo/report', room: GITLAB_ROOM }, headers: { 'Access-Control-Allow-Origin': '*' } }),
-  );
+  await playgroundServer(page, { plainRooms: true });
   await page.route(/:1234\/playground\/upstream\?/, (route) => {
     posted.push(route.request().url());
     return route.fulfill({

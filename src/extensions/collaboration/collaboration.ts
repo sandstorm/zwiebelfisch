@@ -1,12 +1,15 @@
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
+import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import { ProgressLocation } from '../../hosts/window/window';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
+import { Account } from './account';
 import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
 import { visualPresence } from './visual-editor/visual-editor';
+import { AccountStatus } from './workbench/account';
 import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
 /**
@@ -24,15 +27,32 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  *
  * Until the room's text is in the project, the editing area shows "Connecting to the room…" and takes no input. In a
  * room backed by a GitLab branch, the branch is a source control, and the browser warns before the last user leaves
- * changes nobody commits. See docs/20_features/12_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and docs/40_architecture/09_server.typ.
+ * changes nobody commits.
+ *
+ * A server lets in only people signed in there (a session cookie; the widget holds no token): the status bar shows
+ * the account ("Sign in", or the name with "Sign out" in its menu), and a room the user may not join yet for that
+ * offers to sign in, which leaves the page for the server's sign-in and comes back. See
+ * docs/20_features/12_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and
+ * docs/40_architecture/09_server.typ.
  */
 export function collaboration(options: CollaborationOptions): TypstExtension {
+  const server = 'url' in options;
   return {
     id: 'collaboration',
-    activate({ project, window, scm, workbench, sourceEditor, visualEditor, subscriptions }) {
+    contributes: server
+      ? {
+          commands: [
+            { command: 'collaboration.signIn', title: 'Sign in', category: 'Collaboration' },
+            { command: 'collaboration.signOut', title: 'Sign out', category: 'Collaboration' },
+          ],
+        }
+      : undefined,
+    activate(context) {
+      const { project, window, scm, workbench, sourceEditor, visualEditor, subscriptions } = context;
       subscriptions.push(workbench.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
       const user = workbench.user;
+      const account = 'url' in options ? signInOut(new Account(options.url), context) : null;
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
           const editor = window.activeTextEditor;
@@ -43,7 +63,9 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
         tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
-      });
+        signInRequired: () =>
+          void window.showErrorMessage(SIGN_IN_REQUIRED, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
+      }, account);
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
       visualPresence(presences, documents).activate({ visualEditor, subscriptions });
       subscriptions.push(
@@ -64,10 +86,38 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
 }
 
 /**
+ * The account's status bar entry and the commands `collaboration.signIn` (to the server's sign-in, back to this page)
+ * and `collaboration.signOut` (then the page reloads: the room's connection was the signed-in user's).
+ */
+function signInOut(account: Account, { commands, window, workbench, subscriptions }: ExtensionContext): Account {
+  const view = workbench.ownerDocument.defaultView;
+  const status = new AccountStatus(workbench.ownerDocument, account, {
+    signIn: () => void commands.executeCommand('collaboration.signIn'),
+    showMenu: (anchor) => window.showContextMenu(ACCOUNT_MENU, { anchor, title: account.identity?.name ?? 'Account' }),
+  });
+  subscriptions.push(
+    account,
+    account.onDidChange(() => status.show()),
+    window.registerStatusBarItem(status.element, { alignment: 'right', priority: 10 }),
+    workbench.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut', title: 'Sign out' }),
+    commands.registerCommand('collaboration.signIn', () => view?.location.assign(account.signInUrl(view.location.href))),
+    commands.registerCommand('collaboration.signOut', async () => {
+      await account.signOut();
+      view?.location.reload();
+    }),
+  );
+  return account;
+}
+
+/** The account entry's menu (`window.showContextMenu`). */
+const ACCOUNT_MENU = 'collaboration/account';
+
+/**
  * Where the shared state lives: a Y.Doc the host connects itself (any
  * provider; pass it synced, and its awareness for remote cursors), or a
- * Hocuspocus server the widget connects to.
+ * Hocuspocus server the widget connects to: the collaboration server of
+ * this repository, on the page's host (the session cookie is sent to it).
  */
 export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }
-  | { url: string; room: string; token?: string };
+  | { url: string; room: string };

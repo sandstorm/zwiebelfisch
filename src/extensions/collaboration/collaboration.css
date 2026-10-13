@@ -1,5 +1,5 @@
 /* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source editors,
-   in each user's color (--typst-remote-color, and --typst-remote-text for text on it).
+   in each user's color (--typst-remote-color, and --typst-remote-text for text on it); the account in the status bar.
    See collaboration in collaboration.ts, which registers it. */
 .typst-collaboration__selection {
   background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
@@ -68,3 +68,17 @@
   bottom: calc(100% + 3px);
   border-radius: 3px 3px 0 3px;
 }
+/* The account in the status bar: "Sign in", or the signed-in user's name (a click: the account menu). */
+.typst-collaboration__account {
+  font: inherit;
+  font-size: 12px;
+  border: 0;
+  margin: 4px 8px 4px 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: none;
+  color: var(--te-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.typst-collaboration__account:hover { background: var(--te-hover); }

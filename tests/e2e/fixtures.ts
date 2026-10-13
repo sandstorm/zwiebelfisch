@@ -1,5 +1,5 @@
 // Playwright fixtures: the static demo build served through request interception (no dev server, no port).
-import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -65,6 +65,26 @@ export async function clickGlyph(glyph: Locator, options: { clickCount?: number 
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   });
   await glyph.page().mouse.click(point.x, point.y, options);
+}
+
+/** The playground server (server/cmd/fake-gitlab, as `mise run test:e2e-gitlab` / `test:e2e-collab` start it). */
+export const SERVER = 'http://127.0.0.1:1234';
+
+/**
+ * Where the specs against that server open the demo: another port of the server's host, so the session cookie goes
+ * along to the server (same site). The server also serves the build there (TYPST_DEMO_DIST), for the browser coming
+ * back from signing in.
+ */
+export const SERVER_DEMO = 'http://127.0.0.1:5199';
+
+/**
+ * Signs `context` in as `user` at the server's fake GitLab, without a page: the sign-in's redirects (the fake's
+ * page signs in at once with `login_hint`) end at the server's own `/`, and the session cookie lands in the context.
+ */
+export async function signIn(context: BrowserContext, user: string): Promise<void> {
+  const response = await context.request.get(`${SERVER}/auth/login?${new URLSearchParams({ login_hint: user, return: '/' })}`);
+  expect(response.ok(), await response.text()).toBe(true);
+  expect((await context.cookies(SERVER)).map((cookie) => cookie.name)).toContain('typst_session');
 }
 
 /** The file panel's tree row of `path` (as shown: `chapters/intro.typ`, a folder `chapters`). */

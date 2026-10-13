@@ -38,6 +38,14 @@ jobs:
       - run: mise run typecheck
       - run: mise run quality
       - run: mise run test:unit
+      # the Go server's modules and build cache, keyed by go.sum
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('go.sum') }}-${{ hashFiles('server/**/*.go') }}
+          restore-keys: go-${{ runner.os }}-${{ hashFiles('go.sum') }}-
       - run: mise run server:test
       - run: mise run check:examples
       - run: mise run docs:pdf

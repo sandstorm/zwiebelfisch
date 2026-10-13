@@ -1,11 +1,11 @@
 // The playground bar above the demo editor: mode, example, room, user, server status. See main.ts.
 import { EXAMPLES } from './examples';
-import { MODES, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
+import { MODES, exampleLink, modeQuery, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
 export interface PlaygroundBar {
-  /** Shows what is known about the server now. */
-  setServer(state: ServerState): void;
+  /** Shows what is known about the server now; `plainRooms`: it opens plain rooms, so Collaborate is offered. */
+  setServer(state: ServerState, plainRooms?: boolean): void;
   /** Shows, at the end of the bar, what became of the last edit (the Documentation example: saved to docs/ or not). */
   setSaveStatus(text: string, level: 'muted' | 'ok' | 'warn'): void;
 }
@@ -24,23 +24,28 @@ export interface BarOptions {
 
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
- * every state has a URL), the user's name, a link that opens a second window
- * as another user in the same room, the server status with the command to
- * start it, and in GitLab mode "Simulate upstream commit".
+ * every state has a URL), the user's name in Local mode (in a room, the widget's status bar shows whom the user
+ * signed in as), how to be a second user in a room, the server status with the command to start it, and in GitLab
+ * mode "Simulate upstream commit". Collaborate (a plain room) is offered once the server says it has plain rooms,
+ * or when the page is in one.
  */
 export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions, options: BarOptions = { server: true }): PlaygroundBar {
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
-  root.append(examplesNav(state, params), modesNav(state, params, options), userForm(state, params, actions));
-  if (state.mode !== 'local') root.append(secondWindow(state, params));
+  const modes = modesNav(state, params, options);
+  root.append(examplesNav(state, params), modes);
+  root.append(state.mode === 'local' ? userForm(state, params, actions) : secondUser());
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
   root.append(status.element);
   const save = el('span', { class: 'demo-bar__save', 'aria-live': 'polite', 'data-testid': 'save-status' });
+  const collaborate = modes.querySelector<HTMLElement>('[data-mode="collab"]')!;
+  collaborate.hidden = state.mode !== 'collab';
   return {
-    setServer(server) {
-      status.server(server);
+    setServer(server, plainRooms = false) {
+      status.server(server, plainRooms);
       if (upstream) upstream.button.disabled = server !== 'gitlab';
+      if (state.mode !== 'collab') collaborate.hidden = !plainRooms;
     },
     setSaveStatus(text, level) {
       if (!save.isConnected) root.append(save);
@@ -60,8 +65,8 @@ class StatusLine {
     this.server(state.mode === 'local' ? null : 'checking');
   }
 
-  server(server: ServerState | null): void {
-    const { text, hint, level } = describeServer(this.state.mode, server);
+  server(server: ServerState | null, plainRooms?: boolean): void {
+    const { text, hint, level } = describeServer(this.state.mode, server, plainRooms);
     this.element.replaceChildren(text, ...(hint ? [' ', el('code', {}, hint)] : []));
     this.element.dataset.level = level;
   }
@@ -111,7 +116,7 @@ function nav(label: string, links: { text: string; href: string | null; current:
 }
 
 function modesNav(state: PlaygroundState, params: URLSearchParams, { server }: BarOptions): HTMLElement {
-  return nav(
+  const element = nav(
     'Mode',
     MODES.map(({ mode, label }) =>
       server || mode === 'local'
@@ -119,6 +124,8 @@ function modesNav(state: PlaygroundState, params: URLSearchParams, { server }: B
         : { text: label, href: null, current: false, title: NO_SERVER },
     ),
   );
+  element.querySelectorAll('a').forEach((link, i) => (link.dataset.mode = MODES[i].mode));
+  return element;
 }
 
 const NO_SERVER = 'Needs the playground server, which this static site does not have: run mise run demo in a checkout';
@@ -135,11 +142,11 @@ function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarA
   return form;
 }
 
-function secondWindow(state: PlaygroundState, params: URLSearchParams): HTMLElement {
-  const other = otherUser(state.user);
-  const link = el('a', { href: userQuery(other, params), target: '_blank', 'data-testid': 'second-window' }, `Open a second window as ${other}`);
-  link.title = 'Same room, another user: try remote cursors and concurrent edits';
-  return link;
+/** How to be someone else in the same room: the session is a cookie, so another browser session. */
+function secondUser(): HTMLElement {
+  const hint = el('span', { class: 'demo-bar__group', 'data-testid': 'second-user' }, 'Second user: this page in a private window, signed in as someone else');
+  hint.title = 'Same room, another user: try remote cursors and concurrent edits';
+  return hint;
 }
 
 function upstreamControls(actions: BarActions, status: StatusLine) {

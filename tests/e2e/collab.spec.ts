@@ -2,16 +2,20 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, type Browser, type Page } from '@playwright/test';
-import { serve, test } from './fixtures';
+import { SERVER_DEMO, serve, signIn, test } from './fixtures';
 
 // Two users in one room of the local collaboration server. Needs the server:
-// run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234).
+// run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234,
+// plain rooms on). Each user signs in at its fake GitLab, in a browser session of their own.
 test.skip(!process.env.TYPST_COLLAB_E2E, 'needs the collaboration server: mise run test:e2e-collab');
+test.use({ baseURL: SERVER_DEMO });
 
 async function join(browser: Browser, baseURL: string, room: string, user: string): Promise<Page> {
-  const page = await (await browser.newContext()).newPage();
+  const context = await browser.newContext();
+  await signIn(context, user);
+  const page = await context.newPage();
   await serve(page, baseURL);
-  await page.goto(`/?room=${room}&user=${user}`);
+  await page.goto(`/?room=${room}`);
   await expect(page.getByTestId('typst-visual')).toContainText('Typst in five minutes');
   return page;
 }

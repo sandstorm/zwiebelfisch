@@ -4,17 +4,17 @@
 
 #unreviewed
 
-Several people can edit the same project at once (#link("https://yjs.dev/")[Yjs]). Add the `collaboration` extension with a connection and set `user`:
+Several people can edit the same project at once (#link("https://yjs.dev/")[Yjs]). Add the `collaboration` extension with a connection:
 
 ```ts
 import { collaboration, createTypstEditor } from 'typst-editor';
 
 createTypstEditor(host, {
   source,                                    // seeds a new room; a room's text wins
-  user: { name: 'Ada', color: '#6c71c4' },   // color optional
+  user: { name: 'Ada', color: '#6c71c4' },   // the name until signed in; color optional
   extensions: (builtinExtensions) => [
     ...builtinExtensions,
-    collaboration({ url: 'wss://collab.example.org', room: 'project-42', token }),
+    collaboration({ url: 'wss://editor.example.org', room: 'project-42' }),
   ],
 });
 ```
@@ -25,14 +25,14 @@ On `<typst-editor>`, put `extensions` and `user` into `options` before the eleme
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room, token? }`*: a #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server, e.g. this repository's (@configuration-collaboration-server-running).
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
 
 == The server <configuration-collaboration-server-running>
 
-`server/` is a Hocuspocus server that stores rooms in SQLite (@architecture-server). Run it with:
+`server/` is a Go server that stores rooms in SQLite (@architecture-server). Its rooms are GitLab branches (@configuration-gitlab-integration); rooms of any other name (*plain rooms*) only when enabled. Run it with:
 
 ```sh
 mise run server:dev    # ws://127.0.0.1:1234
@@ -42,18 +42,39 @@ mise run server:dev    # ws://127.0.0.1:1234
   columns: 2,
   [Variable], [Meaning],
   [`PORT`], [Default `1234`.],
-  [`TYPST_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`).],
-  [`TYPST_COLLAB_TOKEN`], [The token clients must send. Unset: no check.],
+  [`TYPST_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
+  [`TYPST_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
+  [`TYPST_PLAIN_ROOMS`], [`1`: also open plain rooms, to anyone signed in. Default off: a client asking for one is refused, and the widget says why.],
+  [`TYPST_AUTH_…`], [The sign-in, required (@configuration-collaboration-server-sign-in).],
+  [`TYPST_LOG_LEVEL`, `TYPST_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-The token check is a stub: one shared token for every room and user.
+A server without sign-in, or with neither GitLab nor plain rooms, does not start. `GET /api/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
+
+=== Sign-in <configuration-collaboration-server-sign-in>
+
+People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.html")[OpenID Connect] provider, by default the GitLab instance (@configuration-gitlab-integration): register an application there (GitLab: _Edit profile → Applications_, or an instance or group application), confidential, with the callback URL and the scopes `openid profile email read_api`.
+
+#table(
+  columns: 2,
+  [Variable], [Meaning],
+  [`TYPST_AUTH_CLIENT_ID`], [Required: the application's id.],
+  [`TYPST_AUTH_CLIENT_SECRET`], [Required: its secret (never commit it).],
+  [`TYPST_AUTH_REDIRECT_URL`], [The callback registered with the application, e.g. `https://editor.example.org/auth/callback`. Default: `/auth/callback` on the host the browser named.],
+  [`TYPST_AUTH_ISSUER`], [The provider (default `TYPST_GITLAB_URL`). Another one signs people in, but GitLab rooms refuse them: their GitLab account is unknown.],
+)
+
+- The server keeps who signed in in memory, with the user's tokens: nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise.
+- The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
+- Endpoints: `GET /auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /auth/callback`, `POST /auth/logout`, `GET /api/me` (who is signed in, or 401).
 
 == Trying it locally <configuration-collaboration-server-demo>
 
 `mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo).
 
-- *Collaborate:* pick it in the playground bar, then "Open a second window as Bob".
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
+- *Sign in* with the status bar's "Sign in": the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
+- *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
 - `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes the fake GitLab unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

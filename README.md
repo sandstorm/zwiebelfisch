@@ -81,7 +81,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 (`mise run demo:build`: the same on the production build, so it loads as in production).
 
 - `?example=simple|advanced|docs`: the project to open (`docs` edits this documentation live).
-- `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.
+- `?room=gitlab:demo/report@main` opens a fake GitLab branch; `?room=<name>` collaborates in a plain room.
 
 ## Documentation
 

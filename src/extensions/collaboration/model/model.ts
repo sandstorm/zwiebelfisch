@@ -9,6 +9,7 @@ import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/room-protocol/room-protocol';
+import { serverHttpBase } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
@@ -60,16 +61,25 @@ export class Collaboration {
   /**
    * Starts sharing `shared`. With a server, this connects and waits for the
    * first sync, so a room's existing text wins over the local one; the room's source control tells its outcomes
-   * and news with `tell` (default: not at all).
+   * and news with `tell` (default: not at all). The WebSocket carries the session cookie: the server knows who
+   * connects. Rejects with the server's reason when it refuses the room (not signed in: SIGN_IN_REQUIRED; no access
+   * to the GitLab project; a plain room on a server that opens only GitLab rooms).
    */
   static async start(options: CollaborationOptions, shared: SharedRoom, tell: Tell = () => {}): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
-    const provider = new HocuspocusProvider({ url: options.url, name: options.room, token: options.token ?? null, document: ydoc });
-    await new Promise<void>((resolve) => {
-      if (provider.isSynced) resolve();
-      else provider.on('synced', () => resolve());
-    });
+    const provider = new HocuspocusProvider({ url: options.url, name: options.room, document: ydoc });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        provider.on('authenticationFailed', ({ reason }: { reason: string }) => reject(new Error(reason)));
+        if (provider.isSynced) resolve();
+        else provider.on('synced', () => resolve());
+      });
+    } catch (error) {
+      provider.destroy();
+      ydoc.destroy();
+      throw error;
+    }
     return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell });
   }
 
@@ -115,15 +125,11 @@ function statelessChannel(provider: HocuspocusProvider): StatelessChannel {
   };
 }
 
-/**
- * Fetches a file of the room from the server's HTTP side (same host and path
- * as the WebSocket: ws → http, wss → https), with the room's token.
- */
-function roomFiles(options: { url: string; room: string; token?: string }): (path: ProjectPath) => Promise<Uint8Array> {
-  const base = options.url.replace(/^ws/, 'http').replace(/\/$/, '');
-  const headers: Record<string, string> = options.token ? { Authorization: `Bearer ${options.token}` } : {};
+/** Fetches a file of the room from the server's HTTP side, with the session cookie (as the WebSocket). */
+function roomFiles(options: { url: string; room: string }): (path: ProjectPath) => Promise<Uint8Array> {
+  const base = serverHttpBase(options.url);
   return async (path) => {
-    const response = await fetch(base + roomFilePath(options.room, path), { headers });
+    const response = await fetch(base + roomFilePath(options.room, path), { credentials: 'include' });
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
     return new Uint8Array(await response.arrayBuffer());
   };
