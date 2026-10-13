@@ -113,4 +113,31 @@ describe('the caret between blocks', () => {
     press('ArrowRight');
     expect(gaps()).toBe(0);
   });
+
+  it('has no gap between a list and a paragraph or another list: the arrows go on as ProseMirror does', () => {
+    const source = 'One\n\n- a\n- b\n\n+ c\n\nTwo\n';
+    const { press, caret, gaps } = setup(source);
+    caret(3);
+    expect(press('ArrowDown')).toBe(false);
+    expect(gaps()).toBe(0);
+    caret(source.indexOf('- a') + 2);
+    expect(press('ArrowUp')).toBe(false);
+    caret(source.indexOf('- b') + 3);
+    expect(press('ArrowDown')).toBe(false);
+    expect(gaps()).toBe(0);
+    caret(source.indexOf('+ c') + 3);
+    expect(press('ArrowDown')).toBe(false);
+    expect(press('ArrowRight')).toBe(false);
+    expect(gaps()).toBe(0);
+  });
+
+  it('has a gap between a list and a table, on the table\'s side as beside a paragraph', () => {
+    const source = '- a\n- b\n\n#table(columns: 2, [x], [y])\n';
+    const { doc, press, caret, gaps, tiptap } = setup(source);
+    caret(source.indexOf('- b') + 3);
+    expect(press('ArrowDown')).toBe(true);
+    expect(gaps()).toBe(1);
+    type(tiptap, 'z');
+    expect(doc.text).toBe('- a\n- b\n\nz\n\n#table(columns: 2, [x], [y])\n');
+  });
 });

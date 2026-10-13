@@ -254,3 +254,26 @@ describe('the caret between two code blocks in a block style', () => {
     expect(doc.text).toBe(TWO_CODE_BLOCKS);
   });
 });
+
+describe('the caret beside a list in a block style', () => {
+  const source = 'Before.\n\n#example[\n  Intro.\n\n  - a\n  - b\n]\n\nAfter.\n';
+  const endOfLast = source.indexOf('- b') + 3;
+
+  it('goes from the end of the last item of a list ending a block style to the gap after the block style', () => {
+    const { view, press, caret, gaps, tiptap } = setup(source);
+    caret(endOfLast);
+    expect(press('ArrowDown')).toBe(true);
+    expect(gaps()).toBe(1);
+    expect(tiptap.state.selection.toJSON()).toMatchObject({ type: 'blockGap', pos: tiptap.state.doc.child(0).nodeSize + tiptap.state.doc.child(1).nodeSize });
+    expect(view.selection().from).toBe(source.indexOf('\n]\n') + 2);
+    expect(press('ArrowUp')).toBe(true);
+    expect(view.selection().from).toBe(endOfLast);
+  });
+
+  it('has no gap between the list and the paragraph before it in the block style', () => {
+    const { press, caret, gaps } = setup(source);
+    caret(source.indexOf('Intro.') + 'Intro.'.length);
+    expect(press('ArrowDown')).toBe(false);
+    expect(gaps()).toBe(0);
+  });
+});

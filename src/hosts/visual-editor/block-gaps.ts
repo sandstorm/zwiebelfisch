@@ -13,10 +13,10 @@ import { posToSource, sourceToPos } from '../prosemirror-typst/prosemirror-typst
  * block, and sees whether the caret is inside the block or after it.
  *
  * A gap is a place between two sibling blocks where at least one is a box (a block that is not a text block: a
- * container like a block style, a figure, a table, a list, or an atom like a raw box or an image; or a code block,
- * whose text takes Enter as a line break), and before the first or after the last block of the document or a
- * container, beside a box. Only where a paragraph may go, and never inside a list item. Between two paragraphs (or
- * headings) there is none.
+ * container like a block style, a figure, a table, or an atom like a raw box or an image; or a code block, whose
+ * text takes Enter as a line break), and before the first or after the last block of the document or a container,
+ * beside a box. Only where a paragraph may go, and never inside a list item. A list is no box: between paragraphs,
+ * headings and lists there is none, and the arrows go from text to list item as ProseMirror moves them.
  *
  * - Arrow keys go one stop at a time: from the end of the text in a box onto the gap after it (with nothing after
  *   the text in between), from there into the next block or the gap after the box around; backwards the same.
@@ -137,9 +137,13 @@ function isGap($pos: ResolvedPos): boolean {
   return paragraph !== undefined && parent.canReplaceWith(index, index, paragraph);
 }
 
-/** A block a gap goes beside: one without text of its own (a container, an atom), or code (spec `code`). */
+/**
+ * A block a gap goes beside: one without text of its own (a container, an atom), or code (spec `code`); not a list
+ * (schema group `list`), which is text to the arrows.
+ */
 function isBox(node: Node | null): boolean {
-  return node !== null && node.isBlock && (!node.isTextblock || node.type.spec.code === true);
+  if (node === null || !node.isBlock || node.type.isInGroup('list')) return false;
+  return !node.isTextblock || node.type.spec.code === true;
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
