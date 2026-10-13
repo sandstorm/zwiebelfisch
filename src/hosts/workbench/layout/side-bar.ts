@@ -1,5 +1,6 @@
 // See WorkbenchLayout in workbench-layout.ts.
 
+import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { SidePanel, SidePanelOptions } from '../workbench';
 
@@ -8,7 +9,8 @@ import type { SidePanel, SidePanelOptions } from '../workbench';
  * by a separator on the panel's inner edge (drag or arrow keys; remembered). Which panel shows: the viewer's pick (a
  * rail button; clicking the shown panel's button hides the side), else the side's default panel, else the first panel
  * whose owner asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for
- * the moment only, and Escape, a click outside or `dismiss()` close the panel.
+ * the moment only, and Escape, a click outside or `dismiss()` close the panel. Each panel's command
+ * `workbench.view.<id>` picks it from the keyboard (`#toggleFocus`); its rail button's tooltip names the key.
  */
 export class SideBar {
   readonly element: HTMLElement;
@@ -24,14 +26,16 @@ export class SideBar {
   #shown: string | null = null;
   #defaultPanel: string | null | undefined;
   #overlay = false;
+  /** Where the focus was before a panel's command focused it, to go back there when the command hides it. */
+  #returnFocus: HTMLElement | null = null;
   readonly #cleanup: (() => void)[] = [];
 
   constructor(
     private readonly host: HTMLElement,
     readonly side: Side,
-    /** Restored from what the viewer had; changed in place, then `save` is called. */
+    /** Restored from what the viewer had; changed in place, then `owner.save` is called. */
     readonly state: SideBarState,
-    private readonly save: () => void,
+    private readonly owner: SideBarOwner,
   ) {
     const doc = host.ownerDocument;
     this.#size = SIZES[side];
@@ -71,7 +75,15 @@ export class SideBar {
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'typst-editor__rail-button';
-    button.title = options.label;
+    const command = `workbench.view.${id}`;
+    // the key may be bound after the panel is added: named anew whenever the tooltip may show
+    const describe = () => {
+      const key = this.owner.commands.keybindingLabel(command);
+      button.title = key ? `${options.label} (${key})` : options.label;
+    };
+    describe();
+    button.addEventListener('pointerenter', describe);
+    button.addEventListener('focus', describe);
     button.setAttribute('aria-label', options.label);
     button.setAttribute('aria-controls', body.id);
     button.dataset.testid = `typst-panel-toggle-${id}`;
@@ -79,7 +91,8 @@ export class SideBar {
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
     this.#place(button, options.order ?? 0, options.alignment === 'bottom');
     this.#panel.insertBefore(body, this.#resizer);
-    const entry: PanelEntry = { body, button, fallback: false, available: true, visible: false, visibility: new EventEmitter<void>() };
+    const registration = this.owner.commands.registerCommand(command, () => this.#toggleFocus(id));
+    const entry: PanelEntry = { body, button, registration, fallback: false, available: true, visible: false, visibility: new EventEmitter<void>() };
     this.#panels.set(id, entry);
     this.layout();
     return {
@@ -90,6 +103,7 @@ export class SideBar {
       onDidChangeVisibility: entry.visibility.event,
       setDefault: (open) => this.#update(id, { fallback: open }),
       setAvailable: (available) => this.#update(id, { available }),
+      show: (preserveFocus) => this.#reveal(id, preserveFocus ?? false),
       dismiss: () => this.#dismiss(),
       dispose: () => this.#remove(id),
     };
@@ -171,7 +185,7 @@ export class SideBar {
   #choose(id: string | null): void {
     if (this.#overlay) return this.show(id);
     this.state.chosen = id;
-    this.save();
+    this.owner.save();
     this.layout();
   }
 
@@ -180,6 +194,29 @@ export class SideBar {
     if (!panel) return;
     Object.assign(panel, change);
     this.layout();
+  }
+
+  /** Shows panel `id` as the viewer's pick and, unless `preserveFocus`, focuses it (where the focus was is remembered). */
+  #reveal(id: string, preserveFocus: boolean): void {
+    if (!this.#isAvailable(id)) return;
+    this.#choose(id);
+    if (preserveFocus) return;
+    const root = this.host.getRootNode() as Document | ShadowRoot;
+    const body = this.#panels.get(id)!.body;
+    if (!body.contains(root.activeElement)) this.#returnFocus = root.activeElement instanceof HTMLElement ? root.activeElement : null;
+    const target = body.querySelector<HTMLElement>(FOCUSABLE) ?? body;
+    if (target === body) body.tabIndex = -1;
+    target.focus();
+  }
+
+  /** `workbench.view.<id>`: shows and focuses panel `id`, or hides the side while it is shown and has the focus. */
+  #toggleFocus(id: string): void {
+    const body = this.#panels.get(id)?.body;
+    const root = this.host.getRootNode() as Document | ShadowRoot;
+    if (this.#shown !== id || !body?.contains(root.activeElement)) return this.#reveal(id, false);
+    this.#choose(null);
+    if (this.#returnFocus?.isConnected) this.#returnFocus.focus();
+    this.#returnFocus = null;
   }
 
   #dismiss(): void {
@@ -191,6 +228,7 @@ export class SideBar {
     if (!panel) return;
     panel.body.remove();
     panel.button.remove();
+    panel.registration.dispose();
     panel.visibility.dispose();
     this.#panels.delete(id);
     if (this.#shown === id) this.#shown = null;
@@ -217,7 +255,7 @@ export class SideBar {
 
   #resize(size: number): void {
     this.state.size = this.#clamp(size);
-    this.save();
+    this.owner.save();
     this.#applySize();
   }
 
@@ -288,9 +326,23 @@ export function div(doc: Document, className: string): HTMLElement {
   return element;
 }
 
+/** What a side needs of the whole layout: to save the state of both sides, and the commands. */
+export interface SideBarOwner {
+  save(): void;
+  readonly commands: PanelCommands;
+}
+
+/** What the side needs of the commands: to register each panel's, and the key of one. */
+export interface PanelCommands {
+  registerCommand(id: string, handler: () => void): Disposable;
+  keybindingLabel(id: string): string | undefined;
+}
+
 interface PanelEntry {
   body: HTMLElement;
   button: HTMLButtonElement;
+  /** Its command `workbench.view.<id>`. */
+  registration: Disposable;
   fallback: boolean;
   available: boolean;
   /** As told last through `visibility`. */
@@ -306,6 +358,9 @@ const SIZES = {
   left: { unit: 'px', min: 160, max: 480, initial: 240, step: 16, label: 'Left panel width' },
   right: { unit: '%', min: 20, max: 80, initial: 50, step: 5, label: 'Right panel width' },
 } as const;
+
+/** What can take the focus in a panel: the first of these gets it when the panel is shown from the keyboard. */
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;

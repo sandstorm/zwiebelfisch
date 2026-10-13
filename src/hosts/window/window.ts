@@ -213,6 +213,8 @@ export interface SearchProvider {
 export interface SearchItem extends QuickPickItem {
   /** Where the provider matched the query: the item is shown as given, not matched again. */
   readonly highlights?: QuickPickHighlights;
+  /** The key that does the same, as people read it (`⌘⇧F`), at the row's end. */
+  readonly keybinding?: string;
   /**
    * Opens, runs or applies what the item stands for. Called once the search is closed and the focus is back where it
    * was, still within the user's key press or click (a file picker may open).
@@ -258,6 +260,8 @@ export interface ContributedMenuItem {
   readonly group?: string;
   /** Whether it is checked, asked with the menu's context; without: not a checkbox. */
   readonly toggled?: (context: Readonly<Record<string, unknown>>) => boolean;
+  /** The key of its command as people read it, at the entry's end. */
+  readonly keybinding?: string;
 }
 
 /**

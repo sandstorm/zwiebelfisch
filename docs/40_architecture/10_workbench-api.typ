@@ -12,19 +12,23 @@ commands.registerKeybinding('Mod+Alt+KeyW', 'wordCount.count');
 
 - `registerCommand`: an id registered twice throws.
 - `executeCommand<T>(id, ...args)` calls the handler synchronously (the user's gesture, selection and focus are as now) and resolves to its result. It rejects for an unknown id and when the handler throws or rejects.
-- `registerKeybinding(key, command)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Ctrl or Cmd). The command runs without arguments, before any editor sees the key.
+- `registerKeybinding(key, command)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Cmd on the Mac, else Ctrl). The modifiers must be exactly those (VS Code's matching): `Alt+Digit1` is not AltGr+1, `Ctrl+Minus` not Ctrl+Shift+Minus. The command runs without arguments, before any editor sees the key.
+- Keys of commands for people are declared: `contributes.keybindings: [{ command, key, mac? }]` (VS Code's; `mac`: the Mac's key, if another). The workbench binds them and shows a command's key wherever it offers the command: search everywhere's command rows, menu entries, tab bar tooltips, and a side panel's rail tooltip (the key of `workbench.view.<id>`).
 - The host runs commands too: `editor.executeCommand(id, ...args)`.
 - Commands for people get a name in `contributes.commands` (VS Code's): search everywhere lists them while they are registered, as "Category: Title", and runs them without arguments. Declare only commands that work without any.
 
 ```ts
 export const wordCount = (): TypstExtension => ({
   id: 'word-count',
-  contributes: { commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }] },
+  contributes: {
+    commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }],
+    keybindings: [{ command: 'wordCount.count', key: 'Mod+Alt+KeyW' }],
+  },
   activate({ commands, subscriptions }) { subscriptions.push(commands.registerCommand('wordCount.count', () => { … })); },
 });
 ```
 
-- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
+- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`); `workbench.view.<id>` per side panel (VS Code's `workbench.view.explorer`) shows and focuses it, or hides it when it is shown and has the focus (the focus goes back where it was).
 
 == Menus <architecture-workbench-api-menus>
 
@@ -136,7 +140,7 @@ The built-in providers:
   columns: 2,
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; within a side the higher `priority` further left],
-  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`), in the rail's `alignment` group (`'top'`, the default, or `'bottom'`, at the rail's far end), by `order` there (lower first, default 0); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, and VS Code's `WebviewView` `visible` + `onDidChangeVisibility`: shown now, also as the narrow widget's overlay while open; never while unavailable, e.g. to work for the panel only while it is seen). One panel per side shows; ids are unique across both sides],
+  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`), in the rail's `alignment` group (`'top'`, the default, or `'bottom'`, at the rail's far end), by `order` there (lower first, default 0); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, and VS Code's `WebviewView` `show(preserveFocus?)` (as the viewer's pick on the rail; focuses the first control, else the panel) and `visible` + `onDidChangeVisibility`: shown now, also as the narrow widget's overlay while open; never while unavailable, e.g. to work for the panel only while it is seen). One panel per side shows; ids are unique across both sides],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor: inside a Typst editor's content, scrolling with it; around any other editor's panel; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (inside a `<typst-editor>`'s shadow root too); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],

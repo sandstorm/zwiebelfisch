@@ -26,7 +26,10 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 export function comments(): TypstExtension {
   return {
     id: 'comments',
-    contributes: { commands: [{ command: ADD_COMMENT, title: 'Add comment', category: 'Comments' }] },
+    contributes: {
+      commands: [{ command: ADD_COMMENT, title: 'Add comment', category: 'Comments' }],
+      keybindings: [{ command: ADD_COMMENT, key: 'Mod+Alt+KeyM' }],
+    },
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, commands, window, workbench, preview, subscriptions } = context;

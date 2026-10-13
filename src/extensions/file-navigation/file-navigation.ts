@@ -80,8 +80,8 @@ export function fileNavigation(): TypstExtension {
         new Disposable(() => clearTimeout(typing)),
         commands.registerCommand(BACK, () => go('back')),
         commands.registerCommand(FORWARD, () => go('forward')),
-        commands.registerKeybinding(KEYBINDINGS.forward, FORWARD),
         commands.registerKeybinding(KEYBINDINGS.back, BACK),
+        commands.registerKeybinding(KEYBINDINGS.forward, FORWARD),
       );
       show();
     },

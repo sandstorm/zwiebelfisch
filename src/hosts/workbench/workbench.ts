@@ -5,7 +5,7 @@ import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { User } from '../../core/user/user';
-import { type Commands, CommandsHost } from '../commands/commands';
+import { type Commands, CommandsHost, type KeybindingContribution } from '../commands/commands';
 import { type LanguageContribution, type Languages, LanguagesHost } from '../languages/languages';
 import { Preview, type PreviewContributions, type PreviewProgress } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
@@ -48,7 +48,7 @@ export interface TypstExtension {
   readonly id: string;
   /**
    * What the extension declares before any extension is activated (VS Code's `contributes` in an extension's
-   * manifest): its settings, commands and languages.
+   * manifest): its settings, commands, keys and languages.
    */
   readonly contributes?: ExtensionContributions;
   /** Registers the extension's contributions; everything it pushes into `context.subscriptions` is disposed with the widget. */
@@ -67,6 +67,11 @@ export interface ExtensionContributions {
    * without arguments, so declare only commands that work without any.
    */
   readonly commands?: readonly CommandContribution[];
+  /**
+   * The keys of its commands (VS Code's `contributes.keybindings`): bound for the widget's life, and shown wherever
+   * the command is offered (search everywhere, menus, rail buttons).
+   */
+  readonly keybindings?: readonly KeybindingContribution[];
   /**
    * The languages of files it knows by ending (VS Code's `contributes.languages`): `languages.getLanguageId(path)`
    * reads them, e.g. to pick the help sheet of the shown file. An ending belongs to one language.
@@ -144,7 +149,9 @@ export interface Workbench {
   registerStyleSheet(css: string): Disposable;
   /**
    * Adds a side panel with its rail button on `options.side` (one panel per side is shown at a time); disposing removes
-   * both. Ids are unique across both sides; the right side has the preview (`preview`) built in.
+   * both. Ids are unique across both sides; the right side has the preview (`preview`) built in. Each panel has a
+   * command `workbench.view.<id>` (VS Code's `workbench.view.explorer`): it shows and focuses the panel, or hides it
+   * when it is shown and has the focus (the focus back where it was). The rail button's tooltip names its key.
    */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
@@ -245,6 +252,11 @@ export interface SidePanel {
   setDefault(open: boolean): void;
   /** Shows or removes it and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
   setAvailable(available: boolean): void;
+  /**
+   * Shows it as if the viewer picked it on the rail (VS Code's `WebviewView.show`), and focuses it unless
+   * `preserveFocus`: its first focusable element, else the panel itself. Nothing while it is unavailable.
+   */
+  show(preserveFocus?: boolean): void;
   /** Closes it if it lies over the editing area (narrow widget, left side), e.g. after something was chosen in it. */
   dismiss(): void;
   dispose(): void;
@@ -380,14 +392,14 @@ export class WorkbenchHost implements Workbench {
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
     const doc = host.ownerDocument;
-    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
     this.commands = new CommandsHost(host);
+    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`), this.commands);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#tabs = new EditorTabs(this.#layout.editor, this.#menus, {
       onDidChoose: (viewType) => this.open(this.#active, { viewType }),
       context: () => ({ activeCustomEditorId: this.#activeCustomEditorId, resource: this.#active }),
-      executeCommand: (command) => this.commands.executeCommand(command),
+      commands: this.commands,
       showContextMenu: (menuId, menuOptions) => this.window.showContextMenu(menuId, menuOptions),
     });
     this.#typstEditors = new TypstEditors(project, {
@@ -431,13 +443,14 @@ export class WorkbenchHost implements Workbench {
   }
 
   /**
-   * Declares the settings and languages of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
+   * Declares the settings, keys and languages of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
    * Values set for settings no one declares are reported (console) and ignored.
    */
   activate(extensions: readonly TypstExtension[]): void {
     for (const extension of extensions) {
       this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
       this.#languages.declare(extension.contributes?.languages ?? []);
+      this.commands.declareKeybindings(extension.contributes?.keybindings ?? []);
     }
     this.#declaredCommands = extensions.flatMap((extension) => extension.contributes?.commands ?? []);
     this.#workspace.check();
@@ -551,7 +564,7 @@ export class WorkbenchHost implements Workbench {
       onDidChangeActiveFile: this.#shown.event,
       activeTextEditor: () => this.#typstEditors.activeTextEditor,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
-      menuItems: (menuId, context) => this.#menus.items(menuId, context),
+      menuItems: (menuId, context) => this.#menus.items(menuId, context).map((item) => ({ ...item, keybinding: this.commands.keybindingLabel(item.command) })),
       executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
     });
     this.#typstEditors.register(window);
@@ -616,6 +629,7 @@ export class WorkbenchHost implements Workbench {
         commandSearch({
           declared: () => this.#declaredCommands,
           isRegistered: (id) => this.commands.has(id),
+          keybindingLabel: (id) => this.commands.keybindingLabel(id),
           executeCommand: (id) => this.commands.executeCommand(id),
         }),
       ),

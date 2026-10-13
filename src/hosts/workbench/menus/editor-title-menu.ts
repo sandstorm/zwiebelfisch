@@ -1,6 +1,7 @@
 // EditorTitleMenu: the `editor/title` menu (VS Code's id) and the "View" menu at the end of the editing area's tab bar.
 // See registerMenuItem in ../workbench.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
+import type { CommandsHost } from '../../commands/commands';
 import type { ContextMenuOptions } from '../../window/window';
 import type { MenuContext } from '../workbench';
 import type { Menus } from './menus';
@@ -47,9 +48,11 @@ export class EditorTitleMenu {
 
   #button(command: string, title = command, icon?: string): HTMLButtonElement {
     const button = this.#makeButton(title, icon);
+    const key = this.options.commands.keybindingLabel(command);
+    if (key) button.title = `${title} (${key})`;
     button.dataset.command = command;
     button.addEventListener('click', () => {
-      this.options.executeCommand(command).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
+      this.options.commands.executeCommand(command).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
     });
     return button;
   }
@@ -90,8 +93,8 @@ export class EditorTitleMenu {
 export interface EditorTitleMenuOptions {
   /** What the menus are shown for now (`activeCustomEditorId`, `resource`), asked on every `update` and for "View". */
   context(): MenuContext;
-  /** Runs an entry's command (without arguments). */
-  executeCommand(command: string): Promise<unknown>;
+  /** Runs an entry's command (without arguments); names its key in the button's tooltip. */
+  readonly commands: Pick<CommandsHost, 'executeCommand' | 'keybindingLabel'>;
   /** Pops up a contributed menu (the window's). */
   showContextMenu(menuId: string, options: ContextMenuOptions): void;
   /** The buttons were shown anew (the tab bar shows itself while it has tabs or buttons). */

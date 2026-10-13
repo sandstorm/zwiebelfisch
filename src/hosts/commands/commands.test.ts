@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Tests for commands.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CommandsHost } from './commands';
+import { CommandsHost, keyLabel } from './commands';
 
-function setup() {
+function setup({ mac = false } = {}) {
   const root = document.body.appendChild(document.createElement('div'));
   const inner = root.appendChild(document.createElement('div'));
-  return { root, inner, commands: new CommandsHost(root) };
+  return { root, inner, commands: new CommandsHost(root, { mac }) };
 }
 
 function press(target: HTMLElement, init: KeyboardEventInit) {
@@ -61,8 +61,52 @@ describe('CommandsHost', () => {
     expect(run).toHaveBeenCalledTimes(1);
     expect(editor).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
-    press(inner, { code: 'KeyM', altKey: true, metaKey: true });
+  });
+
+  it('matches exactly the named modifiers: Mod is Cmd on the Mac, else Ctrl; AltGr (Ctrl+Alt) is not Alt', () => {
+    const run = vi.fn();
+    const other = setup();
+    other.commands.registerCommand('test.run', run);
+    other.commands.registerKeybinding('Alt+Digit1', 'test.run');
+    other.commands.registerKeybinding('Mod+KeyK', 'test.run');
+    expect(press(other.inner, { code: 'Digit1', altKey: true, ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(press(other.inner, { code: 'Digit1', altKey: true, shiftKey: true }).defaultPrevented).toBe(false);
+    expect(press(other.inner, { code: 'KeyK', metaKey: true }).defaultPrevented).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+    press(other.inner, { code: 'Digit1', altKey: true });
+    press(other.inner, { code: 'KeyK', ctrlKey: true });
     expect(run).toHaveBeenCalledTimes(2);
+
+    const mac = setup({ mac: true });
+    mac.commands.registerCommand('test.run', run);
+    mac.commands.registerKeybinding('Mod+KeyK', 'test.run');
+    expect(press(mac.inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(false);
+    press(mac.inner, { code: 'KeyK', metaKey: true });
+    expect(run).toHaveBeenCalledTimes(3);
+  });
+
+  it("binds the declared keys, the Mac's on the Mac, and names a command's first key as people read it", () => {
+    const declared = [
+      { command: 'test.find', key: 'Mod+Shift+KeyF' },
+      { command: 'test.files', key: 'Alt+Digit1', mac: 'Ctrl+Digit1' },
+    ];
+    const other = setup();
+    other.commands.declareKeybindings(declared);
+    other.commands.registerKeybinding('F3', 'test.find');
+    expect([other.commands.keybindingLabel('test.find'), other.commands.keybindingLabel('test.files'), other.commands.keybindingLabel('test.none')]).toEqual(['Ctrl+Shift+F', 'Alt+1', undefined]);
+    const mac = setup({ mac: true });
+    mac.commands.declareKeybindings(declared);
+    expect([mac.commands.keybindingLabel('test.find'), mac.commands.keybindingLabel('test.files')]).toEqual(['⌘⇧F', '⌃1']);
+    const run = vi.fn();
+    mac.commands.registerCommand('test.files', run);
+    press(mac.inner, { code: 'Digit1', altKey: true });
+    press(mac.inner, { code: 'Digit1', ctrlKey: true });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels keys of bindings and of the toolbar alike', () => {
+    expect(['Mod+Alt+KeyM', 'Ctrl+Shift+Minus', 'Mod+B', 'Mod+Enter', 'Meta+Slash'].map((key) => keyLabel(key, true))).toEqual(['⌘⌥M', '⌃⇧-', '⌘B', '⌘Enter', '⌘/']);
+    expect(['Mod+Alt+KeyM', 'Ctrl+Shift+Minus', 'Mod+B', 'Mod+Enter'].map((key) => keyLabel(key, false))).toEqual(['Ctrl+Alt+M', 'Ctrl+Shift+-', 'Ctrl+B', 'Ctrl+Enter']);
   });
 
   it('logs a bound command that fails, the key still taken', async () => {

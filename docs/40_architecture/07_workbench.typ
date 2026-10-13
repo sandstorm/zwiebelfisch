@@ -39,7 +39,7 @@
 == Lifecycle <architecture-workbench-lifecycle>
 
 + The constructor makes every host and the frame, and puts the CSS in: first the tokens and the frame (`typst-editor.css`) with the workbench's own (`<style id="typst-editor-styles">`), then each host's `<name>.css` (its `styleSheet`; the Visual editor's after ProseMirror's vendored `prosemirror.css`). The extensions' follow at activation.
-+ `activate(list)` declares every extension's settings (`contributes.configuration`) and languages (`contributes.languages`), and collects its commands for people (`contributes.commands`), so any declared setting and language is readable during activation. Values for undeclared ids: console warning, ignored.
++ `activate(list)` declares every extension's settings (`contributes.configuration`) and languages (`contributes.languages`), binds its keys (`contributes.keybindings`), and collects its commands for people (`contributes.commands`), so any declared setting and language is readable during activation. Values for undeclared ids: console warning, ignored.
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
 + The main file is shown (in the editor the option `viewType` names) and compiled. Views are created later, on demand, with what was registered.
 + `dispose()` disposes the extensions in reverse list order, each one's subscriptions in reverse, then the frame.

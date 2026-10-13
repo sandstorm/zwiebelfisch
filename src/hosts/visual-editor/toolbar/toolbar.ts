@@ -5,6 +5,7 @@ import { FloatingBar } from './floating-bar';
 import { TextStyleMenu, textStyleEntries } from './text-style-menu';
 import { ToolbarMenu, type MenuItems } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
+import { keyLabel } from '../../commands/commands';
 import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyle, type TextStyleProvider, type VisualEditorContext } from '../visual-editor';
 
 /**
@@ -174,7 +175,7 @@ export class Toolbar {
     else button.textContent = action.text ?? action.label;
     button.classList.toggle('typst-toolbar__button--text', !action.icon);
     button.setAttribute('aria-label', action.label);
-    button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
+    button.title = action.shortcut ? `${action.label} (${keyLabel(action.shortcut)})` : action.label;
     button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.tiptap.chain().focus()).run()));
     refreshers.push(() => {
       button.disabled = action.enabled ? !action.enabled(this.tiptap) : action.run !== undefined && !action.run(this.tiptap.can().chain()).run();
@@ -232,9 +233,4 @@ function isAction(entry: Entry): entry is ToolbarAction {
 /** Whether it is a button or control of its own (not actions for a menu). */
 function isShown(entry: Entry): entry is ToolbarAction | ToolbarControl {
   return !('provideActions' in entry);
-}
-
-function shortcutText(shortcut: string): string {
-  const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-  return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace('Alt', mac ? '⌥' : 'Alt').replace(/\+/g, mac ? '' : '+');
 }

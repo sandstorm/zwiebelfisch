@@ -72,6 +72,8 @@
   font: 13px system-ui, sans-serif;
 }
 .typst-context-menu__item {
+  display: flex;
+  align-items: baseline;
   border: 0;
   border-radius: 6px;
   padding: 4px 10px;
@@ -136,6 +138,9 @@
 .typst-quick-pick__item[aria-selected='true'] { background: var(--te-selected); color: var(--te-text); }
 .typst-quick-pick__description { color: var(--te-muted); font-size: 12px; }
 .typst-quick-pick__detail { flex-basis: 100%; color: var(--te-muted); font-size: 12px; }
+/* A command's key at the row's end (search everywhere's commands, menus). */
+.typst-quick-pick__keybinding,
+.typst-context-menu__keybinding { margin-left: auto; padding-left: 16px; color: var(--te-muted); font: inherit; font-size: 12px; white-space: nowrap; }
 /* withProgress, ProgressLocation.Window: a spinner and the text in the status bar. */
 .typst-editor__progress {
   display: flex;

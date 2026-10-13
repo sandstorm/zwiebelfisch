@@ -6,7 +6,7 @@ import { formatValue } from '../model/describe';
 
 /**
  * The contributions of the extensions it `instrument`s, in the order they were made: every `register…` call on their
- * contexts' namespaces and the settings they declare, each described in its point's terms (contribution-points.ts),
+ * contexts' namespaces and the settings and keys they declare, each described in its point's terms (contribution-points.ts),
  * with where it was made and whether it was disposed since.
  *
  * Instrumenting wraps an extension's `activate`: its context's namespaces become proxies that pass every call through
@@ -28,6 +28,10 @@ export class ContributionLog {
         let activating = true;
         for (const [id, property] of Object.entries(extension.contributes?.configuration?.properties ?? {})) {
           this.#entries.push({ extension: extension.id, point: 'contributes.configuration', ...describeSetting(id, property), arguments: formatValue(property).text, location: undefined, late: false, disposed: false });
+        }
+        for (const binding of extension.contributes?.keybindings ?? []) {
+          const description = describeContribution('commands.registerKeybinding', [binding.key, binding.command]);
+          this.#entries.push({ extension: extension.id, point: 'contributes.keybindings', ...description, arguments: formatValue(binding).text, location: undefined, late: false, disposed: false });
         }
         const record: Recorder = (point, args, location) => {
           const entry = { extension: extension.id, point, ...describeContribution(point, args), arguments: formatValue(args).text, location, late: !activating, disposed: false };

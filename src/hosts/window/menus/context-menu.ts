@@ -4,7 +4,7 @@ import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../win
 /**
  * What `showContextMenu` shows. One menu at a time over the widget `host` (a new one closes the open one): a
  * `role="menu"` list of the menu's entries, a separator between groups, an entry with `toggled` as a checkbox entry
- * (`menuitemcheckbox`, a check mark while it holds), fixed at its anchor and kept inside the
+ * (`menuitemcheckbox`, a check mark while it holds), an entry's key at its end, fixed at its anchor and kept inside the
  * viewport. The first entry gets the focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press
  * elsewhere closes the menu and gives the focus back to the element that had it; a chosen entry's command runs after
  * that (a failing one is logged: it tells the user itself). A menu without entries is not shown.
@@ -27,6 +27,7 @@ export class ContextMenu {
     const entries = items.map((item) => ({
       label: item.title ?? item.command,
       group: item.group,
+      keybinding: item.keybinding,
       checked: item.toggled?.(context),
       run: () => this.#run(item.command, args),
     }));
@@ -95,6 +96,7 @@ class MenuList {
     check.setAttribute('aria-hidden', 'true');
     check.textContent = entry.checked ? '✓' : '';
     item.append(check, entry.label);
+    if (entry.keybinding) item.append(' ', element(doc, 'kbd', 'typst-context-menu__keybinding', entry.keybinding));
     item.addEventListener('click', () => {
       this.close();
       entry.run();
@@ -133,14 +135,16 @@ class MenuList {
 interface Entry {
   readonly label: string;
   readonly group?: string;
+  readonly keybinding?: string;
   /** Checked or not for a checkbox entry; undefined for any other. */
   readonly checked?: boolean;
   run(): void;
 }
 
-function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
+function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
   const node = doc.createElement(tag);
   node.className = className;
+  if (text !== undefined) node.textContent = text;
   return node;
 }
 

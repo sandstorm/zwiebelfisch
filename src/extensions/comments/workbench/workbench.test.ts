@@ -23,7 +23,6 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
         commands.set(id, handler);
         return new Disposable(() => commands.delete(id));
       },
-      registerKeybinding: () => new Disposable(() => {}),
     },
     workbench: { registerMenuItem: () => new Disposable(() => {}) },
   };

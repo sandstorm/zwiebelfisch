@@ -418,13 +418,18 @@ class OnePicker<T extends string | QuickPickItem> {
   }
 }
 
-/** An item's label, description and detail, the `highlights` marked. */
-function itemElement(doc: Document, item: string | QuickPickItem, highlights: QuickPickHighlights = {}): HTMLElement {
+/** An item's label, description, key (search everywhere's) and detail, the `highlights` marked. */
+function itemElement(doc: Document, item: string | (QuickPickItem & { keybinding?: string }), highlights: QuickPickHighlights = {}): HTMLElement {
   const option = element(doc, 'div', 'typst-quick-pick__item');
   option.append(highlighted(doc, 'typst-quick-pick__label', labelOf(item), highlights.label));
   if (typeof item === 'string') return option;
   // a space before each further part: the option's accessible name reads as words
   if (item.description) option.append(' ', highlighted(doc, 'typst-quick-pick__description', item.description, highlights.description));
+  if (item.keybinding) {
+    const key = element(doc, 'kbd', 'typst-quick-pick__keybinding');
+    key.textContent = item.keybinding;
+    option.append(' ', key);
+  }
   if (item.detail) option.append(' ', highlighted(doc, 'typst-quick-pick__detail', item.detail, highlights.detail));
   return option;
 }
