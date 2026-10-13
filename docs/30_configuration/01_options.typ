@@ -48,7 +48,6 @@ Colors and dark mode in detail: @configuration-embedding-theming.
 #table(
   columns: 3,
   [Setting], [Values (default)], [Effect],
-  [`spellcheck.enabled`], [`true`, `false` (`true`)], [Whether the browser checks the spelling in the Visual editor, in the language of the document's `set text(lang: ..)`.],
 )
 
 === Preview <configuration-options-preview>

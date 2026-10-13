@@ -22,7 +22,6 @@ This project is both an *authoring environment* and an *embeddable WYSIWYG edito
 - **Page layout:** page breaks and rules
 - **Full Typst support:** if an element is not supported natively, e.g. maths like $E=m*c^2$, we always fall back to the raw Typst source.
 - **Files:** a file panel for every file of the project
-- **Spelling**, checked in the document's language
 - **PDF** download
 
 ### User experience
