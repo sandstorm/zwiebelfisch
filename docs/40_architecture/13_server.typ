@@ -27,6 +27,7 @@ type Authenticate = (token: string, room: string) => Promise<AuthenticatedUser>;
   table.header[Y.Doc entry][Content][Rooms],
   [`files`], [`Y.Map<path, Y.Text>`: every `.typ` file], [all],
   [awareness], [`user`, `cursor` (relative positions)], [all],
+  [`project`], [`Y.Map`: `main`, the main file's path], [not GitLab],
   [`assets`], [`Y.Map<path, sha | Uint8Array>`: the other files (blob sha, or uploaded bytes not committed yet)], [GitLab],
   [`meta`], [written by the server: the base (`baseSha`, `base`, `baseAssets`, `lastCommits`), `changes`, `conflict`, `commitFailure`, `autoCommit`; see `room-protocol.ts`], [GitLab],
 )

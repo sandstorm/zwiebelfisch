@@ -50,7 +50,8 @@ import widgetStyles from './typst-editor.css?inline';
  * devtools wrap the final list, so they record every extension's contributions, the host's too.
  *
  * A Typst document is a project of files, and the main file is one of them. So the host gives and gets every file
- * through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's text. What a feature lets
+ * through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's text, and `mainFile`
+ * says which file that is. What a feature lets
  * the host configure is a setting its extension declares (`settings: { 'pdfExport.download': false }`), so the
  * options stay the same when features come and go. `<typst-editor>` wraps this function as a custom element.
  *
@@ -58,8 +59,9 @@ import widgetStyles from './typst-editor.css?inline';
  * `host` before calling this. See docs/30_configuration/02_embedding.typ, "createTypstEditor".
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
-  const main = ProjectPath.of(options.main ?? '/main.typ');
-  const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
+  const main = ProjectPath.of(options.mainFile?.path ?? '/main.typ');
+  const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
+  const project = new Project(main, files, { mainLocked: options.mainFile?.locked });
   const workbench = new WorkbenchHost(host, project, {
     viewType: options.viewType,
     user: options.user,
@@ -72,8 +74,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const builtins = builtinExtensions();
   workbench.activate(devtools(options.extensions?.(builtins) ?? builtins));
   // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
-  const subscription = project.onDidChangeFile((change) => options.onFilesChange?.(change));
-  const document = project.document(main)!;
+  const subscriptions = [
+    project.onDidChangeFile((change) => options.onFilesChange?.(change)),
+    project.onDidChangeMain((path) => options.onMainFileChange?.(path)),
+  ];
   return {
     get files() {
       return project.files();
@@ -84,10 +88,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       workbench.open(workbench.window.activeFile);
     },
     get source() {
-      return document.text;
+      return project.document(project.main)!.text;
     },
     set source(text: string) {
-      project.apply({ kind: 'update', path: main, content: text });
+      project.apply({ kind: 'update', path: project.main, content: text });
     },
     get settings() {
       return workbench.settings;
@@ -105,7 +109,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
     exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
     dispose: () => {
-      subscription.dispose();
+      for (const subscription of subscriptions) subscription.dispose();
       workbench.dispose();
       project.dispose();
     },
@@ -119,11 +123,14 @@ export interface TypstEditorOptions {
    * on first import.
    */
   files?: ProjectFiles;
-  /** Path of the main file (default `/main.typ`). It is compiled, and cannot be renamed or deleted. */
-  main?: string;
   /**
-   * Shortcut for the main file's text, for hosts with a single file: wins over `files[main]`. Without either,
-   * the main file starts empty.
+   * The main file (default `/main.typ`): the one compiled; it cannot be renamed or deleted. Users can make another
+   * `.typ` file the main one ("Set as main file"), unless `locked`.
+   */
+  mainFile?: { path: string; locked?: boolean };
+  /**
+   * Shortcut for the main file's text, for hosts with a single file: wins over `files[mainFile.path]`. Without
+   * either, the main file starts empty.
    */
   source?: string;
   /**
@@ -141,6 +148,8 @@ export interface TypstEditorOptions {
    * create / rename / delete, the collaborators' changes and assignments to `files` / `source`.
    */
   onFilesChange?(change: FileChange): void;
+  /** Called with the new main file's path when another file became the main file, a collaborator's change included. */
+  onMainFileChange?(path: ProjectPath): void;
   /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
   onOpen?(path: ProjectPath): void;
   /** Who works here: the name (and cursor color) others see when collaborating, who commits to GitLab and signs comments. */
@@ -168,8 +177,8 @@ export interface TypstEditor {
    */
   files: ProjectFiles;
   /**
-   * Shortcut for the main file's text (`files[main]`). Assigning replaces it as one minimal edit (only the
-   * differing middle changes), reported through `onFilesChange` as an `update`.
+   * Shortcut for the text of the main file, whichever it is now. Assigning replaces it as one minimal edit (only
+   * the differing middle changes), reported through `onFilesChange` as an `update`.
    */
   source: string;
   /**

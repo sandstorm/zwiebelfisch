@@ -69,25 +69,25 @@ describe('FilePanel', () => {
   it('lists the files as a tree, marks the main and the active one, and opens on click', () => {
     const { parent, onOpen, item, items } = setup();
     expect(parent.querySelector('[role=tree]')).not.toBeNull();
-    expect(items().map((t) => t.title)).toEqual(['chapter.typ', 'logo.png', 'main.typ']);
+    expect(items().map((t) => t.title)).toEqual(['main.typ', 'chapter.typ', 'logo.png']);
     expect(item('main.typ').getAttribute('aria-selected')).toBe('true');
     expect(item('main.typ').textContent).toContain('Main');
     item('chapter.typ').click();
     expect(onOpen).toHaveBeenCalledWith(path('/chapter.typ'));
   });
 
-  it('shows folders first, collapsed, and expands them on click (remembering it)', () => {
+  it('shows the main file first, then folders, collapsed, and expands them on click (remembering it)', () => {
     const { item, items, memory } = setup(undefined, nested);
-    expect(items().map((t) => t.title)).toEqual(['chapters', 'img', 'data.csv', 'main.typ']);
+    expect(items().map((t) => t.title)).toEqual(['main.typ', 'chapters', 'img', 'data.csv']);
     expect(item('chapters').getAttribute('aria-expanded')).toBe('false');
     item('chapters').click();
     expect(items().map((t) => [t.title, t.getAttribute('aria-level')])).toEqual([
+      ['main.typ', '1'],
       ['chapters', '1'],
       ['chapters/end.typ', '2'],
       ['chapters/intro.typ', '2'],
       ['img', '1'],
       ['data.csv', '1'],
-      ['main.typ', '1'],
     ]);
     expect(memory.update).toHaveBeenLastCalledWith('openFolders', [path('/chapters')]);
   });
@@ -165,7 +165,7 @@ describe('FilePanel', () => {
 
     it('Shift+F10 and the context menu key show the context menu of the focused row, below it', () => {
       const { item, menus } = setup();
-      press(item('main.typ'), 'Home'); // chapter.typ
+      press(item('main.typ'), 'ArrowDown'); // chapter.typ
       press(item('chapter.typ'), 'F10', { shiftKey: true });
       press(item('chapter.typ'), 'ContextMenu');
       expect(menus.map(({ anchor, args }) => [anchor, args])).toEqual([
@@ -250,7 +250,10 @@ describe('FilePanel', () => {
       const tree = parent.querySelector<HTMLElement>('[role=tree]')!;
       item('chapters').focus();
       expect(item('main.typ').tabIndex).toBe(0); // the shown file is the tab stop
-      press(item('main.typ'), 'Home');
+      press(item('main.typ'), 'End');
+      press(item('data.csv'), 'Home');
+      expect(document.activeElement).toBe(item('main.typ'));
+      press(item('main.typ'), 'ArrowDown');
       expect(document.activeElement).toBe(item('chapters'));
       press(item('chapters'), 'ArrowRight');
       expect(item('chapters').getAttribute('aria-expanded')).toBe('true');
@@ -271,7 +274,7 @@ describe('FilePanel', () => {
     it('F2 renames and Delete deletes the focused row', async () => {
       const { item, change, answers, asked, warned } = setup();
       item('chapter.typ').focus();
-      press(item('main.typ'), 'Home');
+      press(item('main.typ'), 'ArrowDown');
       press(item('chapter.typ'), 'F2');
       expect(asked[0].value).toBe('chapter.typ');
       answers.push('Delete');

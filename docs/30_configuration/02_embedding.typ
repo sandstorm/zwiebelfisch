@@ -85,6 +85,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
   [`exportPdf(options?)`], [The PDF as a `Blob` (@configuration-embedding-pdf).],
   [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
   [`files-change` event], [`detail`: the `FileChange`, as `onFilesChange` gets it.],
+  [`main-file-change` event], [`detail: { path }`: another file became the main file, also by a collaborator.],
   [`open` event], [`detail: { path }`: another file is shown.],
 )
 
@@ -94,7 +95,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
 
 ```js
 const editor = document.createElement('typst-editor');
-editor.options = { main: '/thesis.typ', files, viewType: 'sourceEditor', user: { name: 'Ada' } };
+editor.options = { mainFile: { path: '/thesis.typ' }, files, viewType: 'sourceEditor', user: { name: 'Ada' } };
 editor.setAttribute('settings', JSON.stringify({ 'files.panel': 'show' }));
 document.body.append(editor);   // options are read now
 ```
@@ -116,7 +117,7 @@ typst-editor { --te-accent: rebeccapurple; }   /* also --te-border, --te-bg, --t
 import { createTypstEditor } from 'typst-editor';
 
 const editor = createTypstEditor(host, {   // attach host to the document first, give it a height
-  main: '/thesis.typ',
+  mainFile: { path: '/thesis.typ' },
   files: {
     '/thesis.typ': '#include "chapters/intro.typ"\n#image("logo.png")',
     '/chapters/intro.typ': '= Introduction\n',

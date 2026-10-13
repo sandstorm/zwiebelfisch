@@ -16,10 +16,11 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  * Most widgets never collaborate, so this entry stays small. The Yjs side (Collaboration in model/model.ts) is a chunk
  * of its own that CollaborationLink loads on demand; nothing outside model/ imports it other than as a type.
  * Sharing works on the documents, not the editors: each Typst file's text is bound to a Y.Text, and the editors keep
- * following their TypstDocument. The other users' places come back as `Presences`, which the extension draws itself
- * through the hosts' generic contribution points: CodeMirror extensions in the Source editors (source-editor/, which
- * also keeps other users' edits out of the undo history), highlights, decorations and raw box code in the Visual
- * editors (visual-editor/), file decorations in the workbench (workbench/).
+ * following their TypstDocument; outside GitLab rooms, the main file is the room's too. The other users' places come
+ * back as `Presences`, which the extension draws itself through the hosts' generic contribution points: CodeMirror
+ * extensions in the Source editors (source-editor/, which also keeps other users' edits out of the undo history),
+ * highlights, decorations and raw box code in the Visual editors (visual-editor/), file decorations in the workbench
+ * (workbench/).
  *
  * Until the room's text is in the project, the editing area shows "Connecting to the room…" and takes no input. In a
  * room backed by a GitLab branch, the branch is a source control, and the browser warns before the last user leaves

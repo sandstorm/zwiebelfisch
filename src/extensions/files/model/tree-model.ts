@@ -4,10 +4,11 @@ import { ProjectPath } from '../../../core/paths/paths';
 
 /**
  * The project's files as a tree: folders come from the paths, plus `folders`
- * (empty folders made in the panel). Each folder lists its folders first,
- * then its files, both by name (numbers by value: 2 before 10).
+ * (empty folders made in the panel). Each folder lists the main file `main` (if
+ * it holds it) first, then its folders, then its files, both by name (numbers by
+ * value: 2 before 10).
  */
-export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = []): TreeEntry {
+export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = [], main?: ProjectPath): TreeEntry {
   const root: TreeEntry = { kind: 'folder', path: null, name: '', children: [] };
   const index = new Map<Folder, TreeEntry>([[null, root]]);
   const folder = (path: Folder): TreeEntry => {
@@ -21,7 +22,8 @@ export function buildTree(paths: readonly ProjectPath[], folders: Iterable<Proje
   };
   for (const path of folders) folder(path);
   for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: ProjectPath.name(path), children: [] });
-  for (const entry of index.values()) entry.children.sort(compare);
+  const rank = (entry: TreeEntry) => (entry.path === main ? 0 : entry.kind === 'folder' ? 1 : 2);
+  for (const entry of index.values()) entry.children.sort((a, b) => rank(a) - rank(b) || collator.compare(a.name, b.name));
   return root;
 }
 
@@ -33,7 +35,7 @@ export interface TreeEntry {
   kind: 'file' | 'folder';
   path: Folder;
   name: string;
-  /** Folders only: sorted, folders first. */
+  /** Folders only: sorted, the main file first, then folders. */
   children: TreeEntry[];
 }
 
@@ -104,10 +106,6 @@ export function navigate(rows: readonly Row[], current: ProjectPath | null, key:
   const index = rows.findIndex((row) => row.path === current);
   if (index < 0) return FOCUS_KEYS.has(key) && rows.length > 0 ? { kind: 'focus', path: rows[0].path } : null;
   return Object.hasOwn(KEYS, key) ? KEYS[key](rows, index) : null;
-}
-
-function compare(a: TreeEntry, b: TreeEntry): number {
-  return Number(b.kind === 'folder') - Number(a.kind === 'folder') || collator.compare(a.name, b.name);
 }
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });

@@ -47,6 +47,22 @@ afterEach(() => {
 });
 
 describe('files and source', () => {
+  it('`mainFile` names the main file; `source` and `onMainFileChange` follow when another becomes it, unless locked', async () => {
+    const onMainFileChange = vi.fn();
+    const files = { '/thesis.typ': '= Thesis', '/a.typ': 'A' };
+    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files, onMainFileChange });
+    expect(editor.source).toBe('= Thesis');
+    await editor.executeCommand('files.setMainFile', '/a.typ');
+    expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
+    expect(editor.source).toBe('A');
+    editor.source = 'A!';
+    expect(editor.files['/a.typ']).toBe('A!');
+    const locked = setup({ mainFile: { path: '/thesis.typ', locked: true }, files, onMainFileChange }).editor;
+    await locked.executeCommand('files.setMainFile', '/a.typ');
+    expect(locked.source).toBe('= Thesis');
+    expect(onMainFileChange).toHaveBeenCalledTimes(1);
+  });
+
   it('`files` holds every file, the main one included; `source` is the main file\'s text', () => {
     const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' } });
     expect(editor.files).toEqual({ '/main.typ': '= Main', '/a.typ': 'A' });
@@ -83,7 +99,7 @@ describe('the file panel in the widget', () => {
     expect(single.host.querySelector('[data-testid=typst-panel-toggle-files]')).not.toBeNull();
     const several = setup({ source: '= Hello', files: { '/chapters/intro.typ': 'Intro' } });
     expect(several.filesOpen()).toBe(true);
-    expect(several.items().map((t) => t.title)).toEqual(['chapters', 'main.typ']);
+    expect(several.items().map((t) => t.title)).toEqual(['main.typ', 'chapters']);
   });
 
   it('`hide` shows no panel and no rail button; `show` opens it for one file', () => {

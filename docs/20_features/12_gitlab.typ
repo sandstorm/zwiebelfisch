@@ -9,6 +9,8 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *It saves by itself* when nobody edited for 10 minutes, and when the last user leaves.
 
+*The main file is your own:* "Set as main file" changes it for you only.
+
 *Changes on GitLab* (pushes, merges) are merged into the open project.
 
 *Conflicts must be resolved by hand:* where the project and GitLab changed the same lines, nothing is merged or saved. The status bar warns "Conflict with GitLab: main.typ". Make the lines match, here or on GitLab, then save again.

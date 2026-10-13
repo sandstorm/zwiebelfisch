@@ -54,13 +54,14 @@ editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };   // replac
   columns: 3,
   [Option], [Type (default)], [Meaning],
   [`files`], [`{ [path]: string | Uint8Array }` (`{}`)], [Every file by absolute path (@configuration-embedding-files): Typst as `string`, images and data as `Uint8Array`.],
-  [`main`], [path (`'/main.typ'`)], [The compiled file. It cannot be renamed or deleted.],
-  [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[main]`.],
+  [`mainFile`], [`{ path, locked? }` (`{ path: '/main.typ' }`)], [The compiled file. It cannot be renamed or deleted. Users can make another `.typ` file the main one, for this page only; a collaboration room shares it (not a GitLab room). `locked: true` keeps it fixed, also against the room.],
+  [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[mainFile.path]`.],
   [`viewType`], [`'visualEditor'` (default), `'sourceEditor'`], [The editor Typst files open in, until the user picks the other tab.],
   [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them. `color` is their cursor color.],
   [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings).],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
   [`onFilesChange(change)`], [callback], [Every change to any file (@configuration-embedding-files).],
+  [`onMainFileChange(path)`], [callback], [Another file became the main file, also by a collaborator.],
   [`onOpen(path)`], [callback], [Another file is shown, e.g. to keep it in the URL.],
   [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],
 )
@@ -79,7 +80,7 @@ A thesis portal: one project per student, saved on the portal's server, its own 
 import { createTypstEditor } from 'typst-editor';
 
 const editor = createTypstEditor(document.getElementById('thesis')!, {
-  main: '/thesis.typ',
+  mainFile: { path: '/thesis.typ', locked: true },
   files: await loadProject(studentId),            // { '/thesis.typ': '…', '/figures/setup.png': Uint8Array, … }
   user: { name: 'Ada Example', color: '#1d5fa8' },
   settings: {

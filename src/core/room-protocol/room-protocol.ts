@@ -9,6 +9,12 @@
  */
 export const FILES_MAP = 'files';
 
+/**
+ * The Y.Doc map of the project's state besides its files, written by clients: `main`, the path of the main file
+ * (collaboration's SharedMainFile; not in GitLab-backed rooms).
+ */
+export const PROJECT_MAP = 'project';
+
 /** Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`. */
 export const GITLAB_ROOM_PREFIX = 'gitlab:';
 

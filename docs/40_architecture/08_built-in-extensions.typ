@@ -24,7 +24,7 @@ extensions/<name>/
   [`markdown`], [Markdown pasted as Typst (`typst.markdown`, a small lossy converter); first where the text is surely Markdown, else in the "Paste as" chip], [paste edit],
   [`wordProcessors`], [HTML from Word, Google Docs, LibreOffice cleaned before the Visual editor reads it (lists, Office tags, empty paragraphs)], [Tiptap extension (`transformPastedHTML`)],
   [`documentLinks`], [file paths in Typst text as links; `documentLinks.createFile`], [document links],
-  [`files`], [the file panel (Alt+1 / ⌃1) and its commands; the read-only fallback editor; search group "Files"], [side panel, menus, custom editor, search],
+  [`files`], [the file panel (Alt+1 / ⌃1) and its commands, "Set as main file" among them; the read-only fallback editor; search group "Files"], [side panel, menus, custom editor, search],
   [`search`], [the side panel "Find in files" (magnifier): text or regex in the project, current file or a folder; Replace mode with one Undo; matches highlighted in both editors; ⌘⇧F, ⌘⇧H, Alt+3 / ⌃3, "Find in folder…"; search everywhere's row "Find in files: …"], [side panel, commands, keys, menu, highlights, search],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
   [`help`], [the side panel "Help" with the shown file's help sheets; rows drag or insert into the editor], [side panel, commands, menu, Tiptap extension],
@@ -61,7 +61,7 @@ extensions/<name>/
 
 Exported from the package, not in the list; a host adds it.
 
-- *`collaboration(options)`* shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection, shows other users in every editor and registers a GitLab room's source control (@architecture-server).
+- *`collaboration(options)`* shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server).
 
 == How they meet <architecture-built-in-extensions-meeting>
 

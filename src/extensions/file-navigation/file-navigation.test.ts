@@ -130,4 +130,14 @@ describe('file navigation: reading order', () => {
     vi.advanceTimersByTime(100);
     expect(links()).toEqual(['← main.typ', 'appendix.typ →']);
   });
+
+  it('reads the order from a new main file at once', () => {
+    const { host, project, workbench } = setup();
+    project.apply({ kind: 'create', path: path('/book.typ'), content: '= Book\n#include "chapter.typ"\n' });
+    workbench.open(path('/chapter.typ'));
+    const links = () => [...host.querySelectorAll<HTMLElement>('nav.typst-file-navigation--bottom button')].map((button) => button.textContent);
+    expect(links()).toEqual(['← main.typ']);
+    expect(project.setMain(path('/book.typ'))).toBeNull();
+    expect(links()).toEqual(['← book.typ']);
+  });
 });
