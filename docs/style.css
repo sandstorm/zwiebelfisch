@@ -29,6 +29,7 @@ body > header {
 }
 body > header img { height: 2.25rem; display: block; }
 body > header nav a { font-weight: 700; text-decoration: none; }
+body > header nav a + a { margin-left: 1.25rem; }
 body > footer {
   margin: 4rem 0 2rem;
   padding-top: 1rem;

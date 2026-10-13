@@ -14,12 +14,16 @@
 /// A chapter file's first `= …` heading, without its label.
 #let chapter-title(path) = read(path).match(regex("(?m)^= (.+?)\s*(<[^>]*>)?\s*$")).captures.at(0)
 
-/// What every page has around its content; `root` leads from the page to the site's top folder.
+/// What every page has around its content; `root` leads from the page to the site's top folder. "Try it" opens these
+/// docs in the demo, which the published site has in demo/ (.github/workflows/pages.yml).
 #let site-page(root, body) = {
   html.link(rel: "stylesheet", href: root + "style.css")
   html.header({
     link(root + "index.html", html.img(src: root + "assets/sandstorm-logo.svg", alt: "Sandstorm"))
-    html.nav(link(root + "index.html")[Contents])
+    html.nav({
+      link(root + "demo/?example=docs")[Try it: edit these docs in the editor]
+      link(root + "index.html")[Contents]
+    })
   })
   html.main(body)
   html.footer[#company · #link("https://sandstorm.de")[sandstorm.de]]

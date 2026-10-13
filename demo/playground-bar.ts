@@ -17,16 +17,21 @@ export interface BarActions {
   simulateUpstream(change: UpstreamChange): Promise<string>;
 }
 
+export interface BarOptions {
+  /** Whether a playground server may be there; false (the static site): Collaborate and GitLab are shown unavailable. */
+  server: boolean;
+}
+
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
  * every state has a URL), the user's name, a link that opens a second window
  * as another user in the same room, the server status with the command to
  * start it, and in GitLab mode "Simulate upstream commit".
  */
-export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions): PlaygroundBar {
+export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions, options: BarOptions = { server: true }): PlaygroundBar {
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
-  root.append(examplesNav(state, params), modesNav(state, params), userForm(state, params, actions));
+  root.append(examplesNav(state, params), modesNav(state, params, options), userForm(state, params, actions));
   if (state.mode !== 'local') root.append(secondWindow(state, params));
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
@@ -105,12 +110,18 @@ function nav(label: string, links: { text: string; href: string | null; current:
   return element;
 }
 
-function modesNav(state: PlaygroundState, params: URLSearchParams): HTMLElement {
+function modesNav(state: PlaygroundState, params: URLSearchParams, { server }: BarOptions): HTMLElement {
   return nav(
     'Mode',
-    MODES.map(({ mode, label }) => ({ text: label, href: modeQuery(mode, params), current: mode === state.mode })),
+    MODES.map(({ mode, label }) =>
+      server || mode === 'local'
+        ? { text: label, href: modeQuery(mode, params), current: mode === state.mode }
+        : { text: label, href: null, current: false, title: NO_SERVER },
+    ),
   );
 }
+
+const NO_SERVER = 'Needs the playground server, which this static site does not have: run mise run demo in a checkout';
 
 function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarActions): HTMLElement {
   const input = el('input', { name: 'user', size: '10', 'aria-label': 'Your name' });

@@ -36,6 +36,8 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
 
 *Examples:* start with *Simple*, which opens first: one page with the main features, each with what to try. *Advanced* is a report in several files (template, chapters, custom styles, a spreadsheet, diagrams, figures and references); GitLab mode always uses it. *Documentation* is this book; with `mise run demo` your edits are saved to `docs/`.
 
+*Without installing anything:* the published docs (GitHub Pages) have the demo next to them, "Try it" in each page's header. It opens this book in the editor, Visual, Source and preview, all in the browser. It is read-only: nothing is saved, and reloading the page starts over. Collaborate and GitLab mode need the playground server, so they are not offered there. `mise run build:demo -- --base ./ --mode static` builds it.
+
 *The URL holds the state*, so a reload or a shared link opens the same place:
 
 #table(

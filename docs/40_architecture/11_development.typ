@@ -90,7 +90,7 @@ On `mise run demo` and `mise run demo:build`, the Documentation example (`?examp
 - *Saving*: an edit is written once typing pauses. A create, rename, delete or upload in the file panel happens on disk first. The playground bar says "Saving…", "Saved to …", or why not.
 - *Changes on disk* (a checkout, another editor) show up without a reload; unsaved edits in the editor are kept and the next edit saves over the disk.
 - *No lost writes*: each write names the version it replaces (`If-Match`), and the server refuses it (412, "Not saved") when the file on disk is another.
-- *A static build* has no file API: edits stay in the page, and the bar says so.
+- *A static build* has no file API: edits stay in the page, and the bar says so (the static site, @architecture-development-release: its banner).
 
 Depth (path guard, token, protocol): `docsFiles` in `demo/docs-files/plugin.ts`.
 
@@ -127,7 +127,7 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 
 GitHub runs the same mise tasks as a checkout (`.github/workflows/`; the tools come from `mise.toml` through `jdx/mise-action`). Every push and pull request runs CI: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` are kept when it fails). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
 
-Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/`. The demo there has no server: Local mode works, Collaborate and GitLab do not.
+Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/`, linked from each page's header ("Try it"). The demo there is the static site (`build:demo -- --mode static`, `demo/static-site.ts`): it opens the Documentation example, editable but read-only (a banner says nothing is saved, ⌘S / Ctrl+S says so too, a reload starts over); Collaborate and GitLab show as unavailable, as there is no server.
 
 A release is a version tag: `git tag v1.2.3 && git push origin v1.2.3`. The tag first runs all of CI, end-to-end tests included (`release.yml` calls `ci.yml`); only when it passes does it publish, all on GitHub:
 
