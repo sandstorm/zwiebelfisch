@@ -23,6 +23,20 @@ function setup(text = '@book{a}\n') {
 }
 
 describe('TextFileEditor', () => {
+  it('indents the selected lines with Tab, outdents with Shift+Tab; Escape, then Tab goes to the browser', () => {
+    const { view } = setup('a\nb\n');
+    const press = (shiftKey = false) => !view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', keyCode: 9, shiftKey, bubbles: true, cancelable: true }));
+    view.dispatch({ selection: { anchor: 0, head: 3 } });
+    expect(press()).toBe(true);
+    expect(view.state.doc.toString()).toBe('  a\n  b\n');
+    expect(press(true)).toBe(true);
+    expect(view.state.doc.toString()).toBe('a\nb\n');
+    view.dispatch({ selection: { anchor: 0 } });
+    view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+    expect(press()).toBe(false);
+    expect(view.state.doc.toString()).toBe('a\nb\n');
+  });
+
   it('shows the file with its name', () => {
     const { parent, view } = setup();
     expect(parent.querySelector('[data-testid=typst-text-file] h2')?.textContent).toBe('refs.bib');

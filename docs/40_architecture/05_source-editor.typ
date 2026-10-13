@@ -28,6 +28,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 ```
 
 - *Mechanism kept:* `basicSetup`, `codeColors`, line wrapping, the reveal highlight, selection reporting.
+- *Tab* indents the selected lines, Shift+Tab outdents them (`indentWithTab`, two spaces); Escape, then Tab moves the focus on (CodeMirror's way out). The text files' editor does the same.
 
 == codeColors <architecture-source-editor-code-colors>
 

@@ -1,7 +1,8 @@
 // TextFileEditor: a text file in plain CodeMirror. See textFiles in ../text-files.ts.
 import { basicSetup } from 'codemirror';
+import { indentWithTab } from '@codemirror/commands';
 import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { codeColors } from '../../../hosts/source-editor/source-editor';
 
@@ -35,6 +36,8 @@ export class TextFileEditor {
       doc: options.text,
       extensions: [
         basicSetup,
+        // Tab and Shift+Tab indent and outdent the selected lines; Escape, then Tab moves the focus on (CodeMirror's)
+        keymap.of([indentWithTab]),
         codeColors,
         EditorView.lineWrapping,
         options.extensions ?? [],

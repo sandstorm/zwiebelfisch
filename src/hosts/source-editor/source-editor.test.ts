@@ -160,3 +160,25 @@ describe('shared CodeMirror extensions', () => {
     expect(() => host.registerSharedCodeMirrorExtension(shared)).not.toThrow();
   });
 });
+
+describe('Tab in the SourceEditor', () => {
+  /** Presses `name` (with Shift: `shift`) in `view`; returns whether something consumed it (the browser does nothing then). */
+  const press = (view: EditorView, name: 'Tab' | 'Escape', shift = false) =>
+    // with its keyCode, which CodeMirror reads for Escape, then Tab
+    !view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: name, keyCode: KEY_CODES[name], shiftKey: shift, bubbles: true, cancelable: true }));
+  const KEY_CODES = { Tab: 9, Escape: 27 };
+
+  it('Tab indents the selected lines, Shift+Tab outdents them; Escape, then Tab goes to the browser', () => {
+    const { doc, editor } = setup('a\nb\nc\n');
+    editor().dispatch({ selection: { anchor: 0, head: 3 } });
+    expect(press(editor(), 'Tab')).toBe(true);
+    expect(doc.text).toBe('  a\n  b\nc\n');
+    expect(press(editor(), 'Tab', true)).toBe(true);
+    expect(doc.text).toBe('a\nb\nc\n');
+    // with a selection, CodeMirror's Escape first leaves a caret, then turns the next Tab over to the browser
+    press(editor(), 'Escape');
+    press(editor(), 'Escape');
+    expect(press(editor(), 'Tab')).toBe(false);
+    expect(doc.text).toBe('a\nb\nc\n');
+  });
+});

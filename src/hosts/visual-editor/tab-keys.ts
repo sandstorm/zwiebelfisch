@@ -1,16 +1,22 @@
 // See VisualEditor in ./visual-editor.ts.
 import { Extension } from '@tiptap/core';
-import { Plugin, type PluginView } from '@tiptap/pm/state';
+import { Plugin, type EditorState, type PluginView, type Transaction } from '@tiptap/pm/state';
 
 /**
- * Tab and Shift+Tab stay in the text. The constructs' keymaps use them first (lists nest, tables move between cells,
- * code blocks indent); what none of them takes is consumed here, last (priority 1), instead of moving the focus out
- * of the editor. The way out by keyboard, as in CodeMirror (no keyboard trap): Escape, then Tab or Shift+Tab moves
- * the focus on as the browser does, once. Escape in a raw box counts too.
+ * Tab and Shift+Tab stay in the text. In code (a textblock whose spec says `code`, a code block) they indent and
+ * outdent the selected lines, as CodeMirror's `indentWithTab` does in the Source editor; before any other construct,
+ * so code in a list item or a table cell indents rather than nesting the item or moving to the next cell. Elsewhere
+ * the constructs' keymaps use them (lists nest, tables move between cells); what none of them takes is consumed here,
+ * last (priority 1), instead of moving the focus out of the editor. The way out by keyboard, as in CodeMirror (no
+ * keyboard trap): Escape, then Tab or Shift+Tab moves the focus on as the browser does, once. Escape in a raw box
+ * counts too.
  */
 export const TabKeys = Extension.create({
   name: 'typstTabKeys',
   priority: 1, // the lowest Tiptap honours: 0 counts as the default, 100
+  addExtensions() {
+    return [CodeIndentation];
+  },
   addKeyboardShortcuts() {
     return { Tab: () => true, 'Shift-Tab': () => true };
   },
@@ -18,6 +24,52 @@ export const TabKeys = Extension.create({
     return [new Plugin({ view: (view) => escapeThenTab(view.dom) })];
   },
 });
+
+/** Tab and Shift+Tab in code: before the constructs' keymaps (lists, tables, task lists at 100 to 120). */
+const CodeIndentation = Extension.create({
+  name: 'typstCodeIndentation',
+  priority: 200,
+  addKeyboardShortcuts() {
+    const run = (indent: (tr: Transaction, lineStart: number, line: string) => void) => () => {
+      const tr = indentLines(this.editor.state, indent);
+      if (tr) this.editor.view.dispatch(tr.scrollIntoView());
+      return tr !== null;
+    };
+    return {
+      Tab: run((tr, lineStart) => tr.insertText(INDENT_UNIT, tr.mapping.map(lineStart))),
+      'Shift-Tab': run((tr, lineStart, line) => {
+        const spaces = /^ */.exec(line)![0].length;
+        const start = tr.mapping.map(lineStart);
+        // back to the indent unit's column before: 4 spaces to 2, 3 to 2, 1 to 0
+        if (spaces > 0) tr.delete(start, start + (spaces % INDENT_UNIT.length || INDENT_UNIT.length));
+      }),
+    };
+  },
+});
+
+/** The indentation Tab adds in code: two spaces, Typst's style and the Source editor's (CodeMirror's default). */
+const INDENT_UNIT = '  ';
+
+/**
+ * `indent` applied to every line the selection touches in the code it is in (a caret: its line), or null where the
+ * selection is not within one code textblock. A selection ending right at a line's start leaves that line, as in
+ * CodeMirror.
+ */
+function indentLines(state: EditorState, indent: (tr: Transaction, lineStart: number, line: string) => void): Transaction | null {
+  const { $from, $to } = state.selection;
+  const code = $from.parent;
+  if (!code.type.spec.code || !$from.sameParent($to)) return null;
+  const start = $from.start();
+  const text = code.textContent;
+  const [from, to] = [$from.pos - start, $to.pos - start];
+  const tr = state.tr;
+  for (let lineStart = text.lastIndexOf('\n', from - 1) + 1; ; ) {
+    const end = text.indexOf('\n', lineStart);
+    indent(tr, start + lineStart, text.slice(lineStart, end < 0 ? text.length : end));
+    if (end < 0 || end + 1 >= to) return tr;
+    lineStart = end + 1;
+  }
+}
 
 /**
  * Lets the Tab after an Escape in `dom` (the editor's, raw boxes included) through to the browser: caught before

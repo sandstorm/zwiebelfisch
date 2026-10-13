@@ -1,9 +1,10 @@
 import { basicSetup } from 'codemirror';
+import { indentWithTab } from '@codemirror/commands';
 import { syntaxHighlighting } from '@codemirror/language';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
 } from '@codemirror/state';
-import { Decoration, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, keymap, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
@@ -136,6 +137,8 @@ export class SourceEditor {
       doc: document.text,
       extensions: [
         basicSetup,
+        // Tab and Shift+Tab indent and outdent the selected lines; Escape, then Tab moves the focus on (CodeMirror's)
+        keymap.of([indentWithTab]),
         codeColors,
         this.contributed.of(contributions.extensionsFor(context)),
         EditorView.lineWrapping,

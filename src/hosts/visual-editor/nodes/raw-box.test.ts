@@ -110,6 +110,18 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
   });
 
+  it("Tab indents every selected line of a raw block's code, Shift+Tab outdents them", () => {
+    const source = '#let f(x) = {\nx\n}\n';
+    const { doc, box } = setup(source);
+    const block = box('.typst-visual__raw-block');
+    const tab = (shiftKey: boolean) => block.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }));
+    block.dispatch({ selection: { anchor: 0, head: source.indexOf('}') + 1 } });
+    tab(false);
+    expect(doc.text).toBe('  #let f(x) = {\n  x\n  }\n');
+    tab(true);
+    expect(doc.text).toBe(source);
+  });
+
   it('live in the shadow root of the Visual editor, so focus and selection are read there', () => {
     const host = document.createElement('div');
     document.body.append(host);
