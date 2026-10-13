@@ -107,6 +107,34 @@ func TestStateRoundTripAndUpdatesCarryOrigin(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestUpdatesThatChangeNothingAreNotTold(t *testing.T) {
+	server := ydoc.New()
+	client := ydoc.New()
+	var updates []byte
+	client.OnUpdate(func(u []byte, _ any) { updates = u })
+	require.NoError(t, client.Write(nil, func(w *ydoc.Writer) { w.SetText("files", "/x", "hello") }))
+	require.NoError(t, client.Write(nil, func(w *ydoc.Writer) { w.Edit("files", "/x", 0, 1, "") }))
+	require.NoError(t, server.Apply(client.State(), "client"))
+
+	var told []any
+	server.OnUpdate(func(_ []byte, o any) { told = append(told, o) })
+	// what a client sends on (re)connecting: its whole state, which the server has (a deletion included)
+	require.NoError(t, server.Apply(client.State(), "client"))
+	require.NoError(t, server.Apply(updates, "client"))
+	reply, _, err := client.HandleSync(server.SyncStep1(), "server")
+	require.NoError(t, err)
+	_, _, err = server.HandleSync(reply, "client")
+	require.NoError(t, err)
+	require.NoError(t, server.Write("server", func(*ydoc.Writer) {}))
+	require.Empty(t, told)
+
+	// a deletion alone is a change
+	require.NoError(t, client.Write(nil, func(w *ydoc.Writer) { w.Edit("files", "/x", 0, 1, "") }))
+	require.NoError(t, server.Apply(updates, "client"))
+	require.Equal(t, []any{"client"}, told)
+	require.Equal(t, "llo", server.Texts("files")["/x"])
+}
+
 func TestSyncHandshake(t *testing.T) {
 	server := ydoc.New()
 	require.NoError(t, server.Write(nil, func(w *ydoc.Writer) { w.SetText("files", "/s", "server") }))
