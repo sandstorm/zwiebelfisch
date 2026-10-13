@@ -287,6 +287,11 @@ describe('WorkbenchLayout', () => {
     expect(document.activeElement).not.toBe(field);
     sidePanel.show();
     expect(document.activeElement).toBe(field);
+    // an element marked autofocus before the first control
+    const query = body.appendChild(document.createElement('input'));
+    query.autofocus = true;
+    sidePanel.show();
+    expect(document.activeElement).toBe(query);
     // a panel with nothing to focus gets the focus itself
     const preview = layout.addPanel('preview', { label: 'Preview', icon: document.createElement('span'), side: 'right' });
     preview.show();

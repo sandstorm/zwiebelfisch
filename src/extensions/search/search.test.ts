@@ -78,6 +78,12 @@ describe('search', () => {
     expect(row('notes.txt')).toBeDefined();
   });
 
+  it('workbench.view.search (the panel key) focuses the query field, not the mode buttons before it', async () => {
+    const { workbench, input } = setup();
+    await workbench.commands.executeCommand('workbench.view.search');
+    expect(document.activeElement).toBe(input);
+  });
+
   it('workbench.action.findInFiles takes VS Code arguments', async () => {
     const { workbench, panel, input } = setup();
     await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'w.rld', isRegex: true, isCaseSensitive: true });
