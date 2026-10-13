@@ -89,11 +89,30 @@ describe('calculateMarginNoteChanges', () => {
     expect(noted(renamed, renamed.length - 1)).toBe('#import "@preview/drafting:0.2.2": (a, b as c, margin-note)\nText#margin-note[|]\n');
   });
 
-  it('adds an import at the top for a note above the existing drafting import', () => {
+  it('adds an import at the top for a note above a drafting import without margin-note', () => {
     const text = '= T\n#import "@preview/drafting:0.2.2": inline-note\nText\n';
     expect(noted(text, 3)).toBe(`${IMPORT}= T#margin-note[|]\n#import "@preview/drafting:0.2.2": inline-note\nText\n`);
+  });
+
+  it('adds no note above the file\'s own margin-note import: never a second import of it', () => {
     const full = '= T\n#import "@preview/drafting:0.2.2": margin-note\nText\n';
-    expect(noted(full, 3)).toBe(`${IMPORT}= T#margin-note[|]\n#import "@preview/drafting:0.2.2": margin-note\nText\n`);
+    expect(noted(full, 3)).toBe('null');
+    expect(noted(`${IMPORT}Text\n`, 0)).toBe('null');
+  });
+
+  it('adds no note around statements: they would apply only inside it (a selected preamble box)', () => {
+    const preamble = `${IMPORT}#set page(width: 16cm)\n#set text(size: 12pt)\n#show link: underline\n`;
+    const text = `${preamble}\n= Title\n\nHello *stars* world.\n`;
+    // the Visual editor's selected box of the preamble, with or without its last newline
+    expect(noted(text, 0, preamble.length - 1)).toBe('null');
+    expect(noted(text, 0, preamble.length)).toBe('null');
+    expect(noted(text, IMPORT.length, preamble.length - 1)).toBe('null');
+    expect(noted('One.\n#let x = 1\nTwo.\n', 0, 18)).toBe('null');
+    // a statement inside the selected markup keeps its own scope
+    expect(noted('A #box[#set text(red); b] c\n', 2, 25)).toBe(`${IMPORT}A #margin-note[#box[#set text(red); b]][|] c\n`);
+    // the text after the preamble still takes a note
+    const stars = text.indexOf('stars');
+    expect(noted(text, stars, stars + 5)).toBe(`${text.slice(0, stars - 1)}#margin-note[*stars*][|]${text.slice(stars + 6)}`);
   });
 
   it('keeps wildcard imports and turns a bare module import into an item import', () => {

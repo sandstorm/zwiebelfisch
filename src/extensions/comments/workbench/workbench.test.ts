@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 // Tests for workbench.ts: the command comments.addComment.
+import type { Editor } from '@tiptap/core';
+import { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -79,5 +81,19 @@ describe('comments.addComment', () => {
     setup(sourceEditor(doc, { from: 16, to: 20 })).comment();
     expect(doc.text).toBe(text);
     expect(() => setup(null).comment()).not.toThrow();
+  });
+
+  it('leaves the document alone with the Visual editor\'s preamble box selected (Mod+Alt+M runs the command)', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    const text = `${IMPORT}#set page(width: 16cm)\n#set text(size: 12pt)\n#show link: underline\n\n= Title\n\nHello *stars* world.\n`;
+    const doc = new TypstDocument(text);
+    const view = new VisualEditor(root, doc, VisualEditorHost.from([marginNotes({ comment: () => {} })]));
+    const tiptap = (root.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    expect(tiptap.state.doc.firstChild?.type.name).toBe('rawBlock');
+    tiptap.view.dispatch(tiptap.state.tr.setSelection(NodeSelection.create(tiptap.state.doc, 0)));
+    const editor: TextEditor = { document: doc, viewType: VISUAL_EDITOR, selection: view.selection(), revealRange: vi.fn(), insertSnippet: vi.fn() };
+    setup(editor).comment();
+    expect(doc.text).toBe(text);
+    expect(root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.disabled).toBe(true);
   });
 });

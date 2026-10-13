@@ -20,12 +20,18 @@ import { calculatePageMarginChanges } from './page-margin';
  * Page margins drafting 0.2.2 cannot handle (a single length) get room for
  * notes on the right (see `calculatePageMarginChanges`).
  *
- * Null where no note fits (the position is inside code).
+ * Null where no note fits: the position is inside code, the selection holds
+ * statements (`#set`, `#show`, `#import`, `#let`: wrapped, they would apply
+ * only inside the note; a selected box of them, like a document's preamble in
+ * the Visual editor, is no text to comment on), or the note would come before
+ * the file's drafting import (a second import is no fix).
  */
 export function calculateMarginNoteChanges(text: string, range: SourceRange): MarginNoteChanges | null {
+  if (holdsStatements(text, range)) return null;
   const note = noteEdit(text, range);
-  if (!note) return null;
-  const changes = [...withImport(text, note), ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
+  const imported = note && withImport(text, note);
+  if (!note || !imported) return null;
+  const changes = [...imported, ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
   return { changes, note: SourceOffset.of(mapOffset(changes, note.at(-1)!.from) - 1) };
 }
@@ -35,6 +41,23 @@ export interface MarginNoteChanges {
   changes: TextChange[];
   note: SourceOffset;
 }
+
+/** Whether `range` holds (part of) a statement whose scope a note around it would change: one in the markup the selection is in. */
+function holdsStatements(text: string, { from, to }: { from: number; to: number }): boolean {
+  let found = false;
+  typstParser.parse(text).iterate({
+    from,
+    to,
+    enter: ({ node }) => {
+      const { parent } = node;
+      if (STATEMENTS.has(node.name) && node.from < to && node.to > from && parent && parent.from <= from && parent.to >= to) found = true;
+      return !found;
+    },
+  });
+  return found;
+}
+
+const STATEMENTS = new Set(['SetRule', 'ShowRule', 'ModuleImport', 'LetBinding']);
 
 /** The note itself: around the formatting the selection starts or ends with, else around the selection as is. */
 function noteEdit(text: string, range: { from: number; to: number }): TextChange[] | null {
@@ -101,11 +124,13 @@ function insert(at: number, text: string): TextChange {
 /**
  * `changes` (the note's, the first one at the start of its call) plus
  * whatever makes `margin-note` imported from drafting there; an import at the
- * note's position goes first.
+ * note's position goes first. Null when the note would come before the file's
+ * own import of it.
  */
-function withImport(text: string, changes: TextChange[]): TextChange[] {
+function withImport(text: string, changes: TextChange[]): TextChange[] | null {
   const extra = marginNoteImport(text, changes[0].from);
   if (!extra) return changes;
+  if (!marginNoteImport(text, SourceOffset.of(text.length))) return null;
   const same = changes.find((change) => change.from === extra.from);
   if (same) return changes.map((change) => (change === same ? { ...same, insert: extra.insert + same.insert } : change));
   return [extra, ...changes].sort((a, b) => a.from - b.from);
