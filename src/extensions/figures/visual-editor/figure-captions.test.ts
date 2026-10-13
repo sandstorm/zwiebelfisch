@@ -69,3 +69,23 @@ describe('figure captions', () => {
     expect(editor.can().addFigureCaption(1)).toBe(false);
   });
 });
+
+describe('figure bodies', () => {
+  it('take their figure along when deleted', () => {
+    const { editor, text, image } = setup('Intro\n\n#figure(image("a.png"), caption: [A cat]) <fig:a>\n\nOutro\n');
+    editor.commands.setNodeSelection(image());
+    editor.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+    expect(text()).toBe('Intro\n\nOutro\n');
+  });
+
+  it('set the caption as plain text, making the figure; an empty one removes it', () => {
+    const { editor, text, image } = setup('#image("a.png")\n');
+    editor.commands.setFigureCaption(image(), 'A *cat*');
+    expect(text()).toBe('#figure(image("a.png"), caption: [A \\*cat\\*])\n');
+    expect((editor.state.selection as NodeSelection).node.type.name).toBe('image');
+    editor.commands.setFigureCaption(image(), 'A dog');
+    expect(text()).toBe('#figure(image("a.png"), caption: [A dog])\n');
+    editor.commands.setFigureCaption(image(), '');
+    expect(text()).toBe('#image("a.png")\n');
+  });
+});

@@ -9,7 +9,7 @@ import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, Pr
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
-import type { Languages } from '../hosts/languages/languages';
+import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
@@ -226,7 +226,7 @@ describe('diagrams', () => {
     expect(flow.hint).toMatch(/^Edit diagram\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     expect(logo.hint).toMatch(/^Open img\/logo\.png\(/);
     expect(flow.picture.hasAttribute('title')).toBe(false);
-    expect(host.querySelector('.typst-visual__box-actions, .typst-images__tools button[aria-label="Edit diagram"]')).toBeNull();
+    expect(host.querySelector('.typst-visual__box-actions, button[aria-label="Edit diagram"]')).toBeNull();
     modClick(flow.picture);
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
     expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
@@ -240,8 +240,9 @@ describe('spreadsheets', () => {
 
   /** The widget, and the merged document links of its main file (as every editor gets them), resolved. */
   function withLinks(options: TypstEditorOptions) {
-    let languages: Languages | null = null;
-    const probe: TypstExtension = { id: 'probe', activate: (context) => void (languages = context.languages) };
+    let languages: LanguagesHost | null = null;
+    // the host's merged links (the extensions get none: no extension shows links itself)
+    const probe: TypstExtension = { id: 'probe', activate: (context) => void (languages = context.languages as LanguagesHost) };
     const shown = setup({ ...options, extensions: (builtinExtensions) => [...builtinExtensions, probe] });
     const links = () =>
       languages!.provideDocumentLinks({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: SOURCE }).map((link) => languages!.resolveDocumentLink(link));

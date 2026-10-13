@@ -33,13 +33,6 @@ export interface Languages {
    */
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
   /**
-   * The links of `document` from every matching provider, merged as the editors show them, in text order (VS Code's
-   * `vscode.executeLinkProvider`), for an extension that shows links itself (an image box's path).
-   */
-  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
-  /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
-  resolveDocumentLink(link: DocumentLink): DocumentLink;
-  /**
    * Shows the links of a CodeMirror editor's text as the Source editors do, for an extension's own editor: the text is
    * in `languageId`; `path` is the file it is in, now (null: none, no links).
    */
@@ -206,6 +199,12 @@ export interface DocumentDropEditProvider {
    * (the next provider is asked).
    */
   provideDocumentDropEdits(document: TextDocument, position: SourceOffset, file: ProjectPath): DocumentDropEdit | null;
+  /**
+   * The folder (`/assets/`) a file from the computer dropped into `document` goes to before it is dropped as a project
+   * file; `file` is where it would go at the top of the project (`/cat.png`). undefined: no file of this provider's (the
+   * next provider is asked; none: the top).
+   */
+  provideUploadFolder?(document: TextDocument, file: ProjectPath): string | undefined;
 }
 
 /** What a drop puts into a document (VS Code's DocumentDropEdit), in one undo step. */
@@ -377,6 +376,16 @@ export class LanguagesHost implements Languages {
       if (edit) return edit;
     }
     return null;
+  }
+
+  /** The folder a file from the computer dropped into `document` goes to: the first provider's by priority that names one, else the top (`/`). */
+  provideUploadFolder(document: TextDocument, file: ProjectPath): string {
+    const matching = this.#dropEditProviders.filter(({ selector }) => matches(selector, document.languageId));
+    for (const { provider } of matching.sort((a, b) => b.priority - a.priority)) {
+      const folder = provider.provideUploadFolder?.(document, file);
+      if (folder !== undefined) return folder;
+    }
+    return '/';
   }
 
   createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {

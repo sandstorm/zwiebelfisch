@@ -38,7 +38,22 @@ const Figure = Node.create({
         (pos) =>
         ({ tr, dispatch }) =>
           removeCaption(tr, pos, dispatch !== undefined),
+      setFigureCaption:
+        (pos, text) =>
+        ({ tr, dispatch }) =>
+          setCaption(tr, pos, text, dispatch !== undefined),
     };
+  },
+  addKeyboardShortcuts() {
+    // a selected body goes with its figure: a caption without its image is no figure
+    const deleteFigure = () => {
+      const { selection } = this.editor.state;
+      if (!(selection instanceof NodeSelection) || !selection.node.type.isInGroup(FIGURE_BODY)) return false;
+      const { $from } = selection;
+      if ($from.parent.type.name !== 'figure') return false;
+      return this.editor.commands.deleteRange({ from: $from.before(), to: $from.after() });
+    };
+    return { Backspace: deleteFigure, Delete: deleteFigure };
   },
 });
 
@@ -90,6 +105,26 @@ function addCaption(tr: Transaction, pos: number, apply: boolean): boolean {
     tr.replaceWith(pos, pos + body.nodeSize, figureNode);
     tr.setSelection(TextSelection.create(tr.doc, pos + 1 + inside.nodeSize + 1));
   }
+  tr.scrollIntoView();
+  return true;
+}
+
+/**
+ * `setFigureCaption` on `tr`, if it applies (`apply`: else only whether it would): the caption becomes `text`
+ * (plain), an empty one removes it. The body ends up selected.
+ */
+function setCaption(tr: Transaction, pos: number, text: string, apply: boolean): boolean {
+  if (text === '') return removeCaption(tr, pos, apply);
+  const located = locate(tr, pos);
+  if (!located) return false;
+  if (!apply) return true;
+  if (!located.figure || located.figure.node.childCount < 2) addCaption(tr, pos, true);
+  // the body stays at `pos` when it becomes a figure's (one position further in)
+  const bodyPos = tr.doc.nodeAt(pos)?.type.isInGroup(FIGURE_BODY) ? pos : pos + 1;
+  const captionPos = bodyPos + tr.doc.nodeAt(bodyPos)!.nodeSize;
+  const caption = tr.doc.nodeAt(captionPos)!;
+  if (caption.textContent !== text) tr.replaceWith(captionPos + 1, captionPos + caption.nodeSize - 1, tr.doc.type.schema.text(text));
+  tr.setSelection(NodeSelection.create(tr.doc, bodyPos));
   tr.scrollIntoView();
   return true;
 }
@@ -253,6 +288,11 @@ declare module '@tiptap/core' {
        * working. The body ends up selected.
        */
       removeFigureCaption: (pos: number) => ReturnType;
+      /**
+       * Sets the caption of the figure body at `pos` to the plain `text`, adding one as `addFigureCaption` does; an
+       * empty `text` removes it as `removeFigureCaption` does. The body ends up selected.
+       */
+      setFigureCaption: (pos: number, text: string) => ReturnType;
     };
   }
 }

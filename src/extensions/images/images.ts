@@ -6,22 +6,22 @@ import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
-import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
+import { IMAGE_FILES, imageBlob, isImage, uploadFolder } from './model/image-files';
 import { imageSource } from './visual-editor/image-syntax';
 import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
 import { imageEditor } from './workbench/image-editor';
 
 /**
  * Images, from the file in the project to the box in the text. In the Visual editor an `#image("path", ..)` block
- * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it,
- * set its alt text and add a caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
+ * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it
+ * and set its caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
  * images and uploads; image files pasted into the text are uploaded and inserted too, and an image dropped into the
- * text (from the file panel, or from the computer once the workbench uploaded it) becomes `#image("path")` where it
+ * text (from the file panel, or from the computer once the workbench uploaded it where the project's images are) becomes `#image("path")` where it
  * is dropped (a drop edit provider). Uploads go through `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
  *
  * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
- * the window only custom editors, and the file panel only files. The path on an image box is the document link the
- * link providers (`languages`) put on it, so it opens the file or says it is missing. An edit on an image box rewrites
+ * the window only custom editors, and the file panel only files. The picture of an image box follows the document link
+ * on its path, as every box's picture does (⌘/Ctrl+click opens the file). An edit on an image box rewrites
  * only the argument it touches (model/image-call.ts). See docs/40_architecture/08_built-in-extensions.typ.
  */
 export function images(): TypstExtension {
@@ -34,31 +34,27 @@ export function images(): TypstExtension {
         workbench.registerStyleSheet(css),
         projectImages,
         window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
-        languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops),
+        languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops(project)),
       );
       imagesVisualEditor({
         assets: (document) => projectImages.forDocument(document).assets,
         imageUrls: (document) => projectImages.forDocument(document).urls,
-        imageLinks: (document) => ({
-          linkOf: (src) => {
-            const file = project.pathOf(document);
-            // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
-            const markup = src.startsWith('#') ? src : `#${src}`;
-            const [link] = file ? languages.provideDocumentLinks({ path: file, languageId: 'typst', text: markup }) : [];
-            return link ? languages.resolveDocumentLink(link) : null;
-          },
-          open: (target) => workbench.open(target),
-        }),
         prompts: window,
       }).activate(context);
     },
   };
 }
 
-/** An image file dropped into a Typst file: `#image("path")`, the path written from that file. */
-const imageDrops: DocumentDropEditProvider = {
-  provideDocumentDropEdits: (document, _position, file) => (isImage(file) ? { insertText: imageSource(ProjectPath.referenceTo(document.path, file)) } : null),
-};
+/**
+ * An image file dropped into a Typst file: `#image("path")`, the path written from that file. One from the computer
+ * goes where the project's images are (`uploadFolder`), as pasted ones do.
+ */
+function imageDrops(project: Project): DocumentDropEditProvider {
+  return {
+    provideDocumentDropEdits: (document, _position, file) => (isImage(file) ? { insertText: imageSource(ProjectPath.referenceTo(document.path, file)) } : null),
+    provideUploadFolder: (_document, file) => (isImage(file) ? uploadFolder(project.paths().filter((p) => isImage(p))) : undefined),
+  };
+}
 
 export interface ProjectImagesOptions {
   project: Project;
@@ -126,8 +122,9 @@ export class ProjectImages {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
     const { project, applyEdit } = this.options;
-    const { path, content } = change;
-    const target = uploadTarget(path, content, (candidate) => project.content(candidate));
+    const { content } = change;
+    const folder = uploadFolder(project.paths().filter((p) => isImage(p)));
+    const target = uploadTarget(ProjectPath.of(folder + ProjectPath.name(change.path)), content, (candidate) => project.content(candidate));
     if (project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
     const problem = await applyEdit({ kind: 'create', path: target, content });
     return problem === null ? { path: ProjectPath.referenceTo(file, target) } : { error: problem };

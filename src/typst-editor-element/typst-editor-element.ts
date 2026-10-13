@@ -28,7 +28,7 @@ import type { Settings } from '../hosts/workspace/workspace';
  *   `files-change` with every `FileChange` (`onFilesChange`), `open` with `{ path }` (`onOpen`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
  *
- * See docs/30_reference/02_embedding.typ, "Custom element".
+ * See docs/30_configuration/02_embedding.typ, "Custom element".
  */
 export class TypstEditorElement extends Base() {
   static readonly observedAttributes = ['value', 'settings'];

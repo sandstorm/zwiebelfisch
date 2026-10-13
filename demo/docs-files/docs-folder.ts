@@ -7,7 +7,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { contentTag, type DiskChange, isTextPath } from './protocol.ts';
 
 /**
- * The files under `root`, by paths relative to it (`20_features/02_visual-editor.typ`). Writes are atomic (a hidden temporary file
+ * The files under `root`, by paths relative to it (`20_features/03_writing.typ`). Writes are atomic (a hidden temporary file
  * renamed over the target), and only over the version the writer knows. It remembers what it wrote last per path,
  * until someone else changes the file, so `watch` skips the event for the folder's own write (no echo to the page that
  * made it). It notes that before the file changes on disk, since the watcher's event may arrive before the write's last

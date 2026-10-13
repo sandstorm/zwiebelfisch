@@ -23,7 +23,7 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  *
  * Until the room's text is in the project, the editing area shows "Connecting to the room…" and takes no input. In a
  * room backed by a GitLab branch, the branch is a source control, and the browser warns before the last user leaves
- * changes nobody commits. See docs/20_features/27_collaborative-editing.typ, docs/30_reference/03_collaboration-server.typ and docs/40_architecture/13_server.typ.
+ * changes nobody commits. See docs/20_features/11_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and docs/40_architecture/13_server.typ.
  */
 export function collaboration(options: CollaborationOptions): TypstExtension {
   return {

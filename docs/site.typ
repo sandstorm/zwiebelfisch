@@ -1,5 +1,5 @@
 // The documentation as HTML pages (Typst's bundle export): `mise run docs:html`.
-// One page per chapter (`30_reference/02_embedding.typ` → `30_reference/02_embedding.html`), an index page with the
+// One page per chapter (`30_configuration/02_embedding.typ` → `30_configuration/02_embedding.html`), an index page with the
 // outline, style.css and the logo copied next to them. `@label` references link across pages.
 // The chapters and parts come from main.typ's source: its `#include "…"` lines in order, and the `= …` part
 // headings between them; a page's title is its chapter's first `= …` heading.

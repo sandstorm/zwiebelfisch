@@ -12,7 +12,7 @@ import css from './slash-commands.css?inline';
  *
  * It adds no commands of its own. It reads what other extensions put into the Insert menu and the text style menu
  * (through the completion context), so the list grows with them, and the whole feature can be left out.
- * See docs/20_features/16_slash-commands.typ and docs/40_architecture/11_visual-editor-constructs.typ, "Completion lists".
+ * See docs/20_features/01_wysiwyg-editing.typ and docs/40_architecture/11_visual-editor-constructs.typ, "Completion lists".
  */
 export function slashCommands(): TypstExtension {
   return {

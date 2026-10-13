@@ -1,41 +1,28 @@
-// Resize handles, width presets, alt text and caption on an image box. See images in ../images.ts.
-import type { PathReference } from '../../../core/paths/paths';
+// The resize handles of an image box. See images in ../images.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { RawBoxTools, RawBoxToolsHost } from '../../../hosts/visual-editor/visual-editor';
-import type { WindowApi } from '../../../hosts/window/window';
-import { imageAlt, imageArg, imageWidthCss, withImageAlt, withImageWidth } from '../model/image-call';
+import { imageWidthCss, withImageWidth } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
-import { imagePath } from './image-syntax';
 
 /**
- * What an image box offers besides its code: the "Image: path" heading, a
- * frame around the rendered picture showing the image's width with drag
- * handles to change it, and, while the image is selected, a small toolbar
- * (add/remove caption where the figures extension's commands are there,
- * preset widths, alt text, edit the code).
+ * What an image box offers besides its code: a frame around the rendered
+ * picture showing the image's width, with drag handles to change it. Double-clicking the picture shows the code. (The bar
+ * above a selected image is image-bar.ts.)
  *
- * Every change is one transaction (see "Image edits" below), so one undo step
- * that rewrites only the argument concerned. A drag changes the width live in the
- * editor and writes `width: NN%` once, on release.
+ * A drag changes the width live in the editor and writes `width: NN%` once, on
+ * release: one undo step that rewrites only that argument (`resizeImage`).
  */
 export class ImageTools implements RawBoxTools {
-  private readonly label: HTMLElement;
   private readonly frame: HTMLElement | null = null;
   private readonly badge: HTMLElement | null = null;
-  private readonly tools: HTMLElement;
-  private readonly captionButton: HTMLButtonElement;
-  private readonly presetButtons: HTMLButtonElement[];
   private node: Node;
   private stopDrag: (() => void) | null = null;
 
-  constructor(private readonly host: ImageToolsHost, node: Node) {
+  constructor(private readonly host: RawBoxToolsHost, node: Node) {
     this.node = node;
     const doc = host.dom.ownerDocument;
     host.dom.classList.add('typst-images__box');
-    this.label = doc.createElement('div');
-    this.label.className = 'typst-visual__box-label typst-images__label';
-    host.dom.prepend(this.label);
     if (host.picture) {
       this.frame = doc.createElement('div');
       this.frame.className = 'typst-images__frame';
@@ -43,87 +30,22 @@ export class ImageTools implements RawBoxTools {
       this.badge.className = 'typst-images__size';
       this.frame.append(host.picture, ...HANDLES.map((h) => this.handle(h)), this.badge);
       this.frame.addEventListener('dblclick', () => host.editCode());
+      const picture = host.picture;
+      // an SVG with only a viewBox has no size of its own: it would shrink to nothing, so it fills the text width
+      picture.addEventListener('load', () => this.frame!.classList.toggle('typst-images__frame--no-size', picture.naturalWidth === 0));
       host.dom.insertBefore(this.frame, host.code);
     }
-    this.tools = doc.createElement('div');
-    this.tools.className = 'typst-images__tools';
-    this.tools.setAttribute('role', 'toolbar');
-    this.tools.setAttribute('aria-label', 'Image');
-    this.tools.addEventListener('mousedown', (event) => {
-      if ((event.target as HTMLElement).closest('button')) event.preventDefault();
-    });
-    this.captionButton = this.button('Add caption', () => this.toggleCaption());
-    this.presetButtons = PRESETS.map((percent) => {
-      const button = this.button(`${percent}%`, () => this.run((state, pos) => resizeImage(state, pos, percent)));
-      button.setAttribute('aria-label', `Width ${percent}%`);
-      return button;
-    });
-    const prompts = host.prompts;
-    const altButtons = prompts ? [this.button('Alt text', () => void this.askAlt(prompts))] : [];
-    const codeButton = this.button('Edit code', () => host.editCode());
-    this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, codeButton);
-    host.dom.insertBefore(this.tools, host.code);
     this.update(node);
   }
 
-  /** The image node changed (e.g. its call was edited): heading, width and buttons follow. */
+  /** The image node changed (e.g. its call was edited): the width follows. */
   update(node: Node): void {
     this.node = node;
-    const path = imagePath(node.attrs.src);
-    this.label.replaceChildren('Image: ', path === null ? '(no path)' : (this.host.pathLabel?.(path, node.attrs.src) ?? path));
     if (this.frame && !this.stopDrag) this.showWidth(imageWidthCss(node.attrs.src));
-    this.refresh();
-  }
-
-  /** The image was selected: its toolbar shows (CSS) with the buttons up to date. */
-  select(): void {
-    this.refresh();
-  }
-
-  /** Brings the buttons up to date with the document (caption or not, current width). */
-  private refresh(): void {
-    const pos = this.host.getPos();
-    const info = pos === undefined ? null : imageInfo(this.host.tiptap.state, pos);
-    const caption = this.captionCommand();
-    this.captionButton.hidden = caption === null;
-    this.captionButton.textContent = caption === 'removeFigureCaption' ? 'Remove caption' : 'Add caption';
-    for (const [i, button] of this.presetButtons.entries()) button.setAttribute('aria-pressed', String(info?.width === `${PRESETS[i]}%`));
   }
 
   dispose(): void {
     this.stopDrag?.();
-  }
-
-  private toggleCaption(): void {
-    const pos = this.host.getPos();
-    const command = this.captionCommand();
-    if (pos !== undefined && command) this.host.tiptap.commands[command](pos);
-    this.host.tiptap.view.focus();
-    this.refresh();
-  }
-
-  /** What the caption button does now: the figures extension's command that applies, if that extension is there. */
-  private captionCommand(): 'addFigureCaption' | 'removeFigureCaption' | null {
-    const pos = this.host.getPos();
-    const { tiptap } = this.host;
-    // another extension's commands: guarded, the figures may be left out
-    if (pos === undefined || !('addFigureCaption' in tiptap.commands)) return null;
-    if (tiptap.can().removeFigureCaption(pos)) return 'removeFigureCaption';
-    return tiptap.can().addFigureCaption(pos) ? 'addFigureCaption' : null;
-  }
-
-  /** Asks for the alt text (an empty one removes it) and sets it. */
-  private async askAlt(prompts: Pick<WindowApi, 'showInputBox'>): Promise<void> {
-    const pos = this.host.getPos();
-    const alt = (pos === undefined ? null : imageInfo(this.host.tiptap.state, pos)?.alt) ?? '';
-    const text = await prompts.showInputBox({
-      title: 'Alt text',
-      prompt: alt ? 'Alt text (empty removes it)' : 'Alt text',
-      value: alt,
-      placeHolder: 'What the image shows',
-    });
-    if (text === undefined) return this.host.tiptap.view.focus();
-    this.run((state, at) => setImageAlt(state, at, text.trim()));
   }
 
   /** Dispatches the edit for this image (if it applies) and returns the focus to the text. */
@@ -133,20 +55,11 @@ export class ImageTools implements RawBoxTools {
     const tr = pos === undefined ? null : edit(view.state, pos);
     if (tr) view.dispatch(tr.scrollIntoView());
     view.focus();
-    this.refresh();
   }
 
   private showWidth(width: string): void {
     this.frame!.style.width = width;
     this.frame!.classList.toggle('typst-images__frame--sized', width !== '');
-  }
-
-  private button(text: string, click: () => void): HTMLButtonElement {
-    const button = this.host.dom.ownerDocument.createElement('button');
-    button.type = 'button';
-    button.textContent = text;
-    button.addEventListener('click', click);
-    return button;
   }
 
   private handle(name: string): HTMLElement {
@@ -195,60 +108,17 @@ export class ImageTools implements RawBoxTools {
   }
 }
 
-/** The image box the tools belong to (its picture moves into the resize frame). */
-export interface ImageToolsHost extends RawBoxToolsHost {
-  /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
-  pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
-  /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
-  prompts?: Pick<WindowApi, 'showInputBox'>;
-}
-
 /** Resize handles: corners and sides; `w` in the name means it sits on the left. */
 const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
 
-/** Width presets offered as buttons (keyboard-friendly resizing). */
-const PRESETS = [25, 50, 75, 100];
-
-// --- Image edits ---------------------------------------------------------
-// What the tools read from and change in an image block (bare, or the body of
-// a figure), each change one transaction: width and alt text. The image call
-// changes only in the argument concerned; the serializer prints everything
-// else of the block as it was.
-
-/** What the image tools show for an image block. */
-interface ImageInfo {
-  alt: string | null;
-  /** The `width` argument as written. */
-  width: string | null;
-}
-
-/** The image block at `pos`, if there is one. */
-function imageAt(state: EditorState, pos: number): Node | null {
-  const image = state.doc.nodeAt(pos);
-  return image?.type.name === 'image' ? image : null;
-}
-
-/** What the image block at `pos` has; null if there is none. */
-function imageInfo(state: EditorState, pos: number): ImageInfo | null {
-  const image = imageAt(state, pos);
-  if (!image) return null;
-  const src: string = image.attrs.src;
-  return { alt: imageAlt(src), width: imageArg(src, 'width') };
-}
-
-/** Sets the image's `width` to `percent` of the text width (whole percent). */
+/**
+ * Sets the `width` of the image block at `pos` (bare, or the body of a figure) to `percent` of the text width (whole
+ * percent), as one transaction; null if there is no image there or the width is that already. Only the argument
+ * changes; the serializer prints everything else of the block as it was.
+ */
 function resizeImage(state: EditorState, pos: number, percent: number): Transaction | null {
-  return editCall(state, pos, (src) => withImageWidth(src, percent));
-}
-
-/** Sets the image's alt text; an empty one removes it. */
-function setImageAlt(state: EditorState, pos: number, alt: string): Transaction | null {
-  return editCall(state, pos, (src) => withImageAlt(src, alt));
-}
-
-function editCall(state: EditorState, pos: number, change: (src: string) => string): Transaction | null {
-  const image = imageAt(state, pos);
-  if (!image) return null;
-  const src = change(image.attrs.src);
+  const image = state.doc.nodeAt(pos);
+  if (image?.type.name !== 'image') return null;
+  const src = withImageWidth(image.attrs.src, percent);
   return src === image.attrs.src ? null : state.tr.setNodeAttribute(pos, 'src', src);
 }

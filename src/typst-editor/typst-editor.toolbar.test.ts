@@ -182,8 +182,9 @@ describe('Visual editor toolbar', () => {
     Object.defineProperty(input, 'files', { value: [file] });
     input.dispatchEvent(new Event('change'));
     await settle();
-    expect(applied).toMatchObject([{ kind: 'create', path: '/cat.png' }]);
-    expect(doc.text).toBe('Text\n\n#image("cat.png")\n');
+    // no images yet: to /images/
+    expect(applied).toMatchObject([{ kind: 'create', path: '/images/cat.png' }]);
+    expect(doc.text).toBe('Text\n\n#image("images/cat.png")\n');
   });
 
   it('tells why an upload was refused (an error message), and leaves the text unchanged', async () => {
@@ -268,8 +269,9 @@ describe('Visual editor toolbar', () => {
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
       await settle();
-      expect(uploaded).toEqual(['shot.png']);
-      expect(doc.text).toBe('One\n\n#image("shot.png")\n\nTwo\n');
+      // where the project's images are
+      expect(uploaded).toEqual(['img/shot.png']);
+      expect(doc.text).toBe('One\n\n#image("img/shot.png")\n\nTwo\n');
     });
 
     it('leaves pastes without images alone', () => {

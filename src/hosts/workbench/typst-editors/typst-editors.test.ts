@@ -44,6 +44,18 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
 }
 
 describe('TypstEditors', () => {
+  it('keeps the selection when a document switches between the Visual and the Source editor', () => {
+    const { editors, show } = setup();
+    show('/main.typ');
+    show('/main.typ', SOURCE_EDITOR);
+    editors.activeTextEditor!.revealRange(SourceRange.of({ from: 1, to: 3 }));
+    show('/main.typ', VISUAL_EDITOR);
+    expect(editors.activeTextEditor!.selection).toEqual(SourceRange.of({ from: 1, to: 3 }));
+    editors.activeTextEditor!.revealRange(SourceRange.of({ from: 4, to: 4 }));
+    show('/main.typ', SOURCE_EDITOR);
+    expect(editors.activeTextEditor!.selection).toEqual(SourceRange.of({ from: 4, to: 4 }));
+  });
+
   it('registers the Visual editor, then the Source editor, as the editors of *.typ; the Visual editor opens by default', () => {
     const { window, show, visible } = setup();
     expect(window.customEditorChoices(path('/main.typ'))).toEqual([

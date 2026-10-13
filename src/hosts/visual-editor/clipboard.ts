@@ -1,7 +1,7 @@
 // Copy and paste as Typst text. See VisualEditor in visual-editor.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
-import { Plugin, type EditorState } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
 import type { VisualEditorPasteEdits } from './visual-editor';
@@ -9,7 +9,8 @@ import type { VisualEditorPasteEdits } from './visual-editor';
 /**
  * The clipboard in Typst. Copy and cut put the selection's Typst source on the clipboard as text (`text/plain`, and
  * `text/x-typst` saying it is Typst): byte for byte where that source reads as what is selected, else the selection
- * printed anew (part of a bold word: `*bo*`). ProseMirror's HTML goes along for rich targets (a mail, a word
+ * printed anew (part of a bold word: `*bo*`). A cut with nothing selected cuts the paragraph at the caret, as IntelliJ
+ * cuts the line: a list item or quote that is only that paragraph goes along (`caretBlock`). ProseMirror's HTML goes along for rich targets (a mail, a word
  * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
  * source).
  *
@@ -49,6 +50,14 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
           },
           props: {
             clipboardTextSerializer: (slice, view) => typstOfSelection(view.state, slice),
+            handleDOMEvents: {
+              // before ProseMirror's own cut, which then cuts what is selected here
+              cut: (view) => {
+                const block = caretBlock(view.state);
+                if (block !== null) view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, block)));
+                return false;
+              },
+            },
             handleKeyDown: (_view, event) => {
               literal = (event.metaKey || event.ctrlKey) && event.shiftKey && (event.code === 'KeyV' || event.key.toLowerCase() === 'v');
               return false;
@@ -80,11 +89,26 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
  * document as the slice printed (`*bold* text`); else the slice printed (`*bo*` for the start of a bold word).
  */
 function typstOfSelection(state: EditorState, slice: Slice): string {
-  const { doc, schema } = state;
+  const { doc, schema, selection } = state;
   const { from, to } = selectionSource(state);
-  const source = serializeToTypst(doc).slice(from, to);
+  const text = serializeToTypst(doc).slice(from, to);
+  // a selection from between blocks (a whole paragraph) starts after the source before it: without the blank lines
+  const source = selection.$from.parent.isTextblock ? text : text.replace(/^\s*\n/, '');
   const printed = serializeToTypst(schema.topNodeType.create({ trail: '' }, unwrapped(slice).content));
   return source !== '' && reprinted(source, schema) === reprinted(printed, schema) ? source : printed;
+}
+
+/**
+ * Where the block at the caret starts, for a cut with nothing selected: the paragraph, or the outermost container
+ * that holds only it (a list item, a quote; not past an isolating node, as a table cell). Null: a selection, or a
+ * caret in code (a code block's line is no paragraph).
+ */
+function caretBlock({ selection }: EditorState): number | null {
+  const { $from, empty } = selection;
+  if (!empty || !$from.parent.isTextblock || $from.parent.type.spec.code) return null;
+  let depth = $from.depth;
+  while (depth > 1 && $from.node(depth - 1).childCount === 1 && !$from.node(depth - 1).type.spec.isolating) depth--;
+  return $from.before(depth);
 }
 
 /** The source range the selection shows. */

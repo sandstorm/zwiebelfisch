@@ -17,7 +17,7 @@ interface TypstExtension {
 
 == Adding, leaving out, replacing <architecture-extensions-overview-list>
 
-The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@reference-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
+The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
 
 == Example: word count <architecture-extensions-overview-example>
 

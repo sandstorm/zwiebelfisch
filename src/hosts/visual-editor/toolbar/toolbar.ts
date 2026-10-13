@@ -170,7 +170,9 @@ export class Toolbar {
     const button = this.root.ownerDocument.createElement('button');
     button.type = 'button';
     button.className = 'typst-toolbar__button';
-    button.innerHTML = action.icon;
+    if (action.icon) button.innerHTML = action.icon;
+    else button.textContent = action.text ?? action.label;
+    button.classList.toggle('typst-toolbar__button--text', !action.icon);
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
     button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.tiptap.chain().focus()).run()));

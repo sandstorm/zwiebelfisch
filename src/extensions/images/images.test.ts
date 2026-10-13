@@ -43,13 +43,14 @@ describe('ProjectImages', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:0');
   });
 
-  it('lists the project images and uploads new ones, with paths as written in the document', async () => {
+  it('lists the project images and uploads new ones where most images are, with paths as written in the document', async () => {
     const { chapter, project, applyEdit } = setup({ '/chapters/fig.svg': '<svg/>' });
     expect(chapter.assets.list()).toEqual(['fig.svg', path('/img/logo.png')]);
+    // to the first of the folders holding most images
     const result = await chapter.assets.upload(new File([new Uint8Array([9])], 'cat.png'));
-    expect(applyEdit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/cat.png') }));
-    expect(result).toEqual({ path: path('/cat.png') });
-    expect(project.has(path('/cat.png'))).toBe(true);
+    expect(applyEdit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/chapters/cat.png') }));
+    expect(result).toEqual({ path: 'cat.png' });
+    expect(project.has(path('/chapters/cat.png'))).toBe(true);
   });
 
   it('says why an upload was refused or is no image it can show', async () => {

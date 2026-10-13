@@ -4,6 +4,47 @@ A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a
 compiler runs as WebAssembly in a worker. Embed it as `<typst-editor>` or with `createTypstEditor`.
 Every feature is an extension. Real-time collaboration (optional) needs the server in `server/`.
 
+## Features
+
+This project is both an *authoring environment* and an *embeddable WYSIWYG editor* for Typst files.
+
+### Basic features
+
+- **Visual editor:** edits Typst projects like a word processor, including styling, headlines, lists, …
+- Typographic **rendering preview**, displaying the full source document.
+- For nerds, a **Source editor** where you can write the Typst file directly is also included :-)
+- **Standard word processor styling and shortcuts** supported (via [Tiptap](https://tiptap.dev/) and [ProseMirror](https://prosemirror.net/))
+- Support for **code blocks with syntax highlighting**, via ```` ``` ```` for multiline code and `` ` `` for inline code
+- Support for **images**
+- Support for **tables**
+- **Headings and table of contents**
+- **Labels and cross-references** to headings, figures and tables
+- **Page layout:** page breaks and rules
+- **Full Typst support:** if an element is not supported natively, e.g. maths like $E=m*c^2$, we always fall back to the raw Typst source.
+- **Files:** a file panel for every file of the project
+- **Spelling**, checked in the document's language
+- **PDF** download
+
+### User experience
+
+- **Slash commands:** type `/` in the Visual editor for everything the Insert and text style menus offer
+- **Search everywhere:** files, headings, labels, commands, text; press Shift twice
+- **Bidirectional navigation:** click any part of the preview to jump to the corresponding source, and select any part of the interactive editor to highlight this in the preview.
+- **Help:** a cheat sheet for the file you edit
+- **Invisible characters**, as a word processor's formatting marks
+
+### Advanced features
+
+- Support for **custom styles**, so you can easily create inline styles and **block styles** for things like custom call-outs.
+- Support for **draw.io diagrams**, which can be directly edited inline and embedded.
+- Support for **spreadsheets** (based on [IronCalc](https://www.ironcalc.com/)), which can be edited inline, including calculations, and then embedded (fully or partially) into the Typst file
+  - spreadsheet styling is transferred to Typst
+- Support for **Mermaid diagrams** if you prefer text-based diagrams.
+- Support for **multi-file** projects.
+- **Comments** as margin notes in the Typst source
+- Support for **collaborative real-time editing**.
+- **GitLab** integration: edit any Typst project from GitLab, and write back changes.
+
 ## Try it with Docker
 
 ```sh
@@ -46,8 +87,8 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.typ):
 
 - **Getting started** (`docs/10_getting-started/`): trying the demo.
-- **Features** (`docs/20_features/`): one chapter per feature, for users.
-- **Reference** (`docs/30_reference/`): configuration, embedding, the collaboration server, for technical users.
+- **Features** (`docs/20_features/`): what users get, one chapter per area.
+- **Configuration** (`docs/30_configuration/`): configuration options, embedding, the collaboration server, GitLab integration, for technical users.
 - **Architecture** (`docs/40_architecture/`): how the code is built, writing an extension, conventions, development.
 
 Read it as a PDF (`mise run docs:pdf`), as HTML (`mise run docs:html`), or edit it live in the demo's

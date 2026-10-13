@@ -16,42 +16,27 @@
 = Features
 #[
   #set heading(offset: 1)
-  #include "20_features/01_overview.typ"
-  #include "20_features/02_visual-editor.typ"
-  #include "20_features/03_rendering-preview.typ"
-  #include "20_features/04_source-editor.typ"
-  #include "20_features/05_styling-and-shortcuts.typ"
-  #include "20_features/06_code-blocks.typ"
-  #include "20_features/07_images.typ"
-  #include "20_features/08_tables.typ"
-  #include "20_features/09_table-of-contents.typ"
-  #include "20_features/10_labels-and-references.typ"
-  #include "20_features/11_page-layout.typ"
-  #include "20_features/12_full-typst-support.typ"
-  #include "20_features/13_files.typ"
-  #include "20_features/14_spelling.typ"
-  #include "20_features/15_pdf.typ"
-  #include "20_features/16_slash-commands.typ"
-  #include "20_features/17_search-everywhere.typ"
-  #include "20_features/18_bidirectional-navigation.typ"
-  #include "20_features/19_help.typ"
-  #include "20_features/20_invisible-characters.typ"
-  #include "20_features/21_custom-styles.typ"
-  #include "20_features/22_drawio-diagrams.typ"
-  #include "20_features/23_spreadsheets.typ"
-  #include "20_features/24_mermaid-diagrams.typ"
-  #include "20_features/25_multi-file-projects.typ"
-  #include "20_features/26_comments.typ"
-  #include "20_features/27_collaborative-editing.typ"
-  #include "20_features/28_gitlab.typ"
+  #include "20_features/01_wysiwyg-editing.typ"
+  #include "20_features/02_bidirectional-navigation.typ"
+  #include "20_features/03_writing.typ"
+  #include "20_features/04_full-typst-support.typ"
+  #include "20_features/05_multiple-files.typ"
+  #include "20_features/06_custom-styles.typ"
+  #include "20_features/07_drawio-diagrams.typ"
+  #include "20_features/08_spreadsheets.typ"
+  #include "20_features/09_mermaid-diagrams.typ"
+  #include "20_features/10_comments.typ"
+  #include "20_features/11_collaborative-editing.typ"
+  #include "20_features/12_gitlab.typ"
 ]
 
-= Reference
+= Configuration
 #[
   #set heading(offset: 1)
-  #include "30_reference/01_configuration.typ"
-  #include "30_reference/02_embedding.typ"
-  #include "30_reference/03_collaboration-server.typ"
+  #include "30_configuration/01_options.typ"
+  #include "30_configuration/02_embedding.typ"
+  #include "30_configuration/03_collaboration-server.typ"
+  #include "30_configuration/04_gitlab-integration.typ"
 ]
 
 = Architecture

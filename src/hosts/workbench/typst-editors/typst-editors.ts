@@ -9,8 +9,8 @@ import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/wind
 /**
  * The Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`, `sourceEditor`), the
  * `TextEditor` of each document over them, and the editor frame. Per document, each editor is made the first time
- * the document is shown in it, in its custom editor's panel; kept (with cursor, scroll and undo history) while hidden,
- * disposed with the panel (the file deleted).
+ * the document is shown in it, in its custom editor's panel; kept (with scroll and undo history) while hidden,
+ * disposed with the panel (the file deleted). Switching a document between the two keeps the selection (the cursor).
  */
 export class TypstEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();
@@ -91,7 +91,7 @@ export class TypstEditors {
 
   #shown(editor: DocumentEditor | null, viewType: string): void {
     this.#removeFrame();
-    if (editor) editor.viewType = viewType;
+    if (editor) editor.show(viewType);
     this.#active = editor;
     this.#placeFrame();
   }
@@ -128,6 +128,13 @@ export class DocumentEditor implements TextEditor {
   viewType: string = VISUAL_EDITOR;
 
   constructor(readonly document: TypstDocument) {}
+
+  /** Shows the document in its editor `viewType`; switched from the other one, at the selection that one had. */
+  show(viewType: string): void {
+    const previous = this.viewType === viewType ? undefined : this.editors.get(this.viewType)?.editor;
+    this.viewType = viewType;
+    if (previous) this.revealRange(previous.selection());
+  }
 
   get selection(): SourceRange {
     return this.editors.get(this.viewType)!.editor.selection();

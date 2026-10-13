@@ -19,7 +19,7 @@ import { MERMAID_HELP } from './workbench/mermaid-help';
  * All of it goes through the hosts' generic points: a toolbar item, a document link provider, a drop edit provider, a
  * help provider, a known import (`languages.registerKnownImport`). The file
  * opens in whatever editor `.mmd` has (the text-files extension's). Typst draws the diagram, so nothing is rendered
- * here. See docs/20_features/24_mermaid-diagrams.typ.
+ * here. See docs/20_features/09_mermaid-diagrams.typ.
  */
 export function mermaid(): TypstExtension {
   return {

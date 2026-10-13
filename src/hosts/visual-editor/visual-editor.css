@@ -155,6 +155,7 @@
 }
 .typst-floating-bar[hidden] { display: none; }
 .typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
+.typst-toolbar__button.typst-toolbar__button--text { width: auto; padding: 0 6px; font: 12px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .typst-floating-bar .typst-toolbar__menu-button { height: 28px; }
 /* A completion list (registerCompletionItemProvider) below the typed trigger; placed by Tiptap's suggestion (Floating UI) */
 .typst-visual__suggest {

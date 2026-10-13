@@ -33,8 +33,8 @@ The screen:
   [Part], [What it holds],
   [Playground bar (top)], [Example; mode Local, Collaborate or GitLab (fake); your name; in Collaborate and GitLab mode a link that opens a second window as another user.],
   [Left rail and side panel], [Files, Help; the magnifier opens search everywhere.],
-  [Editing area], [The shown file. A Typst file has the tabs Visual and Source; other files open in their own editor (spreadsheet, diagram, text).],
-  [Right side and rail], [The preview; the devtools (@reference-embedding-devtools).],
+  [Editing area], [The shown file. A Typst file has the tabs Visual and Source (switching keeps the cursor); other files open in their own editor (spreadsheet, diagram, text).],
+  [Right side and rail], [The preview; the devtools (@configuration-embedding-devtools).],
   [Status bar], [Errors and warnings; in GitLab mode what is not saved yet.],
 )
 
@@ -50,20 +50,16 @@ The examples:
 
 Main features:
 
-- Visual editing like a word processor (@features-visual-editor).
-- All Typst features supported.
-- what it does not model shows as a raw box (@features-full-typst-support).
-- Source editing with highlighting; both editors edit the same text (@features-source-editor).
-- Live preview; a click in it jumps to the text (@features-rendering-preview, @features-bidirectional-navigation).
-- Images, figures and tables (@features-images, @features-tables).
+- Visual editing like a word processor, a Source editor and a live preview; a click in the preview jumps to the text.
+- All Typst features: what the Visual editor does not model shows as a raw box.
+- Images, figures, tables, labels and cross-references.
 - Spreadsheets in IronCalc, shown in the document as tables (@features-spreadsheets).
-- Diagrams: draw.io (@features-drawio-diagrams) and Mermaid (@features-mermaid-diagrams).
-- Custom styles from the template (@features-custom-styles).
-- Labels and cross-references (@features-labels-and-references).
-- Comments as margin notes (@features-comments).
-- Slash commands (`/table`) and search everywhere: press Shift twice (@features-search-everywhere).
-- Help panel: a cheat sheet for the shown file (@features-help).
-- Collaboration and saving to GitLab (@features-collaborative-editing, @features-gitlab); PDF download (@features-pdf).
+- Diagrams: draw.io and Mermaid (@features-mermaid-diagrams).
+- Custom styles from the template.
+- Comments as margin notes.
+- Slash commands (`/table`) and search everywhere: press Shift twice.
+- Help panel: a cheat sheet for the shown file.
+- Collaboration and saving to GitLab; PDF download.
 
 The page's state is its URL:
 
@@ -77,4 +73,4 @@ The page's state is its URL:
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line (1-based): a reload or a shared link opens the file with the cursor at the start of that line. It follows while you work.],
 )
 
-Next: what users get (@features-overview), every setting and option (@reference-configuration), the collaboration server (@reference-collaboration-server), embedding and events (@reference-embedding), how it is built and adding features (@architecture-overview, @architecture-extensions-overview).
+Next: what users get (@features-wysiwyg-editing), every setting and option (@configuration-options), the collaboration server (@configuration-collaboration-server), embedding and events (@configuration-embedding), how it is built and adding features (@architecture-overview, @architecture-extensions-overview).

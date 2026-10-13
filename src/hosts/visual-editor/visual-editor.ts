@@ -229,7 +229,7 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     readonly box?: 'code' | 'widget';
     /** For `box: 'code'`: a heading above the code saying what the box shows (an outline: "Table of contents"); `className` goes on the box. */
     readonly title?: { readonly className: string; text(src: string): string };
-    /** For `box: 'code'`: tools on every box of this type (an image's resize handles and toolbar). */
+    /** For `box: 'code'`: tools on every box of this type (an image's heading and resize handles). */
     tools?(host: RawBoxToolsHost, node: Node): RawBoxTools;
     /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
     readonly keepsDom?: boolean;
@@ -534,12 +534,10 @@ export interface RawBoxToolsHost {
   editCode(): void;
 }
 
-/** Tools on a code box (an image's resize handles and toolbar); a click on the picture then selects the box. */
+/** Tools on a code box (an image's heading and resize handles); a click on the picture then selects the box. */
 export interface RawBoxTools {
   /** The box's node changed. */
   update(node: Node): void;
-  /** The box was selected. */
-  select(): void;
   dispose(): void;
 }
 
@@ -596,7 +594,10 @@ export interface ToolbarAction {
   label: string;
   /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
   shortcut?: string;
-  icon: string;
+  /** An `svg(..)` icon; or `text`. */
+  icon?: string;
+  /** A short text shown in place of an icon, where it says more (`25%`). */
+  text?: string;
   /** The command; also decides, dry-run, whether the button is enabled. An action with `click` has none. */
   run?(chain: ChainedCommands): ChainedCommands;
   /** Instead of running a command, e.g. to ask for a value first. */

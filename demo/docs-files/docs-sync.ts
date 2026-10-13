@@ -192,7 +192,7 @@ export class DocsSync {
   }
 }
 
-/** The plugin's file API, by paths relative to docs/ (`20_features/02_visual-editor.typ`). */
+/** The plugin's file API, by paths relative to docs/ (`20_features/03_writing.typ`). */
 export interface DocsFilesApi {
   /** Writes `bytes` over `base`, the version the page last read or wrote (null: no file); rejects if the disk has another. */
   write(path: string, bytes: Uint8Array, base: Uint8Array | null): Promise<void>;
@@ -268,7 +268,7 @@ function diskContent(change: DiskChange): FileContent | null {
   return change.path.endsWith('.typ') ? change.text : new TextEncoder().encode(change.text);
 }
 
-/** `/20_features/02_visual-editor.typ` → `20_features/02_visual-editor.typ`. */
+/** `/20_features/03_writing.typ` → `20_features/03_writing.typ`. */
 function relative(path: string): string {
   return path.slice(1);
 }

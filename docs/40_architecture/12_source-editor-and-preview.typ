@@ -44,7 +44,6 @@ languages.registerDocumentLinkProvider({ language: 'typst' }, {
 - A more specific link for the same path (diagrams' and Mermaid's "Edit diagram", spreadsheets' "Edit spreadsheet" on a `.ic.gen.typ`, over the plain file link) comes from a provider of a higher `priority`: it replaces the other where they overlap, so it is also a box's primary link.
 - Keep `provideDocumentLinks` cheap; `resolveDocumentLink(link)` may fill in `target`, `tooltip` or `command` when a link is shown or followed.
 - Only the providers whose selector matches a text are asked; where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
-- An extension that shows links itself (an image box's path) reads `languages.provideDocumentLinks(document)` and `languages.resolveDocumentLink(link)`.
 - An extension's own CodeMirror editor shows them as the Source editors do with `languages.createDocumentLinksCodeMirrorExtension(languageId, () => path)`.
 
 == Preview <architecture-source-editor-and-preview-preview>

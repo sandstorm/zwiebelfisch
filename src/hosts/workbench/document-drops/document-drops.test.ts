@@ -23,7 +23,7 @@ function figureDrops() {
       dropped.push({ offset, file });
       return file.endsWith('.ic') ? { insertText: '#figure(sheets.Budget)', additionalEdit: [{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '#import "b.typ": sheets\n\n' }] } : null;
     },
-    upload: async (files) => files.map((file) => ProjectPath.of(`/${file.name}`)),
+    upload: async (_document, files) => files.map((file) => ProjectPath.of(`/${file.name}`)),
   };
   return { drops, dropped };
 }

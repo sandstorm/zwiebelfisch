@@ -27,7 +27,7 @@ const visual = (page: Page) => page.getByTestId('typst-visual');
 const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
 const imageBox = (page: Page) => visual(page).locator('.typst-images__box');
 const picture = (page: Page) => imageBox(page).locator('img.typst-visual__rendering');
-const imageTools = (page: Page) => imageBox(page).getByRole('toolbar', { name: 'Image' });
+const imageBar = (page: Page) => page.getByRole('toolbar', { name: 'Image' });
 
 test('a figure shows its image and its caption as editable rich text; label and arguments stay', async ({ page }) => {
   await load(page, '#figure(image("logo.svg", width: 50%), caption: [A *logo* image], placement: top) <fig:logo>\n');
@@ -49,9 +49,12 @@ test('insert an image, add a caption, type it, drag a handle: the source gets th
   await expect.poll(value(page)).toContain('#image("logo.svg")');
 
   await picture(page).click();
-  await imageTools(page).getByRole('button', { name: 'Add caption' }).click();
-  await page.keyboard.type('A teal box');
-  await expect.poll(value(page)).toContain('#figure(image("logo.svg"), caption: [A teal box])');
+  await imageBar(page).getByRole('button', { name: 'Caption' }).click();
+  const caption = page.getByRole('form', { name: 'Add caption' });
+  await caption.getByLabel('Caption').fill('A teal box');
+  await caption.getByLabel('Caption').press('Enter');
+  // labelled after the caption
+  await expect.poll(value(page)).toContain('#figure(image("logo.svg"), caption: [A teal box]) <fig:teal-box>');
 
   await picture(page).click();
   const handle = imageBox(page).locator('[data-handle="e"]');
@@ -62,28 +65,32 @@ test('insert an image, add a caption, type it, drag a handle: the source gets th
   await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 5 });
   await expect(imageBox(page).locator('.typst-images__size')).toHaveText(/^\d+%$/);
   await page.mouse.up();
-  await expect.poll(value(page)).toMatch(/#figure\(image\("logo\.svg", width: \d+%\), caption: \[A teal box\]\)/);
+  await expect.poll(value(page)).toMatch(/#figure\(image\("logo\.svg", width: \d+%\), caption: \[A teal box\]\) <fig:teal-box>/);
 
   // one undo step takes the width back
   await page.keyboard.press('ControlOrMeta+Z');
-  await expect.poll(value(page)).toContain('#figure(image("logo.svg"), caption: [A teal box])');
+  await expect.poll(value(page)).toContain('#figure(image("logo.svg"), caption: [A teal box]) <fig:teal-box>');
 });
 
-test('preset widths, alt text and Remove caption in the image toolbar', async ({ page }) => {
+test('a preset width and an empty Caption in the image bar; deleting the image deletes its figure', async ({ page }) => {
   await load(page, '#figure(image("logo.svg"), caption: [Logo])\n\nText\n');
   await picture(page).click();
-  await imageTools(page).getByRole('button', { name: 'Width 25%' }).click();
+  await imageBar(page).getByRole('button', { name: 'Width 25%' }).click();
   await expect.poll(value(page)).toContain('image("logo.svg", width: 25%)');
 
-  await imageTools(page).getByRole('button', { name: 'Alt text' }).click();
-  const alt = page.getByRole('form', { name: 'Alt text' });
-  await alt.getByLabel('Alt text').fill('A teal box');
-  await alt.getByLabel('Alt text').press('Enter');
-  await expect.poll(value(page)).toContain('image("logo.svg", width: 25%, alt: "A teal box")');
-
   await picture(page).click();
-  await imageTools(page).getByRole('button', { name: 'Remove caption' }).click();
-  await expect.poll(value(page)).toBe('#image("logo.svg", width: 25%, alt: "A teal box")\n\nText\n');
+  await imageBar(page).getByRole('button', { name: 'Caption' }).click();
+  const caption = page.getByRole('form', { name: 'Edit caption' });
+  await expect(caption.getByLabel('Caption (empty removes it)')).toHaveValue('Logo');
+  await caption.getByLabel('Caption (empty removes it)').fill('');
+  await caption.getByLabel('Caption (empty removes it)').press('Enter');
+  await expect.poll(value(page)).toBe('#image("logo.svg", width: 25%)\n\nText\n');
+
+  await page.keyboard.press('ControlOrMeta+Z');
+  await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 25%), caption: [Logo])\n\nText\n');
+  await picture(page).click();
+  await page.keyboard.press('Backspace');
+  await expect.poll(value(page)).toBe('Text\n');
 });
 
 test('a removed figure label can be added again, typed right where its tag shows', async ({ page }) => {

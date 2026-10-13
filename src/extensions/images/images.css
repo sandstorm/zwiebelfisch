@@ -1,22 +1,13 @@
-/* The images extension's styles: image boxes (frame, resize handles, tools), also as a figure's body,
-   an image's path link, and the read-only editor of image files.
+/* The images extension's styles: image boxes (frame, resize handles), also as a figure's body,
+   and the read-only editor of image files.
    See images in images.ts, which registers it; colors from the widget's --te-* tokens. */
-/* An image box's path: a button opening the file, or struck through when the file is missing */
-.typst-images__path {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: var(--te-accent);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-images__path:hover { text-decoration: underline; }
-.typst-images__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
 /* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
 .typst-images__picture { max-height: min(24em, 40vh); object-fit: contain; }
-/* Images: a frame showing the width, resize handles and the image toolbar while selected */
+/* Images: a frame showing the width, resize handles while selected */
 .typst-images__frame { position: relative; width: fit-content; max-width: 100%; }
 .typst-images__frame--sized > .typst-images__picture { width: 100%; }
+.typst-images__frame--no-size { width: 100%; }
+.typst-images__frame--no-size > .typst-images__picture { width: 100%; }
 .typst-images__frame:has(> .typst-images__picture[hidden]) { display: none; }
 .typst-images__resize-handle {
   position: absolute;
@@ -49,29 +40,9 @@
   font: 12px system-ui, sans-serif;
 }
 .typst-images__frame--resizing > .typst-images__size { display: block; }
-.typst-images__tools {
-  position: relative;
-  display: none;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-  font: 12px system-ui, sans-serif;
-}
-.typst-images__box.ProseMirror-selectednode:has(.typst-images__picture:not([hidden])) > .typst-images__tools,
-.typst-images__tools:focus-within { display: flex; }
-.typst-images__tools button {
-  padding: 2px 8px;
-  border: 1px solid var(--te-border);
-  border-radius: 4px;
-  background: var(--te-surface);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-images__tools button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
 /* An image as a figure's body (the figures extension's <figure>): centred above the caption */
 figure > .typst-images__box { margin-bottom: 0.2em; }
 figure .typst-images__frame { margin: 0 auto; }
-figure .typst-images__tools { justify-content: center; }
 .typst-images__frame > .typst-images__picture { cursor: default; }
 /* Read-only view of image files */
 .typst-images__file {

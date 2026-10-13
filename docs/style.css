@@ -77,6 +77,33 @@ nav[role="doc-toc"] > ol { padding-left: 0; }
 nav[role="doc-toc"] > ol > li { margin-top: 0.8rem; font-weight: 700; }
 nav[role="doc-toc"] > ol > li li { font-weight: 400; }
 nav[role="doc-toc"] a { text-decoration: none; }
-/* `example` in template.typ: below its source the result, an SVG of Typst's own look */
-.example-result { margin: 1rem 0 1.5rem; display: flex; justify-content: center; }
-.example-result svg { max-width: 100%; height: auto !important; }
+/* `example` in template.typ: one frame, the Typst source on the left, the result (an SVG of Typst's own look) on the
+   right; below each other for a document's pages and on narrow screens */
+.example {
+  margin: 1rem 0 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.example-label {
+  padding: 0.3rem 0.75rem;
+  background: var(--tint);
+  border-bottom: 1px solid var(--line);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.example-source { min-width: 0; }
+.example-source pre { margin: 0; border-radius: 0; font-size: 0.8em; white-space: pre-wrap; }
+.example-result { border-left: 1px solid var(--line); min-width: 0; }
+.example-result svg { display: block; max-width: 100%; height: auto !important; margin: 0.75rem auto; }
+.example--pages, .example--pages .example-result { grid-template-columns: 1fr; border-left: none; }
+.example--pages .example-result { border-top: 1px solid var(--line); }
+@media (max-width: 40rem) {
+  .example { grid-template-columns: 1fr; }
+  .example-result { border-left: none; border-top: 1px solid var(--line); }
+}

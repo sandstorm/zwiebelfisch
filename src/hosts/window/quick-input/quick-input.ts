@@ -215,7 +215,8 @@ export class QuickInput {
     const target = [this.#trigger, root.activeElement].find(shown);
     if (!target) return null;
     const rect = target.getBoundingClientRect();
-    if (target.closest('[contenteditable="true"], .cm-content')) {
+    // a control inside an editor (an image box's toolbar) is the anchor itself, not the editor's selection
+    if (!target.closest(CONTROLS) && target.closest('[contenteditable="true"], .cm-content')) {
       const selection = selectionRect(root);
       if (selection) return selection;
     }
@@ -502,6 +503,9 @@ function selectionIn(root: Document | ShadowRoot): Selection | null {
   const own = (root as ShadowRoot & { getSelection?(): Selection | null }).getSelection;
   return typeof own === 'function' ? own.call(root) : (root.ownerDocument ?? (root as Document)).getSelection();
 }
+
+/** What the user presses rather than types in. */
+const CONTROLS = 'button, input, select, textarea, a[href], [role="button"], [role="menuitem"]';
 
 /** Elements taller than this (an editor's whole text) are no anchor: the box goes to their top instead. */
 const MAX_ANCHOR_HEIGHT = 120;

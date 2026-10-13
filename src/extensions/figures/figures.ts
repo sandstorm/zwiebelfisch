@@ -5,7 +5,8 @@ import { figureSearch } from './workbench/figure-search';
 
 /**
  * `#figure(body, caption: [..])` in the Visual editor, with the caption as rich text and the commands
- * `addFigureCaption` / `removeFigureCaption` (an image box's tools offer them); and every figure (tables and listings
+ * `addFigureCaption` / `removeFigureCaption` / `setFigureCaption` (an image box's tools offer the last); deleting a
+ * selected body deletes its figure (caption and all); and every figure (tables and listings
  * too) in search everywhere, by caption.
  *
  * A figure frames whatever another construct offers as a body, an image or a table, through the node group

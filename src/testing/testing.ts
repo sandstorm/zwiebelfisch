@@ -67,8 +67,6 @@ export interface TestEditorOptions {
   applyEdit?(change: FileChange): Promise<string | null>;
   /** The preview's compiled snippets of the document (raw boxes show them; default: none) and when they change. */
   preview?: Partial<Pick<PreviewContributions, 'snippet' | 'onDidRender'>>;
-  /** The document links (`languages`; an image box's path; default: none) and where following one goes (`workbench.open`). */
-  links?: Partial<Pick<Languages, 'provideDocumentLinks' | 'resolveDocumentLink'> & Pick<Workbench, 'open'>>;
   /** What the user answers when the editor asks (link URL, image, alt text, …); default: every question cancelled. */
   prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
@@ -143,7 +141,7 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
 /**
  * `contributions` activated in order, for their Visual-editor contributions, with an extension context made from
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
- * `options.links`, the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
+ * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
  * Registrations other than the Visual editor's (style sheets, commands, custom editors, search providers, link
  * providers, drop edit providers) are accepted and ignored.
  */
@@ -161,7 +159,7 @@ function testContext(options: TestEditorOptions) {
   const added = async (change: FileChange) => (change.kind === 'create' && project.add(change.path, change.content), null);
   return {
     project,
-    workbench: { registerStyleSheet: ignored, open: options.links?.open ?? (() => {}) } satisfies Partial<Workbench>,
+    workbench: { registerStyleSheet: ignored, open: () => {} } satisfies Partial<Workbench>,
     commands: { registerCommand: ignored } satisfies Partial<Commands>,
     window: {
       registerCustomEditorProvider: ignored,
@@ -171,18 +169,13 @@ function testContext(options: TestEditorOptions) {
       showErrorMessage: prompts.showErrorMessage,
     } satisfies Partial<WindowApi>,
     workspace: { applyEdit: options.applyEdit ?? added } satisfies Partial<Workspace>,
-    languages: testLanguages(options),
+    languages: testLanguages(),
     preview: testPreview(options),
   };
 }
 
-function testLanguages(options: TestEditorOptions): Pick<Languages, 'registerDocumentLinkProvider' | 'registerDocumentDropEditProvider' | 'provideDocumentLinks' | 'resolveDocumentLink'> {
-  return {
-    registerDocumentLinkProvider: ignored,
-    registerDocumentDropEditProvider: ignored,
-    provideDocumentLinks: options.links?.provideDocumentLinks ?? (() => []),
-    resolveDocumentLink: options.links?.resolveDocumentLink ?? ((link) => link),
-  };
+function testLanguages(): Pick<Languages, 'registerDocumentLinkProvider' | 'registerDocumentDropEditProvider'> {
+  return { registerDocumentLinkProvider: ignored, registerDocumentDropEditProvider: ignored };
 }
 
 /** A project holding the editor's document (whatever document it is) and `options.files`. */

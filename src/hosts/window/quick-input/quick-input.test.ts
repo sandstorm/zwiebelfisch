@@ -86,6 +86,27 @@ describe('showInputBox', () => {
     // jsdom has no layout: the box has no size, so it fits anywhere
     expect([box()!.style.left, box()!.style.top]).toEqual(['100px', '64px']);
   });
+
+  it('is placed below a button pressed inside an editor, not at the selection', () => {
+    const { host, button, quickInput, box } = setup();
+    const editor = host.appendChild(document.createElement('div'));
+    editor.contentEditable = 'true';
+    editor.setAttribute('contenteditable', 'true');
+    editor.append(button);
+    editor.append('Some text');
+    const range = document.createRange();
+    range.selectNodeContents(editor.lastChild!);
+    range.getClientRects = () => [new DOMRect(300, 300, 50, 16)] as unknown as DOMRectList;
+    document.getSelection()!.removeAllRanges();
+    document.getSelection()!.addRange(range);
+    host.getBoundingClientRect = () => new DOMRect(10, 20, 600, 400);
+    Object.defineProperties(host, { clientWidth: { value: 600 }, clientHeight: { value: 400 } });
+    button.getBoundingClientRect = () => new DOMRect(110, 60, 40, 20);
+    button.getClientRects = () => [button.getBoundingClientRect()] as unknown as DOMRectList;
+    button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    void quickInput.showInputBox();
+    expect([box()!.style.left, box()!.style.top]).toEqual(['100px', '64px']);
+  });
 });
 
 describe('showQuickPick', () => {

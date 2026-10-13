@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for image-tools.ts.
+// Tests for image-tools.ts and image-bar.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualEditor, TestPrompts } from '../../../testing/testing';
@@ -16,11 +16,14 @@ async function setup(text: string, prompts?: TestPrompts) {
   const view = createVisualEditor(parent, doc, { files, prompts });
   await settle();
   const box = () => parent.querySelector<HTMLElement>('.typst-images__box')!;
-  const tools = () => box().querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;
-  const button = (name: string) =>
-    [...tools().querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? b.textContent) === name)!;
+  const bar = () => parent.querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;
   const picture = () => box().querySelector<HTMLImageElement>('img.typst-visual__rendering')!;
-  return { doc, view, parent, box, tools, button, picture };
+  /** The image bar's button `name`, the image selected first. */
+  const button = (name: string) => {
+    mousedown(picture());
+    return bar().querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+  };
+  return { doc, view, parent, box, bar, button, picture };
 }
 
 const mousedown = (target: Element) => target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
@@ -28,10 +31,12 @@ const pointer = (target: EventTarget, type: string, clientX: number) =>
   target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX }));
 
 describe('image tools', () => {
-  it('clicking the picture selects the image (showing its tools) instead of its code', async () => {
-    const { box, picture } = await setup('Intro\n\n#image("cat.png")\n');
+  it('clicking the picture selects the image (showing its bar) instead of its code', async () => {
+    const { box, bar, picture } = await setup('Intro\n\n#image("cat.png")\n');
+    expect(bar().hidden).toBe(true);
     mousedown(picture());
     expect(box().classList).toContain('ProseMirror-selectednode');
+    expect(bar().hidden).toBe(false);
     expect(box().querySelector<HTMLElement>('.typst-visual__code')!.hidden).toBe(true);
   });
 
@@ -41,17 +46,20 @@ describe('image tools', () => {
     expect(box().querySelector<HTMLElement>('.typst-visual__code')!.hidden).toBe(false);
   });
 
-  it('adds a caption, which is then typed as text, and removes it again', async () => {
-    const { doc, view, button, parent } = await setup('Intro\n\n#image("cat.png", width: 50%)\n');
-    button('Add caption').click();
-    expect(doc.text).toBe('Intro\n\n#figure(image("cat.png", width: 50%), caption: [])\n');
-    expect(parent.querySelector('figure figcaption')).not.toBeNull();
-    expect(view.selection().from).toBe(doc.text.indexOf(']'));
-    button('Remove caption').click();
+  it('asks for the caption, sets it, and removes it with an empty one', async () => {
+    const prompts = new TestPrompts().answer('The cat on the mat', '');
+    const { doc, button } = await setup('Intro\n\n#image("cat.png", width: 50%)\n', prompts);
+    button('Caption').click();
+    await settle();
+    expect(prompts.asked[0].options).toMatchObject({ prompt: 'Caption', value: '' });
+    expect(doc.text).toBe('Intro\n\n#figure(image("cat.png", width: 50%), caption: [The cat on the mat])\n');
+    button('Caption').click();
+    await settle();
+    expect(prompts.asked[1].options).toMatchObject({ prompt: 'Caption (empty removes it)', value: 'The cat on the mat' });
     expect(doc.text).toBe('Intro\n\n#image("cat.png", width: 50%)\n');
   });
 
-  it('sets a preset width as one edit of the width argument', async () => {
+  it('sets a preset width as one edit of the width argument, the current one pressed', async () => {
     const { doc, button } = await setup('#figure(image("cat.png", width: 8cm, height: 2cm), caption: [A]) <cat>\n');
     expect(button('Width 75%').getAttribute('aria-pressed')).toBe('false');
     button('Width 75%').click();
@@ -63,19 +71,6 @@ describe('image tools', () => {
     const { doc, button } = await setup('#image("cat.png", alt: "A cat")\n');
     button('Width 50%').click();
     expect(doc.text).toBe('#image("cat.png", alt: "A cat", width: 50%)\n');
-  });
-
-  it('asks for the alt text and sets it; an empty one removes it', async () => {
-    const prompts = new TestPrompts().answer('A cat', '');
-    const { doc, button } = await setup('#image("cat.png")\n', prompts);
-    button('Alt text').click();
-    await settle();
-    expect(prompts.asked[0].options).toMatchObject({ title: 'Alt text', prompt: 'Alt text', value: '' });
-    expect(doc.text).toBe('#image("cat.png", alt: "A cat")\n');
-    button('Alt text').click();
-    await settle();
-    expect(prompts.asked[1].options).toMatchObject({ prompt: 'Alt text (empty removes it)', value: 'A cat' });
-    expect(doc.text).toBe('#image("cat.png")\n');
   });
 
   it('dragging a handle shows the width live and writes it as percent on release', async () => {

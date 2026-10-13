@@ -1,6 +1,6 @@
 // Reading and editing the arguments of an image call, `#image("path", ..)` (an image block) or `image("path", ..)`
-// (a figure's body). An edit replaces only the text of the argument it touches, so a resize or a new alt text is a
-// minimal source change. See images in ../images.ts.
+// (a figure's body). An edit replaces only the text of the argument it touches, so a resize is a minimal source
+// change. See images in ../images.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 
@@ -29,18 +29,6 @@ export function withImageArg(call: string, name: string, value: string | null): 
 /** `call` with `width: NN%` (relative to the text width), rounded to whole percent. */
 export function withImageWidth(call: string, percent: number): string {
   return withImageArg(call, 'width', `${Math.round(percent)}%`);
-}
-
-/** The alt text of the image, if it is written as a plain string. */
-export function imageAlt(call: string): string | null {
-  const literal = imageArg(call, 'alt');
-  return literal !== null && /^"(?:[^"\\\n]|\\["\\])*"$/.test(literal) ? literal.slice(1, -1).replace(/\\(["\\])/g, '$1') : null;
-}
-
-/** `call` with the alt text `alt`; an empty one removes the argument. */
-export function withImageAlt(call: string, alt: string): string {
-  const literal = `"${alt.replace(/["\\]/g, '\\$&').replace(/\n/g, '\\n')}"`;
-  return withImageArg(call, 'alt', alt ? literal : null);
 }
 
 /** The image's `width` as a CSS width ('' when it has none, or one CSS cannot show). */

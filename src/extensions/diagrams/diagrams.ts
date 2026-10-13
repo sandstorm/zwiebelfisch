@@ -24,7 +24,7 @@ import { newDiagram } from './workbench/new-diagram';
  * the diagram.
  *
  * The embed protocol (EmbedSession in model/) is pure state, so it is tested without an iframe; DiagramEditor in
- * workbench/ only carries messages. See docs/20_features/22_drawio-diagrams.typ.
+ * workbench/ only carries messages. See docs/20_features/07_drawio-diagrams.typ.
  */
 export function diagrams(): TypstExtension {
   return {

@@ -169,6 +169,15 @@ describe('LanguagesHost', () => {
     expect(edit('/flow.drawio.png')).toBe('image');
   });
 
+  it('uploads a file dropped from the computer to the folder of the first provider by priority that names one, else to the top', () => {
+    const languages = new LanguagesHost(targets);
+    const none = { provideDocumentDropEdits: () => null };
+    languages.registerDocumentDropEditProvider({ language: 'typst' }, none, { priority: 110 });
+    languages.registerDocumentDropEditProvider({ language: 'typst' }, { ...none, provideUploadFolder: (_document, file) => (file.endsWith('.png') ? '/img/' : undefined) });
+    expect(languages.provideUploadFolder(document, ProjectPath.of('/cat.png'))).toBe('/img/');
+    expect(languages.provideUploadFolder(document, ProjectPath.of('/notes.txt'))).toBe('/');
+  });
+
   it('runs the paste edit providers of the language in order, each on the text the one before left; drops edits that collide', () => {
     const languages = new LanguagesHost(targets);
     const change = (from: number, to: number, insert: string) => ({ from: SourceOffset.of(from), to: SourceOffset.of(to), insert });

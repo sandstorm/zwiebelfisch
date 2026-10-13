@@ -158,6 +158,14 @@ describe('copy', () => {
     expect(doc.text).toBe('Some.\n');
   });
 
+  it('cuts the paragraph at the cursor when nothing is selected, as IntelliJ cuts the line', () => {
+    const source = 'One.\n\nSome *bold* text.\n\nThree.\n';
+    const { doc, select, cut } = setup(source);
+    select(source.indexOf('bold'));
+    expect(cut().getData('text/plain')).toBe('Some *bold* text.');
+    expect(doc.text).toBe('One.\n\nThree.\n');
+  });
+
   it('round-trips: what is copied pastes back byte for byte, as Typst text and as HTML', () => {
     const source = `Some *bold* text, an escaped \\* star.\n\n= A heading (raw here)\n\n${FIGURE}\n\nEnd.\n`;
     const { select, copy } = setup(source);

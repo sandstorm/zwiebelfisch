@@ -6,12 +6,14 @@ import type { ProjectLabels } from '../model/label-index';
 import { svg, type CompletionItem, type CompletionItemProvider, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
 import { describeLabel } from '../model/label-description';
 import { insertReference } from './label-edits';
-import { canStartNewLabel, labelTags, startNewLabel, type LabelPrompts } from './label-tags';
+import { captionLabels } from './caption-labels';
+import { canStartNewLabel, editLabel, hasLabel, labelTags, startNewLabel, type LabelPrompts } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
 
 /**
- * `@key` chips with hints, label tags on blocks, the `@` list of labels, and "Add label" (in the Insert menu and, where
+ * `@key` chips with hints, label tags on blocks, the `@` list of labels, "Label" in the bar above a selected image
+ * (add, rename, remove), and "Add label" (in the Insert menu and, where
  * the selection's block can take a label, in the selection's bar).
  */
 export function references(options: ReferencesOptions): VisualEditorContribution {
@@ -26,6 +28,8 @@ export function references(options: ReferencesOptions): VisualEditorContribution
         visualEditor.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
         // after the marks and the link, before the comment (50)
         visualEditor.registerToolbarItem({ group: 'selection', order: 45, create: (toolbar) => onlyWhereEnabled(addLabel(toolbar)) }),
+        // the images extension's bar above a selected image (an extension that is left out takes the bar along)
+        visualEditor.registerToolbarItem({ group: 'image', order: 15, create: (toolbar) => figureLabel(toolbar, options) }),
       );
     },
   };
@@ -63,12 +67,12 @@ const REFERENCE: TypstNodeSpec = {
   },
 };
 
-/** The plugins of one editor: reference hints, label tags. */
+/** The plugins of one editor: reference hints, label tags, labels named after captions. */
 function referencesExtension(labels: ProjectLabels, document: TypstDocument, prompts: LabelPrompts): Extension {
   return Extension.create({
     name: 'typstReferences',
     addProseMirrorPlugins() {
-      return [referenceHints(labels), labelTags({ labels, document, prompts })];
+      return [referenceHints(labels), labelTags({ labels, document, prompts }), captionLabels(labels)];
     },
   });
 }
@@ -113,6 +117,16 @@ function addLabel(toolbar: ToolbarContext): ToolbarAction {
     run: (c) => c,
     enabled: (editor) => canStartNewLabel(editor.state) !== null,
     click: () => startNewLabel(toolbar.editor.view),
+  };
+}
+
+/** "Label" in the bar above a selected image: adds the label of its figure (or the image), or renames or removes it. */
+function figureLabel(toolbar: ToolbarContext, { labels, prompts }: ReferencesOptions): ToolbarAction {
+  return {
+    label: 'Label',
+    icon: ICON,
+    click: () => editLabel(toolbar.editor.view, { labels, document: toolbar.document, prompts }),
+    active: (editor) => hasLabel(editor.state),
   };
 }
 

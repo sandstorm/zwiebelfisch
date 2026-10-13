@@ -14,7 +14,7 @@ import { styleSearch } from './workbench/style-search';
  * applies them from the text style menu, importing a style where it is used; "New style…" there adds a block style to
  * start from and shows it in the Source editor. Search everywhere ("Styles") applies a style in either editor.
  *
- * Calls of functions not declared as styles stay raw boxes. See docs/20_features/21_custom-styles.typ.
+ * Calls of functions not declared as styles stay raw boxes. See docs/20_features/06_custom-styles.typ.
  */
 export function styles(): TypstExtension {
   return {

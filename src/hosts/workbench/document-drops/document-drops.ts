@@ -14,8 +14,8 @@ import { PROJECT_PATH_TYPE } from '../workbench';
 export interface DocumentDrops {
   /** What the project file `file` dropped at `offset` of `document` becomes (`languages.provideDocumentDropEdit`); null: nothing. */
   edit(document: TypstDocument, offset: SourceOffset, file: ProjectPath): DocumentDropEdit | null;
-  /** Adds `files` from the computer to the project; resolves to the project files they are, in order (none for a refused one). */
-  upload(files: File[]): Promise<ProjectPath[]>;
+  /** Adds `files` from the computer, dropped into `document`, to the project; resolves to the project files they are, in order (none for a refused one). */
+  upload(document: TypstDocument, files: File[]): Promise<ProjectPath[]>;
 }
 
 /**
@@ -36,7 +36,7 @@ export function visualEditorDrops(document: TypstDocument, drops: DocumentDrops)
             handleDOMEvents: {
               dragover: (_view, event) => accept(event),
               drop: (view, event) => {
-                const dropped = droppedFiles(event, drops);
+                const dropped = droppedFiles(event, document, drops);
                 if (dropped === undefined) return false;
                 let at: number | undefined = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? view.state.selection.to;
                 const insert = (files: readonly ProjectPath[]) => {
@@ -70,7 +70,7 @@ export function sourceEditorDrops(document: TypstDocument, drops: DocumentDrops)
   return EditorView.domEventHandlers({
     dragover: (event) => accept(event),
     drop: (event, view) => {
-      const dropped = droppedFiles(event, drops);
+      const dropped = droppedFiles(event, document, drops);
       if (dropped === undefined) return false;
       let pos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.head;
       const insert = (files: readonly ProjectPath[]) => {
@@ -106,7 +106,7 @@ function accept(event: DragEvent): boolean {
  * event then taken (the browser, the editor's own drop handling and the widget's `onDidDropFiles` see it no more).
  * Undefined: neither, the event left alone.
  */
-function droppedFiles(event: DragEvent, drops: DocumentDrops): ProjectPath[] | Promise<ProjectPath[]> | undefined {
+function droppedFiles(event: DragEvent, document: TypstDocument, drops: DocumentDrops): ProjectPath[] | Promise<ProjectPath[]> | undefined {
   const data = event.dataTransfer;
   if (data?.types.includes(PROJECT_PATH_TYPE)) {
     take(event);
@@ -115,7 +115,7 @@ function droppedFiles(event: DragEvent, drops: DocumentDrops): ProjectPath[] | P
   }
   if (!data?.types.includes('Files') || data.files.length === 0) return undefined;
   take(event);
-  return drops.upload([...data.files]);
+  return drops.upload(document, [...data.files]);
 }
 
 function take(event: DragEvent): void {

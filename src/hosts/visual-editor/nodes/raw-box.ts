@@ -87,9 +87,9 @@ export const RawBoxNavigation = Extension.create({
  * editor (hovered, the hint of every link; Mod+click on it, or Alt+Enter on the
  * selected box, follows it).
  * Its spec's `view.title` may head it (an outline: "Table of contents"), `view.tools` add
- * tools (an image: resize handles, a toolbar); clicking the picture of a box
+ * tools (an image: heading, resize handles); clicking the picture of a box
  * with tools selects the box rather than opening the code (double-click,
- * Enter or the tools' "Edit code" do).
+ * or Enter do).
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
@@ -165,7 +165,6 @@ class RawBox implements NodeView {
 
   selectNode(): void {
     this.dom.classList.add('ProseMirror-selectednode');
-    this.tools?.select();
   }
 
   deselectNode(): void {

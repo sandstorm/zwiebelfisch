@@ -55,6 +55,23 @@ export function startNewLabel(view: EditorView): boolean {
   return true;
 }
 
+/**
+ * The label of the figure or block the selection is in (see `labelTarget`): a new one as `startNewLabel` starts it,
+ * an existing one offered as a click on its tag offers it (rename, remove). False when there is no such block.
+ */
+export function editLabel(view: EditorView, options: LabelTagsOptions): boolean {
+  const target = labelTarget(view.state);
+  const name: string | undefined = target?.node.attrs.label?.name;
+  if (!target || name === undefined) return startNewLabel(view);
+  void editTag({ view, name, inline: target.node.isTextblock, block: () => labelTarget(view.state)?.pos ?? null, options });
+  return true;
+}
+
+/** Whether the figure or block the selection is in has a label. */
+export function hasLabel(state: EditorState): boolean {
+  return !!labelTarget(state)?.node.attrs.label;
+}
+
 /** The block a new label would go on (its position), or null (none, or it has one). */
 export function canStartNewLabel(state: EditorState): number | null {
   const target = labelTarget(state);
@@ -240,7 +257,7 @@ function canHaveLabel(node: Node): boolean {
 }
 
 /** How a new label for `node` starts, by Typst custom: `fig:` / `tab:` for figures, `sec:` for headings, else nothing. */
-function labelPrefix(node: Node): string {
+export function labelPrefix(node: Node): string {
   if (node.type.name === 'heading') return 'sec:';
   if (node.type.name !== 'figure') return '';
   return node.firstChild?.type.name === 'table' ? 'tab:' : 'fig:';

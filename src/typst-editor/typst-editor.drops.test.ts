@@ -44,6 +44,7 @@ const FILES = {
   '/diagrams/flow.mmd': 'flowchart LR\n  A --> B\n',
   '/diagrams/editor.drawio.png': BYTES,
   '/img/logo.png': BYTES,
+  '/img/photo.png': BYTES,
   '/chapters/one.typ': '= One\n',
   '/notes.txt': 'notes',
 };
@@ -147,11 +148,12 @@ describe('a file from the computer dropped into the text', () => {
     expect(drop.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(changes).toContain('/todo.txt'));
     // the spreadsheet is there already (same content): its file is used, not uploaded once more
-    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/flow.mmd', '/sketch.drawio.png', '/cat.png', '/todo.txt']);
+    // images where the project's are (/img/), others at the top
+    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/flow.mmd', '/img/sketch.drawio.png', '/img/cat.png', '/todo.txt']);
     expect(new TextDecoder().decode(editor.files['/flow.mmd'] as Uint8Array)).toBe('flowchart LR\n');
     expect(editor.source).toBe(
       '#import "budget.ic.gen.typ": sheets\n#import "@preview/merman:0.4.0": mermaid\n\nOne\n' +
-        '#figure(mermaid(read("flow.mmd"), width: 100%), caption: [ ])#figure(image("sketch.drawio.png"), caption: [ ])#image("cat.png")#figure(sheets.Budget, caption: [ ])Two\n',
+        '#figure(mermaid(read("flow.mmd"), width: 100%), caption: [ ])#figure(image("img/sketch.drawio.png"), caption: [ ])#image("img/cat.png")#figure(sheets.Budget, caption: [ ])Two\n',
     );
     editor.dispose();
   });
@@ -167,16 +169,16 @@ describe('a file from the computer dropped into the text', () => {
     // not uploaded once more by the file panel
     expect(outside).toEqual([]);
     await vi.waitFor(() => expect(editor.source).toContain('mermaid(read'));
-    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/a.png', '/flow.mmd']);
+    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/img/a.png', '/flow.mmd']);
     expect(editor.source).toBe(
-      '#import "@preview/merman:0.4.0": mermaid\n#import "budget.ic.gen.typ": sheets\n\nOne\n\n#image("a.png")\n\n#figure(sheets.Budget, caption: [ ])\n\n' +
+      '#import "@preview/merman:0.4.0": mermaid\n#import "budget.ic.gen.typ": sheets\n\nOne\n\n#image("img/a.png")\n\n#figure(sheets.Budget, caption: [ ])\n\n' +
         '#figure(mermaid(read("flow.mmd"), width: 100%), caption: [ ])\n\nTwo\n',
     );
     editor.dispose();
   });
 
   it('a second file of the same name and other content gets a free name; a refused upload is an error message', async () => {
-    const { host, editor } = setup(SOURCE_EDITOR, 'Text\n', { allowFileChange: (change) => change.path !== '/secret.png' });
+    const { host, editor } = setup(SOURCE_EDITOR, 'Text\n', { allowFileChange: (change) => change.path !== '/img/secret.png' });
     const view = CodeMirrorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)!;
     vi.spyOn(CodeMirrorView.prototype, 'posAtCoords').mockReturnValue(5);
     view.contentDOM.dispatchEvent(desktopDrop(file('budget.ic', new Uint8Array([3])), file('secret.png')));

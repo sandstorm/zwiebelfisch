@@ -24,7 +24,7 @@ import type { ShownDocument } from './workbench/document-tab';
  *
  * It uses only what any extension gets, so it sees what an outside extension sees. That is why it wraps the list: an
  * extension sees only its own context, so the others' contributions are recorded by wrapping their `activate`
- * (ContributionLog in recording/contributions.ts), not by a listing in the hosts. See docs/30_reference/02_embedding.typ,
+ * (ContributionLog in recording/contributions.ts), not by a listing in the hosts. See docs/30_configuration/02_embedding.typ,
  * "Devtools".
  */
 export function devtools(extensions: readonly TypstExtension[]): TypstExtension[] {

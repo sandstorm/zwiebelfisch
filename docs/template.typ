@@ -126,7 +126,21 @@
   set table(inset: 5pt, stroke: 0.5pt + black, fill: none)
   show table.cell: set text(fill: black)
   example-headings.update(0)
-  [#metadata(key)#body#metadata(key + "/end")]
+  // its figures are numbered from 1, as in a document of its own, and taken off the book's count after it
+  let kinds = (image, table, raw)
+  context {
+    let before = kinds.map(kind => counter(figure.where(kind: kind)).get().first())
+    show: body => kinds.zip(before).fold(body, (it, (kind, n)) => {
+      show figure.where(kind: kind): set figure(numbering: i => std.numbering("1", i - n))
+      it
+    })
+    [#metadata(key)#body#metadata(key + "/end")]
+  }
+  context for kind in kinds {
+    let inside = selector(figure.where(kind: kind)).after(metadata.where(value: key)).before(metadata.where(value: key + "/end"))
+    let count = query(inside).len()
+    if count > 0 { counter(figure.where(kind: kind)).update(i => i - count) }
+  }
 }
 
 /// `example`'s result of a document setting its pages (`#set page(paper, width, height, margin, numbering,
@@ -165,30 +179,50 @@
   if body.has("body") { code-block(body.body) }
 }
 
-/// A real-world example: the Typst code block in `body` (```typ … ```), highlighted, and below it what Typst makes of
-/// its text. A custom block style of the docs: the Visual editor shows it as a block "Example" with the code block in
-/// it to edit. Self-contained on purpose: the code is evaluated alone, without the chapter's imports and variables,
-/// so what the reader sees is the whole document and can be copied into an empty file (an example using styles
-/// declares them itself). A document setting its pages shows them at half size (`example-pages`); any other, an
-/// excerpt of a page. Its headings are numbered as its `#set heading(numbering: ..)` line says.
+/// A real-world example: the Typst code block in `body` (```typ … ```), highlighted, and next to it what Typst makes
+/// of its text, in one frame headed "Typst" and "Result" (a document setting its pages: the pages below the code, at
+/// half size, `example-pages`; any other: an excerpt of a page). A custom block style of the docs: the Visual editor
+/// shows it as a block "Example" with the code block in it to edit. Self-contained on purpose: the code is evaluated
+/// alone, without the chapter's imports and variables, so what the reader sees is the whole document and can be
+/// copied into an empty file (an example using styles declares them itself). Its headings are numbered as its
+/// `#set heading(numbering: ..)` line says.
 /// @style block Example
 #let example(body) = {
   let code = code-block(body)
   if code == none { panic("example: put the example's Typst code in its body as a code block, ```typ … ```") }
   let source = code.text
-  raw(source, block: true, lang: "typ")
   let headings = source.match(regex("(?m)^#set heading\((.*)\)[ \t]*$"))
   let numbering = if headings != none { eval("(" + headings.captures.at(0) + ",)").at("numbering", default: none) }
-  let result = plain-typst("example:" + source, numbering: numbering, if source.contains(regex("(?m)^#set page\(")) {
-    example-pages(source)
-  } else {
-    block(width: 12cm, inset: 1cm, fill: white, stroke: 0.5pt + colors.line, {
+  let pages = source.contains(regex("(?m)^#set page\("))
+  let result = plain-typst("example:" + source, numbering: numbering, if pages { example-pages(source) } else {
+    // half the text width: the result's column
+    block(width: text-width / 2 - 0.6cm, inset: 0.4cm, fill: white, {
       set align(start)
       eval(source, mode: "markup")
     })
   })
-  context if target() == "html" { html.div(class: "example-result", html.frame(result)) } else {
-    block(above: 0.8em, below: 1.4em, width: 100%, align(center, result))
+  let source = raw(source, block: true, lang: "typ")
+  context if target() == "html" {
+    html.div(class: "example" + if pages { " example--pages" }, {
+      html.div(class: "example-source", html.div(class: "example-label")[Typst] + source)
+      html.div(class: "example-result", html.div(class: "example-label")[Result] + html.frame(result))
+    })
+  } else {
+    // each half its label on a tinted strip above it, so a page break never parts the two
+    let half(label, content) = {
+      block(width: 100%, fill: colors.tint, inset: (x: 8pt, y: 5pt), below: 0pt, sticky: true,
+        text(size: 7.5pt, weight: "bold", fill: colors.primary, tracking: 0.1em, upper(label)))
+      content
+    }
+    block(above: 0.8em, below: 1.4em, width: 100%, breakable: pages, stroke: 0.5pt + colors.line, radius: 3pt, clip: true, {
+      show raw.where(block: true): set text(size: 7.5pt)
+      grid(
+        columns: if pages { 1 } else { (1fr, 1fr) },
+        stroke: (x, y) => (left: if x > 0 { 0.5pt + colors.line }, top: if y > 0 { 0.5pt + colors.line }),
+        half[Typst][#source],
+        half[Result][#block(inset: if pages { 8pt } else { 0pt }, align(center, result))],
+      )
+    })
   }
 }
 

@@ -9,7 +9,7 @@ import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/vis
  * Editing a cell changes only that cell's source; a table whose shape changed is printed again in the style it was
  * written in. A table the Visual editor cannot edit as a grid (merged cells, lines, a footer, a computed `columns`)
  * stays a raw box. A table as a figure's body gets its caption from the figures extension (node group
- * `figureBody`). See docs/20_features/08_tables.typ.
+ * `figureBody`). See docs/20_features/03_writing.typ.
  */
 export function tables(): TypstExtension {
   return {

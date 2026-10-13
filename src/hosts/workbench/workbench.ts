@@ -1,6 +1,6 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { ProjectPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
@@ -658,22 +658,27 @@ export class WorkbenchHost implements Workbench {
         const path = this.project.pathOf(document);
         return path ? this.#languages.provideDocumentDropEdit({ path, languageId: 'typst', text: document.text }, offset, file) : null;
       },
-      upload: (files) => this.#upload(files),
+      upload: (document, files) => this.#upload(document, files),
     };
     this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
     this.#sourceEditors.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, drops));
   }
 
   /**
-   * Adds `files` from the computer to the project (`workspace.applyEdit`), each at the top under its name, or under the
+   * Adds `files` from the computer, dropped into `document`, to the project (`workspace.applyEdit`), each in the folder
+   * the drop edit providers name (`languages.provideUploadFolder`; default: the top) under its name, or under the
    * first free one of `name-2.ext`, … unless a file of that name has the same content (`uploadTarget`); a refusal is
    * an error message. Resolves to the files' paths in the project, without the refused ones.
    */
-  async #upload(files: File[]): Promise<ProjectPath[]> {
+  async #upload(document: TypstDocument, files: File[]): Promise<ProjectPath[]> {
     const paths: ProjectPath[] = [];
+    const file = this.project.pathOf(document);
+    const text = { path: file!, languageId: 'typst', text: document.text };
     for (const change of await uploadChanges(files)) {
       if (change.kind !== 'create') continue;
-      const path = uploadTarget(change.path, change.content, (candidate) => this.project.content(candidate));
+      const folder = file ? this.#languages.provideUploadFolder(text, change.path) : '/';
+      const named = ProjectPath.of(folder + ProjectPath.name(change.path));
+      const path = uploadTarget(named, change.content, (candidate) => this.project.content(candidate));
       const problem = this.project.has(path) ? null : await this.#workspace.applyEdit({ ...change, path });
       if (problem) void this.window.showErrorMessage(problem);
       else paths.push(path);

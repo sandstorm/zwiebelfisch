@@ -1,6 +1,6 @@
 // Tests for image-call.ts.
 import { describe, expect, it } from 'vitest';
-import { imageAlt, imageArg, imageWidthCss, withImageArg, withImageWidth, withoutHash, withHash, withImageAlt } from './image-call';
+import { imageArg, imageWidthCss, withImageArg, withImageWidth, withoutHash, withHash } from './image-call';
 
 describe('image call arguments', () => {
   it('reads a named argument, in markup or code form', () => {
@@ -32,12 +32,8 @@ describe('image call arguments', () => {
     expect(withImageArg('#rect()', 'width', '50%')).toBe('#rect()');
   });
 
-  it('writes widths as whole percent and alt text as a string', () => {
+  it('writes widths as whole percent', () => {
     expect(withImageWidth('#image("a.png", width: 3cm)', 49.6)).toBe('#image("a.png", width: 50%)');
-    expect(withImageAlt('#image("a.png")', 'A "cat"\\dog')).toBe('#image("a.png", alt: "A \\"cat\\"\\\\dog")');
-    expect(withImageAlt('#image("a.png", alt: "x")', '')).toBe('#image("a.png")');
-    expect(imageAlt('#image("a.png", alt: "A \\"cat\\"")')).toBe('A "cat"');
-    expect(imageAlt('#image("a.png", alt: text)')).toBeNull();
   });
 
   it('shows the written width in CSS where CSS has the same unit', () => {

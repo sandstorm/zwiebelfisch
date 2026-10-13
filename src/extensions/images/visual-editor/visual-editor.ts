@@ -1,8 +1,7 @@
 // Images in the Visual editor. See images in ../images.ts.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink } from '../../../hosts/languages/languages';
+import { PathReference } from '../../../core/paths/paths';
 import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
@@ -10,22 +9,26 @@ import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syn
 import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
 import { imageFilePastes, insertImages } from './image-insertion';
 import { imagePath } from './image-syntax';
+import { IMAGE_BAR, imageBarItems } from './image-bar';
 import { ImageTools } from './image-tools';
 import { IMAGE_ACCEPT } from '../model/image-files';
 
 /**
- * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
- * path", with tools (resize handles, width, alt text; a caption where the
- * figures extension offers one) and the image file in place of the code, also
- * as a figure's body; "Insert image" (a path, or the project's images and
- * uploads), and image files pasted into the text.
+ * `#image("literal path", ..)` blocks, edited as code in a box, with the image
+ * file in place of the code and resize handles (its path's link followed on the
+ * picture, as on every box's), also as
+ * a figure's body; a bar above the selected image (width; a caption where the
+ * figures extension offers one); "Insert image" (a path, or the project's
+ * images and uploads), and image files pasted into the text.
  */
 export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
   return {
     id: 'images',
     activate({ visualEditor, subscriptions }) {
       subscriptions.push(
-        visualEditor.registerNode(imageSpec(options)),
+        visualEditor.registerNode(imageSpec()),
+        visualEditor.registerToolbarGroup(IMAGE_BAR),
+        ...imageBarItems(options.prompts).map((item) => visualEditor.registerToolbarItem(item)),
         visualEditor.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
         // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
         visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
@@ -34,7 +37,7 @@ export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribu
   };
 }
 
-/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the window's. */
+/** Where images ask (an image, a path, a caption, a width) and tell why an upload was refused: the window's. */
 export type ImagePrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
 
 /** Where image files are shown from: the host's project files, as URLs. */
@@ -51,18 +54,8 @@ export interface ImagesOptions {
   assets(document: TypstDocument): ImageAssets;
   /** Image files shown in place of the call while it is not edited. */
   imageUrls(document: TypstDocument): ImageUrls;
-  /** The links on image paths in a document: an image box's path opens its file, or shows it is missing. */
-  imageLinks(document: TypstDocument): ImageLinks;
-  /** Where "Insert image" and "Alt text" ask, and refused uploads are told. */
+  /** Where "Insert image" and the image tools ask, and refused uploads are told. */
   prompts: ImagePrompts;
-}
-
-/** The document links on the paths of a document's image calls. */
-export interface ImageLinks {
-  /** The (resolved) link on the path of the image call `src`, or null. */
-  linkOf(src: string): DocumentLink | null;
-  /** Shows a link's target. */
-  open(target: ProjectPath): void;
 }
 
 /** Where the Visual editor gets images to insert from: the host's project files. */
@@ -73,7 +66,7 @@ export interface ImageAssets {
   upload(file: File): Promise<{ path: PathReference } | { error: string }>;
 }
 
-function imageSpec(options: ImagesOptions): TypstNodeSpec {
+function imageSpec(): TypstNodeSpec {
   return {
     name: 'image',
     tiptap: Image,
@@ -92,18 +85,14 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
     },
     view: {
       box: 'code',
-      tools: (host, node) => {
-        const links = options.imageLinks(host.editor.document);
-        const pathLabel = (path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target));
-        return new ImageTools({ ...host, pathLabel, prompts: options.prompts }, node);
-      },
+      tools: (host, node) => new ImageTools(host, node),
     },
   };
 }
 
 /**
  * A standalone `#image("path", ..)` call. Its source is kept and edited like a
- * raw block's; the box shows which image it is. A figure may hold it as its
+ * raw block's; the box shows the image. A figure may hold it as its
  * body (`figureBody`), the call then written without `#`.
  */
 const Image = Node.create({
@@ -209,27 +198,4 @@ function imagePicker(doc: Document, choose: (files: File[]) => void): HTMLInputE
     if (files.length > 0) choose(files);
   });
   return picker;
-}
-
-// --- An image box's path as a link to the file (the document link on it)
-
-/** An image box's path as a button that opens the link's target, or the path marked as leading nowhere (with the link's tooltip). */
-function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Document, open: (target: ProjectPath) => void): HTMLElement {
-  // an image's path leads to a file, if anywhere
-  const target = link?.target instanceof URL ? undefined : link?.target;
-  if (!target) {
-    const missing = doc.createElement('span');
-    missing.className = 'typst-images__path typst-images__path--missing';
-    missing.textContent = path;
-    missing.title = link?.tooltip ?? 'Outside the project';
-    return missing;
-  }
-  const button = doc.createElement('button');
-  button.type = 'button';
-  button.className = 'typst-images__path';
-  button.textContent = path;
-  button.title = link?.tooltip ?? `Open ${ProjectPath.displayName(target)}`;
-  button.addEventListener('mousedown', (event) => event.preventDefault());
-  button.addEventListener('click', () => open(target));
-  return button;
 }

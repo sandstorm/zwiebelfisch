@@ -26,7 +26,7 @@ export const DOCS_FILES_SNAPSHOT = 'snapshot';
 export const DOCS_FILES_CHANGE = 'change';
 
 /**
- * A file in docs/ that changed on disk, by its path relative to docs/ (`20_features/02_visual-editor.typ`): its content as text
+ * A file in docs/ that changed on disk, by its path relative to docs/ (`20_features/03_writing.typ`): its content as text
  * (text files, see `isTextPath`) or base64 (the rest), or deleted.
  */
 export type DiskChange = { path: string } & ({ text: string } | { base64: string } | { deleted: true });

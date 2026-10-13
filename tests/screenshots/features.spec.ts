@@ -1,5 +1,5 @@
-// The pictures of the feature chapters (docs/20_features/): one test per chapter that shows the editor, named after
-// the chapter's label without `features-`, saved as docs/assets/screenshots/<name>.png: only the part of the window
+// The pictures of the feature chapters (docs/20_features/): one test per feature that shows the editor, named after
+// the feature (`#screenshot("tables")`), saved as docs/assets/screenshots/<name>.png: only the part of the window
 // that shows what its "What it does" describes (chapters about Typst's output show an `example` instead, see
 // docs/template.typ). Not a test suite: it checks only what it waits for before the picture. Run by
 // `mise run docs:screenshots`, which builds the demo, removes the pictures no test here takes any more and lists the rest in docs/assets/screenshots/index.typ for `screenshot` in
@@ -60,9 +60,9 @@ test('images', async ({ page }) => {
   await hideFiles(page);
   const image = visual(page).locator('.typst-images__box').first();
   await image.locator('img.typst-visual__rendering').click();
-  const controls = image.getByRole('toolbar', { name: 'Image' });
+  const controls = page.getByRole('toolbar', { name: 'Image' });
   await expect(controls).toBeVisible();
-  // the whole box in the window, its controls below it included
+  // the whole box in the window, its bar above it included
   await image.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   await shoot(page, 'images', [image, controls], { padding: 12 });
 });
@@ -117,7 +117,7 @@ test('drawio-diagrams', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
   // the draw.io figure's box, found by its file
-  const image = visual(page).locator('.typst-images__box', { has: page.getByRole('button', { name: 'diagrams/editor.drawio.png' }) });
+  const image = visual(page).locator('.typst-images__box', { has: page.locator('img[alt*="diagrams/editor.drawio.png"]') });
   await image.locator('img.typst-visual__rendering').hover();
   await expect(page.getByRole('tooltip')).toBeVisible();
   await shoot(page, 'drawio-diagrams', [image, page.getByRole('tooltip')], { padding: 12 });

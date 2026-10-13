@@ -39,7 +39,7 @@ const CHAPTERS = Object.fromEntries(
     .map(([path, text]) => [path.slice('../../docs'.length), text]),
 );
 
-const CHAPTER_PATH ='/20_features/09_table-of-contents.typ';
+const CHAPTER_PATH ='/20_features/03_writing.typ';
 const CHAPTER = [
   '= Headings <features-headings>',
   '',
@@ -94,14 +94,14 @@ describe("the docs' example block style", () => {
   });
 
   it("shows the docs' chapters with examples as Example blocks holding a code block, their files unchanged", () => {
-    expect(Object.keys(CHAPTERS).length).toBeGreaterThanOrEqual(4);
+    expect(Object.keys(CHAPTERS).length).toBeGreaterThanOrEqual(3);
     for (const [path, text] of Object.entries(CHAPTERS)) {
       const files = { '/main.typ': '', '/template.typ': template, [path]: text };
       const host = document.body.appendChild(document.createElement('div'));
       const editor = createTypstEditor(host, { files });
       editor.open(path);
       const blocks = [...host.querySelectorAll<HTMLElement>('.typst-styles__block')].filter((b) => !b.closest('[hidden]'));
-      expect(blocks.map((b) => [b.dataset.styleTitle, b.querySelectorAll('.typst-markup__code-block').length]), path).toEqual([['Example', 1]]);
+      expect(blocks.map((b) => [b.dataset.styleTitle, b.querySelectorAll('.typst-markup__code-block').length]), path).toEqual(text.split('#example[').slice(1).map(() => ['Example', 1]));
       expect(editor.files[path]).toBe(text);
     }
   });
