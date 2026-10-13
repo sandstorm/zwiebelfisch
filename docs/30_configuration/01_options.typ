@@ -3,7 +3,7 @@
 There are two kinds, as in VS Code:
 
 - *Settings* are values by id `<section>.<key>`, each declared by the extension of its feature. They can change while the editor runs.
-- *Options* are what `createTypstEditor` takes once: files, callbacks, the user, the extensions (@configuration-options-editor).
+- *Options* are what `createTypstEditor` takes once: files, the main file, the user, the extensions (@configuration-options-editor).
 
 == Setting values <configuration-options-setting>
 
