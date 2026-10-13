@@ -63,6 +63,8 @@ export class Preview implements PreviewContributions {
   private requestedRenderer = PAGES.id;
   /** The registered renderer shown instead of the pages; null: the pages are shown. */
   private active: ActiveRenderer | null = null;
+  /** What `reveal` asked for last: a renderer shown later starts there. */
+  private revealed: Reveal | null = null;
   /** The pages compiled for snippets while another renderer is active, of `compile`. */
   private pagesOnDemand: { compile: Compile; done: Promise<void> } | null = null;
   /** The view options' values by id as last set (also of ids not registered yet); the others are at their default. */
@@ -152,7 +154,8 @@ export class Preview implements PreviewContributions {
   }
 
   reveal(path: ProjectPath, { from }: SourceRange): void {
-    this.reveals.push({ path, from });
+    this.revealed = { path, from };
+    this.reveals.push(this.revealed);
   }
 
   clearClickHighlight(): void {
@@ -395,6 +398,8 @@ export class Preview implements PreviewContributions {
     const failed = response.result.files.length === 0;
     if (!failed && this.active === active) {
       active.view.update({ files: response.result.files });
+      // a renderer just shown starts where the cursor was revealed last
+      if (!active.shown && this.revealed) this.reveals.push(this.revealed);
       active.shown = true;
       this.rendered.fire();
     }

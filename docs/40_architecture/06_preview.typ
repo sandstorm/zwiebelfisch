@@ -55,7 +55,7 @@ preview.registerPdfExportOption({
 
 == Renderers <architecture-preview-renderers>
 
-The pages (`pages`) are built in. A registered renderer replaces them below the toolbar while it is the active one: the preview compiles only for it, and hands it the output and the cursor.
+The pages (`pages`) are built in. A registered renderer replaces them below the toolbar while it is the active one: the preview compiles only for it, and hands it the output and the cursor (after its first output, the last `reveal`).
 
 ```ts
 preview.registerRenderer({

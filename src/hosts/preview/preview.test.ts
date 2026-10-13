@@ -519,6 +519,7 @@ describe('Preview renderers', () => {
       const warning = { severity: 'warning', message: 'ignored in HTML', hints: [], path: '/main.typ', from: 0, to: 1 };
       if (request.type === 'html') return { type: 'html', result: { files: [file], diagnostics: [warning], missingPackages: [] } };
       if (request.type === 'elements') return { type: 'elements', elements };
+      if (request.type === 'cursor') return { type: 'cursor', positions: [] };
       if (request.type === 'boxes') return { type: 'boxes', boxes: [] };
       return null;
     };
@@ -570,6 +571,15 @@ describe('Preview renderers', () => {
     await vi.waitFor(() => expect(log).toEqual(['create', 'update index.html']));
     expect(requests).toEqual(['compile', 'html']);
     expect(diagnostics).toContain('ignored in HTML');
+  });
+
+  it('starts a renderer shown later where the cursor was revealed last', async () => {
+    const { log, renderer } = setup();
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    preview.reveal(ProjectPath.of('/main.typ'), SourceRange.of({ from: 1, to: 1 }));
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    await vi.waitFor(() => expect(log).toEqual(['create', 'update index.html', 'reveal index.html#1a']));
   });
 
   it('hands the renderer the elements at the cursor, and goes back to the pages', async () => {
