@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server (in-memory) and run the two-user Playwright spec against the demo build"
-#MISE depends=["build"]
+#MISE description="Start the collaboration server (in-memory, plain rooms) and run the two-user Playwright spec against the demo build"
+#MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }
@@ -10,7 +10,7 @@ set -euo pipefail
 args=("$@")
 [[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
 [[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-TYPST_COLLAB_DB=":memory:" node server/src/main.ts &
+TYPST_COLLAB_DB=":memory:" TYPST_PLAIN_ROOMS=1 .cache/bin/typst-server &
 server=$!
 trap 'kill "$server"' EXIT
 # wait until the server accepts connections (up to 10 s)

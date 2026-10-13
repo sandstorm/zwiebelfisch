@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
-#MISE depends=["build"]
+#MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }
@@ -10,7 +10,8 @@ set -euo pipefail
 args=("$@")
 [[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
 [[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-node server/src/fake-gitlab-main.ts &
+# plain rooms off (the default): gitlab.spec.ts checks that such a server refuses them
+.cache/bin/fake-gitlab &
 server=$!
 trap 'kill "$server"' EXIT
 # wait until the server accepts connections (up to 10 s)

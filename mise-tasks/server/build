@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Build the server binaries (typst-server, fake-gitlab) into .cache/bin/ for this machine"
+set -euo pipefail
+exec go build -o .cache/bin/ ./server/cmd/typst-server ./server/cmd/fake-gitlab

@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Vet and test the Go collaboration server (unit tests, Yjs fixtures, the real HocuspocusProvider in-process)"
-set -euo pipefail
-# TestServerBinary also runs the built binary on a port; it skips where no port can be bound.
-go vet ./server/...
-exec go test ./server/... "$@"

@@ -3,7 +3,7 @@
 # push to main and by hand (Actions → Pages → Run workflow).
 #
 # The demo there runs without a server: the editor, the preview and the examples work in the page (the engine is
-# WebAssembly; @preview packages come from packages.typst.org). Collaborate and GitLab need the playground server on
+# WebAssembly; @preview packages come from packages.typst.org). GitLab and Collaborate need the playground server on
 # 127.0.0.1:1234 (mise run demo, or the Docker image), and the Documentation example saves nothing.
 name: Pages
 

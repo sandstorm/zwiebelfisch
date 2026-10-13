@@ -164,6 +164,22 @@ func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc) (*room, error) {
 	return g, nil
 }
 
+// Paths are the URL path prefixes ServeHTTP answers (an http.ServeMux pattern each): the room files, and
+// the webhook when it is enabled.
+func (x *Rooms) Paths() []string {
+	paths := []string{"/rooms/"}
+	if x.opts.WebhookSecret != "" {
+		paths = append(paths, "/"+x.opts.ID+"/webhook")
+	}
+	return paths
+}
+
+// Handles reports whether room is one of these rooms' names (`<ID>:<project>@<branch>`).
+func (x *Rooms) Handles(room string) bool {
+	_, _, ok := x.parseRoomName(room)
+	return ok
+}
+
 // parseRoomName splits `<ID>:<project id or path>@<branch>`.
 func (x *Rooms) parseRoomName(name string) (project, branch string, ok bool) {
 	rest, ok := strings.CutPrefix(name, x.prefix)

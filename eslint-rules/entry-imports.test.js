@@ -10,15 +10,15 @@ import entryImports from './entry-imports.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
-/** The rule's messages for `code` as if it were the file `file` (path from the repository root). */
-function lint(file, code) {
+/** The rule's messages for `code` as if it were the file `file` (path from the repository root), with eslint.config.js's options. */
+function lint(file, code, options = boundaries) {
   const linter = new Linter({ configType: 'flat', cwd: root });
   const config = [
     {
       files: ['**/*.ts'],
       languageOptions: { parser: tseslint.parser },
       plugins: { local: { rules: { 'entry-imports': entryImports } } },
-      rules: { 'local/entry-imports': ['error', boundaries] },
+      rules: { 'local/entry-imports': ['error', options] },
     },
   ];
   return linter.verify(code, config, { filename: path.join(root, file) }).map((m) => m.message);
@@ -52,10 +52,15 @@ describe('entry-imports', () => {
   });
 
   it('allows the listed exceptions, and only for their importers', () => {
-    expect(lint('server/src/gitlab/gitlab-rooms.test.ts', "import { x } from '../../../src/extensions/collaboration/model/shared-project.ts';")).toEqual([]);
-    expect(lint('server/src/gitlab/gitlab-room.ts', "import { x } from '../../../src/extensions/collaboration/model/shared-project.ts';")).toHaveLength(1);
-    expect(lint('server/src/gitlab/gitlab-rooms.test.ts', "import { x } from '../../../src/extensions/collaboration/model/in-process.ts';")).toEqual([]);
-    expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';")).toHaveLength(1);
+    const options = {
+      ...boundaries,
+      exceptions: [{ target: 'extensions/collaboration/model/in-process.ts', importers: '^tests/.*\\.test\\.ts$', why: 'a test' }],
+    };
+    const inProcess = "import { x } from '../../src/extensions/collaboration/model/in-process';";
+    expect(lint('tests/rooms/rooms.test.ts', inProcess, options)).toEqual([]);
+    expect(lint('tests/rooms/rooms.ts', inProcess, options)).toHaveLength(1);
+    expect(lint('tests/rooms/rooms.test.ts', inProcess)).toHaveLength(1);
+    expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';", options)).toHaveLength(1);
   });
 
   it('checks paths in new URL(…, import.meta.url) and vi.mock(…)', () => {

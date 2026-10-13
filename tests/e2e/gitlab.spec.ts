@@ -191,3 +191,9 @@ test('saving without changes says so', async ({ browser, baseURL }, info) => {
   await saveToGitLab(ann, 'Nothing');
   await expect(messages(ann).getByRole('status').filter({ hasText: 'No changes to save' })).toBeVisible();
 });
+
+test('a plain room on this server (plain rooms off): the bar and the widget say it opens only GitLab rooms', async ({ page }) => {
+  await page.goto('/?room=plain-e2e&user=Ann');
+  await expect(page.locator('#playground').getByRole('status')).toContainText('only GitLab rooms');
+  await expect(messages(page)).toContainText('Cannot join the room: This server opens only GitLab rooms');
+});

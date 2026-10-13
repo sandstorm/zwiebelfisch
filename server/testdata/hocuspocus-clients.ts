@@ -10,6 +10,7 @@
 //   edit: two clients edit one room and see each other's text and presence; a third with a wrong token is
 //         refused and gets nothing.
 //   read: one client prints what the room holds (after a server restart).
+//   refused: one client is refused (a plain room on a server without them) and prints the reason it got.
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { createInterface } from 'node:readline';
 import * as Y from 'yjs';
@@ -137,8 +138,15 @@ async function read() {
   return { texts: texts(d) };
 }
 
+async function refused() {
+  let denied = '';
+  client(token, { onAuthenticationFailed: ({ reason }) => (denied = reason) });
+  await until('refused', () => denied !== '');
+  return { denied };
+}
+
 try {
-  const result = await ({ edit, read } as Record<string, () => Promise<object>>)[scenario]();
+  const result = await ({ edit, read, refused } as Record<string, () => Promise<object>>)[scenario]();
   print({ t: 'result', ...result });
 } catch (error) {
   print({ t: 'error', message: String(error) });

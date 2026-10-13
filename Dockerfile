@@ -1,26 +1,26 @@
 # The demo playground as one image: `mise run docker:build`, then `mise run docker:run` (or the docker commands in
 # mise-tasks/docker/). It serves the built demo on :5199 and runs the collaboration server with the in-memory fake
-# GitLab on :1234, as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT) or SIGTERM stops both. GitHub builds it
-# for linux/amd64 and linux/arm64 and pushes it to ghcr.io (.github/workflows/docker.yml).
+# GitLab on :1234 (server/cmd/fake-gitlab, plain rooms on), as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT)
+# or SIGTERM stops both. GitHub builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io
+# (.github/workflows/docker.yml).
 #
 # Stage `build` installs the tools mise.toml pins (so the image builds with the same versions as a checkout) and runs
-# build:demo. It runs on the building machine's platform: the demo (JS, wasm, fonts) is the same for every platform,
-# so a multi-platform build compiles the engine once and natively, never under emulation. Stage `deps` installs the
-# server's production dependencies on the target platform (better-sqlite3 is native code). Stage `runtime` is Node
-# only: the built demo (dist/demo), the server's sources and those dependencies. The server serves the demo itself
-# (TYPST_DEMO_DIST, server/src/playground/static-files.ts): no Vite, no dev dependencies. Without a checkout the
-# Documentation example saves nothing; the playground bar says so. See docs/10_getting-started/01_getting-started.typ.
+# build:demo. Stage `server` cross-compiles the Go server for the target platform (CGO_ENABLED=0: a static binary,
+# SQLite is pure Go). Both run on the building machine's platform: the demo (JS, wasm, fonts) is the same for every
+# platform and Go cross-compiles, so a multi-platform build never runs under emulation. Stage `runtime` is distroless:
+# the binary, the built demo (dist/demo) and the fake repository's files (demo/examples/advanced).
 #
-# The server is the TypeScript one (server/src) on Node. When the Go server replaces it, only `deps` and `runtime`
-# change (a Go build stage and a runtime with its binary); `build` and the dist/demo it hands over stay as they are.
+# The server serves the demo from that folder (TYPST_DEMO_DIST, playground.StaticFiles), not embedded with go:embed:
+# the folder is what build:demo leaves, and an embedding package would make every Go build need a built demo first.
+# Without a checkout the Documentation example saves nothing; the playground bar says so. See
+# docs/10_getting-started/01_getting-started.typ.
 
 FROM --platform=$BUILDPLATFORM debian:bookworm-20261005@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS build
 
-# a C toolchain for Rust's build scripts and, should no prebuilt binary fit, better-sqlite3 (node-gyp: python3, make),
-# needed by the full install here as well
+# a C toolchain for Rust's build scripts
 # hadolint ignore=DL3008
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential ca-certificates curl git python3 \
+  && apt-get install -y --no-install-recommends build-essential ca-certificates curl git \
   && rm -rf /var/lib/apt/lists/*
 
 ARG MISE_VERSION=2026.10.4
@@ -37,15 +37,15 @@ RUN case "$BUILDARCH" in \
   && echo "${sha}  /usr/local/bin/mise" | sha256sum -c - \
   && chmod +x /usr/local/bin/mise
 
+# Go is the `server` stage's; the CI linters are not needed here
 ENV MISE_DATA_DIR=/mise MISE_YES=1 MISE_TRUSTED_CONFIG_PATHS=/app PATH=/mise/shims:$PATH \
-  CARGO_HOME=/cargo RUSTUP_HOME=/rustup
+  MISE_DISABLE_TOOLS=go,actionlint,hadolint,shellcheck CARGO_HOME=/cargo RUSTUP_HOME=/rustup
 WORKDIR /app
 
 # The tools, then the JS dependencies: both stay cached until mise.toml or the lockfile change.
 COPY mise.toml ./
 RUN mise install
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY server/package.json server/
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store,sharing=locked \
   pnpm install --frozen-lockfile --store-dir /pnpm-store
 
@@ -54,39 +54,30 @@ RUN --mount=type=cache,id=cargo-registry,target=/cargo/registry \
     --mount=type=cache,id=typst-engine-target,target=/app/crates/typst-engine/target \
   mise run build:demo
 
-FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS deps
+# the Go version mise.toml pins
+FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS server
 
-# for better-sqlite3, should no prebuilt binary fit this platform (node-gyp: python3, make)
-# hadolint ignore=DL3008
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential python3 \
-  && rm -rf /var/lib/apt/lists/*
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
+  go mod download
+COPY server server
+RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build,target=/root/.cache/go-build \
+  CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags="-s -w" -o /out/fake-gitlab ./server/cmd/fake-gitlab
 
-# The runtime's dependencies from the lockfile, production only (pnpm installs the root's along with the server's),
-# with the pnpm that package.json names (packageManager; the one mise.toml pins).
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-WORKDIR /deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY server/package.json server/
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store,sharing=locked \
-  corepack enable pnpm \
-  && pnpm install --frozen-lockfile --prod --store-dir /pnpm-store
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
 
-FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runtime
-
-ENV NODE_ENV=production HOST=0.0.0.0 TYPST_DEMO_DIST=/app/dist/demo
+ENV TYPST_ADDRESS=0.0.0.0 TYPST_PLAIN_ROOMS=1 TYPST_DEMO_DIST=/app/dist/demo
 WORKDIR /app
-COPY --from=deps /deps/node_modules node_modules
-COPY --from=deps /deps/server/node_modules server/node_modules
+COPY --from=server /out/fake-gitlab /app/fake-gitlab
 COPY --from=build /app/dist/demo dist/demo
-# the server's sources and what they read: the room protocol from src/, the fake repository's files
-COPY package.json ./
-COPY server/package.json server/
-COPY server/src server/src
-COPY src src
+# the fake repository's files, read from the working directory
 COPY demo/examples/advanced demo/examples/advanced
 
-# the base image's user `node`
-USER 1000:1000
+# the base image's user `nonroot`
+USER 65532:65532
 EXPOSE 5199 1234
-CMD ["node", "server/src/fake-gitlab-main.ts"]
+ENTRYPOINT ["/app/fake-gitlab"]

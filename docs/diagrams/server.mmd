@@ -1,0 +1,10 @@
+flowchart LR
+  W[widget<br/>HocuspocusProvider] -- WebSocket --> A
+  B[demo, other clients] -- "GET /api/info<br/>GET /rooms/…/files/…" --> A
+  GL[GitLab] -- "POST /gitlab/webhook" --> A
+  A[app<br/>one port] --> C[collab<br/>a goroutine per room]
+  A --> X
+  C --> Y[ydoc<br/>Yjs: ygo]
+  C --> S[(store<br/>SQLite)]
+  C -- Extension --> X[gitlab<br/>Rooms]
+  X -- Repository --> R[GitLab REST]

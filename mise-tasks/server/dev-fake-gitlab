@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the playground collaboration server alone: plain rooms + GitLab rooms against an in-memory fake GitLab (gitlab:demo/report@main); mise run demo also starts the demo"
+#MISE description="Start the playground server alone: GitLab rooms against an in-memory fake GitLab (gitlab:demo/report@<branch>) and plain rooms; mise run demo also starts the demo"
 set -euo pipefail
-exec node server/src/fake-gitlab-main.ts "$@"
+# plain rooms on unless TYPST_PLAIN_ROOMS says otherwise: the demo's Collaborate mode uses them
+TYPST_PLAIN_ROOMS="${TYPST_PLAIN_ROOMS:-1}" exec go run ./server/cmd/fake-gitlab "$@"

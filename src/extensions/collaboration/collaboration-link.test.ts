@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 import { connect, connectAwareness } from './model/in-process';
 import type { PlacedPresence } from './presence/presence';
 import { CollaborationLink } from './collaboration-link';
+import { Collaboration } from './model/model';
 import { Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -80,5 +81,16 @@ describe('CollaborationLink', () => {
     if (!files.has(MAIN)) files.set(MAIN, new Y.Text('Hello world'));
     files.get(MAIN)!.insert(0, 'Remote: ');
     expect(project.document(MAIN)!.text).toBe('Hello world');
+  });
+
+  it("tells the user why the room could not be joined (the server's reason)", async () => {
+    vi.spyOn(Collaboration, 'start').mockRejectedValueOnce(new Error('This server opens only GitLab rooms'));
+    vi.spyOn(console, 'error').mockImplementationOnce(() => {});
+    const tell = vi.fn();
+    const project = new Project(MAIN, { [MAIN]: 'Hello world' });
+    const link = new CollaborationLink({ url: 'ws://127.0.0.1:1234', room: 'plain' }, { project }, { current: () => null, focused: () => false, tell });
+    cleanup.push(() => link.dispose());
+    await link.ready;
+    expect(tell).toHaveBeenCalledWith('Cannot join the room: This server opens only GitLab rooms', 'error');
   });
 });

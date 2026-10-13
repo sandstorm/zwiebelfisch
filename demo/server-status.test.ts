@@ -21,20 +21,22 @@ function fakeFetch(routes: Record<string, () => Response>) {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 describe('probeServer', () => {
-  it('finds the playground server with its fake GitLab', async () => {
-    const { fetch, calls } = fakeFetch({ '/playground': () => json({ project: 'demo/report', room: GITLAB_ROOM }) });
-    await expect(probeServer(fetch)).resolves.toBe('gitlab');
-    expect(calls[0].url).toBe(`${SERVER.http}/playground`);
+  it('finds the playground server with its fake GitLab, and whether it has plain rooms', async () => {
+    const { fetch, calls } = fakeFetch({
+      '/api/info': () => json({ plainRooms: true }),
+      '/playground': () => json({ project: 'demo/report', room: GITLAB_ROOM }),
+    });
+    await expect(probeServer(fetch)).resolves.toEqual({ kind: 'gitlab', plainRooms: true });
+    expect(calls.map((call) => call.url)).toEqual([`${SERVER.http}/api/info`, `${SERVER.http}/playground`]);
   });
 
-  it('a server without the playground endpoints (mise run server:dev) is plain', async () => {
-    const { fetch, calls } = fakeFetch({ '/': () => new Response(null, { status: 200 }) });
-    await expect(probeServer(fetch)).resolves.toBe('plain');
-    expect(calls[1].init?.mode).toBe('no-cors');
+  it('a server without the playground endpoints (mise run server:dev) is just a server; plain rooms off', async () => {
+    const { fetch } = fakeFetch({ '/api/info': () => json({ plainRooms: false }) });
+    await expect(probeServer(fetch)).resolves.toEqual({ kind: 'server', plainRooms: false });
   });
 
   it('nothing listening: offline', async () => {
-    await expect(probeServer(fakeFetch({}).fetch)).resolves.toBe('offline');
+    await expect(probeServer(fakeFetch({}).fetch)).resolves.toEqual({ kind: 'offline', plainRooms: false });
   });
 });
 
@@ -69,14 +71,20 @@ describe('describeServer', () => {
   });
 
   it('GitLab mode on a server without the fake GitLab says which command has it', () => {
-    const status = describeServer('gitlab', 'plain');
+    const status = describeServer('gitlab', 'server');
     expect(status.level).toBe('warn');
     expect(status.hint).toContain('mise run demo');
   });
 
+  it('Collaborate mode on a server without plain rooms says it opens only GitLab rooms', () => {
+    const status = describeServer('collab', 'server', false);
+    expect(status).toMatchObject({ level: 'warn', text: expect.stringMatching(/only GitLab rooms/), hint: 'mise run demo' });
+    expect(describeServer('gitlab', 'gitlab', false).level).toBe('ok');
+  });
+
   it('connected', () => {
     expect(describeServer('gitlab', 'gitlab')).toMatchObject({ level: 'ok', text: expect.stringContaining('fake GitLab') });
-    expect(describeServer('collab', 'plain')).toMatchObject({ level: 'ok', text: expect.stringContaining(SERVER.ws) });
+    expect(describeServer('collab', 'server', true)).toMatchObject({ level: 'ok', text: expect.stringContaining(SERVER.ws) });
   });
 
   it('a server that came up after the page loaded asks for a reload', () => {

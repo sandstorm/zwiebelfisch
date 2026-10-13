@@ -20,7 +20,7 @@ import (
 )
 
 // GitLab rooms against a repository in memory (fakeRepo), in a stand-in for the collaboration room
-// (fakeHost), on a clock the test moves (fakeClock). The ports of server/src/gitlab/gitlab-rooms.test.ts;
+// (fakeHost), on a clock the test moves (fakeClock);
 // collab_test.go runs a room in the real collaboration server.
 
 func TestMain(m *testing.M) { goleak.VerifyTestMain(m) }
@@ -297,7 +297,9 @@ func TestLoading(t *testing.T) {
 			r, err := x.openRoom(name, &fakeHost{}, ydoc.New())
 			require.NoError(t, err)
 			require.Nil(t, r, name)
+			require.False(t, x.Handles(name), name)
 		}
+		require.True(t, x.Handles("gitlab:demo/report@main"))
 		p, b, ok := x.parseRoomName("gitlab:7@feature/x@y")
 		require.True(t, ok)
 		require.Equal(t, []string{"7", "feature/x@y"}, []string{p, b})

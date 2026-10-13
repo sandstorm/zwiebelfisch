@@ -7,9 +7,9 @@ and 15 "Open work") and delete once built. Legend: (v) verified in code or on th
 
 | What | How (v) |
 |---|---|
-| Project identity | Only the room name, chosen by the client: `gitlab:<project id or path>@<branch>` (`server/src/gitlab/gitlab-extension.ts: parseRoomName`). Always the whole repository; no subfolder. |
-| Demo "GitLab (fake)" | `?room=gitlab:demo/report@main` in the URL (`demo/playground.ts`, `GITLAB_ROOM`). `FakeGitLab` is in-memory (`server/src/gitlab/fake-gitlab.ts`); another branch name starts a fresh branch from `main`. The playground bar switches modes. |
-| Auth | Stub: `sharedToken(TYPST_COLLAB_TOKEN)`, one token for every room and user (`server/src/auth.ts`). Users are whatever name the client sends (`?user=Ann`). |
+| Project identity | Only the room name, chosen by the client: `gitlab:<project id or path>@<branch>` (`server/lib/gitlab/rooms.go: parseRoomName`). Always the whole repository; no subfolder. |
+| Demo "GitLab (fake)" | `?room=gitlab:demo/report@main` in the URL (`demo/playground.ts`, `GITLAB_ROOM`). The fake GitLab is in-memory (`server/lib/fakegitlab`); another branch name starts a fresh branch from `main`. The playground bar switches modes. |
+| Auth | Stub: `collab.SharedToken(TYPST_COLLAB_TOKEN)`, one token for every room and user (`server/lib/collab/auth.go`). Users are whatever name the client sends (`?user=Ann`). |
 | GitLab access | One server-wide token with `api` scope (`TYPST_GITLAB_TOKEN`) does everything: tree, files, blobs, commits (`gitlab-api.ts`). Users never sign in to GitLab; commits name co-editors as `Co-authored-by:`. |
 | Persistence | SQLite: one Y.Doc per room, GitLab rooms included (`collab-server.ts`, `@hocuspocus/extension-sqlite`). Browser: localStorage/sessionStorage mementos for UI state (`hosts/workbench/memento`). Nothing per user on the server. |
 | Main file | GitLab rooms: per user (the client's `mainFile` option); other rooms share it (`project` map, `shared-main-file.ts`). |

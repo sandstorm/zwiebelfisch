@@ -3,9 +3,8 @@
  * server reads and merges them in GitLab rooms).
  *
  * What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the stateless messages of
- * GitLab-backed rooms, and the URL of a room's file. Both sides import this file: the collaboration extension and
- * server/src. It lives in core, not in the extension, because the server may import nothing else of the widget. It has
- * no imports, so the server's Node runtime can load it directly. See docs/40_architecture/09_server.typ.
+ * GitLab-backed rooms, and the URL of a room's file. The widget's side; the server's (Go) is
+ * server/lib/gitlab/protocol.go, and a change here is a change there. See docs/40_architecture/09_server.typ.
  */
 export const FILES_MAP = 'files';
 
@@ -26,7 +25,6 @@ export const GITLAB_ROOM_PREFIX = 'gitlab:';
  * | `baseSha`     | the commit the room's base is           |
  * | `base`        | `Record<path, string>`: the `.typ` files at `baseSha` |
  * | `baseAssets`  | `Record<path, blobSha>`: the other files at `baseSha` |
- * | `lastCommits` | `Record<path, commitSha>`: per `.typ` file, the commit that last changed it (optimistic concurrency) |
  * | `changes`     | `RoomChanges \| null`: what the room has that the branch has not (kept up to date while people edit) |
  * | `conflict`    | `RoomConflict \| null`: upstream changes that conflict with the room's; nothing is committed until resolved |
  * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it); cleared by the next commit or merge, or a conflict |
@@ -47,7 +45,6 @@ export interface RoomMeta {
   baseSha: string;
   base: Record<string, string>;
   baseAssets: Record<string, string>;
-  lastCommits: Record<string, string>;
 }
 
 /** What the room has that its branch has not (`changes` in the meta map; null or missing: nothing). */
@@ -84,7 +81,7 @@ export type ClientMessage = {
   type: 'gitlab:save';
   /** Commit message (default 'Edit via Typst editor'). */
   message?: string;
-  /** The commit's author (default: the user the token belongs to). */
+  /** Who saves, named in `gitlab:saved` when the token names nobody (the commit's author is the server's bot). */
   author?: { name: string; email?: string };
 };
 

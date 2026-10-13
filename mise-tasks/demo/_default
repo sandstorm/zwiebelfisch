@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #MISE description="Playground: the demo (Vite, :5199) and the collaboration server with an in-memory fake GitLab (:1234); Ctrl-C stops both"
-#MISE depends=["build:engine", "build:fonts"]
+#MISE depends=["build:engine", "build:fonts", "server:build"]
 # Everything local: no real GitLab, no secrets, nothing stored. Usage: README.md (Demo).
 # The demo page expects the server on 127.0.0.1:1234 and Vite on 127.0.0.1:5199 (vite.config.ts). The arguments go to
 # Vite: `mise run demo preview` serves the last build (dist/demo) instead, which is what demo:build does.
 set -euo pipefail
 
-node server/src/fake-gitlab-main.ts &
+# plain rooms on: the Collaborate mode
+TYPST_PLAIN_ROOMS=1 .cache/bin/fake-gitlab &
 server=$!
 # stop the server however this script ends (Ctrl-C, Vite exiting, an error)
 trap 'kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT
@@ -27,9 +28,9 @@ cat <<EOF
 
 Typst editor playground
   Local          $demo/
-  Collaborate    $demo/?room=playground-simple&user=Ann   (second window: &user=Bob)
   GitLab (fake)  $demo/?room=gitlab%3Ademo%2Freport%40main&user=Ann
-  Server         ws://127.0.0.1:1234  (plain rooms, and gitlab:demo/report@<any branch>)
+  Collaborate    $demo/?room=playground-simple&user=Ann   (second window: &user=Bob)
+  Server         ws://127.0.0.1:1234  (gitlab:demo/report@<any branch>, and plain rooms)
 Ctrl-C stops both.
 
 EOF

@@ -95,6 +95,7 @@ type client struct {
 	mu        sync.Mutex
 	doc       *ydoc.Doc
 	auth      []string // "authenticated" / "denied"
+	reasons   []string // of the denials
 	acks      int
 	awareness [][]byte
 	stateless []string
@@ -173,6 +174,9 @@ func (c *client) handle(msg []byte) {
 		}
 	case msgAuth:
 		c.auth = append(c.auth, map[byte]string{1: "denied", 2: "authenticated"}[payload[0]])
+		if payload[0] == 1 {
+			c.reasons = append(c.reasons, string(payload[2:])) // VarString; reasons here are < 128 bytes
+		}
 	case msgSyncStatus:
 		c.acks++
 	case msgAwareness:
@@ -297,6 +301,21 @@ func TestWrongTokenIsDeniedAndGetsNothing(t *testing.T) {
 	// the provider may try again on the same connection
 	intruder.authenticate("secret")
 	intruder.eventually("in now", func() bool { return intruder.doc.Texts("files")["/x"] == "confidential" })
+}
+
+func TestRefusalTellsItsReason(t *testing.T) {
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(string, string) (collab.User, error) {
+			return collab.User{}, collab.Refusal{Reason: "no plain rooms here"}
+		}
+	})
+	c := dial(t, s, "room", "secret")
+	c.eventually("refused", func() bool { return len(c.reasons) == 1 })
+	require.Equal(t, "no plain rooms here", c.reasons[0])
+
+	other := dial(t, newServer(t, memStore(t)), "room", "wrong")
+	other.eventually("refused", func() bool { return len(other.reasons) == 1 })
+	require.Equal(t, "permission-denied", other.reasons[0], "other errors are not told")
 }
 
 // extension is an Extension for tests: it opens every room whose name starts with "x-", records what it

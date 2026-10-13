@@ -2,6 +2,7 @@ package collab
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 
@@ -109,8 +110,13 @@ func (c *conn) authenticate(address string, d *decoder) {
 	}
 	user, err := c.s.opts.Authenticate(token, room)
 	if err != nil {
+		reason := "permission-denied"
+		var refusal Refusal
+		if errors.As(err, &refusal) {
+			reason = refusal.Reason
+		}
 		c.log.Info().Str("room", room).Err(err).Msg("permission denied")
-		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
+		c.send(frame(address, msgAuth).uint(authPermissionDenied).string(reason).buf)
 		return
 	}
 	c.send(frame(address, msgAuth).uint(authAuthenticated).string("read-write").buf)

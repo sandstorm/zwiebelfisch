@@ -28,7 +28,7 @@ The collaboration code loads on demand. `onDidChangeFiles` and `change` also fir
 
 == The server <configuration-collaboration-server-running>
 
-`server/` is a Hocuspocus server that stores rooms in SQLite (@architecture-server). Run it with:
+`server/` is a Go server that stores rooms in SQLite (@architecture-server). Its rooms are GitLab branches (@configuration-gitlab-integration); rooms of any other name (*plain rooms*) only when enabled. Run it with:
 
 ```sh
 mise run server:dev    # ws://127.0.0.1:1234
@@ -38,18 +38,21 @@ mise run server:dev    # ws://127.0.0.1:1234
   columns: 2,
   [Variable], [Meaning],
   [`PORT`], [Default `1234`.],
-  [`TYPST_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`).],
+  [`TYPST_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
+  [`TYPST_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
   [`TYPST_COLLAB_TOKEN`], [The token clients must send. Unset: no check.],
+  [`TYPST_PLAIN_ROOMS`], [`1`: also open plain rooms. Default off: a client asking for one is refused, and the widget says why.],
+  [`TYPST_LOG_LEVEL`, `TYPST_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-The token check is a stub: one shared token for every room and user.
+The token check is a stub: one shared token for every room and user. A server with neither GitLab nor plain rooms does not start. `GET /api/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
 
 == Trying it locally <configuration-collaboration-server-demo>
 
 `mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo).
 
-- *Collaborate:* pick it in the playground bar, then "Open a second window as Bob".
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
+- *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so), then "Open a second window as Bob".
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
 - `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes the fake GitLab unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

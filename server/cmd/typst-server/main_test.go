@@ -19,7 +19,8 @@ import (
 )
 
 // The built binary on a real port, with real WebSockets from the real HocuspocusProvider: edit with two
-// clients, refuse a wrong token, restart (SIGTERM stores the rooms), read the room back. Needs a port: it
+// clients in a plain room, refuse a wrong token, restart (SIGTERM stores the rooms), read the room back;
+// without plain rooms (and GitLab), it does not start. Needs a port: it
 // skips where none can be bound (the agent sandbox); TestRealHocuspocusProvider in package collab covers
 // the protocol there.
 func TestServerBinary(t *testing.T) {
@@ -37,7 +38,7 @@ func TestServerBinary(t *testing.T) {
 	require.NoError(t, err, string(out))
 
 	env := append(os.Environ(), fmt.Sprintf("PORT=%d", port), "TYPST_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
-		"TYPST_COLLAB_TOKEN=secret", "TYPST_LOG_LEVEL=debug")
+		"TYPST_COLLAB_TOKEN=secret", "TYPST_PLAIN_ROOMS=1", "TYPST_LOG_LEVEL=debug")
 	url := fmt.Sprintf("ws://127.0.0.1:%d", port)
 
 	stop := start(t, binary, env, port)
@@ -48,8 +49,14 @@ func TestServerBinary(t *testing.T) {
 	stop()
 
 	stop = start(t, binary, env, port)
-	defer stop()
 	require.Equal(t, edit["texts"], clients(t, "read", url)["texts"])
+	stop()
+
+	bare := exec.Command(binary)
+	bare.Env = []string{fmt.Sprintf("PORT=%d", port), "TYPST_COLLAB_DB=:memory:"}
+	out, err = bare.CombinedOutput()
+	require.Error(t, err)
+	require.Contains(t, string(out), "no rooms to serve")
 }
 
 // start runs the server and waits until it accepts connections; stop sends SIGTERM and waits for the exit.

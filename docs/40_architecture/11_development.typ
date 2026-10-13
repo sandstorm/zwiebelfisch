@@ -24,7 +24,7 @@ The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collabora
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
   [`build:engine`], [Rust → wasm; skipped when the Rust sources are unchanged],
   [`test:e2e`], [Playwright in chromium, firefox and webkit, or one (`test:e2e chromium`); `test:e2e-all` runs every suite],
-  [`server:dev`], [the collaboration server with SQLite in `server/.data/` (@architecture-server)],
+  [`server:dev`], [the collaboration server (Go) with SQLite in `server/.data/`; GitLab rooms need `TYPST_GITLAB_URL` and `TYPST_GITLAB_TOKEN` (@architecture-server)],
   [`docs:pdf`], [this book → `dist/docs/typst-editor.pdf`],
 )
 
@@ -100,7 +100,7 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 == Open work <architecture-development-open-work>
 
 - *Verification*: run every Playwright spec in all three browsers (`test:e2e-all`); many have never run in a browser. Try a real GitLab. Check by eye: IronCalc's dark palette, the diagrams.net embed parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and its export reply.
-- *Auth*: GitLab sign-in, a real token check in `onAuthenticate`, the commit author from the verified identity.
+- *Auth*: GitLab sign-in, a real check as `collab.Authenticate`, the co-authors from the verified identity.
 - *GitLab rooms*: highlight conflict ranges in the editors (the data is sent); report an asset changed on both sides (the room's wins today); don't commit an empty main file when the repository lacks it.
 - *Collaboration*: tell the user when the server is unreachable (it stays at "Connecting to the room…"); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
 - *Files*: empty folders live only in the panel; a folder rename, move or delete is one change per file and may stop half-way; file links don't follow paths built at run time; a dropped `.ic` gets no figure until its `.ic.gen.typ` exists; a dropped `.drawio` inserts nothing, a `.drawio.svg` becomes a plain `#image`.
@@ -117,17 +117,17 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only. Other file kinds would get VS Code's `languages.createDiagnosticCollection`.
-- *Server*: decided Go with `reearth/ygo` (`docs/2026_10_13_go-server.md`); the spike is built (`server/lib/`, `server/cmd/typst-server`, `server:go:dev`, `server:go:test`). Next: run `TestServerBinary` where a port can be bound; the Playwright collaboration spec against the Go server; the Dockerfile's runtime stage; switch `server:dev` to Go; read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); rename the module path `typst-editor` once the GitHub remote exists. Step 2, GitLab rooms, is ported (`server/lib/gitlab`, `server/lib/diff3`, the `collab.Extension` hook; not wired into `cmd/typst-server` yet): a bot token commits (editors as `Co-authored-by:`), conflicts are checked per branch (`Repository`, no `lastCommits`). Next: wire it in with the config (`TYPST_GITLAB_*`), then the cut-over (`test:e2e-gitlab` against Go, `09_server.typ` rewritten, `server/src` deleted).
+- *Server* (Go, `docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: a server image (`typst-server`; today's image is the playground); read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned); rename the module path `typst-editor` once the GitHub remote exists.
 
 == Releasing <architecture-development-release>
 
 GitHub runs the same mise tasks as a checkout (`.github/workflows/`; the tools come from `mise.toml` through `jdx/mise-action`). Every push and pull request runs CI: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` are kept when it fails). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
 
-Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/`. The demo there has no server: Local mode works, Collaborate and GitLab do not.
+Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/`. The demo there has no server: Local mode works, GitLab and Collaborate do not.
 
 A release is a version tag: `git tag v1.2.3 && git push origin v1.2.3`. The tag first runs all of CI, end-to-end tests included (`release.yml` calls `ci.yml`); only when it passes does it publish, all on GitHub:
 
-- *Image*: `ghcr.io/<owner>/<repo>:1.2.3` (also `1.2` and `latest`), linux/amd64 and linux/arm64. Every push to `main` updates `:main`. It is the playground image for now; the server image comes with the cut-over to the Go server.
+- *Image*: `ghcr.io/<owner>/<repo>:1.2.3` (also `1.2` and `latest`), linux/amd64 and linux/arm64. Every push to `main` updates `:main`. It is the playground image (the Go server with the fake GitLab, distroless) for now.
 - *npm package*: `@<owner>/typst-editor@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout only.
 - *Release*: generated notes, the book as PDF and the package's tarball.
 

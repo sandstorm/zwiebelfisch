@@ -6,12 +6,12 @@
 // anything in tests/) needs only a top comment (`Tests for X`). See docs/40_architecture/10_conventions.typ.
 // A pointer's path is relative to the file's folder or to the repository root. It must exist, and a named element must
 // appear in it, so a rename or a move that forgets a pointer fails here. Whether a why is a good one is for reviewers.
-// Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each failing file and exits 1.
+// Checks the tracked files in src/, demo/, tests/, server/testdata/ and eslint-rules/; prints each failing file and exits 1.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const SOURCES = ['src/**/*.ts', 'src/**/*.css', 'demo/**/*.ts', 'tests/**/*.ts', 'server/src/**/*.ts', 'eslint-rules/**/*.js'].map((glob) => `:(glob)${glob}`);
+const SOURCES = ['src/**/*.ts', 'src/**/*.css', 'demo/**/*.ts', 'tests/**/*.ts', 'server/testdata/**/*.ts', 'eslint-rules/**/*.js'].map((glob) => `:(glob)${glob}`);
 
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...SOURCES], { encoding: 'utf8' })
   .split('\n')

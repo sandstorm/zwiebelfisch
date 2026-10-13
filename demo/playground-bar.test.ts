@@ -22,11 +22,28 @@ describe('playground bar', () => {
     const { link, status, button, root } = render('?example=simple');
     expect(link('Examples', 'Simple').getAttribute('aria-current')).toBe('page');
     expect(link('Mode', 'Local').getAttribute('aria-current')).toBe('page');
-    expect(new URLSearchParams(link('Mode', 'Collaborate').search).get('room')).toBe('playground-simple');
     expect(new URLSearchParams(link('Mode', 'GitLab (fake)').search).get('room')).toBe(GITLAB_ROOM);
+    expect(link('Mode', 'Collaborate').hidden).toBe(true);
     expect(status().textContent).toMatch(/no server needed/);
     expect(button()).toBeUndefined();
     expect(root.querySelector('[data-testid="second-window"]')).toBeNull();
+  });
+
+  it('GitLab comes first; Collaborate (a plain room) only once the server says it has plain rooms', () => {
+    const { link, bar, root } = render(`?example=simple&room=${encodeURIComponent(GITLAB_ROOM)}`);
+    expect([...root.querySelectorAll('nav[aria-label="Mode"] a')].map((a) => a.textContent)).toEqual(['Local', 'GitLab (fake)', 'Collaborate']);
+    const collaborate = link('Mode', 'Collaborate');
+    bar.setServer('gitlab', false);
+    expect(collaborate.hidden).toBe(true);
+    bar.setServer('gitlab', true);
+    expect(collaborate.hidden).toBe(false);
+    expect(new URLSearchParams(collaborate.search).get('room')).toBe('playground-simple');
+  });
+
+  it('in a plain room, Collaborate stays shown (it is where the page is)', () => {
+    const { link, bar } = render('?room=r1&user=Ann');
+    bar.setServer('server', false);
+    expect(link('Mode', 'Collaborate').hidden).toBe(false);
   });
 
   it('the name field reloads with the new user', () => {

@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Start the Go collaboration server (spike) on ws://127.0.0.1:1234, SQLite in server/.data/; same env as server:dev"
-set -euo pipefail
-# env: PORT, TYPST_ADDRESS, TYPST_COLLAB_DB, TYPST_COLLAB_TOKEN, TYPST_LOG_LEVEL, TYPST_LOG_FORMAT (server/lib/config)
-exec go run ./server/cmd/typst-server "$@"

@@ -13,7 +13,7 @@ import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
-import { probeServer, simulateUpstream } from './server-status';
+import { probeServer, simulateUpstream, type ServerProbe } from './server-status';
 
 const params = new URLSearchParams(location.search);
 const state = playgroundFromQuery(params);
@@ -32,10 +32,8 @@ const bar = renderPlaygroundBar(document.getElementById('playground')!, params, 
 void start();
 
 async function start(): Promise<void> {
-  // Local mode asks no server, so the editor is there at once.
-  const server = state.mode === 'local' ? null : await probeServer();
-  if (server) bar.setServer(server);
-  const { files, collaboration: room } = editorOptions(state, server);
+  const server = await probe();
+  const { files, collaboration: room } = editorOptions(state, server?.kind ?? null);
   const docs = state.example === 'docs' && state.mode === 'local' ? docsSync(files ?? {}) : null;
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
@@ -46,7 +44,15 @@ async function start(): Promise<void> {
   if (docs) editor.onDidChangeFiles((change) => docs.filesChanged(change));
   docs?.attach(editor);
   Object.assign(window, { editor });
-  if (server) watchServer(server !== 'offline');
+  if (server) watchServer(server.kind !== 'offline');
+}
+
+/** What the server offers, shown in the bar; null in Local mode, which asks no server, so the editor is there at once. */
+async function probe(): Promise<ServerProbe | null> {
+  if (state.mode === 'local') return null;
+  const server = await probeServer();
+  bar.setServer(server.kind, server.plainRooms);
+  return server;
 }
 
 /** The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved (static build). */
@@ -59,8 +65,8 @@ function docsSync(files: ProjectFiles): DocsSync | null {
 /** Keeps the status current while in a room (`joined`) or after falling back to the local copy. */
 function watchServer(joined: boolean): void {
   setInterval(async () => {
-    const server = await probeServer();
-    if (joined) bar.setServer(server === 'offline' ? 'lost' : server);
-    else bar.setServer(server === 'offline' ? 'offline' : 'reload');
+    const { kind, plainRooms } = await probeServer();
+    if (joined) bar.setServer(kind === 'offline' ? 'lost' : kind, plainRooms);
+    else bar.setServer(kind === 'offline' ? 'offline' : 'reload', plainRooms);
   }, 5000);
 }

@@ -74,7 +74,7 @@ describe('editorOptions', () => {
   });
 
   it('collaborate mode seeds the room with the example', () => {
-    expect(editorOptions(state('?room=r1'), 'plain')).toEqual({
+    expect(editorOptions(state('?room=r1'), 'server')).toEqual({
       files: exampleFiles('simple'),
       collaboration: { url: SERVER.ws, room: 'r1' },
     });

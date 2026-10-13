@@ -8,11 +8,11 @@ sequenceDiagram
   R->>G: stored room: pull upstream (merge),<br/>ignoring GitLab being unreachable
   Note over C,G: save
   C->>R: gitlab:save<br/>(stateless)
-  R->>G: commitActions(meta, files):<br/>one POST /repository/commits
-  G-->>R: refused with a moved head: merge upstream,<br/>retry (3 attempts), a conflict ends the save
+  R->>G: head still the base? then one<br/>POST /repository/commits (the bot's token)
+  G-->>R: head moved (ErrConflict): merge upstream,<br/>retry (3 attempts), a conflict ends the save
   Note over C,G: auto
-  Note over R,G: idle autoCommit minutes after the last edit,<br/>or LEAVE_DELAY (20 s) after the last user left<br/>(beforeUnloadDocument waits, someone back: no commit)
-  R->>G: the same commit,<br/>automaticCommit's author + message
+  Note over R,G: AutoCommit (10 min) after the last edit,<br/>or LeaveDelay (20 s) after the last user left<br/>(Left waits, someone back: no commit)
+  R->>G: the same commit,<br/>message naming the editors
   Note over C,G: webhook
   G->>R: POST /gitlab/webhook<br/>(X-Gitlab-Token)
   Note over R: merge into the open<br/>rooms of that branch

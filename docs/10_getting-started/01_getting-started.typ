@@ -40,9 +40,9 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
   columns: 2,
   [Query], [Effect],
   [`?example=simple|advanced|docs`], [The example. `docs` saves to `docs/` only with `mise run demo` (@architecture-development-writing-docs).],
-  [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
-  [`&user=<name>`], [The name others see; signs comments and commits.],
+  [`?room=<name>`], [Collaborate mode: a plain room on the local server (the playground server has them; a real one only with `TYPST_PLAIN_ROOMS=1`).],
+  [`&user=<name>`], [The name others see; signs comments and co-authors commits.],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line.],
 )
 

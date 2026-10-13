@@ -10,8 +10,8 @@ import (
 	"typst-editor/server/lib/diff3"
 )
 
-// The fixtures are node-diff3's own results (server/testdata/gen-diff3-fixtures.ts): the port must merge
-// exactly as the TypeScript server did.
+// The fixtures are node-diff3 3.2.1's own results for random line sequences: the port must merge
+// exactly as it does.
 func TestNodeDiff3Fixtures(t *testing.T) {
 	raw, err := os.ReadFile("testdata/node-diff3.json")
 	require.NoError(t, err)

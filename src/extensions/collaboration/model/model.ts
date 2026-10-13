@@ -60,16 +60,24 @@ export class Collaboration {
   /**
    * Starts sharing `shared`. With a server, this connects and waits for the
    * first sync, so a room's existing text wins over the local one; the room's source control tells its outcomes
-   * and news with `tell` (default: not at all).
+   * and news with `tell` (default: not at all). Rejects with the server's reason when it refuses the room (a wrong
+   * token, or a plain room on a server that opens only GitLab rooms).
    */
   static async start(options: CollaborationOptions, shared: SharedRoom, tell: Tell = () => {}): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
     const provider = new HocuspocusProvider({ url: options.url, name: options.room, token: options.token ?? null, document: ydoc });
-    await new Promise<void>((resolve) => {
-      if (provider.isSynced) resolve();
-      else provider.on('synced', () => resolve());
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        provider.on('authenticationFailed', ({ reason }: { reason: string }) => reject(new Error(reason)));
+        if (provider.isSynced) resolve();
+        else provider.on('synced', () => resolve());
+      });
+    } catch (error) {
+      provider.destroy();
+      ydoc.destroy();
+      throw error;
+    }
     return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell });
   }
 

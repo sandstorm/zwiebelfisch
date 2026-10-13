@@ -4,8 +4,8 @@ import { MODES, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuer
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
 export interface PlaygroundBar {
-  /** Shows what is known about the server now. */
-  setServer(state: ServerState): void;
+  /** Shows what is known about the server now; `plainRooms`: it opens plain rooms, so Collaborate is offered. */
+  setServer(state: ServerState, plainRooms?: boolean): void;
   /** Shows, at the end of the bar, what became of the last edit (the Documentation example: saved to docs/ or not). */
   setSaveStatus(text: string, level: 'muted' | 'ok' | 'warn'): void;
 }
@@ -21,21 +21,26 @@ export interface BarActions {
  * The demo's playground bar in `root`: example and mode switchers (links, so
  * every state has a URL), the user's name, a link that opens a second window
  * as another user in the same room, the server status with the command to
- * start it, and in GitLab mode "Simulate upstream commit".
+ * start it, and in GitLab mode "Simulate upstream commit". Collaborate (a plain room) is offered once the server
+ * says it has plain rooms, or when the page is in one.
  */
 export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions): PlaygroundBar {
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
-  root.append(examplesNav(state, params), modesNav(state, params), userForm(state, params, actions));
+  const modes = modesNav(state, params);
+  root.append(examplesNav(state, params), modes, userForm(state, params, actions));
   if (state.mode !== 'local') root.append(secondWindow(state, params));
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
   root.append(status.element);
   const save = el('span', { class: 'demo-bar__save', 'aria-live': 'polite', 'data-testid': 'save-status' });
+  const collaborate = modes.querySelector<HTMLElement>('[data-mode="collab"]')!;
+  collaborate.hidden = state.mode !== 'collab';
   return {
-    setServer(server) {
-      status.server(server);
+    setServer(server, plainRooms = false) {
+      status.server(server, plainRooms);
       if (upstream) upstream.button.disabled = server !== 'gitlab';
+      if (state.mode !== 'collab') collaborate.hidden = !plainRooms;
     },
     setSaveStatus(text, level) {
       if (!save.isConnected) root.append(save);
@@ -55,8 +60,8 @@ class StatusLine {
     this.server(state.mode === 'local' ? null : 'checking');
   }
 
-  server(server: ServerState | null): void {
-    const { text, hint, level } = describeServer(this.state.mode, server);
+  server(server: ServerState | null, plainRooms?: boolean): void {
+    const { text, hint, level } = describeServer(this.state.mode, server, plainRooms);
     this.element.replaceChildren(text, ...(hint ? [' ', el('code', {}, hint)] : []));
     this.element.dataset.level = level;
   }
@@ -106,10 +111,12 @@ function nav(label: string, links: { text: string; href: string | null; current:
 }
 
 function modesNav(state: PlaygroundState, params: URLSearchParams): HTMLElement {
-  return nav(
+  const element = nav(
     'Mode',
     MODES.map(({ mode, label }) => ({ text: label, href: modeQuery(mode, params), current: mode === state.mode })),
   );
+  element.querySelectorAll('a').forEach((link, i) => (link.dataset.mode = MODES[i].mode));
+  return element;
 }
 
 function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarActions): HTMLElement {

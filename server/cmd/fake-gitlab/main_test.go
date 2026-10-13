@@ -19,8 +19,9 @@ import (
 	"typst-editor/server/lib/testutil"
 )
 
-// The built binary on real ports: the playground endpoints next to the collaboration server, the built demo
-// on DEMO_PORT, a clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
+// The built binary on real ports: the playground endpoints next to the collaboration server, plain rooms
+// refused (not enabled) with the reason the real HocuspocusProvider gets, the built demo on DEMO_PORT, a
+// clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
 // package playground covers the handlers in-process.
 func TestPlaygroundBinary(t *testing.T) {
 	port, demoPort := freePort(t), freePort(t)
@@ -49,6 +50,9 @@ func TestPlaygroundBinary(t *testing.T) {
 	require.Equal(t, `{"project":"demo/report","room":"gitlab:demo/report@main"}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/playground", port)))
 	require.Contains(t, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/upstream?room=gitlab%%3Ademo%%2Freport%%40main", port)), "chapters/introduction.typ")
 	require.Equal(t, "Typst editor collaboration server", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", port)))
+	require.Equal(t, `{"plainRooms":false}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/api/info", port)))
+	refused := testutil.RunNode(t, "hocuspocus-clients.ts", "refused", "", fmt.Sprintf("ws://127.0.0.1:%d", port))
+	require.Contains(t, string(refused), "only GitLab rooms")
 	require.Equal(t, "<title>demo</title>", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", demoPort)))
 
 	require.NoError(t, cmd.Process.Signal(syscall.SIGTERM))

@@ -9,6 +9,8 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *It saves by itself* when nobody edited for 10 minutes, and when the last user leaves.
 
+*Commits are the server's:* their author is the server's GitLab account; everyone who edited is named as a co-author.
+
 *The main file is your own:* "Set as main file" changes it for you only.
 
 *Changes on GitLab* (pushes, merges) are merged into the open project.

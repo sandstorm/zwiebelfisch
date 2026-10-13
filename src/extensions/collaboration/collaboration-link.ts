@@ -17,7 +17,8 @@ export class CollaborationLink {
   private scheduled = false;
   /**
    * Settles once the project is shared: the collaboration code loaded and, with a server, the room synced (its text
-   * is in the project), or once that failed (logged). Until then, what the editors show may still be replaced.
+   * is in the project), or once that failed (the user is told why, e.g. the server's reason for refusing the room).
+   * Until then, what the editors show may still be replaced.
    */
   readonly ready: Promise<void>;
 
@@ -26,7 +27,10 @@ export class CollaborationLink {
     shared: SharedRoom,
     private readonly widget: LinkedWidget,
   ) {
-    this.ready = this.start(options, shared).catch((error: unknown) => console.error('collaboration could not start:', error));
+    this.ready = this.start(options, shared).catch((error: unknown) => {
+      console.error('collaboration could not start:', error);
+      this.widget.tell?.(`Cannot join the room: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    });
   }
 
   dispose(): void {

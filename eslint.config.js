@@ -15,7 +15,7 @@ const DOM_GLOBALS = [
   'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'DragEvent', 'DataTransfer', 'File', 'FileList', 'FileReader',
 ];
 const NO_DOM = {
-  core: 'core/ uses no DOM (it runs in the engine worker and on the server too).',
+  core: 'core/ uses no DOM (it runs in the engine worker too).',
   model: 'model/ is pure: no DOM (the view folders next to it draw).',
 };
 
@@ -85,18 +85,7 @@ export const reExportExceptions = [
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
   groupingFolders: ['core', 'extensions', 'hosts'],
-  exceptions: [
-    {
-      target: 'extensions/collaboration/model/shared-project.ts',
-      importers: '^server/.*\\.test\\.ts$',
-      why: "the server's tests build rooms from the client's SharedProject",
-    },
-    {
-      target: 'extensions/collaboration/model/in-process.ts',
-      importers: '^server/.*\\.test\\.ts$',
-      why: "the server's tests wire those rooms' Y.Docs together in-process",
-    },
-  ],
+  exceptions: [],
 };
 
 export default tseslint.config(
@@ -129,7 +118,7 @@ export default tseslint.config(
     // Files read general to specific (docs/40_architecture/10_conventions.typ): the main element first, helpers below
     // their users. Only what is needed while the module loads (a constant spread into an export, a class instantiated at
     // the top level) must come first; uses inside functions, and types, may refer to what follows.
-    files: ['src/**/*.ts', 'demo/**/*.ts', 'server/src/**/*.ts'],
+    files: ['src/**/*.ts', 'demo/**/*.ts'],
     plugins: { '@typescript-eslint': tseslint.plugin },
     rules: {
       '@typescript-eslint/no-use-before-define': [
