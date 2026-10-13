@@ -70,12 +70,12 @@ test('Highlight button wraps the selection in #highlight[…], shown with a back
   await expect(await source(page)).toContainText('#highlight[Fresh line]');
 });
 
-test('Ctrl+Shift+S and Ctrl+Shift+H (⌘⇧S, ⌘⇧H on Mac) strike and highlight the selection, inside underline', async ({ page }) => {
+// Highlight has no key: ⌘⇧H is Replace in files
+test('Ctrl+Shift+S (⌘⇧S on Mac) strikes the selection through, inside underline', async ({ page }) => {
   await freshSelectedLine(page);
   await page.keyboard.press('ControlOrMeta+U');
   await page.keyboard.press('ControlOrMeta+Shift+S');
-  await page.keyboard.press('ControlOrMeta+Shift+H');
-  await expect(await source(page)).toContainText('#underline[#strike[#highlight[Fresh line]]]');
+  await expect(await source(page)).toContainText('#underline[#strike[Fresh line]]');
 });
 
 for (const [label, prefix] of [['Heading 1', '= '], ['Heading 2', '== '], ['Heading 3', '=== ']] as const) {

@@ -17,14 +17,17 @@ async function newLine(page: Page): Promise<void> {
   await page.keyboard.press('Enter');
 }
 
-test('/ lists the Insert menu and the text styles below the caret; typing filters, also by keyword', async ({ page }) => {
+test('/ lists the Insert menu and the text styles at the caret; typing filters, also by keyword', async ({ page }) => {
   await newLine(page);
   await page.keyboard.type('/');
   await expect(list(page)).toBeVisible();
   await expect(list(page).getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
   await expect(list(page).getByRole('option', { name: /Heading 2/ })).toBeVisible();
   const [box, caret] = await Promise.all([list(page).boundingBox(), visual(page).locator('.typst-visual__suggestion').boundingBox()]);
-  expect(box!.y).toBeGreaterThanOrEqual(caret!.y + caret!.height - 1); // below the typed /
+  // below the typed /, or above it where the view has no room below (flipped): never over it
+  const below = box!.y >= caret!.y + caret!.height - 1;
+  const above = box!.y + box!.height <= caret!.y + 1;
+  expect(below || above).toBe(true);
   await page.keyboard.type('spreadsheet');
   await expect(list(page).getByRole('option')).toHaveText([/^Insert table/]);
 });

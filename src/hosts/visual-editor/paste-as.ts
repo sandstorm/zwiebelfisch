@@ -64,7 +64,8 @@ function pasteAs(view: EditorView, alternatives: readonly PasteAlternative[], al
     };
     tr.setMeta(key, { from: tr.mapping.map(state.selection.from, -1), to: tr.selection.to, choice } satisfies Pasted);
   }
-  view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
+  // no `uiEvent: paste`: Tiptap's paste rules would read what went in once more (`\*x\*` pasted as text: strong again)
+  view.dispatch(tr.scrollIntoView().setMeta('paste', true));
 }
 
 /** Keeps the open choice (mapped through changes) and tells `choices` when one opens or closes. */

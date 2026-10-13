@@ -72,6 +72,11 @@ describe('markup in a Visual editor', () => {
     press('Escape');
     expect(press('Tab')).toBe(false);
     expect(doc.text).toBe(source);
+    // the browser moves on from right after the editor, not to what is focusable inside it
+    const stop = document.activeElement!;
+    expect(stop.previousElementSibling).toBe(editable);
+    editable.focus();
+    expect(stop.isConnected).toBe(false);
   });
 
   it('Mod-Shift-s strikes the selection through', () => {

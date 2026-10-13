@@ -56,5 +56,6 @@ test('a Typst row dragged into the Visual editor is read as Typst; Enter inserts
   await page.keyboard.press('End');
   await row(page, '*strong*').click();
   await page.keyboard.press('Enter');
-  await expect.poll(value(page)).toBe('Hello*strong*\n\n= Heading\n');
+  // read as Typst: strong text right after a word is written as the function (`*` only works at word boundaries)
+  await expect.poll(value(page)).toBe('Hello#strong[strong]\n\n= Heading\n');
 });

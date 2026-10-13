@@ -31,6 +31,17 @@ describe('typing a list in the Visual editor', () => {
     });
   }
 
+  it('an item typed after a paragraph followed by others nests tightly: the split paragraph\'s blank line stays with it', () => {
+    const editor = createEditor('Text\n\nMore\n');
+    editor.commands.setTextSelection(editor.state.doc.firstChild!.nodeSize - 1);
+    editor.commands.splitBlock();
+    type(editor, '- one');
+    editor.commands.splitListItem('listItem');
+    type(editor, 'two');
+    editor.commands.sinkListItem('listItem');
+    expect(serializeToTypst(editor.state.doc)).toBe('Text\n\n- one\n  - two\n\nMore\n');
+  });
+
   it('"* " stays text: in Typst * is strong, not a bullet', () => {
     const doc = typed('* item');
     expect(doc.child(1).type.name).toBe('paragraph');

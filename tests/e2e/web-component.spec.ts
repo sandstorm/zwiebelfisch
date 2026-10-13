@@ -11,6 +11,8 @@ test('renders the inline Typst source of <typst-editor>', async ({ page }) => {
   const editor = page.locator('typst-editor');
   // Playwright locators pierce the open shadow root.
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  // the Source editor is made when first shown
+  await editor.getByRole('tab', { name: 'Source' }).click();
   await expect(editor.getByTestId('typst-source')).toContainText('= Plain HTML');
   // the common indentation of the HTML is removed
   expect(await editor.evaluate((el: HTMLElement & { value: string }) => el.value.startsWith('#set page'))).toBe(true);
@@ -55,6 +57,7 @@ test('setting the value property updates the preview without a change event', as
   });
   expect(changes).toBe(0);
   await expect(preview.locator('.typst-preview__page')).toHaveCount(2);
+  await editor.getByRole('tab', { name: 'Source' }).click();
   await expect(editor.getByTestId('typst-source')).toContainText('Second page');
 });
 
@@ -95,5 +98,6 @@ test('runs commands of the extensions', async ({ page }) => {
 test('the value attribute replaces the source', async ({ page }) => {
   const editor = page.locator('typst-editor');
   await editor.evaluate((el) => el.setAttribute('value', '= From attribute\n'));
+  await editor.getByRole('tab', { name: 'Source' }).click();
   await expect(editor.getByTestId('typst-source').locator('.cm-content')).toHaveText('= From attribute');
 });
