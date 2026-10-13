@@ -16,7 +16,7 @@ run() {
 run "test:e2e ($usage_browser)" mise run test:e2e "$usage_browser" -- --output=test-results/e2e
 run "test:e2e-collab ($usage_browser)" mise run test:e2e-collab "$usage_browser" -- --output=test-results/collab
 run "test:e2e-gitlab ($usage_browser)" mise run test:e2e-gitlab "$usage_browser" -- --output=test-results/gitlab
-run "test:e2e-gitlab (auto-commit off)" env TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab "$usage_browser" -- --grep "leave" --output=test-results/gitlab-auto-commit-off
+run "test:e2e-gitlab (auto-commit off)" env TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab "$usage_browser" -- --grep "leaving" --output=test-results/gitlab-auto-commit-off
 run "test:e2e-docs ($usage_browser)" mise run test:e2e-docs "$usage_browser" -- --output=test-results/docs
 if ((${#failed[@]})); then
   printf 'Failed: %s\n' "${failed[@]}"
