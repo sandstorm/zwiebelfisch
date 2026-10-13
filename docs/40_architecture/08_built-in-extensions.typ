@@ -93,11 +93,4 @@ Exported from the package, not in the list; a host adds it.
 
 == Page guides and box outlines <architecture-built-in-extensions-guides>
 
-`previewGuides` adds three view options (@architecture-source-editor-and-preview-view), as LaTeX's showframe. Their Typst runs before the main file, in the preview only.
-
-- *Page guides* draw the text area, header, footer and column gutters as the page background, read from the page's settings. The code must never fail: an error would break every document's preview.
-- *Box outlines* are `set block(stroke: ..)` and `set box(stroke: ..)`, so a document's own strokes win. They also shade every `v(..)` with a hatched band.
-- *Block spacing* shades the gap between blocks and paragraphs. It is its own option, as it costs much more (an edit of this book: 140 ms without, 640 ms with).
-- *Markers that take no space* find the spacing: placed content before and after, so the layout stays as it is. Tests check glyph positions and page counts with each option.
-- *Not shown*: `h(..)` (a marker in a line would change line breaking), the spacing between list items, table rows and stack children (their layout's own, not the flow's), and the inset on its own.
-- *Raw boxes* are cut from the preview's pages, so they show the guides too.
+`previewGuides`: see the module comment in `preview-guides.ts` and @architecture-source-editor-and-preview-view.

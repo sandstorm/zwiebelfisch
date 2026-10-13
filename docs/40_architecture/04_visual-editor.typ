@@ -40,7 +40,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 - *Editing:* a nested CodeMirror edits the node's `src`. Each edit is an attribute step, so the source changes exactly there.
 - *Keys:* undo and redo run the Visual editor's history. Arrow keys, Escape and Enter move between box and text. Tab and Shift+Tab indent and outdent a block box's lines.
-- *Picture:* with a box renderer, the box shows a picture (the preview's boxes of its range, @architecture-preview-concepts) until its code gets focus. Only boxes near the view are drawn again after a compile.
+- *Picture:* with a box renderer, the box shows a picture (the preview's boxes of its range, @architecture-preview-rules) until its code gets focus. Only boxes near the view are drawn again after a compile.
 - `view.title` heads the box; `view.tools` add tools (an image's resize handles).
 - `editRawBox(pos, from, to?)`: a Tiptap command that focuses the box's code with the cursor at `from` or `from..to` selected (after Insert → "Inline math", to reveal a search match inside the box).
 - `setRawBoxDecorations` hands what the Visual editor draws on the box to its code (another user's caret inside it).
