@@ -1,10 +1,11 @@
 // Copy and paste as Typst text. See VisualEditor in visual-editor.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
-import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
-import { pastedTypst, TYPST } from './pasted-typst';
+import { pasteWith, type PasteAlternative } from './paste-as';
+import { pasteKinds, TYPST, type PasteKind } from './pasted-typst';
 import type { VisualEditorPasteEdits } from './visual-editor';
 
 /**
@@ -15,13 +16,15 @@ import type { VisualEditorPasteEdits } from './visual-editor';
  * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
  * source).
  *
- * Pasted Typst, plain text, and code (VS Code's, HTML that is code only; another language than Typst as a code block
- * of it, see `pastedTypst`) are read with the editor's specs and go in place of the selection, as one step: a
- * paragraph's inline content into the text there, blocks as blocks (what no spec models: raw boxes). The paste edit
- * providers (`pasteEdits`) may change the text before and make other changes of the document's text in the same step
- * (a copy gave them the clipboard).
- * Mod+Shift+V pastes the text as plain characters, written escaped. Other HTML (a web page, a word processor) goes
- * through ProseMirror's paste and the schema's HTML rules. Its priority puts its text serializer before Tiptap's.
+ * A paste goes in as one of the kinds the clipboard offers (`pasteKinds`): pasted Typst, plain text, and code (VS
+ * Code's, HTML that is code only; another language than Typst as a code block of it) read with the editor's specs,
+ * in place of the selection, as one step: a paragraph's inline content into the text there, blocks as blocks (what no
+ * spec models: raw boxes). The paste edit providers (`pasteEdits`) may change that Typst before and make other changes
+ * of the document's text in the same step (a copy gave them the clipboard). Mod+Shift+V pastes the text as plain
+ * characters, written escaped, a paragraph per line. Other HTML (a web page, a word processor) goes in as ProseMirror
+ * reads it, with the schema's HTML rules. Where the kinds differ, the "Paste as" chip lets the user change it
+ * (`pasteWith`). Text into code (a code block) goes in as it is (ProseMirror's). Its priority puts its text serializer
+ * before Tiptap's.
  * See docs/40_architecture/04_visual-editor.typ.
  */
 export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
@@ -64,19 +67,12 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
               literal = (event.metaKey || event.ctrlKey) && event.shiftKey && (event.code === 'KeyV' || event.key.toLowerCase() === 'v');
               return false;
             },
-            handlePaste: (view, event) => {
+            handlePaste: (view, event, slice) => {
               const data = event.clipboardData;
-              const text = literal || !data ? null : pastedTypst(data);
+              const kinds = data ? pasteKinds(data, literal) : [];
               literal = false;
-              if (text === null || !data || view.state.selection.$from.parent.type.spec.code) return false;
-              const { state } = view;
-              const { parent } = state.selection.$from;
-              const edit = pasteEdits?.provideDocumentPasteEdits(document, [selectionSource(state)], text, data) ?? { insertText: text, additionalEdits: [] };
-              const tr = edit.additionalEdits.length === 0
-                ? state.tr
-                : applyTypstChanges(state.tr, parseTypst(applyChanges(document.text, edit.additionalEdits), state.schema));
-              tr.replaceSelection(typstSlice(edit.insertText, state.schema, parent.isTextblock && parent.content.size > 0));
-              view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
+              if (!data || kinds.length === 0 || view.state.selection.$from.parent.type.spec.code) return false;
+              pasteWith(view, kinds.map((kind) => alternative(kind, { state: view.state, slice, data, document, pasteEdits })));
               return true;
             },
           },
@@ -84,6 +80,39 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
       ];
     },
   });
+}
+
+/** What a paste is made in: the editor's state, ProseMirror's reading of the clipboard (`slice`), the clipboard. */
+interface PasteContext {
+  readonly state: EditorState;
+  readonly slice: Slice;
+  readonly data: DataTransfer;
+  readonly document: TypstDocument;
+  readonly pasteEdits: VisualEditorPasteEdits | null;
+}
+
+/**
+ * Pasting as `kind`: its Typst read with the editor's specs, as the paste edit providers change it (asked now, while
+ * the clipboard can be read); the HTML as ProseMirror pastes it (`slice`, read with the schema's HTML rules).
+ */
+function alternative({ kind, title, typst }: PasteKind, { state, slice, data, document, pasteEdits }: PasteContext): PasteAlternative {
+  if (typst === null) return { kind, title, paste: (at) => pasteSlice(at.tr, slice) };
+  const edit = pasteEdits?.provideDocumentPasteEdits(document, [selectionSource(state)], typst, data) ?? { insertText: typst, additionalEdits: [] };
+  return {
+    kind,
+    title,
+    paste: (at) => {
+      const { parent } = at.selection.$from;
+      const tr = edit.additionalEdits.length === 0 ? at.tr : applyTypstChanges(at.tr, parseTypst(applyChanges(document.text, edit.additionalEdits), at.schema));
+      return tr.replaceSelection(typstSlice(edit.insertText, at.schema, parent.isTextblock && parent.content.size > 0));
+    },
+  };
+}
+
+/** `tr` with `slice` in place of the selection, as ProseMirror pastes: a single closed node replacing it whole. */
+function pasteSlice(tr: Transaction, slice: Slice): Transaction {
+  const single = slice.openStart === 0 && slice.openEnd === 0 && slice.content.childCount === 1 ? slice.content.firstChild : null;
+  return single ? tr.replaceSelectionWith(single, false) : tr.replaceSelection(slice);
 }
 
 /**

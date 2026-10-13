@@ -5,7 +5,7 @@ import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-doc
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
-import { pasteExtension } from './paste-extension';
+import { pasteExtension, type PasteKindOptions } from './paste-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
@@ -91,6 +91,29 @@ export interface DocumentPasteEdit {
    * place as a pasted range goes before the pasted text.
    */
   readonly additionalEdits?: readonly TextChange[];
+}
+
+/**
+ * A paste that went in as one of several kinds and may go in as another instead, until it closes (the next edit, the
+ * selection moved away, Escape): what an editor's "Paste as" chip offers.
+ */
+export interface PasteChoice {
+  /** The kinds it may go in as (VS Code's paste edit kinds: `typst`, `text.plain`, …) with their names, first the one it first went in as. */
+  readonly kinds: readonly { readonly kind: string; readonly title: string }[];
+  /** The kind it went in as. */
+  readonly kind: string;
+  /** Puts it in as `kind` instead, in place of what it put in: undone in one step with the paste. */
+  change(kind: string): void;
+}
+
+/** Where the editors show their paste choices (the workbench's: a quick pick, and the command `editor.action.pasteAs`). */
+export interface PasteChoices {
+  /** `choice` opened: the paste just made may go in as another kind. */
+  openPasteChoice(choice: PasteChoice): void;
+  /** `choice` closed. */
+  closePasteChoice(choice: PasteChoice): void;
+  /** Asks which kind `choice` goes in as (its chip was clicked) and changes it to the one picked. */
+  pickPasteKind(choice: PasteChoice): void;
 }
 
 /** A name and the module it is imported from (`mermaid`, `@preview/merman:0.4.0`). */
@@ -332,10 +355,11 @@ export class LanguagesHost implements Languages {
 
   /**
    * Runs the paste edit providers of the text's language around a copy, cut or paste in a CodeMirror editor, as in the
-   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers).
+   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers);
+   * with `options`, a paste goes in as the first of its kinds and its choice offers the others (see `pasteExtension`).
    */
-  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {
-    return pasteExtension(this, languageId, path);
+  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null, options?: PasteKindOptions): Extension {
+    return pasteExtension(this, languageId, path, options);
   }
 
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {

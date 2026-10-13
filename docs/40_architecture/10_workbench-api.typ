@@ -25,6 +25,7 @@ export const wordCount = (): TypstExtension => ({
 ```
 
 - The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
+- `editor.action.pasteAs({ kind? })` changes the last paste, while its "Paste as" chip shows, to `kind` (`typst`, `text.plain`, `typst.code`, `typst.html`), or asks which in a quick pick.
 
 == Menus <architecture-workbench-api-menus>
 
@@ -271,6 +272,7 @@ languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
 - `provideDocumentPasteEdits(document, ranges, text, dataTransfer)`: on a paste of `text` in place of `ranges` (the selection; `document` as it is before the paste). Returns a `DocumentPasteEdit`, or undefined for none: `insertText`, what goes in instead of `text`, and `additionalEdits?`, other `TextChange`s of the text before the paste. They go into the paste's transaction: one undo step.
 - The providers of a paste run in registration order, each given the text the ones before left. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text.
 - The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
+- A paste may go in as several kinds (Typst, plain text escaped, a code block, the HTML); the editors put in the first and show a "Paste as" chip at the paste's end for the others (Mod+., `editor.action.pasteAs`). The providers run on each kind's Typst; a change replaces the paste and its additional edits, in its undo step.
 
 == File decorations <architecture-workbench-api-decorations>
 

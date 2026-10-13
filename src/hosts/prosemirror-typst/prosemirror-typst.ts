@@ -8,7 +8,7 @@ import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
-import { forgetPrinted, printed, type Span } from './serializer';
+import { escapeMarkup, forgetPrinted, printed, type Span } from './serializer';
 import { unchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
@@ -260,6 +260,14 @@ export function parseTypst(source: string, schema: Schema): Node {
 /** The Typst source of `doc`: untouched nodes as they were written, edited ones printed anew. */
 export function serializeToTypst(doc: Node): string {
   return printed(doc).text;
+}
+
+/**
+ * Plain `text` as Typst markup that reads as exactly its characters, line by line: what starts markup escaped (`\*`,
+ * `\#`, `\$`), and so is what starts a heading or list at a line's start (`\=`, `\-`).
+ */
+export function escapeTypst(text: string): string {
+  return text.replace(/^([ \t]*)(.*)$/gm, (_, indent: string, line: string) => indent + escapeMarkup(line, true));
 }
 
 /**

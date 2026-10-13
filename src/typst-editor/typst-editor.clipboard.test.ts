@@ -178,3 +178,35 @@ describe('pasted labels', () => {
     expect(text('/book/two/b.typ')).toBe(`\n\nSee @fig:b.\n${LABELLED}`);
   });
 });
+
+describe('paste as', () => {
+  it('editor.action.pasteAs changes the last paste of the Source editor to plain text, escaped, in its undo step', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': ' *x* = $y$' });
+    expect(text('/book/two/b.typ')).toBe('Intro *x* = $y$\n');
+    expect(b.dom.querySelector('.typst-paste-chip')?.textContent).toBe('Typst ▾');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
+    expect(text('/book/two/b.typ')).toBe('Intro \\*x\\* = \\$y\\$\n');
+    undo(b.contentDOM);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+
+  it('editor.action.pasteAs changes the last paste of the Visual editor, its imports with it', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': FIGURE });
+    expect(text('/book/two/b.typ')).toBe(`#import "@preview/merman:0.4.0": mermaid\n\nIntro\n\n${FIGURE}\n`);
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
+    // escaped, a paragraph per line, the first joining the paragraph pasted into; no import
+    expect(text('/book/two/b.typ')).toMatch(/^Intro\\#figure\(\n\nmermaid\(read/);
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst' });
+    expect(text('/book/two/b.typ')).toBe(`#import "@preview/merman:0.4.0": mermaid\n\nIntro\n\n${FIGURE}\n`);
+    undo(b.view.dom);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+});
