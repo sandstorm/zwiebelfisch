@@ -32,6 +32,8 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   document.body.replaceChildren();
+  // jsdom has none (a test may give one)
+  delete (document as { elementFromPoint?: unknown }).elementFromPoint;
   vi.useRealTimers();
 });
 
@@ -117,6 +119,26 @@ describe('hoverLink', () => {
       end();
       expect(shown()).toBeNull();
     }
+  });
+
+  it('stays through a scroll that leaves the link under the pointer, placed again; goes with one that moves it away', () => {
+    const { element, move, shown } = setup();
+    // a pane scrolled the link under the pointer, its scroll event after the pointer's arrival (as in a browser)
+    let under: Element | null = element;
+    document.elementFromPoint = vi.fn(() => under);
+    let top = 100;
+    element.getBoundingClientRect = () => ({ top, bottom: top + 20, left: 40, right: 90, width: 50, height: 20, x: 40, y: top }) as DOMRect;
+    move(undefined, { clientX: 50, clientY: 110 });
+    document.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(300);
+    expect(shown()).not.toBeNull();
+    expect(document.elementFromPoint).toHaveBeenLastCalledWith(50, 110);
+    top = 95;
+    document.dispatchEvent(new Event('scroll'));
+    expect(shown()!.style.top).toBe('95px');
+    under = document.body;
+    document.dispatchEvent(new Event('scroll'));
+    expect(shown()).toBeNull();
   });
 
   it('gives an event to the first link that takes it: an outer element does not end an inner link', () => {

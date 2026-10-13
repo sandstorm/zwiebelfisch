@@ -21,8 +21,10 @@ export interface HoveredLink {
  * The pointer moved (`event`): over `hovered`, or over no link (null; also when it left one). Every editor shows a
  * hovered link the same: after the hover delay its hint (`.typst-link-hint`, role=tooltip), and while the modifier is
  * held (⌘ on Mac, else Ctrl) the link look. The hint stays while the pointer moves into it (it may offer buttons); a
- * click, a key other than a modifier, a scroll, or the link's element leaving the page ends it. One link per document is hovered: the first to see an event
- * takes it, so a link inside another's element (a raw box's code in the Visual editor) wins over the outer one.
+ * click, a key other than a modifier, the wheel, a scroll that takes the link from under the pointer, or the link's
+ * element leaving the page ends it (a scroll that leaves it there, e.g. a pane scrolling it into view as the pointer
+ * arrives, places the hint again). One link per document is hovered: the first to see an event takes it, so a link
+ * inside another's element (a raw box's code in the Visual editor) wins over the outer one.
  */
 export function hoverLink(event: MouseEvent, hovered: HoveredLink | null): void {
   const doc = (event.target as Node | null)?.ownerDocument ?? document;
@@ -57,9 +59,18 @@ class LinkHover {
   #leaving: ReturnType<typeof setTimeout> | undefined;
   /** The last event a link took: outer elements see it after. */
   #taken: Event | null = null;
+  /** Where the pointer is over the hovered link (client coordinates). */
+  #pointer = { x: 0, y: 0 };
   readonly #key = (event: Event) => (event instanceof KeyboardEvent && MODIFIERS.has(event.key) ? this.#showMod(event) : this.end());
   readonly #end = (event: Event) => {
     if (!(event.target instanceof Node && this.#hint?.contains(event.target))) this.end();
+  };
+  /** Something scrolled: the hover ends unless the link is still under the pointer (its hint then follows it). */
+  readonly #scroll = (event: Event) => {
+    const hovered = this.#hovered;
+    const under = this.doc.elementFromPoint?.(this.#pointer.x, this.#pointer.y);
+    if (!hovered || !under || !(hovered.element.contains(under) || this.#hint?.contains(under))) return this.#end(event);
+    if (this.#hint) place(this.#hint, hovered.element.getBoundingClientRect());
   };
   /** The link's element went (its editor or box was closed, a remote edit): its hint goes as the pointer moves. */
   readonly #gone = () => {
@@ -70,7 +81,10 @@ class LinkHover {
 
   move(event: MouseEvent, hovered: HoveredLink | null): void {
     if (event === this.#taken) return;
-    if (hovered) this.#taken = event;
+    if (hovered) {
+      this.#taken = event;
+      this.#pointer = { x: event.clientX, y: event.clientY };
+    }
     const current = this.#hovered;
     if (hovered && current && hovered.link === current.link && hovered.element === current.element) {
       clearTimeout(this.#leaving);
@@ -138,7 +152,7 @@ class LinkHover {
       ['keydown', this.#key],
       ['keyup', this.#key],
       ['mousedown', this.#end],
-      ['scroll', this.#end],
+      ['scroll', this.#scroll],
       ['wheel', this.#end],
       ['mousemove', this.#gone],
     ];

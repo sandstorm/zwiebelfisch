@@ -231,6 +231,21 @@ describe('diagrams', () => {
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
     expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
   });
+
+  it('makes the picture of a figure showing a diagram a link "Edit diagram" too', () => {
+    URL.createObjectURL = vi.fn(() => 'blob:1');
+    URL.revokeObjectURL = vi.fn();
+    const { host, editor } = setup({
+      viewType: VISUAL_EDITOR,
+      source: '= Hi\n\n#figure(\n  image("diagrams/flow.drawio.png", width: 100%),\n  caption: [The flow],\n) <fig:flow>\n',
+      files: { '/diagrams/flow.drawio.png': diagram() },
+    });
+    const flow = hovered(host.querySelector<HTMLElement>('.typst-images__box')!);
+    expect(flow.hint).toMatch(/^Edit diagram\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    modClick(flow.picture);
+    expect(editor.activeFile).toBe('/diagrams/flow.drawio.png');
+    expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
+  });
 });
 
 describe('spreadsheets', () => {
@@ -297,6 +312,7 @@ function hovered(box: HTMLElement): { picture: HTMLImageElement; hint: string } 
   const picture = box.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   picture.dispatchEvent(new MouseEvent('mouseenter'));
+  picture.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
   vi.advanceTimersByTime(300);
   vi.useRealTimers();
   const hint = document.querySelector('.typst-link-hint[role=tooltip]');
