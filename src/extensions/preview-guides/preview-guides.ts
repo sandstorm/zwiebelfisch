@@ -12,8 +12,8 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
  * its own. It also shades every `v(…)` as Typst laid it out (`1fr` too). "Block spacing" shades the gap between two
  * blocks or paragraphs, where the one's spacing below and the other's above collapsed into one; it costs a lot more
  * (markers at every block and paragraph), so it is an option of its own. Markers that take no space find the spacing.
- * docs/40_architecture/08_built-in-extensions.typ says why and what is left out (`h`, the spacing between list items
- * and table rows).
+ * docs/40_architecture/06_preview.typ ("View options") says why and what is left out (`h`, the spacing between list
+ * items and table rows).
  *
  * All are Typst run before the main file in the preview only (`PreviewViewOption`); the documents and their PDFs
  * stay as they are. The colors are mid-tones, readable on the inverted pages of the dark mode too. The pictures of
@@ -153,7 +153,7 @@ const BOX_OUTLINES: PreviewViewOption = {
  * item moved on to the next page, the marker stayed behind). The tags are labelled by page, so that each marker's
  * queries stay short. Paragraphs get no placed marker after them (it would drop a tight list's spacing). The `v` tags
  * are its own, so it works without "Box outlines", whose `v` bands it leaves alone. Three markers per block and
- * paragraph make long documents compile slower (docs/40_architecture/08_built-in-extensions.typ).
+ * paragraph make long documents compile slower (docs/40_architecture/06_preview.typ, "View options").
  */
 const GAPS = [
   ...BAND,

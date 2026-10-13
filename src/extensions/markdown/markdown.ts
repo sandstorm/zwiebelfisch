@@ -12,7 +12,7 @@ import { markdownToTypst } from './model/markdown-to-typst';
  * of its lines have syntax only Markdown has than only Typst has (model/markdown-signals.ts). With syntax both share
  * (`*x*`, `- item`) it comes after the editors' Typst, in the "Paste as" chip; with none, not at all (it would only
  * escape what Text escapes). Nothing for Typst a Visual editor copied, nor for a web page's HTML (the Visual editor
- * reads that itself). See docs/40_architecture/10_workbench-api.typ (Copy and paste).
+ * reads that itself). See docs/40_architecture/07_workbench.typ (Copy and paste).
  */
 export function markdown(): TypstExtension {
   return {

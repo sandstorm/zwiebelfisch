@@ -15,7 +15,7 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hos
  * code and pictures). Where a path leads in this
  * project, and that a missing Typst file may be created, is this extension's policy. Other extensions put their own
  * links on some paths with a higher priority (the diagrams' "Edit diagram").
- * See docs/40_architecture/12_source-editor-and-preview.typ.
+ * See docs/40_architecture/05_source-editor.typ, "Document links".
  */
 export function documentLinks(): TypstExtension {
   return {

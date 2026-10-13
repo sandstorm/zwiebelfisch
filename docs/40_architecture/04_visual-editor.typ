@@ -32,7 +32,7 @@ The clipboard holds Typst, so text moves between the Visual editor, the Source e
 - *Other HTML* is read by the schema's HTML rules, printed as Typst and read back. Extensions may clean it first (`transformPastedHTML`: `wordProcessors`). Our own HTML is not read back.
 - *⌘⇧V* pastes plain characters, escaped. In raw boxes and code blocks the text goes in as is.
 - *Paste as:* a paste goes in as the first of its alternative edits (`sortPasteEdits`); with more than one, a chip above its end ("Paste as: Typst ▾", Mod+., `editor.action.pasteAs`) switches the kind, in one undo step.
-- *Paste edit providers* (@architecture-workbench-api-paste) change the pasted Typst and the rest of the text in the paste's transaction.
+- *Paste edit providers* (@architecture-workbench-paste) change the pasted Typst and the rest of the text in the paste's transaction.
 
 == Raw boxes <architecture-visual-editor-raw-boxes>
 
@@ -66,8 +66,8 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
 - *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`, and the position map (`sourceToPos`, `posToSource`) over any document of the editor, e.g. a transaction's. Toolbar items made per editor also get Tiptap's `editor`.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
-- *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-overview-rules.
-- *Links* (`VisualEditorLinks`, given by the workbench): a raw box's picture leads where its Typst's primary document link does (@architecture-source-editor-and-preview-links); text leads to the link at its source offset. The host knows no links itself. Hover shows the hint, ⌘ the link look, ⌘-click or Alt+Enter follows, a plain click edits.
+- *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
+- *Links* (`VisualEditorLinks`, given by the workbench): a raw box's picture leads where its Typst's primary document link does (@architecture-source-editor-links); text leads to the link at its source offset. The host knows no links itself. Hover shows the hint, ⌘ the link look, ⌘-click or Alt+Enter follows, a plain click edits.
 
 == Constructs <architecture-visual-editor-constructs>
 
@@ -121,7 +121,7 @@ visualEditor.registerCompletionItemProvider(
 - *Providers get* `editor`, `query`, `toolbarActions(group)` and `textStyles()`: the slash commands offer what other extensions registered without knowing them.
 - One Tiptap `Suggestion` plugin per provider and editor, with a `SuggestWidget` (`listbox`); keys as in VS Code.
 
-== Example: a callout <architecture-visual-editor-constructs-callout>
+== Example: a callout <architecture-visual-editor-callout>
 
 `#callout(title: "Tip")[…]` as a box with its title in a field and its content as editable text, plus "Callout" in the Insert menu. Editing the title rewrites only the call's head; a call it does not model (`#callout(kind: "x")[…]`) stays raw Typst. The whole example, with its node view and `parseCallout`, is `src/index.visual-editor-construct.test.ts`.
 

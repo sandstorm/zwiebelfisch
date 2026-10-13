@@ -30,7 +30,7 @@ import { handleHttp } from './http-endpoints.ts';
  * server config holds the only GitLab token; clients never see it.
  *
  * Runs after the storage extension (lower priority), so a stored room is loaded before it looks at it.
- * See docs/40_architecture/13_server.typ, "GitLab rooms".
+ * See docs/40_architecture/09_server.typ, "GitLab rooms".
  */
 export class GitLabExtension implements Extension {
   readonly extensionName = 'gitlab';

@@ -3,7 +3,7 @@
 // Every source file carries a why (the doc comment of its main element, the first `export`) or points to the why
 // that explains it: `See <path>` or `See <Name> in <path>` in its top comment or that doc comment. A file without
 // exports (a script like main.ts, a stylesheet) may have its why as its top comment. A test (`*.test.*`, `*.spec.ts`,
-// anything in tests/) needs only a top comment (`Tests for X`). See docs/40_architecture/14_conventions.typ.
+// anything in tests/) needs only a top comment (`Tests for X`). See docs/40_architecture/10_conventions.typ.
 // A pointer's path is relative to the file's folder or to the repository root. It must exist, and a named element must
 // appear in it, so a rename or a move that forgets a pointer fails here. Whether a why is a good one is for reviewers.
 // Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each failing file and exits 1.

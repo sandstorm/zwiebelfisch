@@ -9,7 +9,7 @@
   caption: [Compile, click, cursor and selection between the editors, previewSync, the preview and its worker.],
 ) <architecture-preview-flow>
 
-== Contribution points <architecture-source-editor-and-preview-preview>
+== Contribution points <architecture-preview-contributions>
 
 #table(
   columns: (auto, 1fr, auto),
@@ -19,7 +19,7 @@
   [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only.], [`previewGuides`, `comments`],
 )
 
-The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage`, `clearClickHighlight()`, `setSelectionHighlight(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-overview-rules.
+The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage`, `clearClickHighlight()`, `setSelectionHighlight(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
 
 ```ts
 const pageNumber: PreviewToolbarItem = (preview) => {   // ownerDocument, zoom(), setZoom, scale(), visiblePage()
@@ -50,7 +50,7 @@ preview.registerPdfExportOption({
 - *A range's boxes* (shading, `snippet`): what its source drew, plus everything inside an element whose call lies wholly in it (a `figure` of a package's picture); never a page's header, footer or background. Raw boxes' pictures are snippets, so they show what view options draw.
 - Loading state (`PreviewProgress`) is shown only by the pane: @architecture-workbench-loading.
 
-== View options <architecture-source-editor-and-preview-view>
+== View options <architecture-preview-view>
 
 A `PreviewViewOption`'s `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`. While the prelude has lines, the preview compiles `/.typst-preview-view.typ`: the prelude, then `#include` of the main file. Diagnostics, clicks and snippets stay in the project's files; exports never see it.
 

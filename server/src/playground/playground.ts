@@ -12,7 +12,7 @@ import { nodeRequest, respond, sendResponse, type HttpRequest, type HttpResponse
  *
  * The demo playground (`mise run demo`) shows GitLab rooms without a real GitLab: a FakeGitLab holds the project,
  * and dev-only HTTP endpoints let the demo's playground bar simulate a colleague's push or a GitLab outage. Never part
- * of a real deployment: server/src/main.ts does not load this file. See docs/40_architecture/15_development.typ.
+ * of a real deployment: server/src/main.ts does not load this file. See docs/40_architecture/11_development.typ.
  */
 export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: string; autoCommit?: number | false }): CollabOptions {
   const webhookSecret = randomUUID();

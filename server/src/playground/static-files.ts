@@ -11,7 +11,7 @@ import { pipeline } from 'node:stream/promises';
  * The Docker image runs the playground without Vite (no dev dependencies in it): the playground server serves the
  * built demo (`dist/demo`, `mise run build:demo`) itself, on the port Vite would use. Vite's content-hashed files under
  * `assets/` are cached for good, everything else is revalidated. The docs-files plugin is not there, so the
- * Documentation example saves nothing (the playground bar says so). See docs/40_architecture/15_development.typ.
+ * Documentation example saves nothing (the playground bar says so). See docs/40_architecture/11_development.typ.
  */
 export function staticFiles(root: string): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
   const base = resolve(root);

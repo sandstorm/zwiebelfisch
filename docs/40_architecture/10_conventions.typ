@@ -46,9 +46,9 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *Extensions are factories* (`markup()`, `collaboration(options)`), so options can come later.
 - *Contributions register once, at activation*, and apply to every editor made later. Each returns a `Disposable` for `context.subscriptions`.
 - *One disposal verb*: `dispose()`. Only what a library calls keeps its name (`destroy` in node views and view plugins).
-- *Competing contributions* have an explicit tie-breaker (@architecture-extensions-overview-rules). Registration order counts only within one extension.
+- *Competing contributions* have an explicit tie-breaker (@architecture-extensions-rules). Registration order counts only within one extension.
 - *Commands*: `executeCommand` returns a `Promise<T>`, but the handler runs synchronously, so user activation, selection and focus stay intact.
-- *Settings* work as VS Code's (@architecture-extensions-overview-settings). `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
+- *Settings* work as VS Code's (@architecture-extensions-settings). `createTypstEditor` takes content and host wiring only; what it reports are `onDid…` events on its handle.
 - *CSS*: each host and extension brings its own `<name>.css` (an extension registers it with `registerStyleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. Order: tokens and frame, hosts, extensions.
 - *Class names*: an extension uses class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`) and colors from the `--te-*` tokens. It never styles a host's classes; `data-scheme` is the one shared hook.
 - *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu`), never hand-made popovers or menus.

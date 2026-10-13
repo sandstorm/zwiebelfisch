@@ -8,7 +8,7 @@ import type { Fetch } from './gitlab-api.ts';
  * GitLab rooms are tested without network, ports or secrets. FakeGitLab answers the REST endpoints GitLabProject
  * calls (API v4) through `fetch`, which a test passes as the GitLab config's `fetch`. A test can also act as
  * GitLab's other users and failures: `push` as a colleague, `failNextCommit`, `unreachable` branches.
- * See docs/40_architecture/13_server.typ.
+ * See docs/40_architecture/09_server.typ.
  */
 export class FakeGitLab {
   readonly url = 'https://gitlab.test';

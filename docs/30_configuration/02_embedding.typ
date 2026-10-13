@@ -188,7 +188,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 ```
 
 - Collaboration is not built in: add `collaboration(…)` (@configuration-collaboration-server).
-- The built-ins and their ids: @architecture-built-in-extensions. Writing one: @architecture-extensions-overview.
+- The built-ins and their ids: @architecture-extensions-built-in. Writing one: @architecture-extensions.
 
 === Devtools <configuration-embedding-devtools>
 

@@ -14,7 +14,7 @@ import { headingSearch } from './workbench/heading-search';
  * in model/heading-numbering.ts, an approximation; the preview shows the real ones). The numbers are a view of the
  * headings, nothing without them, so both are one extension. The command adds `#set heading(numbering: "1.")` after
  * the code the active editor's document starts with, or removes the document's heading numbering.
- * See docs/40_architecture/08_built-in-extensions.typ.
+ * See docs/40_architecture/08_extensions.typ.
  */
 export function headings(): TypstExtension {
   return {

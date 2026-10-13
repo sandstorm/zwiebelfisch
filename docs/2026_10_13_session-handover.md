@@ -1,7 +1,7 @@
 # Session handover (2026-10-13, branch task/api-extensibility)
 
 Temporary working note for the next session. Delete when its items are done or moved into
-`docs/40_architecture/15_development.typ` ("Open work").
+`docs/40_architecture/11_development.typ` ("Open work").
 
 State at writing: HEAD `e4f7c1bf` (+ this note and the two concept notes), all unit checks green: typecheck,
 2053 unit tests (`vitest src`), 116 demo tests (`vitest demo`), docs compile. Not run today: E2E (Playwright).

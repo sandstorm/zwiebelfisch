@@ -1,4 +1,4 @@
-= Extensions <architecture-extensions-overview>
+= Extensions <architecture-extensions>
 
 Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `TypstExtension` in `src/hosts/workbench/workbench.ts`.
 
@@ -15,7 +15,7 @@ interface TypstExtension {
 - *Command ids* are `<extension>.<name>` (`pdfExport.export`).
 - *Every type an extension implements or declares* is exported from the package.
 
-== Shape of an extension <architecture-built-in-extensions-shape>
+== Shape of an extension <architecture-extensions-shape>
 
 ```
 extensions/<name>/
@@ -25,7 +25,7 @@ extensions/<name>/
   workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
-== Example: word count <architecture-extensions-overview-example>
+== Example: word count <architecture-extensions-example>
 
 The words of the shown file in the status bar, with a setting for its label and a command the host can run.
 
@@ -68,33 +68,33 @@ const editor = createTypstEditor(host, {
 await editor.executeCommand<number>('wordCount.count'); // 5
 ```
 
-== The extension context <architecture-extensions-overview-context>
+== The extension context <architecture-extensions-context>
 
 What `activate` gets (`ExtensionContext`):
 
 #table(
   columns: 2,
   table.header[Member][What],
-  [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-workbench-api-state)],
-  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-workbench-api-files)],
-  [`commands`], [Commands by id, key bindings (@architecture-workbench-api-commands)],
+  [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-workbench-state)],
+  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-workbench-files)],
+  [`commands`], [Commands by id, key bindings (@architecture-workbench-commands)],
   [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor (@architecture-workbench-api)],
-  [`workspace`], [`applyEdit`, settings (@architecture-workbench-api-settings)],
+  [`workspace`], [`applyEdit`, settings (@architecture-workbench-settings)],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user` (@architecture-workbench-api)],
-  [`scm`], [Source controls (@architecture-workbench-api-scm)],
-  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help)],
+  [`scm`], [Source controls (@architecture-workbench-scm)],
+  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-links, @architecture-workbench-drop-edits, @architecture-workbench-help)],
   [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights; experimental (@architecture-visual-editor-constructs)],
   [`sourceEditor`], [CodeMirror extensions, for the Source editors or shared by every CodeMirror (@architecture-source-editor-host)],
-  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics (@architecture-source-editor-and-preview-preview)],
+  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics (@architecture-preview-contributions)],
 )
 
-== Settings <architecture-extensions-overview-settings>
+== Settings <architecture-extensions-settings>
 
 - *As VS Code's*: declare each in `contributes.configuration.properties` as `<section>.<key>`, with `type`, `default`, `description` and an optional `enum`.
 - *Read* with `workspace.getConfiguration(section).get(key)` and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.updateSettings`).
 - *A wrong value* (wrong type, outside `enum`) counts as unset; an undeclared setting is ignored. Both log a warning. An id declared twice is an error.
 
-== Competing contributions <architecture-extensions-overview-rules>
+== Competing contributions <architecture-extensions-rules>
 
 Each has an explicit tie-breaker; registration order counts only within one extension.
 
@@ -112,7 +112,7 @@ Each has an explicit tie-breaker; registration order counts only within one exte
   [Source editor extensions], [CodeMirror's `Prec`],
 )
 
-== Five vocabularies <architecture-extensions-overview-vocabularies>
+== Five vocabularies <architecture-extensions-vocabularies>
 
 Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`, `onDidChange…`, `registerNode`, `TypstParseContext`), Tiptap's (`Node.create`, `priority`, `addProseMirrorPlugins`; ProseMirror only through Tiptap), CodeMirror's (`Extension`, `EditorView`), Lezer's with the grammar of codemirror-lang-typst (`SyntaxNode`, node names `FuncCall`, `Heading`; for parse rules), and the Typst language (what parse rules read and `toTypst` writes).
 
@@ -120,11 +120,11 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
 - *Pinned versions are part of the API*: codemirror-lang-typst 0.6.0, Tiptap 3.31.
 - *Take ProseMirror objects* (schema, state, transactions) from the editor, never from a copy of your own.
 
-== Built-in extensions <architecture-built-in-extensions>
+== Built-in extensions <architecture-extensions-built-in>
 
 `createTypstEditor` activates them in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`); `devtools` is not in the list: it wraps the final list, last, and records every contribution in a right side panel (@configuration-embedding-devtools).
 
-=== The list <architecture-built-in-extensions-list>
+=== The list <architecture-extensions-list>
 
 #table(
   columns: (auto, 2fr, 1fr),
@@ -159,15 +159,15 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`slashCommands`], [`/` lists the Insert menu and the text styles; the hint "Type / for commands"], [completion, Tiptap decoration],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`],
   [`previewControls`], [zoom, page number; a View menu entry per view option], [preview toolbar, menu `view`, commands],
-  [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-built-in-extensions-guides)], [view options],
+  [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-extensions-guides)], [view options],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [command, preview toolbar],
 )
 
-=== Optional extension <architecture-built-in-extensions-optional>
+=== Optional extension <architecture-extensions-optional>
 
 `collaboration(options)` is exported, not in the list; a host adds it. It shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server).
 
-=== How they meet <architecture-built-in-extensions-meeting>
+=== How they meet <architecture-extensions-meeting>
 
 #table(
   columns: (auto, auto, auto),
@@ -182,6 +182,6 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [menu `explorer/context`], [`files`, `search`], [`files`],
 )
 
-== Page guides and box outlines <architecture-built-in-extensions-guides>
+== Page guides and box outlines <architecture-extensions-guides>
 
-`previewGuides`: see the module comment in `preview-guides.ts` and @architecture-source-editor-and-preview-view.
+`previewGuides`: see the module comment in `preview-guides.ts` and @architecture-preview-view.

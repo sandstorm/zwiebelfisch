@@ -38,7 +38,7 @@ import { attachGrammar, createSchema, documentExtensions, posToSource, serialize
  * position map exhaustively).
  *
  * Only `*.test.ts` files may import it (eslint.config.js). A host's own tests use the host's minimum and their own
- * specs instead. See docs/40_architecture/14_conventions.typ, "Comments and tests".
+ * specs instead. See docs/40_architecture/10_conventions.typ, "Comments and tests".
  */
 export function schemaWith(options: TestEditorOptions = {}): Schema {
   return schemaFrom(contributions(options));

@@ -7,7 +7,7 @@ import { EventEmitter, type Event } from '../event-emitter/event-emitter';
  * Some work takes a while, such as a search provider going through every file. When the user types on, its result
  * is no longer wanted. Whoever asks keeps a `CancellationTokenSource` and cancels it; the provider gets only the token
  * (`provideItems(query, token)`) and checks it between steps. We use VS Code's shape because our providers follow
- * VS Code's API (docs/40_architecture/14_conventions.typ).
+ * VS Code's API (docs/40_architecture/10_conventions.typ).
  */
 export interface CancellationToken {
   /** True once cancelled: stop and return what is there (or nothing). */

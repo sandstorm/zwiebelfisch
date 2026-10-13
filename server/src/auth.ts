@@ -15,7 +15,7 @@ export interface AuthenticatedUser {
 
 /**
  * The stub check until there is a real one (GitLab sign-in, see
- * docs/40_architecture/15_development.typ, "Open work"): without `expected` every client may open every
+ * docs/40_architecture/11_development.typ, "Open work"): without `expected` every client may open every
  * room; with it, the client's token must equal it.
  */
 export function sharedToken(expected: string | undefined): Authenticate {

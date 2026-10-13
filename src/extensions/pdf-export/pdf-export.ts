@@ -17,7 +17,7 @@ import { downloadPdf } from './preview/preview';
  *
  * The preview host compiles the PDF and keeps the export options that other extensions register (comments: include
  * them or not). How they are offered, and whether there is a button at all, is decided here.
- * See docs/40_architecture/12_source-editor-and-preview.typ, "PDF export options".
+ * See docs/40_architecture/06_preview.typ, "Contribution points".
  */
 export function pdfExport(): TypstExtension {
   return {

@@ -16,7 +16,7 @@ import { urlLinks } from './workbench/url-links';
  * registered in, all at priority 100: `*#underline[#strike[#highlight[x]]]*`); inline code is always written innermost
  * (`raw`). Underline, strike and highlight are marks only in their plain form (`#strike[x]`); with arguments they stay
  * raw boxes. Web and mail addresses are document links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new
- * tab. See docs/40_architecture/11_visual-editor-constructs.typ.
+ * tab. See docs/40_architecture/04_visual-editor.typ.
  */
 export function markup(): TypstExtension {
   return {

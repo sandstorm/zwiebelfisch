@@ -10,7 +10,7 @@
 //   made where values come in, e.g. to `open` a file at a range.
 // - VISUAL_EDITOR and SOURCE_EDITOR, to open a file in one of the Typst editors or tell which one is shown.
 // - The optional extension collaboration, which a host adds with its connection.
-// See docs/30_configuration/02_embedding.typ and docs/40_architecture/09_extensions-overview.typ.
+// See docs/30_configuration/02_embedding.typ and docs/40_architecture/08_extensions.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';

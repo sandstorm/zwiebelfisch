@@ -57,4 +57,4 @@ Depth (commit actions, `meta.changes`, `meta.commitFailure`, the operation queue
   [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, the Docker image], [`PORT`, `HOST`; `TYPST_DEMO_DIST` also serves that built demo on `DEMO_PORT` (5199); a GitLab room `gitlab:demo/report@<any branch>` with `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (a push), `POST /playground/outage` (GitLab unreachable)],
 )
 
-The widget's side is the `collaboration` extension (@configuration-collaboration-server, @architecture-built-in-extensions).
+The widget's side is the `collaboration` extension (@configuration-collaboration-server, @architecture-extensions-built-in).

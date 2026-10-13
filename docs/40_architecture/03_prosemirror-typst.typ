@@ -26,7 +26,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 )
 
 - *Attaching:* `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual editor) put the specs on the schema, where `parseTypst` and `serializeToTypst` find them.
-- A second spec of the same name extends the first; order between specs: @architecture-extensions-overview-rules.
+- A second spec of the same name extends the first; order between specs: @architecture-extensions-rules.
 - Writing a spec: @architecture-visual-editor-constructs.
 
 == Parsing <architecture-prosemirror-typst-parse>

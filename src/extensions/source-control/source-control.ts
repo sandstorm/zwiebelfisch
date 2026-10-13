@@ -15,7 +15,7 @@ import { commit, commitTitle, resourceDecorations, SourceControlStatus } from '.
  *
  * A source control (today the GitLab branch behind a collaboration room) registers itself with
  * `scm.registerSourceControl` and tells its outcomes itself. This extension only shows what is registered, so neither
- * knows the other. See docs/40_architecture/10_workbench-api.typ, "Source controls".
+ * knows the other. See docs/40_architecture/07_workbench.typ, "Source controls".
  */
 export function sourceControl(): TypstExtension {
   return {

@@ -27,7 +27,7 @@ new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
   [`invisibles`], [Shared: `highlightWhitespace()` while invisible characters are shown.],
-  [workbench], [Document links of every provider for `typst` (@architecture-source-editor-and-preview-links).],
+  [workbench], [Document links of every provider for `typst` (@architecture-source-editor-links).],
 )
 
 - *Live:* a contribution reaches every editor, open ones included (they reconfigure a `Compartment`); disposing removes it from all. No feature tracks editors.
@@ -39,7 +39,7 @@ new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.
 - *Tab* indents, Shift+Tab outdents (`indentWithTab`); Escape, then Tab leaves the editor.
 - `SourceEditor` (`reveal`, `insert`, `selection`): see the d.ts.
 
-== Document links <architecture-source-editor-and-preview-links>
+== Document links <architecture-source-editor-links>
 
 `languages.registerDocumentLinkProvider(selector, provider, { priority? })`, as VS Code's "Follow link": ⌘-click or Alt+Enter follows, hover shows the target, a plain click edits. Every editor shows them: Source editors, raw boxes, the text files' editor, the Visual editor (reference chips, link marks, a box's picture).
 

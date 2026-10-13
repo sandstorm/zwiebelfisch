@@ -11,7 +11,7 @@ import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual
  * but a literal alignment stays raw too.
  *
  * `model/` reads and writes the alignment syntax; `visual-editor/` holds the node, its commands and the menu (see
- * TextAlign in visual-editor/text-align.ts). See docs/40_architecture/08_built-in-extensions.typ.
+ * TextAlign in visual-editor/text-align.ts). See docs/40_architecture/08_extensions.typ.
  */
 export function alignment(): TypstExtension {
   return {

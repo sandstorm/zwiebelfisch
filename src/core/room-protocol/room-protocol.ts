@@ -5,7 +5,7 @@
  * What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the stateless messages of
  * GitLab-backed rooms, and the URL of a room's file. Both sides import this file: the collaboration extension and
  * server/src. It lives in core, not in the extension, because the server may import nothing else of the widget. It has
- * no imports, so the server's Node runtime can load it directly. See docs/40_architecture/13_server.typ.
+ * no imports, so the server's Node runtime can load it directly. See docs/40_architecture/09_server.typ.
  */
 export const FILES_MAP = 'files';
 

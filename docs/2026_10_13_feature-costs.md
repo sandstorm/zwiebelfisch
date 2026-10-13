@@ -1,6 +1,6 @@
 # What features cost (snapshot, 2026-10-13)
 
-Moved from docs/40_architecture/15_development.typ ("What features cost"). Re-measure with `mise run quality:report 100000` and add up per `src/<layer>/<name>/`.
+Moved from docs/40_architecture/11_development.typ ("What features cost"). Re-measure with `mise run quality:report 100000` and add up per `src/<layer>/<name>/`.
 
 The modules with the most complexity. Lines: TypeScript without blank and comment lines, tests apart. Σ cognitive: summed over the module's functions. Hot: functions with cognitive ≥ 7 or cyclomatic ≥ 8.
 

@@ -15,7 +15,7 @@ and 15 "Open work") and delete once built. Legend: (v) verified in code or on th
 | Main file | GitLab rooms: per user (the client's `mainFile` option); other rooms share it (`project` map, `shared-main-file.ts`). |
 | Widget side | `collaboration` extension; GitLab branch shown via the `scm` API → `source-control` extension (status bar "Not in GitLab: …", "Save to GitLab…", M/A decorations). |
 | Server size | 26 files, ~2930 lines incl. ~1010 test lines; `gitlab-room.ts` (398) is the largest. Deps: Hocuspocus 4.7, yjs, node-diff3. Shares `src/core/room-protocol/` with the widget. |
-| Open work | 15_development.typ: "Auth: GitLab sign-in, a real token check in `onAuthenticate`, the commit author from the verified identity"; "Server: a Rust (`yrs`) or Go server is an open question". |
+| Open work | 11_development.typ: "Auth: GitLab sign-in, a real token check in `onAuthenticate`, the commit author from the verified identity"; "Server: a Rust (`yrs`) or Go server is an open question". |
 
 So there is no "project" concept, no sign-in and no chooser: a real deployment needs the embedding app to know the room name.
 The feature sentence ("A project can be a branch of a GitLab repository…") describes the mechanism, not what a user does.
@@ -232,7 +232,7 @@ work plus a period of running both against the e2e suite.
 5. **`projects` extension** in the app shell: status bar project/branch widgets, commands, search provider, sign out.
    Widget additions only if needed: quick-pick item buttons. Test: unit + e2e.
 6. **Demo + docs**: the demo's "GitLab (fake)" mode opens the app shell; rewrite 20_features/12_gitlab,
-   30_configuration/04 (OAuth app id/secret, redirect URL, scopes), 40_architecture/13; remove the open items.
+   30_configuration/04 (OAuth app id/secret, redirect URL, scopes), 40_architecture/09; remove the open items.
 
 ## Open questions
 

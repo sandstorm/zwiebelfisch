@@ -11,7 +11,7 @@ import { figureSearch } from './workbench/figure-search';
  *
  * A figure frames whatever another construct offers as a body, an image or a table, through the node group
  * `figureBody` that their specs join. So images and tables do not know figures, and figures know neither. Without an
- * extension that offers a body, no figure is modelled. See docs/40_architecture/08_built-in-extensions.typ.
+ * extension that offers a body, no figure is modelled. See docs/40_architecture/08_extensions.typ.
  */
 export function figures(): TypstExtension {
   return {

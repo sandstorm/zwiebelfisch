@@ -46,4 +46,4 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line.],
 )
 
-Next: the features (@features-wysiwyg-editing), the options (@configuration-options), embedding (@configuration-embedding), the collaboration server (@configuration-collaboration-server), and how it is built (@architecture-overview, @architecture-extensions-overview).
+Next: the features (@features-wysiwyg-editing), the options (@configuration-options), embedding (@configuration-embedding), the collaboration server (@configuration-collaboration-server), and how it is built (@architecture-overview, @architecture-extensions).

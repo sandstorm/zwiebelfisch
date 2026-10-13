@@ -27,7 +27,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
 - The editor *follows a change at once*. `editor.settings` is the current values.
 - On `<typst-editor>`, the attribute is read on connect and on every change; a new value replaces the attribute's own ids. `element.updateSettings` merges, as on the editor.
 - Unknown ids and values of the wrong type are ignored with a console warning.
-- An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-overview-settings).
+- An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-settings).
 
 == Settings <configuration-options-settings>
 

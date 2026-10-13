@@ -29,7 +29,7 @@ import { mergeFiles, textEdits } from './merge.ts';
  * editors as co-authors. Operations run one after another. Everything the room knows lives in the Y.Doc, so a room
  * stored and loaded again continues where it was; only the count of edits per editor starts over.
  * Left to others: the commit actions (commit-actions.ts), merging texts (merge.ts), the REST calls (GitLabProject).
- * See docs/40_architecture/13_server.typ, "GitLab rooms".
+ * See docs/40_architecture/09_server.typ, "GitLab rooms".
  */
 export class GitLabRoom {
   private queue: Promise<unknown> = Promise.resolve();
