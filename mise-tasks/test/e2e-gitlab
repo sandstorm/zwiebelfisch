@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), then run the GitLab room Playwright spec (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
+#MISE description="Start the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), then run the GitLab room Playwright spec"
 #MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"

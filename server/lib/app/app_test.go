@@ -256,3 +256,17 @@ func TestPlaygroundPushReachesTheWebhook(t *testing.T) {
 	h = playground.Handler(playground.Options{GitLab: fake, AppendTo: "/main.typ", Webhook: s, WebhookSecret: "hook"}, s)
 	require.Equal(t, 502, get(t, h, request("POST", "/playground/upstream?room=gitlab%3Ademo%2Freport%40main", nil)).StatusCode, "a refused webhook is reported")
 }
+
+// fake-gitlab hands the server's GitLab rooms to the playground's auto-commit switch.
+func TestPlaygroundAutoCommitReachesTheRooms(t *testing.T) {
+	fake, gl := fakeGitLab()
+	s := newServer(t, fake, Options{GitLab: gl})
+	require.NotNil(t, s.GitLab())
+	h := playground.Handler(playground.Options{GitLab: fake, AppendTo: "/main.typ", Rooms: s.GitLab()}, s)
+	res := get(t, h, request("POST", "/playground/auto-commit?room=gitlab%3Ademo%2Freport%40main", nil))
+	require.Equal(t, 200, res.StatusCode)
+	require.Equal(t, `{"autoCommit":false,"room":"gitlab:demo/report@main"}`, text(t, res))
+
+	plainFake, _ := fakeGitLab()
+	require.Nil(t, newServer(t, plainFake, Options{PlainRooms: true}).GitLab(), "no GitLab rooms")
+}

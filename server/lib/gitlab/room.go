@@ -36,6 +36,7 @@ type room struct {
 	x       *Rooms
 	host    host
 	repo    Repository
+	name    string
 	project string
 	branch  string
 
@@ -71,11 +72,7 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
 			r.editors.by[name].edits = 0
 		}
 	}
-	var autoCommit any
-	if r.x.autoCommit > 0 {
-		autoCommit = r.x.autoCommit.Minutes()
-	}
-	if err := r.write(doc, func(w *ydoc.Writer) { w.Set(metaMap, metaAutoCommit, autoCommit) }); err != nil {
+	if err := r.writeAutoCommit(doc); err != nil {
 		return err
 	}
 	if b := readMeta(doc); b != nil {
@@ -157,7 +154,7 @@ func parseSave(user collab.User, payload string) (who, text string, ok bool) {
 // someone is back by then (a reload).
 func (r *room) Left(ctx context.Context) {
 	r.x.task(func() {
-		if r.x.autoCommit == 0 || !r.hasChanges() {
+		if r.autoCommit() == 0 || !r.hasChanges() {
 			return
 		}
 		if !r.x.sleep(ctx, r.x.leaveDelay) || !r.host.Empty() {
@@ -279,13 +276,35 @@ func (r *room) updated(_ []byte, origin any) {
 	if r.changesTimer == nil {
 		r.changesTimer = r.x.clock.AfterFunc(changesDelay, func() { r.x.task(func() { r.host.Do(r.tellChanges) }) })
 	}
-	if r.x.autoCommit == 0 {
-		return
-	}
 	if r.idleTimer != nil {
 		r.idleTimer()
+		r.idleTimer = nil
 	}
-	r.idleTimer = r.x.clock.AfterFunc(r.x.autoCommit, func() { r.x.task(r.autoCommitNow) })
+	if after := r.autoCommit(); after > 0 {
+		r.idleTimer = r.x.clock.AfterFunc(after, func() { r.x.task(r.autoCommitNow) })
+	}
+}
+
+// autoCommit is the time without edits after which the room commits by itself (0: never).
+func (r *room) autoCommit() time.Duration { return r.x.autoCommitOf(r.name) }
+
+// writeAutoCommit writes the auto-commit time into meta.autoCommit (in minutes; null: never).
+func (r *room) writeAutoCommit(doc *ydoc.Doc) error {
+	var minutes any
+	if after := r.autoCommit(); after > 0 {
+		minutes = after.Minutes()
+	}
+	return r.write(doc, func(w *ydoc.Writer) { w.Set(metaMap, metaAutoCommit, minutes) })
+}
+
+// autoCommitChanged: SetAutoCommit changed the setting. The clients learn it; turned off, a pending commit
+// by itself is dropped (turned on, the next edit starts one). On the host's goroutine.
+func (r *room) autoCommitChanged(doc *ydoc.Doc) {
+	if r.autoCommit() == 0 && r.idleTimer != nil {
+		r.idleTimer()
+		r.idleTimer = nil
+	}
+	r.logErr(r.writeAutoCommit(doc), "cannot write the auto-commit setting")
 }
 
 // tellChanges writes what the room has that the branch has not into meta.changes (if that changed).

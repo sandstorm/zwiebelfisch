@@ -94,6 +94,9 @@ func New(o Options) (*Server, error) {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
 
+// GitLab are the GitLab rooms (nil: none), for the demo playground's endpoints.
+func (s *Server) GitLab() *gitlab.Rooms { return s.gitlab }
+
 // Info is what GET /api/info answers: what this server offers, for clients to choose from.
 type Info struct {
 	PlainRooms bool `json:"plainRooms"`

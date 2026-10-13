@@ -65,7 +65,7 @@ Depth (commit actions, renames, `meta.changes`, `meta.commitFailure`, the operat
   columns: (auto, 1fr, 2fr),
   table.header[Command][Task][Configuration],
   [`typst-server`], [`server:dev`], [environment variables: @configuration-collaboration-server-running, @configuration-gitlab-integration],
-  [`fake-gitlab`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, `test:e2e-collab`, the Docker image], [as `typst-server` (no database, no sign-in settings); GitLab is the fake, which also signs people in (its page: `GET /oauth/authorize` on this port; `login_hint` or `user` signs in at once, as the e2e tests do): `gitlab:demo/report@<any branch>` holds `demo/examples/advanced`. `TYPST_DEMO_DIST` also serves that built demo on `DEMO_PORT` (5199). `GET /playground`, `POST /playground/upstream` (a push), `POST /playground/outage` (GitLab unreachable)],
+  [`fake-gitlab`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, `test:e2e-collab`, the Docker image], [as `typst-server` (no database, no sign-in settings); GitLab is the fake, which also signs people in (its page: `GET /oauth/authorize` on this port; `login_hint` or `user` signs in at once, as the e2e tests do): `gitlab:demo/report@<any branch>` holds `demo/examples/advanced`. `TYPST_DEMO_DIST` also serves that built demo on `DEMO_PORT` (5199). `GET /playground`, `POST /playground/upstream` (a push), `POST /playground/outage` (GitLab unreachable), `POST /playground/auto-commit` (one room never saves by itself: the e2e leave-warning test)],
 )
 
 Tests (`mise run server:test`) run the real `HocuspocusProvider` and yjs from Node scripts (`server/testdata/`) against the Go side, in-process; the binaries' tests need a port and skip without one.
