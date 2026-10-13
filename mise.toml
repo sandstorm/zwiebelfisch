@@ -12,6 +12,8 @@ rust = { version = "1.99.0", targets = "wasm32-unknown-unknown" }
 actionlint = "1.7.12"
 hadolint = "2.15.1"
 shellcheck = "0.11.0"
+# the collaboration server in Go (go.mod at the repo root, code in server/)
+go = "1.27.1"
 
 [env]
 # keep Playwright browsers project-local (pinned with @playwright/test)
