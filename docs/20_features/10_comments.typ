@@ -22,4 +22,4 @@ Cold compile time #margin-note[grows linearly][- *Ada* (2026-10-10): Add the 500
 - Click the speech bubble or the highlighted text to open the note's card.
 - On the card: reply, edit or delete your own messages, and "Resolve" (deletes the note).
 - Type `!` in search everywhere to find notes by text or author.
-- The preview shows the notes in the page margin.
+- The preview shows the notes in the page margin; the HTML preview leaves them out (HTML has no margins), keeping the noted text.
