@@ -229,8 +229,14 @@ describe('sortPasteEdits', () => {
   });
 
   it('puts the preferred kinds (exactly those) first, and leaves out an edit putting in the same text as one before', () => {
+    const edits = [edit('typst.code', 'c'), edit('typst', 't', ['typst.code']), edit('typst.html', 'h')];
+    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['typst', 'typst.code', 'typst.html']);
+    expect(sortPasteEdits([...edits, edit('typst.markdown', 'c')]).map(({ kind }) => kind)).toEqual(['typst.code', 'typst', 'typst.html']);
+  });
+
+  it('offers the plain text by its name: it takes the place of the first edit putting in the same text', () => {
     const edits = [edit('typst.code', 'c'), edit('typst', 't', ['typst.code']), edit('text.plain', 't', ['typst']), edit('typst.html', 'h')];
     expect(sortPasteEdits(edits, ['text.plain']).map(({ kind }) => kind)).toEqual(['text.plain', 'typst.code', 'typst.html']);
-    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['typst', 'typst.code', 'typst.html']);
+    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['text.plain', 'typst.code', 'typst.html']);
   });
 });

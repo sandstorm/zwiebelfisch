@@ -192,7 +192,7 @@ describe('paste as', () => {
     b.dispatch({ selection: { anchor: 'Intro'.length } });
     clipboard(b.contentDOM, 'paste', { 'text/plain': ' *x* = $y$' });
     expect(text('/book/two/b.typ')).toBe('Intro *x* = $y$\n');
-    expect(b.dom.querySelector('.typst-paste-chip')?.textContent).toBe('Typst ▾');
+    expect(b.dom.querySelector('.typst-paste-chip')?.textContent).toBe('Paste as: Typst ▾');
     await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
     expect(text('/book/two/b.typ')).toBe('Intro \\*x\\* = \\$y\\$\n');
     undo(b.contentDOM);

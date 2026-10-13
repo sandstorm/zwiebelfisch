@@ -38,7 +38,7 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
   const provider = {
     provideDocumentPasteEdits: (_document: unknown, _ranges: unknown, data: DataTransfer) => [
       { kind: 'typst', title: 'Typst', insertText: pastedOf(data) },
-      { kind: 'text.plain', title: 'Text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
+      { kind: 'text.plain', title: 'Plain text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
     ],
   };
   const parent = document.body.appendChild(document.createElement('div'));
@@ -62,7 +62,7 @@ describe('paste as (CodeMirror)', () => {
     view.dispatch({ selection: { anchor: 4 } });
     paste(' *x*');
     expect(text()).toBe('// pasted\nText *x*\n');
-    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.reversed', title: 'Reversed' }, { kind: 'text.plain', title: 'Text' }]);
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.reversed', title: 'Reversed' }, { kind: 'text.plain', title: 'Plain text' }]);
     state.open!.change('text.plain');
     expect(text()).toBe('// pasted\nText *X*\n');
     expect(state.open?.kind).toBe('text.plain');
@@ -77,7 +77,7 @@ describe('paste as (CodeMirror)', () => {
     view.dispatch({ selection: { anchor: 4 } });
     paste(' x');
     const chip = parent.querySelector<HTMLButtonElement>('.typst-paste-chip')!;
-    expect(chip.textContent).toBe('Typst ▾');
+    expect(chip.textContent).toBe('Paste as: Typst ▾');
     chip.click();
     key({ key: '.', ctrlKey: true });
     expect(state.picked).toEqual([state.open, state.open]);

@@ -125,7 +125,8 @@ export interface DocumentPasteEdit {
 /**
  * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
  * their order; then each after those it yields to, else in the given order. An edit putting in the same text as one
- * before is left out.
+ * before is left out; the plain text one (`text.plain`) takes the place of the first with its text, so a paste with
+ * formatting always offers its plain text by that name.
  */
 export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences: readonly string[] = []): DocumentPasteEdit[] {
   const sorted = preferences.flatMap((kind) => edits.filter((edit) => edit.kind === kind));
@@ -137,7 +138,10 @@ export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences:
     sorted.push(next);
     rest.splice(rest.indexOf(next), 1);
   }
-  return sorted.filter((edit, i) => sorted.findIndex((other) => other.insertText === edit.insertText) === i);
+  const plain = sorted.find((edit) => edit.kind === 'text.plain');
+  return sorted
+    .filter((edit, i) => sorted.findIndex((other) => other.insertText === edit.insertText) === i)
+    .map((edit) => (plain && edit.insertText === plain.insertText ? plain : edit));
 }
 
 /**

@@ -7,7 +7,7 @@ import { PasteAs } from './paste-as';
 /** A choice of Typst and Text that went in as Typst; `changed`: the kinds asked for. */
 function choice(): PasteChoice & { changed: string[] } {
   const changed: string[] = [];
-  return { kinds: [{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }], kind: 'typst', change: (kind) => void changed.push(kind), changed };
+  return { kinds: [{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Plain text' }], kind: 'typst', change: (kind) => void changed.push(kind), changed };
 }
 
 /** A window whose quick pick picks the item labelled `label` (none: cancels); `shown`: the items it was shown. */
@@ -24,12 +24,12 @@ function window(label?: string) {
 
 describe('PasteAs', () => {
   it("asks in a quick pick which kind a choice goes in as (the current one marked) and changes it to the one picked", async () => {
-    const quickPick = window('Text');
+    const quickPick = window('Plain text');
     const pasteAs = new PasteAs(quickPick);
     const open = choice();
     pasteAs.openPasteChoice(open);
     expect(await pasteAs.pasteAs()).toBe(true);
-    expect(quickPick.shown[0].map(({ label, description }) => [label, description])).toEqual([['Typst', 'pasted as'], ['Text', undefined]]);
+    expect(quickPick.shown[0].map(({ label, description }) => [label, description])).toEqual([['Typst', 'pasted as'], ['Plain text', undefined]]);
     expect(open.changed).toEqual(['text.plain']);
   });
 

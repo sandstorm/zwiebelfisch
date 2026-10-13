@@ -22,9 +22,9 @@ export interface PasteOptions {
  * edits of `options.provider` and the registered providers (`sortPasteEdits`; none: CodeMirror's text), as they
  * resolve it, with its additional edits, so one undo takes back all. A paste of different texts at several cursors (a
  * line each) stays as it is. `languageId`: the text's language; `path`: the file it is in, now (null: none, no
- * providers). Where there are other edits, its choice opens (`options.choices`): a chip above its end ("Typst ▾") whose
- * click (or Mod+.) asks which kind; changing it undoes the paste and pastes that edit, so one undo still takes all
- * back. It closes on the next edit, a selection outside the pasted text, or Escape.
+ * providers). Where there are other edits, its choice opens (`options.choices`): a chip above its end ("Paste as:
+ * Typst ▾") whose click (or Mod+.) asks which kind; changing it undoes the paste and pastes that edit, so one undo
+ * still takes all back. It closes on the next edit, a selection outside the pasted text, or Escape.
  */
 export function pasteExtension(
   host: Pick<LanguagesHost, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>,
@@ -214,7 +214,7 @@ class ChoiceReporter {
   }
 }
 
-/** The chip above the end of the paste: the kind it went in as ("Typst ▾"); a click asks for another (`pick`). */
+/** The chip above the end of the paste: the kind it went in as ("Paste as: Typst ▾"); a click asks for another. */
 function chipTooltip(pasted: Pasted, pick: (view: EditorView) => void): Tooltip {
   return {
     pos: pasted.to,
@@ -223,7 +223,7 @@ function chipTooltip(pasted: Pasted, pick: (view: EditorView) => void): Tooltip 
       const dom = view.dom.ownerDocument.createElement('button');
       dom.type = 'button';
       dom.className = 'typst-paste-chip';
-      dom.textContent = `${pasted.paste.title} ▾`;
+      dom.textContent = `Paste as: ${pasted.paste.title} ▾`;
       dom.setAttribute('aria-label', `Pasted as ${pasted.paste.title}: paste as…`);
       dom.title = `Pasted as ${pasted.paste.title}: paste as… (Mod+.)`;
       // the focus stays in the text

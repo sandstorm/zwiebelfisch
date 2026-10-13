@@ -263,7 +263,7 @@ languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
 - *`prepareDocumentPaste?`* runs on copy or cut and adds what a paste will need.
 - *`provideDocumentPasteEdits?`* returns alternatives `{ title, kind, insertText, additionalEdit?, yieldTo? }`. Register with `{ providedPasteEditKinds, pasteMimeTypes? }`; only providers whose mime types the clipboard has are asked.
 - *Kinds* are dot-separated (`typst` covers `typst.html`). The editors' own: `typst`, `typst.code`, `text.plain`, and the Visual editor's `typst.html`.
-- *Order* (`sortPasteEdits`): providers' edits first, then the editors'; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
+- *Order* (`sortPasteEdits`): providers' edits first, then the editors'; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
 - *`resolveDocumentPasteEdit?`* of every provider runs on the edit that goes in, in registration order: a post-step whatever the kind. Built-in: `imports` (the imports a paste needs), `labels` (new names for clashing labels). Overlapping additional edits are dropped.
 - All edits are asked and resolved at paste time; the clipboard can't be read later.
 

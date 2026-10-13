@@ -15,9 +15,9 @@ export interface PasteAlternative {
 
 /**
  * Pastes the first of `alternatives`, as one undo step. With more than one, the paste's choice opens: a chip floats
- * above its end (the toolbar's `paste` bar, "Typst ▾"), whose click (or Mod+.) asks `choices` which kind it goes in
- * as; changing it undoes the paste and pastes the one picked, so one undo still takes all back. It closes on the next
- * edit, a selection outside the pasted range, or Escape.
+ * above its end (the toolbar's `paste` bar, "Paste as: Typst ▾"), whose click (or Mod+.) asks `choices` which kind it
+ * goes in as; changing it undoes the paste and pastes the one picked, so one undo still takes all back. It closes on
+ * the next edit, a selection outside the pasted range, or Escape.
  */
 export function pasteWith(view: EditorView, alternatives: readonly PasteAlternative[]): void {
   pasteAs(view, alternatives, alternatives[0]);
@@ -137,7 +137,7 @@ function chip(editor: Editor, choices: PasteChoices): ToolbarControl {
     refresh: () => {
       const choice = key.getState(editor.state)?.choice;
       const title = choice?.kinds.find(({ kind }) => kind === choice.kind)?.title ?? '';
-      button.textContent = `${title} ▾`;
+      button.textContent = `Paste as: ${title} ▾`;
       button.setAttribute('aria-label', `Pasted as ${title}: paste as…`);
       button.title = `Pasted as ${title}: paste as… (Mod+.)`;
     },

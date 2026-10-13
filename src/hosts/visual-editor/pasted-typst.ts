@@ -17,7 +17,7 @@ class TypstPasteEditProvider implements DocumentPasteEditProvider {
     return [
       ...(read !== null && read !== text ? [{ kind: 'typst.code', title: 'Code block', insertText: read }] : []),
       { kind: 'typst', title: 'Typst', insertText: text, yieldTo: read === null ? ['typst.code', 'typst.html'] : ['typst.code'] },
-      { kind: 'text.plain', title: 'Text', insertText: escapeTypst(text.split(/\n+/).join('\n\n')), yieldTo: ['typst'] },
+      { kind: 'text.plain', title: 'Plain text', insertText: escapeTypst(text.split(/\n+/).join('\n\n')), yieldTo: ['typst'] },
     ];
   }
 }

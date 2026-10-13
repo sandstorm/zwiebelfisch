@@ -168,7 +168,7 @@ describe('paste as', () => {
     select(4);
     paste({ 'text/plain': ' *bold* $x$' });
     expect(doc.text).toBe('Text *bold* $x$\n');
-    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }]);
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Plain text' }]);
     expect(state.open?.kind).toBe('typst');
     state.open!.change('text.plain');
     expect(doc.text).toBe('Text \\*bold\\* \\$x\\$\n');
@@ -186,11 +186,11 @@ describe('paste as', () => {
     select(4);
     paste({ 'text/plain': ' *bold*' });
     const chip = parent.querySelector<HTMLButtonElement>('[role="toolbar"][aria-label="Paste as"] button')!;
-    expect(chip.textContent).toBe('Typst ▾');
+    expect(chip.textContent).toBe('Paste as: Typst ▾');
     chip.click();
     expect(state.picked).toEqual([state.open]);
     state.open!.change('text.plain');
-    expect(chip.textContent).toBe('Text ▾');
+    expect(chip.textContent).toBe('Paste as: Plain text ▾');
   });
 
   it('closes on the next edit, a selection outside the paste, and Escape', () => {
@@ -226,24 +226,35 @@ describe('paste as', () => {
     expect(state.open).toBeNull();
   });
 
-  it('pastes HTML through the schema first, and offers its text as Typst (plain text puts in the same)', () => {
+  it('pastes HTML through the schema first, and offers its text as plain text', () => {
+    const { state, edits } = choices();
+    const { doc, select, paste } = setup('Text\n', edits);
+    select(4);
+    paste({ 'text/plain': 'and x', 'text/html': '<p>and <strong>x</strong></p>' });
+    expect(doc.text).toBe('Textand *x*\n');
+    expect(state.open?.kinds).toEqual([{ kind: 'typst.html', title: 'HTML' }, { kind: 'text.plain', title: 'Plain text' }]);
+    state.open!.change('text.plain');
+    expect(doc.text).toBe('Textand x\n');
+  });
+
+  it('pastes HTML without formatting through the schema as its plain text, and offers its text as Typst', () => {
     const { state, edits } = choices();
     const { doc, select, paste } = setup('Text\n', edits);
     select(4);
     paste({ 'text/plain': 'and *x*', 'text/html': '<p>and *x*</p>' });
     expect(doc.text).toBe('Textand \\*x\\*\n');
-    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.html', 'typst']);
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['text.plain', 'typst']);
     state.open!.change('typst');
     expect(doc.text).toBe('Textand *x*\n');
   });
 
-  it('pastes code of another language as a code block first, and offers it as Typst or HTML (plain text puts in the same)', () => {
+  it('pastes code of another language as a code block first, and offers it as Typst or plain text (HTML puts in the same)', () => {
     const { state, edits } = choices();
     const { doc, select, paste } = setup('Intro\n', edits);
     select(5);
     paste({ 'text/plain': '#x', 'text/html': '<pre><code class="language-python">#x</code></pre>' });
     expect(doc.text).toBe('Intro\n\n```python\n#x\n```\n');
-    expect(state.open?.kinds.map(({ title }) => title)).toEqual(['Code block', 'Typst', 'HTML']);
+    expect(state.open?.kinds.map(({ title }) => title)).toEqual(['Code block', 'Typst', 'Plain text']);
     state.open!.change('typst');
     expect(doc.text).toBe('Intro#x\n');
   });
@@ -259,7 +270,7 @@ describe('paste as', () => {
     select(4);
     paste({ 'text/plain': ' x' });
     expect(doc.text).toBe('Text x!\n');
-    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.loud', title: 'Loud' }]);
+    expect(state.open?.kinds).toEqual([{ kind: 'text.plain', title: 'Plain text' }, { kind: 'typst.loud', title: 'Loud' }]);
     state.open!.change('typst.loud');
     expect(doc.text).toBe('Text *LOUD*!\n');
   });
@@ -271,7 +282,7 @@ describe('paste as', () => {
     select(4);
     paste({ 'text/plain': ' x' });
     expect(doc.text).toBe('Text *LOUD*\n');
-    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.loud', 'typst']);
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.loud', 'text.plain']);
   });
 
   it('pastes plain characters first after Mod+Shift+V, a paragraph per line, and offers Typst', () => {
