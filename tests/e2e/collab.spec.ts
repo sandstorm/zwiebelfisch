@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, type Browser, type Page } from '@playwright/test';
-import { SERVER_DEMO, serve, signIn, test } from './fixtures';
+import { LINE_END, LINE_START, SERVER_DEMO, serve, signIn, test } from './fixtures';
 
 // Two users in one room of the local collaboration server. Needs the server:
 // run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234,
@@ -27,14 +27,6 @@ const marginGlyphs = (page: Page) => () =>
     const margin = box.left + box.width * (1 - 4 / 16);
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
-
-/**
- * The keys that move the Visual editor's caret to its line's end / start. On macOS End and Home scroll the page
- * (Playwright follows the platform's key bindings), Cmd+→ / Cmd+← move the caret there.
- */
-const MAC = process.platform === 'darwin';
-const LINE_END = MAC ? 'Meta+ArrowRight' : 'End';
-const LINE_START = MAC ? 'Meta+ArrowLeft' : 'Home';
 
 async function users(browser: Browser, baseURL: string, project: string) {
   const room = `e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
