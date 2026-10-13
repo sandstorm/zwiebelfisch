@@ -72,7 +72,7 @@ test('an image block shows the image file from the project; a click selects it, 
   await expect(picture(box)).toHaveAttribute('src', /^blob:/);
   expect(await picture(box).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await picture(box).click();
-  await expect(box.getByRole('toolbar', { name: 'Image' })).toBeVisible();
+  await expect(page.getByRole('toolbar', { name: 'Image' })).toBeVisible(); // floating above the image
   await expect(code(box)).toBeHidden();
   await picture(box).dblclick();
   await expect(code(box)).toBeVisible();
@@ -94,7 +94,7 @@ test('Insert image uploads a file into the project and inserts it', async ({ pag
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'Upload image…' }).click();
   await (await chooser).setFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
-  await expect.poll(value(page)).toContain('#image("cat.png")');
-  expect(await page.locator('typst-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/cat.png');
+  await expect.poll(value(page)).toContain('#image("images/cat.png")');
+  expect(await page.locator('typst-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/images/cat.png');
   await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
 });

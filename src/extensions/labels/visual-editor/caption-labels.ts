@@ -1,4 +1,5 @@
 // Labels named after a figure's caption, added once the caption is written. See labels in ../labels.ts.
+import { isHistoryTransaction } from '@tiptap/pm/history';
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { captionLabel } from '../model/caption-label';
@@ -8,8 +9,8 @@ import { labelPrefix } from './label-tags';
 /**
  * A figure without a label whose caption the user wrote gets one named after the caption (`fig:company-logo`, see
  * `captionLabel`) once the cursor leaves the caption: a figure is referenced by its label, so writing a caption is
- * where it gets one. Changes that come from the source (or another user) are left alone; an existing label, or one
- * removed later, stays as it is.
+ * where it gets one. Changes that come from the source (or another user), and undo / redo (the caption it brings
+ * back was written before), are left alone; an existing label, or one removed later, stays as it is.
  */
 export function captionLabels(labels: ProjectLabels): Plugin {
   return new Plugin<number[]>({
@@ -19,7 +20,7 @@ export function captionLabels(labels: ProjectLabels): Plugin {
       apply: (tr, pending) => {
         const done: number[] = tr.getMeta(key) ?? [];
         const mapped = pending.filter((pos) => !done.includes(pos)).map((pos) => tr.mapping.map(pos));
-        return tr.docChanged && tr.getMeta('addToHistory') !== false ? [...new Set([...mapped, ...editedCaptions(tr)])] : mapped;
+        return tr.docChanged && tr.getMeta('addToHistory') !== false && !isHistoryTransaction(tr) ? [...new Set([...mapped, ...editedCaptions(tr)])] : mapped;
       },
     },
     appendTransaction(_, __, state) {

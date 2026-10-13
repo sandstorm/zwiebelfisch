@@ -101,11 +101,11 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   await pick.getByRole('option', { name: 'Upload image…' }).click();
   await (await chooser).setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: PHOTO });
 
-  await expect.poll(value(page)).toContain('#image("photo.png")');
+  await expect.poll(value(page)).toContain('#image("images/photo.png")');
   // Inserted as a block of its own; nothing replaced or split (before the fix it replaced #set page).
   const text = await value(page)();
   expect(text.startsWith('#set page(width: 12cm, height: auto, margin: 1cm)\n')).toBe(true);
-  expect(text).toContain('\n\n#image("photo.png")\n\n');
+  expect(text).toContain('\n\n#image("images/photo.png")\n\n');
   expect(text).toContain('= Title\n\nSome text.\n');
   await expect(pick).toBeHidden();
   await expect(editor.getByTestId('typst-files')).toBeVisible(); // the project has two files now: the panel opens
@@ -124,7 +124,7 @@ test('an image file dropped into the text is uploaded and inserted there, the pa
     return transfer;
   }, PHOTO.toString('base64'));
   await editor.getByTestId('typst-visual').locator('p').first().dispatchEvent('drop', { dataTransfer });
-  await expect.poll(value(page)).toContain('#image("dropped.png")');
+  await expect.poll(value(page)).toContain('#image("images/dropped.png")');
   expect(await value(page)()).toContain('#set page(width: 12cm, height: auto, margin: 1cm)');
   await expectLayoutIntact(page, before);
 });

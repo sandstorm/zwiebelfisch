@@ -4,6 +4,7 @@
 // stub page at its URL only says it is ready.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
+import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -28,10 +29,9 @@ test.beforeEach(async ({ page }) => {
   await expect(visual(page).locator('p')).toHaveText('The runs:');
 });
 
-/** Puts the caret at the end of the Visual editor's paragraph. */
+/** Puts the caret at the end of the Visual editor's paragraph (not click + End: see caretAtEnd). */
 async function caretInParagraph(page: Page): Promise<void> {
-  await visual(page).locator('p').click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p'));
 }
 
 /** Accepts the name the save dialog `title` proposes, after checking it. */

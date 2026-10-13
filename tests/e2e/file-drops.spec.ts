@@ -42,6 +42,8 @@ test('files from the desktop dropped into the Visual and the Source editor are u
   await expect(source).toContainText('#figure(mermaid(read("sequence.mmd"), width: 100%), caption: [ ])');
 
   await source.locator('.cm-content').dispatchEvent('drop', { dataTransfer: await desktopFile('photo.png', 'not really a png') });
-  await expect(fileRow(page, 'photo.png')).toBeVisible();
-  await expect(source).toContainText('#image("photo.png")');
+  // an image goes where the project's images are: the simple example's one is in diagrams/
+  await expect(source).toContainText('#image("diagrams/photo.png")');
+  await fileRow(page, 'diagrams').click();
+  await expect(fileRow(page, 'diagrams/photo.png')).toBeVisible();
 });

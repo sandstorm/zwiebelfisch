@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Tests for caption-labels.ts, through the image bar's "Caption" (the images and figures built-ins), and the bar's "Label".
+import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { Project } from '../../../core/project/project';
@@ -40,6 +41,15 @@ async function caption(text: string, captionText: string): Promise<string> {
 describe('caption labels', () => {
   it('label a figure after the caption written for it, a name no other label of the project has', async () => {
     expect(await caption('#image("cat.png")\n', 'The cat on the mat')).toBe('#figure(image("cat.png"), caption: [The cat on the mat]) <fig:cat-mat-2>\n');
+  });
+
+  it('leave a caption brought back by undo alone: no label', async () => {
+    const { parent, doc, click } = await setup('#figure(image("cat.png"), caption: [Logo])\n\nText\n', new TestPrompts().answer(''));
+    await click('Caption');
+    expect(doc.text).toBe('#image("cat.png")\n\nText\n');
+    (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.commands.undo();
+    await settle();
+    expect(doc.text).toBe('#figure(image("cat.png"), caption: [Logo])\n\nText\n');
   });
 
   it('leave an existing label alone', async () => {
