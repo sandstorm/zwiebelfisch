@@ -4,31 +4,33 @@ import { EditorSelection, EditorState, StateEffect, StateField, type ChangeSpec,
 import { EditorView, ViewPlugin, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
-import type { LanguagesHost, PasteChoice, PasteChoices, TextDocument } from './languages';
+import { sortPasteEdits, type DocumentPasteEditProvider, type LanguagesHost, type PasteChoice, type PasteChoices, type TextDocument } from './languages';
 
-/** The ways a paste can go in besides as it is, and where its choice shows (see `pasteExtension`). */
-export interface PasteKindOptions {
-  /** The text a paste of `text` puts in as each kind, the one it goes in as first. */
-  kinds(text: string): readonly { readonly kind: string; readonly title: string; readonly text: string }[];
+/** The editor's own ways a paste can go in, and where its choice shows (see `pasteExtension`). */
+export interface PasteOptions {
+  /** The editor's own edits (the Source editor's: Typst, code, plain text), before the registered providers'. */
+  readonly provider: DocumentPasteEditProvider;
+  /** Kinds a paste goes in as first where offered (`sortPasteEdits`). */
+  readonly preferences?: readonly string[];
   readonly choices: PasteChoices;
 }
 
 /**
  * Runs the paste edit providers around copy, cut and paste in a CodeMirror editor. A copy or cut adds to the clipboard
  * after CodeMirror's own handler (on the content, inside the outer element listened to) has set the text. A paste:
- * CodeMirror's transaction (`input.paste`) is replaced by one (a transaction filter) that puts the providers' text in
- * and makes their additional edits, so one undo takes back all. A paste of different texts at several cursors (a line
- * each) stays as it is. `languageId`: the text's language; `path`: the file it is in, now (null: none, no providers).
- * With `options`, a paste goes in as the first of its kinds; where they differ, its choice opens (`options.choices`):
- * a chip above its end ("Typst ▾") whose click (or Mod+.) asks which kind; changing it undoes the paste and pastes
- * that kind's text, so one undo still takes all back. It closes on the next edit, a selection outside the pasted
- * text, or Escape.
+ * CodeMirror's transaction (`input.paste`) is replaced by one (a transaction filter) that puts in the first of the
+ * edits of `options.provider` and the registered providers (`sortPasteEdits`; none: CodeMirror's text), as they
+ * resolve it, with its additional edits, so one undo takes back all. A paste of different texts at several cursors (a
+ * line each) stays as it is. `languageId`: the text's language; `path`: the file it is in, now (null: none, no
+ * providers). Where there are other edits, its choice opens (`options.choices`): a chip above its end ("Typst ▾") whose
+ * click (or Mod+.) asks which kind; changing it undoes the paste and pastes that edit, so one undo still takes all
+ * back. It closes on the next edit, a selection outside the pasted text, or Escape.
  */
 export function pasteExtension(
-  edits: Pick<LanguagesHost, 'prepareDocumentPaste' | 'provideDocumentPasteEdits'>,
+  host: Pick<LanguagesHost, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>,
   languageId: string,
   path: () => ProjectPath | null,
-  options?: PasteKindOptions,
+  options: PasteOptions,
 ): Extension {
   const documentOf = (state: EditorState): TextDocument | null => {
     const file = path();
@@ -42,7 +44,7 @@ export function pasteExtension(
         const data = event.clipboardData;
         const copied = data?.getData('text/plain') ?? '';
         const document = documentOf(view.state);
-        if (data && document && copied !== '') edits.prepareDocumentPaste(document, copied, data);
+        if (data && document && copied !== '') host.prepareDocumentPaste(document, copied, data);
       };
       view.dom.addEventListener('copy', copy);
       view.dom.addEventListener('cut', copy);
@@ -71,17 +73,28 @@ export function pasteExtension(
         texts.add(tr.newDoc.sliceString(fromB, toB));
       });
       if (document === null || texts.size !== 1) return tr;
-      const text = [...texts][0];
-      const pastes = (options?.kinds(text) ?? [{ kind: '', title: '', text }])
-        .filter((kind, i, all) => all.findIndex((other) => other.text === kind.text) === i)
-        .map(({ kind, title, text: kindText }): Paste => {
-          const { insertText, additionalEdits } = edits.provideDocumentPasteEdits(document, ranges, kindText, data);
-          return { kind, title, changes: [...additionalEdits, ...ranges.map(({ from, to }) => ({ from, to, insert: insertText }))] };
-        });
+      const pastes = pastesOf(host, options, { document, ranges, text: [...texts][0], data });
       return pasteAs(tr.startState, { ranges, pastes, mainIndex: tr.selection?.mainIndex ?? 0 }, pastes[0]);
     }),
-    ...(options ? [pasteChoice(options.choices)] : []),
+    pasteChoice(options.choices),
   ];
+}
+
+/**
+ * The ways a paste of `text` (CodeMirror's) with the clipboard `data` into `document` in place of `ranges` goes in, the
+ * first first: the edits of `options.provider` and `host`'s providers (none: `text` as it is), as they resolve them.
+ */
+function pastesOf(
+  host: Pick<LanguagesHost, 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>,
+  { provider, preferences }: PasteOptions,
+  { document, ranges, text, data }: { document: TextDocument; ranges: readonly SourceRange[]; text: string; data: DataTransfer },
+): Paste[] {
+  const offered = [...(provider.provideDocumentPasteEdits?.(document, ranges, data) ?? []), ...host.provideDocumentPasteEdits(document, ranges, data)];
+  const edits = offered.length > 0 ? sortPasteEdits(offered, preferences) : [{ kind: '', title: '', insertText: text }];
+  return edits.map((edit) => {
+    const { kind, title, insertText, additionalEdit = [] } = host.resolveDocumentPasteEdit(edit, document, ranges, data);
+    return { kind, title, changes: [...additionalEdit, ...ranges.map(({ from, to }) => ({ from, to, insert: insertText }))] };
+  });
 }
 
 /** A way a paste goes in: its kind and name, and its changes of the text before it. */

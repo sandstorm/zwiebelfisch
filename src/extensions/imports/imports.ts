@@ -14,7 +14,8 @@ import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports
  * unknown).
  *
  * The editors do the paste; this extension is a paste edit provider (`languages.registerDocumentPasteEditProvider`):
- * it adds the imports to the clipboard on a copy and the import change to a paste. See docs/20_features/01_wysiwyg-editing.typ.
+ * it adds the imports to the clipboard on a copy and the import change to whatever a paste puts in (it resolves every
+ * paste edit). See docs/20_features/01_wysiwyg-editing.typ.
  */
 export function imports(): TypstExtension {
   return {
@@ -28,11 +29,13 @@ export function imports(): TypstExtension {
               const found = copiedImports(document.text, document.path, copied);
               if (found.length > 0) dataTransfer.setData(IMPORTS_TYPE, JSON.stringify(found));
             },
-            provideDocumentPasteEdits(document, ranges, text, dataTransfer) {
+            resolveDocumentPasteEdit(edit, document, ranges, dataTransfer) {
               const copied = parseCopiedImports(dataTransfer.getData(IMPORTS_TYPE));
-              return { insertText: text, additionalEdits: calculatePastedImports(document, { ranges, text }, copied, languages.provideKnownImports('typst')) };
+              const imports = calculatePastedImports(document, { ranges, text: edit.insertText }, copied, languages.provideKnownImports('typst'));
+              return { ...edit, additionalEdit: [...(edit.additionalEdit ?? []), ...imports] };
             },
           },
+          { providedPasteEditKinds: [] },
         ),
       );
     },

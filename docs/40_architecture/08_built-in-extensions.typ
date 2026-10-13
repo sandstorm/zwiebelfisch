@@ -73,7 +73,7 @@ Exported from the package, not in the list; a host adds it.
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [help providers], [`typstLanguage`, `mermaid`, `spreadsheets`, `textFiles`], [`help`],
   [known imports], [`mermaid`], [`imports`],
-  [paste edit providers], [`imports`, `labels`], [the Visual editor (Typst pastes), the Source editors],
+  [paste edit providers], [`imports`, `labels` (resolving every paste)], [the Visual editor, the Source editors (the "Paste as" chip offers the kinds)],
   [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`' editor (links by language), `help`],
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],

@@ -1,47 +1,33 @@
-// What a paste can go in as: Typst read from the clipboard, code as a code block, the text as plain characters, the
-// HTML. See clipboard.ts.
+// The editors' own ways a paste of Typst can go in. See clipboard.ts.
+import type { DocumentPasteEdit, DocumentPasteEditProvider } from '../languages/languages';
 import { escapeTypst } from '../prosemirror-typst/prosemirror-typst';
 
-/** A way a paste can go in: its kind (VS Code's paste edit kinds), its name in the "Paste as" choice, its Typst. */
-export interface PasteKind {
-  /** `typst`, `typst.code` (a code block), `text.plain` (plain characters), `typst.html` (the HTML). */
-  readonly kind: string;
-  readonly title: string;
-  /** The Typst it puts in; null: the HTML, read with the schema's HTML rules (ProseMirror's paste). */
-  readonly typst: string | null;
-}
-
 /**
- * The ways the clipboard `data` can go in, the one it goes in as first: as plain characters after Mod+Shift+V
- * (`literal`); else as the Typst `readTypst` reads (a code block for code of another language); else, for other HTML,
- * as that HTML. The others follow in the order of `PasteKind.kind`'s list, without those that put in the same Typst
- * as one before (a line of prose without markup characters is Typst and text alike). As text, each line is a paragraph
- * (as ProseMirror pastes plain text). Empty: nothing to paste (files).
+ * The ways a paste of text into Typst can go in, as the Visual and the Source editor offer them themselves: the
+ * clipboard's text as Typst (`typst`); code of another language as a code block of it (`typst.code`, first); the text
+ * as plain characters, escaped, a paragraph per line (`text.plain`, last). As Typst, it is the text `readTypst` reads,
+ * first unless the clipboard has other HTML (a web page's), whose kind (`typst.html`) it yields to.
  */
-export function pasteKinds(data: DataTransfer, literal: boolean): PasteKind[] {
-  const own = data.getData(TYPST);
-  const text = lines(own || data.getData('text/plain'));
-  const read = readTypst(data);
-  const html = own || literal ? '' : data.getData('text/html');
-  const kinds: PasteKind[] = [
-    ...(read !== null && read !== text ? [{ kind: 'typst.code', title: 'Code block', typst: read }] : []),
-    ...(text ? [{ kind: 'typst', title: 'Typst', typst: text }, { kind: 'text.plain', title: 'Text', typst: escapeTypst(text.split(/\n+/).join('\n\n')) }] : []),
-    ...(html ? [{ kind: 'typst.html', title: 'HTML', typst: null }] : []),
-  ];
-  const preferred = literal ? 'text.plain' : preferredKind(read, text, html);
-  const ordered = [...kinds.filter(({ kind }) => kind === preferred), ...kinds.filter(({ kind }) => kind !== preferred)];
-  return ordered.filter((each, i) => each.typst === null || !ordered.slice(0, i).some((before) => before.typst === each.typst));
+class TypstPasteEditProvider implements DocumentPasteEditProvider {
+  /** Reads the clipboard `data` alone. */
+  provideDocumentPasteEdits(_document: unknown, _ranges: unknown, data: DataTransfer): DocumentPasteEdit[] {
+    const text = lines(data.getData(TYPST) || data.getData('text/plain'));
+    if (!text) return [];
+    const read = readTypst(data);
+    return [
+      ...(read !== null && read !== text ? [{ kind: 'typst.code', title: 'Code block', insertText: read }] : []),
+      { kind: 'typst', title: 'Typst', insertText: text, yieldTo: read === null ? ['typst.code', 'typst.html'] : ['typst.code'] },
+      { kind: 'text.plain', title: 'Text', insertText: escapeTypst(text.split(/\n+/).join('\n\n')), yieldTo: ['typst'] },
+    ];
+  }
 }
 
-/** The kind a paste goes in as, but for Mod+Shift+V: as Typst (or code) where `readTypst` reads it, else as HTML. */
-function preferredKind(read: string | null, text: string, html: string): string {
-  if (read !== null) return read === text ? 'typst' : 'typst.code';
-  return html ? 'typst.html' : 'typst';
-}
+/** The editors' own paste edits of Typst. */
+export const typstPasteEdits = new TypstPasteEditProvider();
 
 /**
  * The Typst source to paste from the clipboard `data`; null: nothing to read as Typst (HTML of a web page or a word
- * processor, for ProseMirror's paste and the schema's HTML rules). First match wins:
+ * processor, for the Visual editor's schema's HTML rules). First match wins:
  * - Typst a Visual editor copied (`text/x-typst`);
  * - text VS Code copied (`vscode-editor-data`), by its language mode: Typst and plain text as they are, another
  *   language as a code block of that language (```` ```python ````);
@@ -93,7 +79,7 @@ const CODE_ELEMENTS = 'pre, code, kbd, samp, tt, .cm-line, .cm-content, .view-li
 const MONOSPACE = /monospace|\bmono\b|\bcode\b|courier|consolas|menlo|monaco/i;
 
 /**
- * The language of `html` if all its text is code (see `pastedTypst`): a class `language-X`, `lang-X`,
+ * The language of `html` if all its text is code (see `readTypst`): a class `language-X`, `lang-X`,
  * `highlight-source-X` (GitHub) or an attribute `data-lang`, `data-language` on any element; null: code of no
  * language; undefined: not code only, or no text.
  */

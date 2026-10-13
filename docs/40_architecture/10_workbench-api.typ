@@ -255,24 +255,34 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 
 == Copy and paste <architecture-workbench-api-paste>
 
-An extension takes part in copy and paste of a language's text with a paste edit provider (VS Code's `DocumentPasteEditProvider`). The editors do the paste: the Visual editor for Typst it reads as Typst, the Source editors for any paste.
+An extension takes part in copy and paste of a language's text with a paste edit provider (VS Code's `DocumentPasteEditProvider`, in its shape): it offers other ways a paste can go in (alternative edits, each of a `kind`), or it resolves whatever goes in. The editors do the paste and offer the alternatives in a "Paste as" chip.
 
 ```ts
+// offers a kind: Markdown on the clipboard as Typst
+languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
+  provideDocumentPasteEdits(document, ranges, dataTransfer) {
+    const text = dataTransfer.getData('text/plain');
+    return looksLikeMarkdown(text) ? [{ kind: 'typst.markdown', title: 'Markdown', insertText: markdownToTypst(text), yieldTo: ['typst.code'] }] : [];
+  },
+}, { providedPasteEditKinds: ['typst.markdown'], pasteMimeTypes: ['text/plain'] });
+
+// resolves every paste: what it needs from the copy, what goes in besides
 languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
   prepareDocumentPaste(document, copied, dataTransfer) {
     dataTransfer.setData('application/x-my-data', JSON.stringify(whatAPasteNeeds(document, copied)));
   },
-  provideDocumentPasteEdits(document, ranges, text, dataTransfer) {
-    return { insertText: text.replaceAll('<old>', '<new>'), additionalEdits: [{ from: 0, to: 0, insert: '#import "x.typ": y\n' }] };
+  resolveDocumentPasteEdit(edit, document, ranges, dataTransfer) {
+    return { ...edit, additionalEdit: [...(edit.additionalEdit ?? []), { from: 0, to: 0, insert: '#import "x.typ": y\n' }] };
   },
-});
+}, { providedPasteEditKinds: [] });
 ```
 
 - `prepareDocumentPaste?(document, copied, dataTransfer)`: on a copy or cut from `document` (a `TextDocument`: `path`, `languageId`, `text`), after the editor has put the copied text (`copied`) on the clipboard; adds what a paste will need.
-- `provideDocumentPasteEdits(document, ranges, text, dataTransfer)`: on a paste of `text` in place of `ranges` (the selection; `document` as it is before the paste). Returns a `DocumentPasteEdit`, or undefined for none: `insertText`, what goes in instead of `text`, and `additionalEdits?`, other `TextChange`s of the text before the paste. They go into the paste's transaction: one undo step.
-- The providers of a paste run in registration order, each given the text the ones before left. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text.
-- The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
-- A paste may go in as several kinds (Typst, plain text escaped, a code block, the HTML); the editors put in the first and show a "Paste as" chip at the paste's end for the others (Mod+., `editor.action.pasteAs`). The providers run on each kind's Typst; a change replaces the paste and its additional edits, in its undo step.
+- `provideDocumentPasteEdits?(document, ranges, dataTransfer)`: on a paste in place of `ranges` (the selection; `document` as it is before the paste), the ways it can go in: `DocumentPasteEdit { title, kind, insertText, additionalEdit?, yieldTo? }`. `insertText` goes in place of each range (the Visual editor reads it as Typst), `additionalEdit` (other `TextChange`s of the text before the paste) into the same transaction: one undo step. Asked only of providers that declare kinds (`providedPasteEditKinds`) and read a type the clipboard has (`pasteMimeTypes`, `text/*` and `*/*` allowed; none: any); edits of kinds not declared are dropped.
+- Kinds are dot-separated, general to specific; one covers those below it (`typst` covers `typst.html`). The editors' own (`VisualEditorHost.typstPasteEdits`, which the workbench hands the Source editors too): `typst` (the clipboard's text as Typst: our own copy, plain text, code of Typst or no language), `typst.code` (code of another language as a code block of it), `text.plain` (plain characters, escaped, a paragraph per line); the Visual editor's `typst.html` (other HTML as its schema reads it, printed as Typst).
+- Order (`sortPasteEdits`): the editors' own edits first, then the providers' in registration order; an edit goes after the kinds in its `yieldTo` (`typst` yields to `typst.html` for HTML that is not code, `text.plain` to all of `typst`); an edit putting in the same text as one before is left out. Preferred kinds go first: Mod+Shift+V in the Visual editor prefers `text.plain`, the Source editors prefer `typst` (the text as CodeMirror pastes it).
+- `resolveDocumentPasteEdit?(edit, document, ranges, dataTransfer)`: every provider's resolves every edit a paste offers, in registration order, each given the edit the ones before left (VS Code asks only the edit's own provider): a post-step on the chosen Typst, whichever kind. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text. The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
+- The paste goes in as the first edit; with others, a chip at its end ("Typst ▾") offers them all (Mod+., `editor.action.pasteAs`). A change replaces the paste and its additional edits, in its undo step. All edits are asked and resolved at paste time: the clipboard is unreadable later.
 
 == File decorations <architecture-workbench-api-decorations>
 

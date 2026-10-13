@@ -54,7 +54,9 @@ function setup(b = 'Intro\n', viewType?: string) {
 /** Fires a clipboard event of `type` on `target` with `items` (type → text) as its data; returns the data after it. */
 function clipboard(target: HTMLElement, type: 'copy' | 'cut' | 'paste', items: Record<string, string> = {}): Record<string, string> {
   const data = new Map(Object.entries(items));
-  const clipboardData = { getData: (t: string) => data.get(t) ?? '', setData: (t: string, v: string) => void data.set(t, v), clearData: () => data.clear(), files: [], types: [] };
+  const clipboardData = { getData: (t: string) => data.get(t) ?? '', setData: (t: string, v: string) => void data.set(t, v), clearData: () => data.clear(), files: [], get types() {
+    return [...data.keys()];
+  } };
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(event, 'clipboardData', { value: clipboardData });
   target.dispatchEvent(event);
@@ -192,6 +194,17 @@ describe('paste as', () => {
     expect(text('/book/two/b.typ')).toBe('Intro \\*x\\* = \\$y\\$\n');
     undo(b.contentDOM);
     expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+
+  it('pastes code of another language into the Source editor as it is first, and offers it as a code block', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro\n'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': 'x = 1', 'vscode-editor-data': '{"version":1,"mode":"python"}' });
+    expect(text('/book/two/b.typ')).toBe('Intro\nx = 1');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.code' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n```python\nx = 1\n```');
   });
 
   it('editor.action.pasteAs changes the last paste of the Visual editor, its imports with it', async () => {

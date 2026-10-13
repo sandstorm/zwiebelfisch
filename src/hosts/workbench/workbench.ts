@@ -7,7 +7,6 @@ import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { User } from '../../core/user/user';
 import { type Commands, CommandsHost } from '../commands/commands';
 import { type LanguageContribution, type Languages, LanguagesHost } from '../languages/languages';
-import { escapeTypst } from '../prosemirror-typst/prosemirror-typst';
 import { Preview, type PreviewContributions, type PreviewProgress } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceEditorHost, type SourceEditorContributions } from '../source-editor/source-editor';
@@ -351,9 +350,13 @@ export class WorkbenchHost implements Workbench {
         const path = this.project.pathOf(document);
         if (path) this.#languages.prepareDocumentPaste({ path, languageId: 'typst', text: document.text }, copied, data);
       },
-      provideDocumentPasteEdits: (document, ranges, text, data) => {
+      provideDocumentPasteEdits: (document, ranges, data) => {
         const path = this.project.pathOf(document);
-        return path ? this.#languages.provideDocumentPasteEdits({ path, languageId: 'typst', text: document.text }, ranges, text, data) : { insertText: text, additionalEdits: [] };
+        return path ? this.#languages.provideDocumentPasteEdits({ path, languageId: 'typst', text: document.text }, ranges, data) : [];
+      },
+      resolveDocumentPasteEdit: (edit, document, ranges, data) => {
+        const path = this.project.pathOf(document);
+        return path ? this.#languages.resolveDocumentPasteEdit(edit, { path, languageId: 'typst', text: document.text }, ranges, data) : edit;
       },
     },
   );
@@ -650,20 +653,16 @@ export class WorkbenchHost implements Workbench {
    * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped; so does a file from the
    * computer, once uploaded (`#upload`): the providers know only project files.
    * Copy and paste in every Source editor run the paste edit providers of Typst (in the Visual editor: `#visualEditor`);
-   * a paste there may go in as Typst or as plain text instead (escaped), which its chip and `editor.action.pasteAs`
-   * change (`#pasteAs`).
+   * a paste there goes in as it is (Typst) and may go in as the editors' other built-in kinds (code, plain text escaped)
+   * or the providers' instead, which its chip and `editor.action.pasteAs` change (`#pasteAs`).
    */
   #extendEditors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
-    const pasteKinds = (text: string) => [
-      { kind: 'typst', title: 'Typst', text },
-      { kind: 'text.plain', title: 'Text', text: escapeTypst(text) },
-    ];
-    this.#sourceEditors.registerCodeMirrorExtension(({ document }) =>
-      this.#languages.createDocumentPasteCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null, { kinds: pasteKinds, choices: this.#pasteAs }),
-    );
+    // a paste goes in as CodeMirror pastes it (the text as Typst) first
+    const paste = { provider: this.#visualEditor.typstPasteEdits, preferences: ['typst'], choices: this.#pasteAs };
+    this.#sourceEditors.registerCodeMirrorExtension(({ document }) => this.#languages.createDocumentPasteCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null, paste));
     this.commands.registerCommand('editor.action.pasteAs', (args?: { kind?: string }) => this.#pasteAs.pasteAs(args));
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());

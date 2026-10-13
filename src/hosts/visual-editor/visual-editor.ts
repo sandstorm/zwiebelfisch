@@ -6,12 +6,13 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
-import type { PasteChoices } from '../languages/languages';
+import type { DocumentPasteEdit, DocumentPasteEditProvider, PasteChoices } from '../languages/languages';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { blockGapAtSource, BlockGaps } from './block-gaps';
 import { BlockHandle } from './block-handle';
 import { clipboard } from './clipboard';
 import { pasteChoice } from './paste-as';
+import { typstPasteEdits } from './pasted-typst';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -377,6 +378,8 @@ export interface VisualEditorContributions {
  * The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
+  /** The editor's own paste edits of Typst (Typst, code, plain text), for the Source editors to offer the same. */
+  readonly typstPasteEdits: DocumentPasteEditProvider = typstPasteEdits;
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
@@ -564,23 +567,20 @@ export interface VisualEditorLinks {
 
 /**
  * Who takes part in copy and paste of Typst in the Visual editor (the workbench's `languages`: the paste edit
- * providers of Typst): a copy or cut adds to the clipboard, a paste changes the text that goes in and may change the
- * document elsewhere, in the paste's step; a paste that may go in as another kind shows its choice there (the "Paste
- * as" chip asks which). The workbench gives it to the host.
+ * providers of Typst): a copy or cut adds to the clipboard, a paste may go in as other kinds and what goes in may
+ * change, and change the document elsewhere, in the paste's step; a paste that may go in as another kind shows its
+ * choice there (the "Paste as" chip asks which). The workbench gives it to the host.
  */
 export interface VisualEditorPasteEdits extends PasteChoices {
   /** On a copy or cut of `copied` (Typst) from `document`: adds what a paste will need to the clipboard `dataTransfer`. */
   prepareDocumentPaste(document: TypstDocument, copied: string, dataTransfer: DataTransfer): void;
+  /** The providers' edits of a paste of the clipboard `dataTransfer` into `document` in place of `ranges`, besides the editor's own. */
+  provideDocumentPasteEdits(document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
   /**
-   * The text a paste of Typst `text` into `document` in place of `ranges` puts in, and the other changes of the
-   * document's text it makes (of the text before the paste, overlapping neither the ranges nor each other).
+   * `edit` as it goes in, as the providers resolve it: its text, and the other changes of the document's text it makes
+   * (of the text before the paste, overlapping neither the ranges nor each other).
    */
-  provideDocumentPasteEdits(
-    document: TypstDocument,
-    ranges: readonly SourceRange[],
-    text: string,
-    dataTransfer: DataTransfer,
-  ): { readonly insertText: string; readonly additionalEdits: readonly TextChange[] };
+  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
 }
 
 /** Where a link of the Visual editor leads. */

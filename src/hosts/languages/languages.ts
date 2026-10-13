@@ -5,7 +5,7 @@ import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-doc
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
-import { pasteExtension, type PasteKindOptions } from './paste-extension';
+import { pasteExtension, type PasteOptions } from './paste-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
@@ -18,8 +18,10 @@ import { pasteExtension, type PasteKindOptions } from './paste-extension';
  * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
  * imports: an extension says where the names of its constructs come from, whoever adds imports reads them. And drops:
  * a file dragged from the file panel (or from the desktop, once the workbench uploaded it) into a Typst editor becomes
- * what an extension makes of it (a spreadsheet: its figure and import), the editors only insert it. And copy and paste: an extension changes what a paste of Typst puts in (a label already taken gets a new name) or
- * what else it changes (the imports the text needs), the editors do the paste, in one undo step.
+ * what an extension makes of it (a spreadsheet: its figure and import), the editors only insert it. And copy and
+ * paste: an extension offers other ways a paste can go in (Markdown as Typst) or changes what goes in (a label already
+ * taken gets a new name) and what else it changes (the imports the text needs); the editors do the paste, in one undo
+ * step, and offer the other ways.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
  * declare which file endings are which language (`contributes.languages`). See docs/40_architecture/07_workbench.typ.
@@ -65,32 +67,77 @@ export interface Languages {
   provideKnownImports(languageId: string): readonly KnownImport[];
   /**
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, in the Visual editor
-   * (Typst it reads as Typst) and the Source editors. The providers of a paste are asked in registration order, each
-   * given the text the ones before left; additional edits that overlap the pasted ranges or an earlier edit are dropped.
+   * and the Source editors. A paste offers the edits of every provider of `metadata.providedPasteEditKinds` whose
+   * `pasteMimeTypes` the clipboard has, after the editor's own (Typst, code, plain text; HTML), as alternatives: it goes
+   * in as the first by `yieldTo`, the "Paste as" chip offers the others. Whichever goes in, every provider's
+   * `resolveDocumentPasteEdit` changes it first, in registration order; additional edits that overlap the pasted ranges
+   * or an earlier edit are dropped.
    */
-  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider): Disposable;
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata): Disposable;
 }
 
-/** Changes what a paste puts into a text and what else it changes (VS Code's DocumentPasteEditProvider). */
+/** What a paste edit provider gives (VS Code's DocumentPasteProviderMetadata). */
+export interface DocumentPasteProviderMetadata {
+  /** The kinds of the edits `provideDocumentPasteEdits` gives (`typst.markdown`); none: it only resolves edits. */
+  readonly providedPasteEditKinds: readonly string[];
+  /** The clipboard types it reads (`text/html`, `text/*`); default: any. */
+  readonly pasteMimeTypes?: readonly string[];
+}
+
+/**
+ * Offers other ways a paste into a text can go in, or changes what goes in (VS Code's DocumentPasteEditProvider). A
+ * provider of kinds converts the clipboard (Markdown into Typst); a resolving one adjusts whatever goes in (a label
+ * already taken renamed, the imports the text needs).
+ */
 export interface DocumentPasteEditProvider {
   /** On a copy or cut of `copied` from `document`: adds what a paste will need to the clipboard (`dataTransfer`). */
   prepareDocumentPaste?(document: TextDocument, copied: string, dataTransfer: DataTransfer): void;
+  /** The ways a paste of the clipboard `dataTransfer` into `document` (its text before the paste) in place of `ranges` can go in. */
+  provideDocumentPasteEdits?(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[] | undefined;
   /**
-   * The edit of a paste of `text` into `document` (its text before the paste) in place of `ranges`, with the
-   * clipboard `dataTransfer`; undefined: none, `text` goes in as it is.
+   * `edit`, of any provider or the editor, as it goes in: asked of every provider, each given the edit the ones before
+   * left (VS Code asks only the edit's own provider). undefined: unchanged.
    */
-  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], text: string, dataTransfer: DataTransfer): DocumentPasteEdit | undefined;
+  resolveDocumentPasteEdit?(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit | undefined;
 }
 
-/** What a paste does (VS Code's DocumentPasteEdit). */
+/** A way a paste can go in (VS Code's DocumentPasteEdit). */
 export interface DocumentPasteEdit {
+  /** Its name in the "Paste as" choice (`Markdown`). */
+  readonly title: string;
+  /**
+   * What it is, dot-separated from the general to the specific (VS Code's paste edit kinds). The editors' own: `typst`
+   * (the text as Typst), `typst.code` (a code block), `text.plain` (plain characters, escaped), `typst.html` (the HTML,
+   * read with the Visual editor's schema).
+   */
+  readonly kind: string;
   /** The text that goes in place of each pasted range. */
   readonly insertText: string;
   /**
    * Other changes of the text before the paste, overlapping neither the pasted ranges nor each other; one at the same
    * place as a pasted range goes before the pasted text.
    */
-  readonly additionalEdits?: readonly TextChange[];
+  readonly additionalEdit?: readonly TextChange[];
+  /** The kinds it gives way to: an edit of such a kind (or one below it: `typst` covers `typst.html`) goes before it. */
+  readonly yieldTo?: readonly string[];
+}
+
+/**
+ * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
+ * their order; then each after those it yields to, else in the given order. An edit putting in the same text as one
+ * before is left out.
+ */
+export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences: readonly string[] = []): DocumentPasteEdit[] {
+  const sorted = preferences.flatMap((kind) => edits.filter((edit) => edit.kind === kind));
+  const rest = edits.filter((edit) => !sorted.includes(edit));
+  while (rest.length > 0) {
+    const yields = (edit: DocumentPasteEdit) => rest.some((other) => other !== edit && edit.yieldTo?.some((kind) => containsKind(kind, other.kind)));
+    // yielding in a circle: the first
+    const next = rest.find((edit) => !yields(edit)) ?? rest[0];
+    sorted.push(next);
+    rest.splice(rest.indexOf(next), 1);
+  }
+  return sorted.filter((edit, i) => sorted.findIndex((other) => other.insertText === edit.insertText) === i);
 }
 
 /**
@@ -98,7 +145,7 @@ export interface DocumentPasteEdit {
  * selection moved away, Escape): what an editor's "Paste as" chip offers.
  */
 export interface PasteChoice {
-  /** The kinds it may go in as (VS Code's paste edit kinds: `typst`, `text.plain`, …) with their names, first the one it first went in as. */
+  /** The kinds it may go in as (`DocumentPasteEdit.kind`) with their names, first the one it first went in as. */
   readonly kinds: readonly { readonly kind: string; readonly title: string }[];
   /** The kind it went in as. */
   readonly kind: string;
@@ -277,7 +324,7 @@ export class LanguagesHost implements Languages {
   #lastLinks: (TextDocument & { links: readonly DocumentLink[] }) | null = null;
   readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
   readonly #dropEditProviders: { selector: DocumentSelector; provider: DocumentDropEditProvider; priority: number }[] = [];
-  readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider }[] = [];
+  readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -323,42 +370,61 @@ export class LanguagesHost implements Languages {
     return this.#knownImports.filter(({ selector }) => matches(selector, languageId)).map(({ known }) => known);
   }
 
-  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider): Disposable {
-    return add(this.#pasteEditProviders, { selector, provider });
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata): Disposable {
+    return add(this.#pasteEditProviders, { selector, provider, metadata });
   }
 
   /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
   prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
-    for (const provider of this.#pasteEditProvidersOf(document)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
+    for (const { provider } of this.#pasteEditProvidersOf(document)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
   }
 
   /**
-   * The edit of a paste of `text` into `document` in place of `ranges`: the providers' in registration order, each
-   * given the text the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
+   * The edits the providers give for a paste of the clipboard `dataTransfer` into `document` in place of `ranges`, in
+   * registration order: of each provider that reads a type the clipboard has, the edits of the kinds it declared.
    */
-  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], text: string, dataTransfer: DataTransfer): Required<DocumentPasteEdit> {
-    let insertText = text;
-    const additionalEdits: TextChange[] = [];
+  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit[] {
+    const types = [...dataTransfer.types];
+    const has = (mime: string) => mime === '*/*' || types.some((type) => type === mime || (mime.endsWith('/*') && type.startsWith(mime.slice(0, -1))));
+    return this.#pasteEditProvidersOf(document).flatMap(({ provider, metadata: { providedPasteEditKinds: kinds, pasteMimeTypes = ['*/*'] } }) => {
+      if (kinds.length === 0 || !pasteMimeTypes.some(has)) return [];
+      const edits = provider.provideDocumentPasteEdits?.(document, ranges, dataTransfer) ?? [];
+      return edits.filter((edit) => kinds.some((kind) => containsKind(kind, edit.kind)));
+    });
+  }
+
+  /**
+   * `edit` as it goes into `document` in place of `ranges`: as the providers resolve it, in registration order, each
+   * given the edit the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
+   */
+  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit {
+    const additionalEdit: TextChange[] = [];
     const taken: SourceRange[] = [...ranges];
-    for (const provider of this.#pasteEditProvidersOf(document)) {
-      const edit = provider.provideDocumentPasteEdits(document, ranges, insertText, dataTransfer);
-      if (!edit) continue;
-      insertText = edit.insertText;
-      for (const change of edit.additionalEdits ?? []) {
-        if (taken.some((range) => conflicts(range, change))) continue;
-        additionalEdits.push(change);
+    const accept = (changes: readonly TextChange[] = []) => {
+      for (const change of changes) {
+        if (additionalEdit.includes(change) || taken.some((range) => conflicts(range, change))) continue;
+        additionalEdit.push(change);
         taken.push(change);
       }
+    };
+    accept(edit.additionalEdit);
+    let resolved: DocumentPasteEdit = { ...edit, additionalEdit: [...additionalEdit] };
+    for (const { provider } of this.#pasteEditProvidersOf(document)) {
+      const next = provider.resolveDocumentPasteEdit?.(resolved, document, ranges, dataTransfer);
+      if (!next) continue;
+      accept(next.additionalEdit);
+      resolved = { ...next, additionalEdit: [...additionalEdit] };
     }
-    return { insertText, additionalEdits };
+    return resolved;
   }
 
   /**
    * Runs the paste edit providers of the text's language around a copy, cut or paste in a CodeMirror editor, as in the
-   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers);
-   * with `options`, a paste goes in as the first of its kinds and its choice offers the others (see `pasteExtension`).
+   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers). A
+   * paste goes in as the first of the edits of the editor's own provider and the registered ones; its choice offers the
+   * others (see `pasteExtension`).
    */
-  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null, options?: PasteKindOptions): Extension {
+  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null, options: PasteOptions): Extension {
     return pasteExtension(this, languageId, path, options);
   }
 
@@ -444,8 +510,8 @@ export class LanguagesHost implements Languages {
     return link ? followableLink(link, this.#actions) : null;
   }
 
-  #pasteEditProvidersOf(document: TextDocument): DocumentPasteEditProvider[] {
-    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).map(({ provider }) => provider);
+  #pasteEditProvidersOf(document: TextDocument): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
+    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId));
   }
 
   /** What a followed link needs from this host: resolving it, and where it leads (`targets`). */
@@ -477,6 +543,11 @@ function matches(selector: DocumentSelector, languageId: string | undefined): bo
 
 function overlap(a: DocumentLink, b: DocumentLink): boolean {
   return a.range.from < b.range.to && b.range.from < a.range.to;
+}
+
+/** Whether the paste edit kind `kind` is `other` or covers it (`typst` covers `typst.html`). */
+function containsKind(kind: string, other: string): boolean {
+  return other === kind || other.startsWith(`${kind}.`);
 }
 
 /** Whether changes of ranges `a` and `b` conflict: they share text, or an empty one lies inside the other (not at its ends). */

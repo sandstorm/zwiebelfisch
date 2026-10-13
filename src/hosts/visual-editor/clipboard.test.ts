@@ -147,12 +147,13 @@ const SOURCES: Record<string, string> = {
   'VS Code in Typst mode': `<meta charset="utf-8"><div style="color: #d4d4d4; font-family: Menlo, monospace; white-space: pre;"><div><span>#set text(lang: "de")</span></div></div>`,
 };
 
-/** Paste edits that leave the text as it is and keep the open paste choice; `picked`: the choices the chip asked about. */
+/** No providers' paste edits, the open paste choice kept; `picked`: the choices the chip asked about. */
 function choices() {
   const state = { open: null as PasteChoice | null, picked: [] as PasteChoice[] };
   const edits: VisualEditorPasteEdits = {
     prepareDocumentPaste: () => undefined,
-    provideDocumentPasteEdits: (_document, _ranges, text) => ({ insertText: text, additionalEdits: [] }),
+    provideDocumentPasteEdits: () => [],
+    resolveDocumentPasteEdit: (edit) => edit,
     openPasteChoice: (choice) => void (state.open = choice),
     closePasteChoice: (choice) => void (state.open = state.open === choice ? null : state.open),
     pickPasteKind: (choice) => void state.picked.push(choice),
@@ -225,26 +226,42 @@ describe('paste as', () => {
     expect(state.open).toBeNull();
   });
 
-  it('pastes HTML through the schema first, and offers its text as Typst or as plain text', () => {
+  it('pastes HTML through the schema first, and offers its text as Typst (plain text puts in the same)', () => {
     const { state, edits } = choices();
     const { doc, select, paste } = setup('Text\n', edits);
     select(4);
     paste({ 'text/plain': 'and *x*', 'text/html': '<p>and *x*</p>' });
     expect(doc.text).toBe('Textand \\*x\\*\n');
-    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.html', 'typst', 'text.plain']);
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.html', 'typst']);
     state.open!.change('typst');
     expect(doc.text).toBe('Textand *x*\n');
   });
 
-  it('pastes code of another language as a code block first, and offers it as Typst, plain text or HTML', () => {
+  it('pastes code of another language as a code block first, and offers it as Typst or HTML (plain text puts in the same)', () => {
     const { state, edits } = choices();
     const { doc, select, paste } = setup('Intro\n', edits);
     select(5);
     paste({ 'text/plain': '#x', 'text/html': '<pre><code class="language-python">#x</code></pre>' });
     expect(doc.text).toBe('Intro\n\n```python\n#x\n```\n');
-    expect(state.open?.kinds.map(({ title }) => title)).toEqual(['Code block', 'Typst', 'Text', 'HTML']);
+    expect(state.open?.kinds.map(({ title }) => title)).toEqual(['Code block', 'Typst', 'HTML']);
     state.open!.change('typst');
     expect(doc.text).toBe('Intro#x\n');
+  });
+
+  it("offers the providers' edits after the editor's own, each as the providers resolve it", () => {
+    const { state, edits } = choices();
+    const provided: VisualEditorPasteEdits = {
+      ...edits,
+      provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }],
+      resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: `${edit.insertText}!` }),
+    };
+    const { doc, select, paste } = setup('Text\n', provided);
+    select(4);
+    paste({ 'text/plain': ' x' });
+    expect(doc.text).toBe('Text x!\n');
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.loud', title: 'Loud' }]);
+    state.open!.change('typst.loud');
+    expect(doc.text).toBe('Text *LOUD*!\n');
   });
 
   it('pastes plain characters first after Mod+Shift+V, a paragraph per line, and offers Typst', () => {

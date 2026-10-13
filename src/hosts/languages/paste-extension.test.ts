@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tests for paste-extension.ts: a paste into a CodeMirror editor through the paste edit providers, and its choice of
-// kinds (the "Paste as" chip).
+// Tests for paste-extension.ts: a paste into a CodeMirror editor through the editor's own and the registered paste
+// edit providers, and its choice of kinds (the "Paste as" chip).
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
@@ -9,10 +9,11 @@ import { SourceRange } from '../../core/typst-document/typst-document';
 import { LanguagesHost, type PasteChoice, type PasteChoices } from './languages';
 
 /**
- * A CodeMirror editor of `text` with the paste extension: a paste goes in as it is (`typst`) or upper-cased
- * (`text.plain`, standing in for escaped text); a provider adds `// pasted` at the top. `state.open`: the open choice.
+ * A CodeMirror editor of `text` with the paste extension: its own provider offers a paste as it is (`typst`) or
+ * upper-cased (`text.plain`, standing in for escaped text); a registered one offers it reversed (`typst.reversed`),
+ * placed by `yieldTo`, and one resolves every paste, adding `// pasted` at the top. `state.open`: the open choice.
  */
-function setup(text: string) {
+function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst'] }: { yieldTo?: string[]; preferences?: string[] } = {}) {
   const state = { open: null as PasteChoice | null, picked: [] as PasteChoice[] };
   const choices: PasteChoices = {
     openPasteChoice: (choice) => void (state.open = choice),
@@ -20,18 +21,31 @@ function setup(text: string) {
     pickPasteKind: (choice) => void state.picked.push(choice),
   };
   const languages = new LanguagesHost({ open() {}, executeCommand: async () => undefined });
-  languages.registerDocumentPasteEditProvider({}, {
-    provideDocumentPasteEdits: (document, _ranges, pasted) => (document.text.startsWith('//') ? undefined : { insertText: pasted, additionalEdits: [{ ...SourceRange.of({ from: 0, to: 0 }), insert: '// pasted\n' }] }),
-  });
-  const kinds = (pasted: string) => [
-    { kind: 'typst', title: 'Typst', text: pasted },
-    { kind: 'text.plain', title: 'Text', text: pasted.toUpperCase() },
-  ];
+  const pastedOf = (data: DataTransfer) => data.getData('text/plain');
+  languages.registerDocumentPasteEditProvider(
+    {},
+    { provideDocumentPasteEdits: (_document, _ranges, data) => [{ kind: 'typst.reversed', title: 'Reversed', insertText: [...pastedOf(data)].reverse().join(''), yieldTo }] },
+    { providedPasteEditKinds: ['typst.reversed'], pasteMimeTypes: ['text/plain'] },
+  );
+  languages.registerDocumentPasteEditProvider(
+    {},
+    {
+      resolveDocumentPasteEdit: (edit, document) =>
+        document.text.startsWith('//') ? undefined : { ...edit, additionalEdit: [{ ...SourceRange.of({ from: 0, to: 0 }), insert: '// pasted\n' }] },
+    },
+    { providedPasteEditKinds: [] },
+  );
+  const provider = {
+    provideDocumentPasteEdits: (_document: unknown, _ranges: unknown, data: DataTransfer) => [
+      { kind: 'typst', title: 'Typst', insertText: pastedOf(data) },
+      { kind: 'text.plain', title: 'Text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
+    ],
+  };
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new EditorView({
     parent,
     doc: text,
-    extensions: [history(), languages.createDocumentPasteCodeMirrorExtension('typst', () => ProjectPath.of('/main.typ'), { kinds, choices })],
+    extensions: [history(), languages.createDocumentPasteCodeMirrorExtension('typst', () => ProjectPath.of('/main.typ'), { provider, preferences, choices })],
   });
   const paste = (pasted: string) => {
     const event = new Event('paste', { bubbles: true, cancelable: true });
@@ -48,7 +62,7 @@ describe('paste as (CodeMirror)', () => {
     view.dispatch({ selection: { anchor: 4 } });
     paste(' *x*');
     expect(text()).toBe('// pasted\nText *x*\n');
-    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }]);
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }, { kind: 'typst.reversed', title: 'Reversed' }]);
     state.open!.change('text.plain');
     expect(text()).toBe('// pasted\nText *X*\n');
     expect(state.open?.kind).toBe('text.plain');
@@ -86,8 +100,20 @@ describe('paste as (CodeMirror)', () => {
     key({ key: 'Escape' });
     expect(state.open).toBeNull();
     const before = text();
-    paste(' 1');
+    paste('1');
     expect(text()).not.toBe(before);
     expect(state.open).toBeNull();
+  });
+
+  it("offers the registered providers' edits after the editor's own, by their yieldTo, the preferred kind first", () => {
+    const yielding = setup('Text\n', { yieldTo: ['typst'], preferences: [] });
+    yielding.paste('ab');
+    expect(yielding.state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst', 'typst.reversed', 'text.plain']);
+    const first = setup('Text\n', { yieldTo: [], preferences: ['typst.reversed'] });
+    first.paste('ab');
+    expect(first.text()).toBe('// pasted\nbaText\n');
+    expect(first.state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.reversed', 'typst', 'text.plain']);
+    first.state.open!.change('typst');
+    expect(first.text()).toBe('// pasted\nabText\n');
   });
 });
