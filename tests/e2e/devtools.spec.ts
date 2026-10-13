@@ -2,6 +2,7 @@
 // (src/extensions/devtools/).
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
+import { caretAtEnd, sourceText } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -63,7 +64,10 @@ test('the contributions tab says what each extension contributed, by extension o
 test('the events tab logs events as they fire, their values in full; filter, pause, clear', async ({ page }) => {
   const devtools = page.getByTestId('typst-devtools');
   await devtools.getByRole('tab', { name: 'Events' }).click();
-  await page.getByTestId('typst-visual').locator('p').first().click();
+  // the caret where ProseMirror has seen it: typed right after a bare click, the key could still meet its first
+  // selection (the leading raw block, selected as a whole) and replace it
+  const paragraph = page.getByTestId('typst-visual').locator('p').first();
+  await caretAtEnd(paragraph);
   await page.keyboard.type('x');
   await expect(devtools).toContainText('project.onDidChangeFile');
   await expect(devtools).toContainText('window.onDidChangeTextEditorSelection');
@@ -75,10 +79,13 @@ test('the events tab logs events as they fire, their values in full; filter, pau
 
   await devtools.getByRole('button', { name: 'Pause' }).click();
   await devtools.getByRole('button', { name: 'Clear' }).click();
-  await page.getByTestId('typst-visual').locator('p').first().click();
+  await caretAtEnd(paragraph);
   await page.keyboard.type('y');
+  await expect.poll(sourceText(page)).toContain('show code.xy');
   await expect(devtools).not.toContainText('project.onDidChangeFile');
   await devtools.getByRole('button', { name: 'Pause' }).click();
+  // the click left the focus on the button: back into the text
+  await caretAtEnd(paragraph);
   await page.keyboard.type('z');
   await expect(devtools).toContainText('project.onDidChangeFile');
 });

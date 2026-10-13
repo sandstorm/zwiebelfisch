@@ -97,6 +97,9 @@ export class SearchPanel {
     this.#tree.setAttribute('aria-label', 'Results');
     this.#root.append(modes, field, this.#replace.field, this.#scope.element, status, this.#replace.notice, this.#empty, this.#tree);
     parent.append(this.#root);
+    // the query field, not the mode buttons before it, takes the focus when the panel is shown by its key; marked once
+    // in place, so the browser's own autofocus on insertion does not take the page's focus
+    this.#input.autofocus = true;
     this.#mode = options.state.get('mode') === 'replace' ? 'replace' : 'find';
     for (const mode of MODES) this.#modes[mode].addEventListener('click', () => this.#setMode(mode));
     this.#replaceAll.addEventListener('click', () => this.#replaceMatches());

@@ -79,8 +79,10 @@ test.describe('in a paragraph (plain page, boxes rendered)', () => {
 
 /** The inline box of `src` in the shown Visual editor, edited: only its code shows; Escape: only its picture again. */
 async function expectCodeReplacesPicture(page: Page, src: string): Promise<void> {
-  const picture = visual(page).locator(`p .typst-visual__raw-inline > img.typst-visual__rendering[alt="${src}"]`);
-  const box = visual(page).locator('p .typst-visual__raw-inline').filter({ has: picture });
+  const pictureOfSrc = `img.typst-visual__rendering[alt="${src}"]`;
+  const picture = visual(page).locator(`p .typst-visual__raw-inline > ${pictureOfSrc}`);
+  // `has` looks inside each box: a locator relative to it, not one starting from the editor
+  const box = visual(page).locator('p .typst-visual__raw-inline').filter({ has: page.locator(pictureOfSrc) });
   const code = box.locator('.typst-visual__code');
   await expect(picture).toBeVisible();
   await expect(code).toBeHidden();
@@ -89,7 +91,9 @@ async function expectCodeReplacesPicture(page: Page, src: string): Promise<void>
   await expect(box.locator('.cm-editor')).toHaveClass(/cm-focused/);
   await expect(code).toBeVisible();
   await expect(picture).toBeHidden();
-  await expectOneLine(box);
+  // its paragraph wraps: the box alone is one line high
+  const { box: height, line } = await heights(box);
+  expect(height).toBeLessThanOrEqual(line * 1.1);
 
   await page.keyboard.press('Escape');
   await expect(picture).toBeVisible();

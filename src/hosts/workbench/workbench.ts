@@ -256,7 +256,8 @@ export interface SidePanel {
   setAvailable(available: boolean): void;
   /**
    * Shows it as if the viewer picked it on the rail (VS Code's `WebviewView.show`), and focuses it unless
-   * `preserveFocus`: its first focusable element, else the panel itself. Nothing while it is unavailable.
+   * `preserveFocus`: its element marked `autofocus` (as a dialog's), else its first focusable one, else the panel
+   * itself. Nothing while it is unavailable.
    */
   show(preserveFocus?: boolean): void;
   /** Closes it if it lies over the editing area (narrow widget, left side), e.g. after something was chosen in it. */

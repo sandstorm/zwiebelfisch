@@ -8,6 +8,8 @@ type Editor = HTMLElement & { value: string; files: Record<string, string | Uint
 
 const editor = (page: Page) => page.locator('typst-editor');
 const search = (page: Page) => editor(page).getByRole('combobox', { name: 'Search everywhere' });
+/** Its rows (not the options of the toolbar's Text style menu). */
+const options = (page: Page) => editor(page).getByRole('dialog', { name: 'Search everywhere' }).getByRole('option');
 
 async function setup(page: Page): Promise<void> {
   await page.goto('/examples/plain-html/');
@@ -30,8 +32,8 @@ test('double Shift in the Visual editor opens it; # narrows to headings; Enter o
   await expect(search(page)).toBeFocused();
   await expect(editor(page).locator('.typst-quick-pick__hint')).toContainText('# Headings');
   await page.keyboard.type('#meth');
-  await expect(editor(page).getByRole('option')).toHaveCount(1);
-  await expect(editor(page).getByRole('option').first()).toContainText('Method');
+  await expect(options(page)).toHaveCount(1);
+  await expect(options(page).first()).toContainText('Method');
   await page.keyboard.press('Enter');
   await expect(search(page)).toHaveCount(0);
   await expect(editor(page).getByTestId('typst-visual').locator('h1:visible')).toHaveText('Method');
@@ -44,7 +46,7 @@ test('double Shift in the Source editor; % finds text in every file and selects 
   await source.locator('.cm-content').click();
   await doubleShift(page);
   await page.keyboard.type('%measured');
-  const option = editor(page).getByRole('option').filter({ hasText: 'chapters/method.typ:3' });
+  const option = options(page).filter({ hasText: 'chapters/method.typ:3' });
   await expect(option).toBeVisible();
   await expect(option.locator('mark')).toHaveText('measured');
   await page.keyboard.press('Enter');
@@ -87,7 +89,7 @@ test('> lists the commands by title and runs the one picked', async ({ page }) =
   await editor(page).getByTestId('typst-visual').locator('p').first().click();
   await doubleShift(page);
   await page.keyboard.type('>number head');
-  await expect(editor(page).getByRole('option').first()).toHaveText('Headings: Number headings on / off');
+  await expect(options(page).first()).toHaveText('Headings: Number headings on / off');
   await page.keyboard.press('Enter');
   await expect.poll(() => editor(page).evaluate((el: Editor) => el.value)).toContain('#set heading(numbering: "1.")');
 });

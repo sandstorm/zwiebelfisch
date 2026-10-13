@@ -196,7 +196,10 @@ export class SideBar {
     this.layout();
   }
 
-  /** Shows panel `id` as the viewer's pick and, unless `preserveFocus`, focuses it (where the focus was is remembered). */
+  /**
+   * Shows panel `id` as the viewer's pick and, unless `preserveFocus`, focuses it (where the focus was is remembered):
+   * its element marked `autofocus` (as a dialog's), else its first focusable one, else the panel itself.
+   */
   #reveal(id: string, preserveFocus: boolean): void {
     if (!this.#isAvailable(id)) return;
     this.#choose(id);
@@ -204,7 +207,7 @@ export class SideBar {
     const root = this.host.getRootNode() as Document | ShadowRoot;
     const body = this.#panels.get(id)!.body;
     if (!body.contains(root.activeElement)) this.#returnFocus = root.activeElement instanceof HTMLElement ? root.activeElement : null;
-    const target = body.querySelector<HTMLElement>(FOCUSABLE) ?? body;
+    const target = body.querySelector<HTMLElement>('[autofocus]') ?? body.querySelector<HTMLElement>(FOCUSABLE) ?? body;
     if (target === body) body.tabIndex = -1;
     target.focus();
   }
