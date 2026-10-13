@@ -41,6 +41,16 @@ export class SearchResults {
       .map((path) => ({ path, matches: this.#files.get(path)! }));
   }
 
+  /**
+   * What each of `file`'s matches becomes with `replace` (`TextQuery.replacement`), in order; undefined for one that is
+   * no longer there.
+   */
+  replacements({ path, matches }: FileMatches, replace: string): (string | undefined)[] {
+    const content = this.#options.project.content(path);
+    const text = content === undefined ? undefined : textOf(content);
+    return matches.map((match) => (text === undefined ? undefined : this.#options.query.replacement(text, match, replace)));
+  }
+
   /** How many matches there are in all. */
   get count(): number {
     return this.#count;

@@ -2,12 +2,15 @@
 // Tests for search-panel.ts with the real model over a project: the keys while there is no query; the result tree
 // (files, lines, the match marked, collapsed files); typing, the options, an invalid regular expression, too many
 // results; the keyboard and clicks; results following a file's change; the scopes (project, current file, folder);
-// a hidden panel dropping its results and searching again when shown; what it has the editors highlight.
+// a hidden panel dropping its results and searching again when shown; what it has the editors highlight; Replace
+// mode (the mode remembered, the preview, replacing a match, a file or all, confirmation, Undo, a match changed
+// meanwhile).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project, type ProjectFiles } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
+import { Replacement } from '../model/replace';
 import { SearchResults } from '../model/search-results';
 import type { TextMatch } from '../model/text-query';
 import { SearchPanel } from './search-panel';
@@ -21,7 +24,9 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n', '/chapters/intro.typ': 'Say hello.\n', '/refs.bib': '@book{hello}', '/logo.png': new Uint8Array() }) {
+const FILES: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n', '/chapters/intro.typ': 'Say hello.\n', '/refs.bib': '@book{hello}', '/logo.png': new Uint8Array() };
+
+function setup(files: ProjectFiles = FILES, state: Record<string, unknown> = {}) {
   const project = new Project(path('/main.typ'), files);
   const opened: [ProjectPath, TextMatch][] = [];
   /** What the panel last had the editors highlight: the files' match counts, the current match as `path:from`. */
@@ -30,6 +35,9 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
   const visibility = new EventEmitter<void>();
   const view = { visible: true, onDidChangeVisibility: visibility.event };
   const activeFile = new EventEmitter<ProjectPath>();
+  const stored = new Map<string, unknown>(Object.entries(state));
+  const confirmed: string[] = [];
+  let confirm = true;
   const window = { activeFile: path('/main.typ'), onDidChangeActiveFile: activeFile.event };
   const panel = new SearchPanel(document.body, {
     search: (query, scope) => {
@@ -46,6 +54,9 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
       },
     },
     keys: [{ label: 'Find in files', key: 'Ctrl+Shift+F' }],
+    replace: (query, matches, replace) => Replacement.apply({ project, applyEdit: async (change) => (project.apply(change), null) }, query, matches, replace),
+    confirm: async (message) => (confirmed.push(message), confirm),
+    state: { get: ((key: string, fallback?: unknown) => stored.get(key) ?? fallback) as never, update: async (key, value) => void stored.set(key, value) },
   });
   const root = document.querySelector<HTMLElement>('[data-testid=typst-search]')!;
   const input = root.querySelector('input')!;
@@ -54,6 +65,17 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
   return {
     project,
     panel,
+    stored,
+    confirmed,
+    /** Whether the confirmation is answered with yes. */
+    setConfirm: (answer: boolean) => void (confirm = answer),
+    /** The first button whose title or text starts with `label`. */
+    button: (label: string) => [...root.querySelectorAll('button')].find((button) => button.title.startsWith(label) || button.textContent!.startsWith(label))!,
+    replaceInput: () => root.querySelector<HTMLInputElement>('input[aria-label=Replace]')!,
+    notice: () => {
+      const notice = root.querySelector<HTMLElement>('.typst-search__notice')!;
+      return notice.hidden ? '' : notice.firstElementChild!.textContent;
+    },
     searches,
     /** Shows or hides the panel. */
     setVisible: (visible: boolean) => {
@@ -97,7 +119,8 @@ function fileRow(row: HTMLElement): string {
 
 function matchRow(row: HTMLElement): string {
   const [line, preview] = row.children;
-  return `  ${line.textContent}: ${[...preview.childNodes].map((node) => (node.nodeName === 'MARK' ? `[${node.textContent}]` : node.textContent)).join('')}`;
+  const marks: Record<string, string> = { MARK: '[$]', DEL: '~$~', INS: '{$}' };
+  return `  ${line.textContent}: ${[...preview.childNodes].map((node) => marks[node.nodeName]?.replace('$', node.textContent!) ?? node.textContent).join('')}`;
 }
 
 describe('SearchPanel', () => {
@@ -236,7 +259,7 @@ describe('SearchPanel', () => {
   it('searches a folder with its subfolders: picked, or the current file\'s; × goes back to the project', async () => {
     const files = { '/main.typ': 'hello', '/a/one.typ': 'hello', '/a/b/two.typ': 'hello', '/ab.typ': 'hello' };
     const { panel, scope, scopeTarget, tree, message, show, clearScope } = setup(files);
-    panel.find({ query: 'hello' }, { kind: 'folder', path: path('/a') });
+    panel.find({ query: 'hello' }, { scope: { kind: 'folder', path: path('/a') } });
     await vi.runAllTimersAsync();
     expect(scope().value).toBe('folder');
     expect(scopeTarget()).toBe('a/');
@@ -284,5 +307,106 @@ describe('SearchPanel', () => {
     await vi.runAllTimersAsync();
     expect(searches).toHaveLength(1);
     expect(message()).toBe('4 results in 3 files');
+  });
+});
+
+describe('SearchPanel in Replace mode', () => {
+  it('switches mode in its header, keeping the query; remembers the mode', async () => {
+    const { panel, button, replaceInput, stored, message, root } = { ...setup(), root: () => document.querySelector('[data-testid=typst-search]')! };
+    expect(replaceInput().closest<HTMLElement>('[hidden]')).not.toBeNull();
+    panel.find({ query: 'hello' });
+    await vi.runAllTimersAsync();
+    button('Replace in files').click();
+    expect(button('Replace in files').getAttribute('aria-pressed')).toBe('true');
+    expect(replaceInput().closest('[hidden]')).toBeNull();
+    expect(stored.get('mode')).toBe('replace');
+    expect(message()).toBe('4 results in 3 files');
+    expect(root().querySelector<HTMLElement>('.typst-search__replace-all')!.hidden).toBe(false);
+    button('Find in files').click();
+    expect(stored.get('mode')).toBe('find');
+    document.body.replaceChildren();
+    expect(setup(FILES, { mode: 'replace' }).button('Replace in files').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('shows each match struck through with its replacement, regular expression groups filled in', async () => {
+    const { panel, tree, replaceInput } = setup({ '/main.typ': 'ann@example bob@test\n' });
+    panel.find({ query: '(\\w+)@(\\w+)', isRegex: true, replace: '$2 for $1' }, { mode: 'replace' });
+    await vi.runAllTimersAsync();
+    expect(tree()).toEqual(['▾ main.typ (2)', '  1: ~ann@example~{example for ann} bob@test', '  1: ann@example ~bob@test~{test for bob}']);
+    replaceInput().value = '$1';
+    replaceInput().dispatchEvent(new Event('input'));
+    await vi.runAllTimersAsync();
+    expect(tree()[1]).toBe('  1: ~ann@example~{ann} bob@test');
+  });
+
+  it('replaces a match (its row\'s button, or Ctrl+Shift+1 on its row) or a file\'s matches; Undo puts them back', async () => {
+    const { project, panel, rows, tree, notice, button } = setup();
+    const text = () => project.content(path('/main.typ'));
+    panel.find({ query: 'hello', replace: 'bye' }, { mode: 'replace' });
+    await vi.runAllTimersAsync();
+    rows()[1].querySelector('button')!.click();
+    expect(text()).toBe('bye world\nhello again\n');
+    await vi.runAllTimersAsync();
+    expect(notice()).toBe('Replaced 1 occurrence in 1 file');
+    await vi.runAllTimersAsync();
+    expect(tree()[0]).toBe('▾ main.typ (1)');
+    rows()[1].focus();
+    rows()[1].dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(text()).toBe('bye world\nbye again\n');
+    await vi.runAllTimersAsync();
+    rows()[0].querySelector('button')!.click();
+    expect(project.content(path('/chapters/intro.typ'))).toBe('Say bye.\n');
+    await vi.runAllTimersAsync();
+    expect(notice()).toBe('Replaced 1 occurrence in 1 file');
+    button('Undo').click();
+    await vi.runAllTimersAsync();
+    expect(notice()).toBe('Restored 1 occurrence');
+    expect(project.content(path('/chapters/intro.typ'))).toBe('Say hello.\n');
+    expect(text()).toBe('bye world\nbye again\n');
+  });
+
+  it('Replace all (its button or Ctrl+Alt+Enter) asks first for more than one file; Undo takes it all back', async () => {
+    const { project, panel, button, confirmed, setConfirm, notice, input, message } = setup();
+    panel.find({ query: 'hello', replace: 'bye' }, { mode: 'replace' });
+    await vi.runAllTimersAsync();
+    setConfirm(false);
+    button('Replace all').click();
+    await vi.runAllTimersAsync();
+    expect(confirmed).toEqual(['Replace 4 occurrences in 3 files?']);
+    expect(project.content(path('/main.typ'))).toBe('Hello world\nhello again\n');
+    setConfirm(true);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, altKey: true, bubbles: true, cancelable: true }));
+    await vi.runAllTimersAsync();
+    expect(project.files()).toMatchObject({ '/main.typ': 'bye world\nbye again\n', '/chapters/intro.typ': 'Say bye.\n', '/refs.bib': '@book{bye}' });
+    expect(notice()).toBe('Replaced 4 occurrences in 3 files');
+    expect(message()).toBe('No results');
+    expect(button('Replace all').disabled).toBe(true);
+    project.document(path('/main.typ'))!.change([{ ...SourceRange.of({ from: 0, to: 0 }), insert: 'Oh, ' }, { ...SourceRange.of({ from: 10, to: 13 }), insert: 'Bye' }], 'test');
+    button('Undo').click();
+    await vi.runAllTimersAsync();
+    expect(notice()).toBe('Restored 3 occurrences · 1 replacement edited since, left as they are');
+    expect(project.files()).toMatchObject({ '/main.typ': 'Oh, Hello world\nBye again\n', '/chapters/intro.typ': 'Say hello.\n', '/refs.bib': '@book{hello}' });
+    expect(button('Undo').hidden).toBe(true);
+  });
+
+  it('leaves a match whose text changed since the list was drawn, and says so', async () => {
+    const { project, panel, rows, notice } = setup();
+    panel.find({ query: 'hello', replace: 'bye' }, { mode: 'replace' });
+    await vi.runAllTimersAsync();
+    project.document(path('/main.typ'))!.change([{ ...SourceRange.of({ from: 0, to: 0 }), insert: 'Oh, ' }], 'test');
+    rows()[1].querySelector('button')!.click();
+    await vi.runAllTimersAsync();
+    expect(project.content(path('/main.typ'))).toBe('Oh, Hello world\nhello again\n');
+    expect(notice()).toBe('Nothing replaced · 1 match changed meanwhile, not replaced');
+  });
+
+  it('does not replace in Find mode', async () => {
+    const { project, panel, rows } = setup();
+    panel.find({ query: 'hello', replace: 'bye' }, { mode: 'find' });
+    await vi.runAllTimersAsync();
+    expect(rows()[1].querySelector('button')).toBeNull();
+    rows()[1].focus();
+    rows()[1].dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(project.content(path('/main.typ'))).toBe('Hello world\nhello again\n');
   });
 });

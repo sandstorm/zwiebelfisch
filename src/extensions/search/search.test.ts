@@ -2,7 +2,8 @@
 // Tests for search.ts in a workbench (preview mocked: no worker in jsdom): the panel on the rail; the key and the
 // command, with the selection or the arguments as query; a match opening in the editor shown now (Visual or Source),
 // a match inside a raw box opening in its code, a text file's match opening that file; the matches highlighted in the
-// shown editor; "Find in folder…" on a folder's row in the file panel.
+// shown editor; "Find in folder…" on a folder's row in the file panel; Replace mode by key, Replace all confirmed in a
+// notification, a text file changed through the host (and its veto).
 import { EditorView as CodeView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
@@ -34,10 +35,10 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n') {
+function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n', allowFileChange?: () => boolean) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': main, '/notes.txt': 'world notes', '/chapters/intro.typ': 'Round about.' });
-  const workbench = new WorkbenchHost(host, project, { viewType });
+  const workbench = new WorkbenchHost(host, project, { viewType, allowFileChange });
   let window!: WindowApi;
   // a text file: one with a declared language
   const probe: TypstExtension = { id: 'probe', contributes: { languages: [{ id: 'plaintext', extensions: ['.txt'] }] }, activate: (context) => void (window = context.window) };
@@ -139,5 +140,40 @@ describe('search', () => {
     expect(document.activeElement).toBe(input);
     expect(panel.querySelector('select')?.value).toBe('folder');
     expect(panel.querySelector('[role=status]')?.textContent).toBe('1 result in 1 file');
+  });
+
+  it('Ctrl+Shift+H shows the panel in Replace mode; there Ctrl+Shift+F switches back, keeping the query', async () => {
+    const { host, window, panel, input } = setup(SOURCE_EDITOR);
+    const key = (target: Element, code: string) => target.dispatchEvent(new KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    window.activeTextEditor!.revealRange(SourceRange.of({ from: 6, to: 11 }));
+    key(host.querySelector('.cm-content')!, 'KeyH');
+    expect(input.value).toBe('world');
+    expect(panel.querySelector('input[aria-label=Replace]')!.closest('[hidden]')).toBeNull();
+    input.value = 'round';
+    key(input, 'KeyF');
+    expect(input.value).toBe('round');
+    expect(panel.querySelector('input[aria-label=Replace]')!.closest('[hidden]')).not.toBeNull();
+  });
+
+  it('Replace all asks in a notification, then replaces in the Typst and the text files; the host may refuse a text file', async () => {
+    let allowed = true;
+    const { host, workbench, project, panel } = setup(VISUAL_EDITOR, undefined, () => allowed);
+    await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'world', replace: 'globe' });
+    await vi.runAllTimersAsync();
+    panel.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    await vi.runAllTimersAsync();
+    const notification = host.querySelector('.typst-notification')!;
+    expect(notification.textContent).toContain('Replace 3 occurrences in 2 files?');
+    [...notification.querySelectorAll('button')].find((button) => button.textContent === 'Replace')!.click();
+    await vi.runAllTimersAsync();
+    expect([project.content(path('/main.typ')), project.content(path('/notes.txt'))]).toEqual(['Hello globe\n\nThe globe is round.\n', 'globe notes']);
+    expect(panel.querySelector('.typst-search__notice')?.textContent).toBe('Replaced 3 occurrences in 2 filesUndo');
+    allowed = false;
+    await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'notes', replace: 'list' });
+    await vi.runAllTimersAsync();
+    panel.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    await vi.runAllTimersAsync();
+    expect(project.content(path('/notes.txt'))).toBe('globe notes');
+    expect(panel.querySelector('.typst-search__notice')?.textContent).toMatch(/^Nothing replaced · notes.txt: This change is not allowed here./);
   });
 });

@@ -93,14 +93,14 @@ const Strike = typedAs(starterKitPart('typstStrike', { strike: {} }), null, null
 
 export const STRIKE: TypstMarkSpec = plainCallMark('strike', Strike);
 
-/** Tiptap's Highlight is a package of its own; this is its plain form (no colour), with its shortcut Mod-Shift-H. */
+/**
+ * Tiptap's Highlight is a package of its own; this is its plain form (no colour), without its shortcut Mod-Shift-H:
+ * that key is Replace in files (the search extension), so Highlight is in the toolbar only.
+ */
 const Highlight = TiptapMark.create({
   name: 'highlight',
   parseHTML: () => [{ tag: 'mark' }],
   renderHTML: ({ HTMLAttributes }) => ['mark', mergeAttributes({ class: 'typst-markup__highlight' }, HTMLAttributes), 0],
-  addKeyboardShortcuts() {
-    return { 'Mod-Shift-h': () => this.editor.commands.toggleMark(this.name) };
-  },
 });
 
 export const HIGHLIGHT: TypstMarkSpec = plainCallMark('highlight', Highlight);
@@ -349,7 +349,7 @@ export const MARK_ACTIONS: Record<'bold' | 'italic' | 'underline' | 'strike' | '
   italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
   underline: { label: 'Underline', shortcut: 'Mod+U', icon: ICONS.underline, run: (c) => c.toggleUnderline(), active: (e) => e.isActive('underline') },
   strike: { label: 'Strikethrough', shortcut: 'Mod+Shift+S', icon: ICONS.strike, run: (c) => c.toggleStrike(), active: (e) => e.isActive('strike') },
-  highlight: { label: 'Highlight', shortcut: 'Mod+Shift+H', icon: ICONS.highlight, run: (c) => c.toggleMark('highlight'), active: (e) => e.isActive('highlight') },
+  highlight: { label: 'Highlight', icon: ICONS.highlight, run: (c) => c.toggleMark('highlight'), active: (e) => e.isActive('highlight') },
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 

@@ -1,11 +1,13 @@
 // The "Find in files" panel's view. See search in ../search.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
+import { keyLabel } from '../../../hosts/commands/commands';
 import type { WindowApi } from '../../../hosts/window/window';
-import type { SidePanel } from '../../../hosts/workbench/workbench';
+import type { Memento, SidePanel } from '../../../hosts/workbench/workbench';
 import type { FileMatches, SearchResults, SearchScope } from '../model/search-results';
 import type { MatchHighlights } from './match-highlights';
 import { type TextMatch, TextQuery } from '../model/text-query';
+import { ReplaceControls, type ReplaceControlsOptions } from './replace-controls';
 import { type Choice, ScopePicker } from './scope-picker';
 
 /**
@@ -21,17 +23,28 @@ import { type Choice, ScopePicker } from './scope-picker';
  * drops its results (nobody sees them go stale) and searches again when it is shown, keeping what was expanded. The
  * tree is one tab stop (↑ / ↓, Home / End, ← / → collapse and expand; ↓ from the field enters it); a click or Enter on
  * a match opens it. The editors highlight what the panel lists, the match row the tree is on emphasised.
+ *
+ * It has two modes, switched in its header (or by the keys that show it in a mode), remembered across visits: Find,
+ * and Replace, which adds the replace field (ReplaceControls), shows each match struck through with its replacement
+ * after it, and offers a replace per match (on hover, or ⇧⌘1 / Ctrl+Shift+1 on its row), per file and for all
+ * (⌥⌘↩ / Ctrl+Alt+Enter). Query, options and scope stay when the mode changes.
  */
 export class SearchPanel {
   readonly #root: HTMLElement;
+  readonly #modes: Record<Mode, HTMLButtonElement>;
   readonly #input: HTMLInputElement;
   readonly #toggles: Record<ToggleName, HTMLButtonElement>;
   readonly #scope: ScopePicker;
+  readonly #replace: ReplaceControls;
+  readonly #replaceAll: HTMLButtonElement;
   readonly #subscriptions: { dispose(): void }[];
   readonly #message: HTMLElement;
   readonly #empty: HTMLElement;
   readonly #tree: HTMLElement;
+  #mode: Mode;
   #results: SearchResults | null = null;
+  /** The query `#results` are for. */
+  #query: TextQuery | null = null;
   #listener: Disposable | null = null;
   #error: string | undefined;
   /** Whether `#results` are still being searched for. */
@@ -53,6 +66,10 @@ export class SearchPanel {
     const doc = parent.ownerDocument;
     this.#root = element(doc, 'div', 'typst-search');
     this.#root.dataset.testid = 'typst-search';
+    const modes = element(doc, 'div', 'typst-search__modes');
+    modes.setAttribute('role', 'group');
+    modes.setAttribute('aria-label', 'Mode');
+    this.#modes = { find: modes.appendChild(modeButton(doc, 'Find')), replace: modes.appendChild(modeButton(doc, 'Replace')) };
     const field = element(doc, 'div', 'typst-search__field');
     this.#input = field.appendChild(element(doc, 'input', 'typst-search__input'));
     this.#input.type = 'text';
@@ -64,31 +81,48 @@ export class SearchPanel {
       isWordMatch: field.appendChild(toggle(doc, 'ab', 'Match Whole Word')),
       isRegExp: field.appendChild(toggle(doc, '.*', 'Use Regular Expression')),
     };
+    this.#replace = new ReplaceControls(doc, options);
     this.#scope = new ScopePicker(doc, options.window);
-    this.#message = element(doc, 'p', 'typst-search__message');
+    const status = element(doc, 'div', 'typst-search__status');
+    this.#message = status.appendChild(element(doc, 'p', 'typst-search__message'));
     this.#message.setAttribute('role', 'status');
+    this.#replaceAll = status.appendChild(element(doc, 'button', 'typst-search__button typst-search__replace-all', 'Replace all'));
+    this.#replaceAll.type = 'button';
+    this.#replaceAll.title = `Replace all (${keyLabel(REPLACE_ALL_KEY)})`;
     this.#empty = element(doc, 'dl', 'typst-search__empty');
     for (const { label, key } of options.keys) this.#empty.append(element(doc, 'dt', 'typst-search__empty-label', label), element(doc, 'dd', 'typst-search__empty-key', key));
     this.#tree = element(doc, 'ul', 'typst-search__tree');
     this.#tree.setAttribute('role', 'tree');
     this.#tree.setAttribute('aria-label', 'Results');
-    this.#root.append(field, this.#scope.element, this.#message, this.#empty, this.#tree);
+    this.#root.append(modes, field, this.#replace.field, this.#scope.element, status, this.#replace.notice, this.#empty, this.#tree);
     parent.append(this.#root);
+    this.#mode = options.state.get('mode') === 'replace' ? 'replace' : 'find';
+    for (const mode of MODES) this.#modes[mode].addEventListener('click', () => this.#setMode(mode));
+    this.#replaceAll.addEventListener('click', () => this.#replaceMatches());
+    this.#root.addEventListener('keydown', (event) => this.#rootKeydown(event));
     this.#input.addEventListener('input', () => this.#typed());
     this.#input.addEventListener('keydown', (event) => this.#inputKeydown(event));
     for (const button of Object.values(this.#toggles)) button.addEventListener('click', () => this.#toggle(button));
     this.#tree.addEventListener('click', (event) => this.#click(event));
     this.#tree.addEventListener('keydown', (event) => this.#treeKeydown(event));
-    this.#subscriptions = [this.#scope, this.#scope.onDidChange(() => this.#search()), options.view.onDidChangeVisibility(() => this.#visibilityChanged())];
-    this.#render();
+    this.#subscriptions = [
+      this.#scope,
+      this.#replace,
+      this.#scope.onDidChange(() => this.#search()),
+      this.#replace.onDidChange(() => this.#scheduleRender()),
+      options.view.onDidChangeVisibility(() => this.#visibilityChanged()),
+    ];
+    this.#setMode(this.#mode);
   }
 
   /**
-   * Searches for what `options` sets, in `scope` if given (the rest as it is) right away, and focuses the query field
-   * with its text selected, to type over.
+   * Searches for what `options` sets, in `mode` and `scope` if given (the rest as it is) right away, and focuses the
+   * query field with its text selected, to type over.
    */
-  find(options: FindOptions = {}, scope?: Choice): void {
+  find(options: FindOptions = {}, { mode, scope }: { mode?: Mode; scope?: Choice } = {}): void {
     if (options.query !== undefined) this.#input.value = options.query;
+    if (options.replace !== undefined) this.#replace.text = options.replace;
+    if (mode) this.#setMode(mode);
     if (scope) this.#scope.pick(scope);
     const set: Record<ToggleName, boolean | undefined> = { isCaseSensitive: options.isCaseSensitive, isWordMatch: options.matchWholeWord, isRegExp: options.isRegex };
     for (const name of TOGGLES) if (set[name] !== undefined) this.#toggles[name].setAttribute('aria-pressed', String(set[name]));
@@ -99,9 +133,34 @@ export class SearchPanel {
 
   dispose(): void {
     clearTimeout(this.#typing);
+    clearTimeout(this.#redraw);
     for (const subscription of this.#subscriptions) subscription.dispose();
     this.#drop();
     this.#root.remove();
+  }
+
+  #setMode(mode: Mode): void {
+    this.#mode = mode;
+    this.#root.classList.toggle('typst-search--replace', mode === 'replace');
+    for (const each of MODES) this.#modes[each].setAttribute('aria-pressed', String(each === mode));
+    this.#replace.field.hidden = mode !== 'replace';
+    if (mode !== this.options.state.get('mode', 'find')) void this.options.state.update('mode', mode);
+    this.#render();
+  }
+
+  /**
+   * Replaces the matches of file `path` and, with `match`, that match only; else all. All are confirmed when many.
+   * What is replaced is what the results have then (they follow every change).
+   */
+  #replaceMatches(path?: ProjectPath, match?: TextMatch): void {
+    const results = this.#results;
+    const query = this.#query;
+    if (this.#mode !== 'replace' || !results || !query) return;
+    const files = (): FileMatches[] => {
+      if (match) return [{ path: path!, matches: [match] }];
+      return results.files().filter((file) => path === undefined || file.path === path);
+    };
+    void this.#replace.replace(query, files, path === undefined);
   }
 
   #typed(): void {
@@ -140,6 +199,7 @@ export class SearchPanel {
     if (this.#stale) return;
     const pressed = (name: ToggleName) => this.#toggles[name].getAttribute('aria-pressed') === 'true';
     const query = new TextQuery({ pattern: this.#input.value, isCaseSensitive: pressed('isCaseSensitive'), isWordMatch: pressed('isWordMatch'), isRegExp: pressed('isRegExp') });
+    this.#query = query;
     this.#error = query.error;
     if (query.pattern && !query.error) {
       const results = (this.#results = this.options.search(query, this.#scope.scope));
@@ -178,6 +238,8 @@ export class SearchPanel {
     this.#empty.hidden = this.#input.value !== '';
     this.#message.textContent = this.#summary(files.length);
     this.#message.classList.toggle('typst-search__message--error', !!this.#error);
+    this.#replaceAll.hidden = this.#mode !== 'replace';
+    this.#replaceAll.disabled = !files.length;
     this.#rows = files.flatMap((file) => this.#fileRows(file));
     this.#tree.replaceChildren(...this.#rows.map((row) => row.element));
     const current = this.#rows.find((row) => row.key === this.#current) ?? this.#rows.find((row) => row.key === fileKey(this.#current)) ?? this.#rows[0];
@@ -204,9 +266,11 @@ export class SearchPanel {
     return `${plural(results.count, 'result')} in ${plural(files, 'file')}`;
   }
 
-  /** The row of `file` and, while it is expanded, those of its matches. */
-  #fileRows({ path, matches }: FileMatches): Row[] {
+  /** The row of `file` and, while it is expanded, those of its matches (in Replace mode with their replacements). */
+  #fileRows(file: FileMatches): Row[] {
+    const { path, matches } = file;
     const doc = this.#root.ownerDocument;
+    const replacing = this.#mode === 'replace';
     const expanded = this.#expanded.get(path) ?? matches.length <= AUTO_COLLAPSE;
     const item = treeItem(doc, 1, 'typst-search__file');
     item.setAttribute('aria-expanded', String(expanded));
@@ -217,9 +281,26 @@ export class SearchPanel {
       element(doc, 'span', 'typst-search__folder', slash > 0 ? ProjectPath.displayName(path.slice(0, slash) as ProjectPath) : ''),
       element(doc, 'span', 'typst-search__count', String(matches.length)),
     );
+    if (replacing) item.append(rowAction(doc, 'Replace', `Replace all in ${ProjectPath.name(path)} (${keyLabel(REPLACE_ROW_KEY)})`));
     const rows: Row[] = [{ key: `file:${path}`, element: item, path }];
-    if (expanded) for (const match of matches) rows.push({ key: `match:${path}:${match.from}`, element: matchItem(doc, match), path, match });
+    if (!expanded) return rows;
+    const replacements = replacing ? this.#results!.replacements(file, this.#replace.text) : [];
+    matches.forEach((match, index) => {
+      const row = matchItem(doc, match, replacing ? (replacements[index] ?? null) : undefined);
+      if (replacing) row.append(rowAction(doc, '⇄', `Replace (${keyLabel(REPLACE_ROW_KEY)})`));
+      rows.push({ key: `match:${path}:${match.from}`, element: row, path, match });
+    });
     return rows;
+  }
+
+  /** In Replace mode: ⌥⌘↩ / Ctrl+Alt+Enter replaces all; ⇧⌘1 / Ctrl+Shift+1 the match or file of the row it is on. */
+  #rootKeydown(event: KeyboardEvent): void {
+    const key = this.#mode === 'replace' ? replaceKey(event) : null;
+    const row = this.#rows[this.#indexOf(event.target)];
+    if (key === 'all') this.#replaceMatches();
+    else if (key === 'row' && row) this.#replaceMatches(row.path, row.match);
+    else return;
+    event.preventDefault();
   }
 
   #inputKeydown(event: KeyboardEvent): void {
@@ -233,7 +314,9 @@ export class SearchPanel {
     const index = this.#indexOf(event.target);
     if (index < 0) return;
     this.#focus(index);
-    this.#activate(this.#rows[index]);
+    const row = this.#rows[index];
+    if (event.target instanceof Element && event.target.closest('.typst-search__row-action')) this.#replaceMatches(row.path, row.match);
+    else this.#activate(row);
   }
 
   #treeKeydown(event: KeyboardEvent): void {
@@ -279,7 +362,7 @@ export class SearchPanel {
   }
 }
 
-export interface SearchPanelOptions {
+export interface SearchPanelOptions extends ReplaceControlsOptions {
   /** Starts searching for `query` in `scope`; the panel disposes the results with the next search. */
   search(query: TextQuery, scope: SearchScope): SearchResults;
   /** The side panel it is in: it searches only while that is shown. */
@@ -292,11 +375,17 @@ export interface SearchPanelOptions {
   open(path: ProjectPath, match: TextMatch): void;
   /** What the panel shows while there is no query: the ways here and their keys ("Find in files", "⌘⇧F"). */
   readonly keys: readonly { readonly label: string; readonly key: string }[];
+  /** Where it remembers the mode across visits. */
+  readonly state: Pick<Memento, 'get' | 'update'>;
 }
+
+/** Find (the default), or Replace: the replace field, the replacements shown, the buttons to replace. */
+export type Mode = 'find' | 'replace';
 
 /** What to search for: the arguments of `workbench.action.findInFiles` (VS Code's names); unset: as the panel has it. */
 export interface FindOptions {
   readonly query?: string;
+  readonly replace?: string;
   readonly isRegex?: boolean;
   readonly isCaseSensitive?: boolean;
   readonly matchWholeWord?: boolean;
@@ -311,6 +400,7 @@ interface Row {
   readonly match?: TextMatch;
 }
 
+const MODES = ['find', 'replace'] as const;
 const TOGGLES = ['isCaseSensitive', 'isWordMatch', 'isRegExp'] as const;
 type ToggleName = (typeof TOGGLES)[number];
 
@@ -320,6 +410,10 @@ const TYPING_PAUSE = 150;
 const REDRAW_PAUSE = 100;
 /** A file with more matches than this starts collapsed. */
 const AUTO_COLLAPSE = 10;
+/** Replace all, anywhere in the panel (VS Code's and IntelliJ's). */
+const REPLACE_ALL_KEY = 'Mod+Alt+Enter';
+/** Replace the match or file of the row the tree is on (VS Code's). */
+const REPLACE_ROW_KEY = 'Mod+Shift+Digit1';
 
 /** The key of the file row of the match row `key` (itself for a file row). */
 function fileKey(key: string | null): string | null {
@@ -339,6 +433,30 @@ function toggle(doc: Document, text: string, label: string): HTMLButtonElement {
   return button;
 }
 
+/** Which replace key `event` is: Replace all (⌥⌘↩), the row's (⇧⌘1), or none. */
+function replaceKey(event: KeyboardEvent): 'all' | 'row' | null {
+  if (!(event.metaKey || event.ctrlKey)) return null;
+  if (event.key === 'Enter' && event.altKey && !event.shiftKey) return 'all';
+  return event.code === 'Digit1' && event.shiftKey && !event.altKey ? 'row' : null;
+}
+
+function modeButton(doc: Document, label: string): HTMLButtonElement {
+  const button = element(doc, 'button', 'typst-search__mode', label);
+  button.type = 'button';
+  button.title = `${label} in files`;
+  return button;
+}
+
+/** A row's replace button: not a tab stop of its own (the tree is one; ⇧⌘1 does the same on the row). */
+function rowAction(doc: Document, text: string, label: string): HTMLButtonElement {
+  const button = element(doc, 'button', 'typst-search__row-action', text);
+  button.type = 'button';
+  button.tabIndex = -1;
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  return button;
+}
+
 function treeItem(doc: Document, level: number, className: string): HTMLElement {
   const item = element(doc, 'li', className);
   item.setAttribute('role', 'treeitem');
@@ -347,12 +465,17 @@ function treeItem(doc: Document, level: number, className: string): HTMLElement 
   return item;
 }
 
-/** A match's row: its line number and the line cut around it, the match marked. */
-function matchItem(doc: Document, { line, preview }: TextMatch): HTMLElement {
+/**
+ * A match's row: its line number and the line cut around it, the match marked; with a `replacement` the match struck
+ * through and the replacement after it (null: the match is no longer there, nothing to show for it).
+ */
+function matchItem(doc: Document, { line, preview }: TextMatch, replacement?: string | null): HTMLElement {
   const item = treeItem(doc, 2, 'typst-search__match');
   const [from, to] = preview.match;
   const text = element(doc, 'span', 'typst-search__preview');
-  text.append(preview.text.slice(0, from), element(doc, 'mark', 'typst-search__hit', preview.text.slice(from, to)), preview.text.slice(to));
+  const hit = preview.text.slice(from, to);
+  const marked = typeof replacement === 'string' ? [element(doc, 'del', 'typst-search__old', hit), element(doc, 'ins', 'typst-search__new', replacement.replace(/\n/g, '↵'))] : [element(doc, 'mark', 'typst-search__hit', hit)];
+  text.append(preview.text.slice(0, from), ...marked, preview.text.slice(to));
   item.append(element(doc, 'span', 'typst-search__line', String(line)), text);
   return item;
 }

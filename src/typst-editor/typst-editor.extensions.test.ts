@@ -606,4 +606,33 @@ describe('collaboration', () => {
     expect(area.hasAttribute('inert')).toBe(false);
     expect(source().state.doc.toString()).toBe('Room text');
   });
+
+  it("a replace in files reaches the other widget as exact edits: what the other typed meanwhile stays, and its results follow", async () => {
+    // two rooms' copies whose updates wait while `paused`, as over a slow connection
+    const [ann, bob] = [new Y.Doc(), new Y.Doc()];
+    let paused = false;
+    const waiting: [Y.Doc, Uint8Array][] = [];
+    const relay = (from: Y.Doc, to: Y.Doc) => from.on('update', (update: Uint8Array, origin: unknown) => origin !== 'relay' && (paused ? waiting.push([to, update]) : Y.applyUpdate(to, update, 'relay')));
+    relay(ann, bob);
+    relay(bob, ann);
+    const shared = new Y.Text();
+    ann.getMap<Y.Text>(FILES_MAP).set('/main.typ', shared);
+    shared.insert(0, 'A cat.\n\nAnother cat.\n');
+    const widgets = [ann, bob].map((doc) => setup({ source: '', extensions: (builtins) => [...builtins, collaboration({ doc })] }));
+    await vi.waitFor(() => expect(widgets.map((widget) => widget.editor.source)).toEqual(['A cat.\n\nAnother cat.\n', 'A cat.\n\nAnother cat.\n']));
+    const [annWidget, bobWidget] = widgets;
+    const status = (widget: typeof annWidget) => widget.host.querySelector('[data-testid=typst-search] [role=status]')?.textContent;
+    await bobWidget.editor.executeCommand('workbench.action.findInFiles', { query: 'cat' });
+    await vi.waitFor(() => expect(status(bobWidget)).toBe('2 results in 1 file'));
+    paused = true;
+    bobWidget.source().dispatch({ changes: { from: 21, insert: 'Bye.\n' }, userEvent: 'input.type' });
+    await annWidget.editor.executeCommand('workbench.action.replaceInFiles', { query: 'cat', replace: 'dog' });
+    await vi.waitFor(() => expect(status(annWidget)).toBe('2 results in 1 file'));
+    annWidget.host.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    await vi.waitFor(() => expect(annWidget.editor.source).toBe('A dog.\n\nAnother dog.\n'));
+    paused = false;
+    for (const [to, update] of waiting.splice(0)) Y.applyUpdate(to, update, 'relay');
+    expect(widgets.map((widget) => widget.editor.source)).toEqual(['A dog.\n\nAnother dog.\nBye.\n', 'A dog.\n\nAnother dog.\nBye.\n']);
+    await vi.waitFor(() => expect(status(bobWidget)).toBe('No results'));
+  });
 });
