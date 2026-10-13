@@ -238,7 +238,14 @@ work plus a period of running both against the e2e suite.
 
 1. ~~Branch~~ Decided: part of the project (dropdown, default preselected).
 2. ~~Recents~~ Decided: on the server per user.
-3. Scope / commit author: user token preferred, but the user is unsure about commits → research again (in progress).
-4. Auto-commit after everyone left: needed somehow (user) → research how (in progress).
-5. Instances / providers: later maybe GitHub or other git hosting too; several providers possible, one server is the default. Complexity being estimated.
+3. ~~Scope / commit author~~ Decided for now: a **bot token** commits (service account or project/group access token); author = the bot,
+   the editors as `Co-authored-by:` trailers (never `author_name` set to a user: impersonation, rejected under web signing).
+   Users sign in with OAuth for identity (`read_user`, `read_api` for the chooser). Because the bot bypasses per-user
+   branch protection, the server checks the user's access level (and protected-branch push rights) before a save.
+   Research: `2026_10_13_git-hosting-research.md` §1 (it recommended user tokens; revisit later).
+4. ~~Auto-commit~~ Decided: **no user tokens are stored at all** (user: too dangerous). User OAuth tokens live in memory for
+   the session only (a server restart means signing in again). Auto-commit after everyone left uses the bot token.
+5. ~~Instances / providers~~ Decided: GitLab only now, with the seams from the research §3 (provider id in room names, URLs,
+   identity `(provider, user id)`, recents and config with one default provider; `Repository` as an interface;
+   branch-level conflict check instead of per-file `last_commit_id`). Further providers (GitHub, Gitea/Forgejo) later.
 6. ~~Language~~ Decided: Go (see 2026_10_13_go-server.md).
