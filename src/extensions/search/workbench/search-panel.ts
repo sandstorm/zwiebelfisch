@@ -4,6 +4,7 @@ import { ProjectPath } from '../../../core/paths/paths';
 import { keyLabel } from '../../../hosts/commands/commands';
 import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento, SidePanel } from '../../../hosts/workbench/workbench';
+import type { PreviewLine } from '../model/match-preview';
 import type { FileMatches, SearchResults, SearchScope } from '../model/search-results';
 import type { MatchHighlights } from './match-highlights';
 import { type TextMatch, TextQuery } from '../model/text-query';
@@ -14,9 +15,10 @@ import { type Choice, ScopePicker } from './scope-picker';
  * The query field with its three options (Match Case, Match Whole Word, Use Regular Expression), where to search
  * (ScopePicker: the project, the current file or a folder), what the search found in words ("23 results in 4 files",
  * an invalid regular expression, too many results), and the matches as a tree: a row per file (name, folder, count)
- * with a row per match below (line number, the source line cut around the match, the match marked). Files with many
- * matches start collapsed (VS Code's `search.collapseResults: auto`), and only an expanded file's rows are made. With
- * no query it shows the keys that lead here instead.
+ * with a row per match below (line number, the source line cut around the match, the match marked), between the lines
+ * before and after it, dimmed (`previewMatches`; not rows). Files with many matches start collapsed (VS Code's
+ * `search.collapseResults: auto`), and only an expanded file's rows are made. With no query it shows the keys that
+ * lead here instead.
  *
  * Typing searches after a short pause, the previous search stopped; the options, the scope and Enter search at once.
  * Results follow the files' changes, redrawn at most every few milliseconds, while the panel is shown: a hidden panel
@@ -240,8 +242,9 @@ export class SearchPanel {
     this.#message.classList.toggle('typst-search__message--error', !!this.#error);
     this.#replaceAll.hidden = this.#mode !== 'replace';
     this.#replaceAll.disabled = !files.length;
-    this.#rows = files.flatMap((file) => this.#fileRows(file));
-    this.#tree.replaceChildren(...this.#rows.map((row) => row.element));
+    const items: HTMLElement[] = [];
+    this.#rows = files.flatMap((file) => this.#fileRows(file, items));
+    this.#tree.replaceChildren(...items);
     const current = this.#rows.find((row) => row.key === this.#current) ?? this.#rows.find((row) => row.key === fileKey(this.#current)) ?? this.#rows[0];
     this.#current = current?.key ?? null;
     this.#highlight();
@@ -266,8 +269,11 @@ export class SearchPanel {
     return `${plural(results.count, 'result')} in ${plural(files, 'file')}`;
   }
 
-  /** The row of `file` and, while it is expanded, those of its matches (in Replace mode with their replacements). */
-  #fileRows(file: FileMatches): Row[] {
+  /**
+   * The row of `file` and, while it is expanded, those of its matches (in Replace mode with their replacements), each
+   * appended to `items` with the lines around the matches (not rows: the tree goes from match to match).
+   */
+  #fileRows(file: FileMatches, items: HTMLElement[]): Row[] {
     const { path, matches } = file;
     const doc = this.#root.ownerDocument;
     const replacing = this.#mode === 'replace';
@@ -283,13 +289,19 @@ export class SearchPanel {
     );
     if (replacing) item.append(rowAction(doc, 'Replace', `Replace all in ${ProjectPath.name(path)} (${keyLabel(REPLACE_ROW_KEY)})`));
     const rows: Row[] = [{ key: `file:${path}`, element: item, path }];
+    items.push(item);
     if (!expanded) return rows;
     const replacements = replacing ? this.#results!.replacements(file, this.#replace.text) : [];
-    matches.forEach((match, index) => {
-      const row = matchItem(doc, match, replacing ? (replacements[index] ?? null) : undefined);
-      if (replacing) row.append(rowAction(doc, '⇄', `Replace (${keyLabel(REPLACE_ROW_KEY)})`));
+    for (const line of this.#results!.preview(file)) {
+      if (line.kind !== 'match') {
+        items.push(contextItem(doc, line));
+        continue;
+      }
+      const match = matches[line.index];
+      const row = matchItem(doc, line, replacing ? (replacements[line.index] ?? null) : undefined);
       rows.push({ key: `match:${path}:${match.from}`, element: row, path, match });
-    });
+      items.push(row);
+    }
     return rows;
   }
 
@@ -467,16 +479,26 @@ function treeItem(doc: Document, level: number, className: string): HTMLElement 
 
 /**
  * A match's row: its line number and the line cut around it, the match marked; with a `replacement` the match struck
- * through and the replacement after it (null: the match is no longer there, nothing to show for it).
+ * through and the replacement after it (null: the match is no longer there, nothing to show for it), and its replace
+ * button.
  */
-function matchItem(doc: Document, { line, preview }: TextMatch, replacement?: string | null): HTMLElement {
+function matchItem(doc: Document, { line, text, match }: PreviewLine & { kind: 'match' }, replacement?: string | null): HTMLElement {
   const item = treeItem(doc, 2, 'typst-search__match');
-  const [from, to] = preview.match;
-  const text = element(doc, 'span', 'typst-search__preview');
-  const hit = preview.text.slice(from, to);
+  const [from, to] = match;
+  const preview = element(doc, 'span', 'typst-search__preview');
+  const hit = text.slice(from, to);
   const marked = typeof replacement === 'string' ? [element(doc, 'del', 'typst-search__old', hit), element(doc, 'ins', 'typst-search__new', replacement.replace(/\n/g, '↵'))] : [element(doc, 'mark', 'typst-search__hit', hit)];
-  text.append(preview.text.slice(0, from), ...marked, preview.text.slice(to));
-  item.append(element(doc, 'span', 'typst-search__line', String(line)), text);
+  preview.append(text.slice(0, from), ...marked, text.slice(to));
+  item.append(element(doc, 'span', 'typst-search__line', String(line)), preview);
+  if (replacement !== undefined) item.append(rowAction(doc, '⇄', `Replace (${keyLabel(REPLACE_ROW_KEY)})`));
+  return item;
+}
+
+/** A line around a match (its number and text, dimmed), or the gap between two blocks of lines: no row of the tree. */
+function contextItem(doc: Document, line: PreviewLine & { kind: 'context' | 'gap' }): HTMLElement {
+  const item = element(doc, 'li', line.kind === 'gap' ? 'typst-search__gap' : 'typst-search__context');
+  item.setAttribute('role', 'none');
+  if (line.kind === 'context') item.append(element(doc, 'span', 'typst-search__line', String(line.line)), element(doc, 'span', 'typst-search__preview', line.text));
   return item;
 }
 

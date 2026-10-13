@@ -102,6 +102,11 @@ function setup(files: ProjectFiles = FILES, state: Record<string, unknown> = {})
     message: () => root.querySelector('[role=status]')!.textContent,
     /** The rows as text: a file row `name folder (count)`, a match row `line: preview` with the match in [ ]. */
     tree: () => rows().map((row) => (row.getAttribute('aria-level') === '1' ? fileRow(row) : matchRow(row))),
+    /** The tree as it reads: its rows as `tree` has them, a line around a match `line| text`, a gap `…`. */
+    lines: () => [...root.querySelectorAll<HTMLElement>('[role=tree] > li')].map((item) => {
+      if (item.getAttribute('role') === 'treeitem') return item.getAttribute('aria-level') === '1' ? fileRow(item) : matchRow(item);
+      return item.className === 'typst-search__gap' ? '  …' : `  ${item.children[0].textContent}| ${item.children[1].textContent}`;
+    }),
     empty: () => root.querySelector<HTMLElement>('dl')!,
     type: async (text: string) => {
       input.value = text;
@@ -141,6 +146,15 @@ describe('SearchPanel', () => {
     expect(empty().hidden).toBe(true);
     expect(message()).toBe('4 results in 3 files');
     expect(tree()).toEqual(['▾ main.typ (2)', '  1: [Hello] world', '  2: [hello] again', '▾ intro.typ chapters (1)', '  1: Say [hello].', '▾ refs.bib (1)', '  1: @book{[hello]}']);
+  });
+
+  it('shows the line before and after each match, shared by matches on nearby lines; a gap between blocks', async () => {
+    const lines = ['#let x = 1', 'one', 'x', 'three', 'x', 'five', 'seis', 'seven', 'x', 'last'];
+    const { panel, lines: shown, tree } = setup({ '/main.typ': lines.join('\n') + '\n' });
+    panel.find({ query: 'x' });
+    await vi.runAllTimersAsync();
+    expect(shown()).toEqual(['▾ main.typ (4)', '  1: #let [x] = 1', '  2| one', '  3: [x]', '  4| three', '  5: [x]', '  6| five', '  …', '  8| seven', '  9: [x]', '  10| last']);
+    expect(tree()).toHaveLength(5);
   });
 
   it('searches after a pause in typing, and again at once for each option', async () => {
@@ -326,6 +340,19 @@ describe('SearchPanel in Replace mode', () => {
     expect(stored.get('mode')).toBe('find');
     document.body.replaceChildren();
     expect(setup(FILES, { mode: 'replace' }).button('Replace in files').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('↑ / ↓ go from match to match over the lines around them; the replacement shows on the match\'s line', async () => {
+    const { panel, rows, press, lines } = setup({ '/main.typ': 'a\nfoo\nb\nc\nfoo\nd\n' }, { mode: 'replace' });
+    panel.find({ query: 'foo', replace: 'bar' });
+    await vi.runAllTimersAsync();
+    expect(lines()).toEqual(['▾ main.typ (2)', '  1| a', '  2: ~foo~{bar}', '  3| b', '  4| c', '  5: ~foo~{bar}', '  6| d']);
+    rows()[1].focus();
+    press(rows()[1], 'ArrowDown');
+    expect(document.activeElement).toBe(rows()[2]);
+    expect(rows()[2].textContent).toContain('5');
+    press(rows()[2], 'ArrowUp');
+    expect(document.activeElement).toBe(rows()[1]);
   });
 
   it('shows each match struck through with its replacement, regular expression groups filled in', async () => {

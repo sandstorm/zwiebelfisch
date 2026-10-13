@@ -47,7 +47,7 @@ export class TextQuery {
         const from = start + found.index;
         line += lineBreaks(text, counted, from);
         counted = from;
-        matches.push({ ...SourceRange.of({ from, to: from + found[0].length }), line, preview: preview(text, from, from + found[0].length) });
+        matches.push({ ...SourceRange.of({ from, to: from + found[0].length }), line });
       }
     }
     return matches;
@@ -96,8 +96,6 @@ export interface TextQueryOptions {
 export interface TextMatch extends SourceRange {
   /** The line `from` is on, 1-based. */
   readonly line: number;
-  /** That line, cut to show the match (leading spaces dropped), and where in it the match is (up to the line's end). */
-  readonly preview: { readonly text: string; readonly match: readonly [number, number] };
 }
 
 /** A regular expression that names a line break searches the whole text, not line by line. */
@@ -128,25 +126,6 @@ function lineBreaks(text: string, from: number, to: number): number {
   for (let i = text.indexOf('\n', from); i >= 0 && i < to; i = text.indexOf('\n', i + 1)) count++;
   return count;
 }
-
-/** The line of `from..to` in `text`, cut to show the match. */
-function preview(text: string, from: number, to: number): TextMatch['preview'] {
-  const start = text.lastIndexOf('\n', from - 1) + 1;
-  const newline = text.indexOf('\n', from);
-  const line = text.slice(start, newline < 0 ? text.length : newline);
-  const column = from - start;
-  const end = Math.min(to - start, line.length);
-  const indent = Math.min(line.length - line.trimStart().length, column);
-  const shownFrom = Math.max(indent, column - BEFORE);
-  const cut = shownFrom > indent ? '…' : '';
-  const shown = line.slice(shownFrom, Math.max(shownFrom + SHOWN, end));
-  return { text: cut + shown, match: [column - shownFrom + cut.length, end - shownFrom + cut.length] };
-}
-
-/** Characters of a line shown before a match (more are cut, with "…"). */
-const BEFORE = 30;
-/** Characters of a line shown in all (more when the match is longer). */
-const SHOWN = 120;
 
 /** What `\n`, `\t` and `\\` stand for in a regex mode replacement. */
 const ESCAPES: Record<string, string> = { n: '\n', t: '\t', '\\': '\\' };

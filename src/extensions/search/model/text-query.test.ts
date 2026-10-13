@@ -62,15 +62,6 @@ describe('TextQuery.findMatches', () => {
     expect(found('abc', { pattern: '' })).toEqual([]);
     expect(new TextQuery({ pattern: 'a' }).findMatches('a\na\na', 2)).toHaveLength(2);
   });
-
-  it('previews the line around the match, without its indent, cut before a far match', () => {
-    const [near] = new TextQuery({ pattern: 'needle' }).findMatches('    the needle here', 1);
-    expect(near.preview).toEqual({ text: 'the needle here', match: [4, 10] });
-    const [far] = new TextQuery({ pattern: 'needle' }).findMatches(`${'x'.repeat(100)} needle`, 1);
-    expect(far.preview).toEqual({ text: `…${'x'.repeat(29)} needle`, match: [31, 37] });
-    const [across] = new TextQuery({ pattern: 'b\\nc', isRegExp: true }).findMatches('ab\ncd', 1);
-    expect(across.preview).toEqual({ text: 'ab', match: [1, 2] });
-  });
 });
 
 describe('TextQuery.replacement', () => {

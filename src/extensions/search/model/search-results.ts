@@ -3,6 +3,7 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../../core/project/project';
+import { type PreviewLine, previewMatches } from './match-preview';
 import type { TextMatch, TextQuery } from './text-query';
 
 /**
@@ -39,6 +40,12 @@ export class SearchResults {
       .paths()
       .filter((path) => this.#files.get(path)?.length)
       .map((path) => ({ path, matches: this.#files.get(path)! }));
+  }
+
+  /** How `file`'s matches read in the results: their lines with a line of context around (`previewMatches`). */
+  preview({ path, matches }: FileMatches): PreviewLine[] {
+    const content = this.#options.project.content(path);
+    return content === undefined ? [] : previewMatches(textOf(content), matches);
   }
 
   /**

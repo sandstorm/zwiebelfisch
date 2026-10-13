@@ -10,6 +10,7 @@
 - *What is searched:* the Typst source of every `.typ` file and every text file (`.bib`, `.csv`, `.json`, `.md`, …), not images or PDFs. Searching `*quick* fox` finds the bold markup.
 - *Options* beside the field: Match Case (`Aa`), Match Whole Word (`ab`), Use Regular Expression (`.*`).
 - *In:* the project, the current file, or a folder. Right click a folder in the file panel → "Find in folder…".
+- *Each result* shows its line between the line before and after it; nearby results share them.
 - Results *update while you type*, and when you or your co-authors change a file.
 
 *Opening a match:* click it, or press Enter on its row. It opens selected in the editor you are working in, Visual or Source. While the panel is open, both editors *highlight every match*.

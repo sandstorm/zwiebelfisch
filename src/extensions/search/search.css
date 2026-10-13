@@ -1,5 +1,6 @@
 /* The search extension's styles: the "Find in files" panel (mode switch, query field and options, replace field,
-   scope, message, outcome of a replace, keys, result tree with the replace preview) and the matches highlighted in
+   scope, message, outcome of a replace, keys, result tree with the lines around each match and the replace preview)
+   and the matches highlighted in
    the editors.
    See search in search.ts, which registers it. */
 .typst-search {
@@ -176,6 +177,18 @@
 }
 .typst-search__file { padding: 0 8px; color: var(--te-text); }
 .typst-search__match { padding: 0 8px 0 28px; }
+/* The lines around the matches (grep -C1): dimmed, not rows; a gap between blocks of lines that are not neighbours. */
+.typst-search__match,
+.typst-search__context { min-height: 20px; line-height: 20px; }
+.typst-search__context {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 8px 0 28px;
+  color: var(--te-muted-2);
+  white-space: nowrap;
+}
+.typst-search__gap { height: 0; margin: 3px 8px 3px 28px; border-top: 1px dashed var(--te-border); }
 .typst-search__file:hover,
 .typst-search__match:hover { background: var(--te-hover); }
 .typst-search__file:focus,
@@ -206,7 +219,16 @@
   line-height: 16px;
   text-align: center;
 }
-.typst-search__line { flex: none; min-width: 2em; color: var(--te-faint); font-size: 11px; text-align: right; }
+.typst-search__line {
+  flex: none;
+  min-width: 3ch;
+  color: var(--te-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.typst-search__match .typst-search__line { color: var(--te-muted); }
 .typst-search__preview {
   flex: 1;
   min-width: 0;
