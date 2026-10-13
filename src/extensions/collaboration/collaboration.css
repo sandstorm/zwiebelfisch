@@ -4,7 +4,8 @@
 .typst-collaboration__selection {
   background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
 }
-/* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look). */
+/* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look); the flag, as a box's, is the
+   name in data-user drawn by ::after (no text in the editor). */
 .typst-collaboration__caret {
   position: relative;
   margin: 0 -1px;
@@ -13,8 +14,9 @@
   word-break: normal;
   pointer-events: none;
 }
-.typst-collaboration__caret-flag,
+.typst-collaboration__caret::after,
 .typst-collaboration__box:not([data-typst-pseudo='own'])::after {
+  content: attr(data-user);
   position: absolute;
   padding: 0 4px;
   background: var(--typst-remote-color, #268bd2);
@@ -28,7 +30,7 @@
   user-select: none;
   z-index: 2;
 }
-.typst-collaboration__caret-flag {
+.typst-collaboration__caret::after {
   bottom: 100%;
   left: -1px;
   border-radius: 3px 3px 3px 0;
@@ -45,12 +47,12 @@
   border-radius: 50%;
   background: var(--typst-remote-color, #268bd2);
 }
-.typst-collaboration__caret--transient > .typst-collaboration__caret-flag {
+.typst-collaboration__caret--transient::after {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
   animation: typst-collaboration-flag 2.5s ease-in;
 }
-.typst-collaboration__caret--transient:hover > .typst-collaboration__caret-flag { opacity: 1; animation: none; }
+.typst-collaboration__caret--transient:hover::after { opacity: 1; animation: none; }
 @keyframes typst-collaboration-flag {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
@@ -63,7 +65,6 @@
   outline-offset: 1px;
 }
 .typst-collaboration__box:not([data-typst-pseudo='own'])::after {
-  content: attr(data-user);
   right: -3px;
   bottom: calc(100% + 3px);
   border-radius: 3px 3px 0 3px;

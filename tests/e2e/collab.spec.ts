@@ -1,8 +1,9 @@
 // End-to-end tests (Playwright, against the demo build): two users in one room (needs the collaboration server: mise run test:e2e-collab).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { expect, type Browser, type Page } from '@playwright/test';
-import { LINE_END, LINE_START, SERVER_DEMO, serve, signIn, test } from './fixtures';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
+import { SERVER_DEMO, serve, signIn, test } from './fixtures';
+import { caretAtEnd, caretAtStart, selectText } from './visual-helpers';
 
 // Two users in one room of the local collaboration server. Needs the server:
 // run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234,
@@ -28,6 +29,13 @@ const marginGlyphs = (page: Page) => () =>
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
 
+/** A remote caret's name flag (its `::after`) as drawn: the name and how opaque. */
+const flag = (caret: Locator) => () =>
+  caret.evaluate((element) => {
+    const style = getComputedStyle(element, '::after');
+    return { name: style.content, opacity: style.opacity };
+  });
+
 async function users(browser: Browser, baseURL: string, project: string) {
   const room = `e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const ann = await join(browser, baseURL, room, 'Ann');
@@ -50,11 +58,9 @@ test('an edit in one Source editor shows up in the other user’s Visual and Sou
 
 test('edits from both Visual editors converge', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('h1').click();
-  await ann.keyboard.press(LINE_END);
+  await caretAtEnd(ann.getByTestId('typst-visual').locator('h1'));
   await ann.keyboard.type(' (Ann)');
-  await bob.getByTestId('typst-visual').locator('li', { hasText: 'Type something.' }).click();
-  await bob.keyboard.press(LINE_END);
+  await caretAtEnd(bob.getByTestId('typst-visual').locator('li p', { hasText: 'Type something.' }));
   await bob.keyboard.type(' (Bob)');
   for (const page of [ann, bob]) {
     await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes (Ann)');
@@ -64,7 +70,7 @@ test('edits from both Visual editors converge', async ({ browser, baseURL }, inf
 
 test('the other user’s selection is shown with their name', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
+  await selectText(ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }), 'stars');
   const selection = bob.getByTestId('typst-visual').locator('.typst-collaboration__selection');
   await expect(selection).toHaveText('stars');
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
@@ -72,12 +78,10 @@ test('the other user’s selection is shown with their name', async ({ browser, 
 
 test('the other user’s caret shows with their name in both editors, where they moved it last, and their file is marked in the tree', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('h1').click();
-  await ann.keyboard.press(LINE_END);
+  await caretAtEnd(ann.getByTestId('typst-visual').locator('h1'));
   const visualCaret = bob.getByTestId('typst-visual').locator('h1 .typst-collaboration__caret[data-user="Ann"]');
   await expect(visualCaret).toHaveCount(1);
-  await expect(visualCaret.locator('.typst-collaboration__caret-flag')).toBeVisible();
-  await expect(visualCaret.locator('.typst-collaboration__caret-flag')).toHaveText('Ann');
+  await expect.poll(flag(visualCaret)).toEqual({ name: '"Ann"', opacity: '1' });
   // Regression: the caret is published after the move, not one step behind (at the click position).
   const textBefore = () =>
     visualCaret.evaluate((caret) => {
@@ -87,7 +91,7 @@ test('the other user’s caret shows with their name in both editors, where they
       return range.toString();
     });
   await expect.poll(textBefore).toBe('Typst in five minutes');
-  await ann.keyboard.press(LINE_START);
+  await caretAtStart(ann.getByTestId('typst-visual').locator('h1'));
   await expect.poll(textBefore).toBe('');
   // the collaboration extension's file decoration: Ann's initial on her file in Bob's file tree (the panel may be closed)
   const decoration = bob.getByTestId('typst-files').locator('[data-path="/main.typ"] .typst-files__decoration');
@@ -98,7 +102,7 @@ test('the other user’s caret shows with their name in both editors, where they
   const sourceCaret = line.locator('.typst-collaboration__caret[data-user="Ann"]');
   await expect(sourceCaret).toHaveCount(1);
   await sourceCaret.hover({ force: true });
-  await expect(sourceCaret.locator('.typst-collaboration__caret-flag')).toHaveCSS('opacity', '1');
+  await expect.poll(flag(sourceCaret)).toEqual({ name: '"Ann"', opacity: '1' });
 });
 
 test('a caret on an empty line shows in the other user’s Source editor', async ({ browser, baseURL }, info) => {
@@ -108,12 +112,13 @@ test('a caret on an empty line shows in the other user’s Source editor', async
   await bob.getByRole('tab', { name: 'Source' }).click();
   // `has` looks inside each line: the caret's locator starts there, not at the page
   const caret = bob.locator('.typst-collaboration__caret[data-user="Ann"]');
-  await expect(bob.getByTestId('typst-source').locator('.cm-line', { has: caret })).toHaveText('Ann');
+  // the name flag is no text: the line stays empty
+  await expect(bob.getByTestId('typst-source').locator('.cm-line', { has: caret })).toHaveText('');
 });
 
 test('a margin note reaches the other user', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
+  await selectText(ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }), 'stars');
   await ann.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' }).click();
   const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
@@ -135,7 +140,7 @@ test('a reply from the other user: both see the thread in the card and in the PD
   }
   await expect.poll(marginGlyphs(ann)).toBeGreaterThan(0);
   const demoNote = await marginGlyphs(ann)();
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
+  await selectText(ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }), 'stars');
   await ann.keyboard.press('ControlOrMeta+Alt+KeyM');
   const annField = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await annField.fill('Is this right?');

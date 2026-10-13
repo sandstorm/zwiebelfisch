@@ -2,8 +2,8 @@
 // marks of spaces and paragraph ends in the Visual editor and the whitespace in the Source editor, is remembered, and
 // changes neither the text nor what is copied.
 import { expect, type Page } from '@playwright/test';
-import { LINE_END, test } from './fixtures';
-import { compiled, sourceText, visual } from './visual-helpers';
+import { test } from './fixtures';
+import { caretAtEnd, compiled, sourceText, visual } from './visual-helpers';
 
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: { source: string } }).editor.source = t), text);
@@ -54,8 +54,7 @@ test('shows the invisible characters in both editors, remembered, the text uncha
 
 test('typing keeps the marks in step with the text', async ({ page }) => {
   await toggle(page, false);
-  await visual(page).locator('p', { hasText: 'three' }).click();
-  await page.keyboard.press(LINE_END);
+  await caretAtEnd(visual(page).locator('p', { hasText: 'three' }));
   await page.keyboard.type(' four five');
   await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(5);
   await page.keyboard.press('Enter');

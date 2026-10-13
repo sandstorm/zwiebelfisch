@@ -50,7 +50,8 @@ export const remotePresence: Extension = StateField.define<readonly Shown[]>({
 
 /**
  * A remote caret: a thin bar in the user's color with a flag naming them (the look of Tiptap's CollaborationCaret /
- * y-codemirror). Styling decides whether the flag always shows or only on hover and right after a move.
+ * y-codemirror). The flag is drawn from `data-user` (CSS), no text: the editor's text stays the document's (for find
+ * in the page, `textContent`). Styling decides whether the flag always shows or only on hover and right after a move.
  */
 export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
   const caret = doc.createElement('span');
@@ -59,10 +60,6 @@ export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
   caret.setAttribute('aria-hidden', 'true');
   caret.contentEditable = 'false';
   presenceStyle(caret, user);
-  const flag = doc.createElement('span');
-  flag.className = 'typst-collaboration__caret-flag';
-  flag.textContent = user.name;
-  caret.append(flag);
   return caret;
 }
 

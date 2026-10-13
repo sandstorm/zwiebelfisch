@@ -47,7 +47,8 @@ describe('VisualEditor presence', () => {
     view.setPresence([{ ...ann, ...at(source.indexOf('bold')) }]);
     const caret = parent.querySelector<HTMLElement>('.typst-collaboration__caret')!;
     expect(caret.dataset.user).toBe('Ann');
-    expect(caret.querySelector('.typst-collaboration__caret-flag')!.textContent).toBe('Ann');
+    // the name flag is drawn from data-user (CSS): the text around stays the document's
+    expect(caret.closest('p')!.textContent).toBe('Some bold text');
     expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
     expect(textBefore(caret)).toBe('Some ');
   });
@@ -58,7 +59,7 @@ describe('VisualEditor presence', () => {
     const caretAt = (offset: number) => {
       view.setPresence([{ ...ann, ...at(offset) }]);
       const caret = parent.querySelector('.typst-collaboration__caret')!;
-      return { block: caret.closest('p, h1')!.textContent!.replace('Ann', ''), before: textBefore(caret).replace('Ann', '') };
+      return { block: caret.closest('p, h1')!.textContent, before: textBefore(caret) };
     };
     expect(caretAt(source.indexOf('\n'))).toEqual({ block: 'Title', before: 'Title' });
     expect(caretAt(source.indexOf('First line') + 'First line'.length)).toMatchObject({ before: 'First line' });
@@ -74,7 +75,7 @@ describe('VisualEditor presence', () => {
     view.setPresence([{ ...ann, ...at(source.indexOf('[]') + 1) }]);
     const caret = parent.querySelector('.typst-collaboration__caret');
     expect(caret).not.toBeNull();
-    expect(caret!.closest('p')?.textContent).toBe('Ann');
+    expect(caret!.closest('p')?.textContent).toBe('');
     expect(caret!.closest('td')).toBe(parent.querySelectorAll('td')[1]);
   });
 
@@ -84,7 +85,7 @@ describe('VisualEditor presence', () => {
     parent.querySelector('[contenteditable]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(doc.text).toBe('One\n\n\n\nTwo\n');
     view.setPresence([{ ...ann, ...at(4) }]);
-    expect([...parent.querySelectorAll('p')].map((p) => p.textContent)).toEqual(['One', 'Ann', 'Two']);
+    expect([...parent.querySelectorAll('p')].map((p) => p.querySelector('.typst-collaboration__caret')?.getAttribute('data-user') ?? p.textContent)).toEqual(['One', 'Ann', 'Two']);
   });
 
   it('tints the selection; carets follow edits from elsewhere and go when cleared', () => {

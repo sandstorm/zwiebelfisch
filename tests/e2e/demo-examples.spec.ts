@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): the demo's examples.
 import { expect, type Page } from '@playwright/test';
-import { LINE_START, test, fileRow } from './fixtures';
+import { test, fileRow } from './fixtures';
+import { caretAtStart } from './visual-helpers';
 
 const examples = (page: Page) => page.getByRole('navigation', { name: 'Examples' });
 const preview = (page: Page) => page.getByTestId('typst-preview');
@@ -74,8 +75,7 @@ test('the URL keeps the shown file and the cursor\'s line: a reload opens them t
   const chapter = '/chapters/introduction.typ';
   await page.goto(`/?example=advanced#${chapter}`);
   const visual = page.locator('[data-testid=typst-visual]:visible');
-  await visual.getByText('This report measures').first().click();
-  await page.keyboard.press(LINE_START);
+  await caretAtStart(visual.getByText('This report measures').first());
   await page.keyboard.type('Now ');
   await expect(page).toHaveURL(/#\/chapters\/introduction\.typ:10$/);
 

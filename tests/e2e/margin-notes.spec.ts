@@ -1,7 +1,8 @@
 // End-to-end tests (Playwright, against the demo build): comments as margin notes, their markers and floating cards.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { LINE_END, test } from './fixtures';
+import { test } from './fixtures';
+import { caretAtEnd } from './visual-helpers';
 import { expect, type Page } from '@playwright/test';
 
 const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/extensions/comments/model/fixtures/drafting-0.2.2.tar.gz'));
@@ -90,8 +91,7 @@ test('a comment on selected text becomes a range note: highlighted, a marker, a 
 });
 
 test('a comment at the cursor becomes a point note; a second note does not repeat the import', async ({ page }) => {
-  await visual(page).locator('p', { hasText: 'Typst is a markup' }).click();
-  await page.keyboard.press(LINE_END);
+  await caretAtEnd(visual(page).locator('p', { hasText: 'Typst is a markup' }));
   await page.keyboard.press('ControlOrMeta+Alt+KeyM');
   await expect(noteField(page)).toBeFocused();
   await noteField(page).fill('Point note');
@@ -186,8 +186,7 @@ test('a reply appends a message to the thread, in the card and in the source', a
 
 test('resolving a range note keeps its text; resolving a point note removes it', async ({ page }) => {
   await commentOnStrong(page, 'Range');
-  await visual(page).locator('h1').click();
-  await page.keyboard.press(LINE_END);
+  await caretAtEnd(visual(page).locator('h1'));
   await commentButton(page).click();
   await noteField(page).fill('Point');
   await noteField(page).press('ControlOrMeta+Enter');
