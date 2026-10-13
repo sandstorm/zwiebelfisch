@@ -14,6 +14,7 @@ import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
 import { previewGuides } from '../extensions/preview-guides/preview-guides';
+import { previewHtml } from '../extensions/preview-html/preview-html';
 import { previewSync } from '../extensions/preview-sync/preview-sync';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { textFiles } from '../extensions/text-files/text-files';
@@ -281,6 +282,7 @@ function builtinExtensions(): TypstExtension[] {
     previewSync(),
     previewControls(),
     previewGuides(),
+    previewHtml(),
     pdfExport(),
   ];
 }

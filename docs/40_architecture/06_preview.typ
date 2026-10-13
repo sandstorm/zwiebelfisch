@@ -4,7 +4,7 @@
 
 #unreviewed
 
-`Preview` in `src/hosts/preview/` compiles the project in a Web Worker (the Typst wasm, @architecture-core-engine) and shows the pages as SVG. It is what `ExtensionContext.preview` is; the host keeps the mechanism, extensions add the controls and decide when to use it.
+`Preview` in `src/hosts/preview/` compiles the project in a Web Worker (the Typst wasm, @architecture-core-engine) and shows the pages as SVG, or hands Typst's HTML export to a registered renderer (@architecture-preview-renderers). It is what `ExtensionContext.preview` is; the host keeps the mechanism, extensions add the controls and decide when to use it.
 
 #figure(
   mermaid(read("../diagrams/preview-flow.mmd"), width: 100%),
@@ -16,7 +16,8 @@
 #table(
   columns: (auto, 1fr, auto),
   table.header[Member][What][Built-in users],
-  [`registerToolbarItem(item, { group, order })`], [A toolbar control. Groups `1_sync`, `2_view`, `3_export`.], [`previewSync`, `previewControls`, `pdfExport`],
+  [`registerToolbarItem(item, { group, order, renderer })`], [A toolbar control. Groups `1_sync`, `2_view`, `3_export`. `renderer`: shown only while that renderer is active.], [`previewSync`, `previewControls`, `pdfExport`],
+  [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (switch: `previewControls`)],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports.], [`comments`],
   [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only.], [`previewGuides`, `comments`],
 )
@@ -51,6 +52,28 @@ preview.registerPdfExportOption({
 - *Overlays* are in pt, placed in percent, so they survive zoom. Shading waits until the compiled text is the `text` given, and is looked up again after every compile.
 - *A range's boxes* (shading, `snippet`): what its source drew, plus everything inside an element whose call lies wholly in it (a `figure` of a package's picture); never a page's header, footer or background. Raw boxes' pictures are snippets, so they show what view options draw.
 - Loading state (`PreviewProgress`) is shown only by the pane: @architecture-workbench-loading.
+
+== Renderers <architecture-preview-renderers>
+
+The pages (`pages`) are built in. A registered renderer replaces them below the toolbar while it is the active one: the preview compiles only for it, and hands it the output and the cursor (after its first output, the last `reveal`).
+
+```ts
+preview.registerRenderer({
+  id: 'html', label: 'HTML', output: 'html',          // output: what the worker compiles for it
+  create(container) {                                // when it becomes the active one
+    return {
+      update({ files }) { … },                       // a successful compile: HtmlFile[] in bundle order
+      reveal(elements) { … },                        // the cursor moved: ElementLocation[], one per page
+      dispose() { … },
+    };
+  },
+});
+```
+
+- *`compileHtml(main)`*: Typst's bundle export (`document(path)`, `asset(path, data)`; a main file without `document` is one `index.html`), with the `html` and `bundle` features on and their "experimental" warnings left out. Every element with a source span gets `data-typst-element` (the span's number, `.2`, `.3` for repeats): stable while other text changes. The worker sends a file's bytes only when its hash changed.
+- *Cursor → element* (`elementsAtCursor`): the innermost syntax node at the cursor that produced an element (an element without span: its nearest ancestor with one); where that node's output is elsewhere too (a heading's text in an outline), the places inside an element of an enclosing node win. One per page, in bundle order; empty for a `#let` or a comment.
+- *The pages stay the host's*: their clicks, shading, zoom and snippets are API others use. With another renderer active, a snippet compiles the pages once per `update()`; view options apply to the pages only. Diagnostics and `onDidRender` come from the active renderer's compile.
+- *`previewHtml`*: one page at a time in an `iframe sandbox="allow-same-origin"` (no scripts). A compile changes the page in place (`morphDocument`, matched by `data-typst-element`), so it keeps its scroll position. Links between pages switch the page, URLs open a new tab. Assets are blob URLs, made once per hash; a path the bundle lacks is looked up among the project's files (the docs' fonts). The cursor shows the page holding its element, else the first one listed; none keeps the page.
 
 == View options <architecture-preview-view>
 

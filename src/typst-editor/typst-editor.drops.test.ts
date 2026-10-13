@@ -27,6 +27,11 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     registerViewOption = () => ({ dispose() {} });
     viewOptions = () => [];
     setViewOptionValues() {}
+    registerRenderer = () => ({ dispose() {} });
+    renderers = () => [{ id: 'pages', label: 'Pages' }];
+    activeRenderer = 'pages';
+    setActiveRenderer() {}
+    onDidChangeRenderers = () => ({ dispose() {} });
     onDidChangeViewOptions = () => ({ dispose() {} });
     engineMemory = 0;
     onDidChangeEngineMemory = () => ({ dispose() {} });

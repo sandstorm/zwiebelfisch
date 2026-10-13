@@ -1,5 +1,5 @@
 import { SourceRange } from '../typst-document/typst-document';
-import type { CompileResult, TypstDiagnostic, TypstEngine, PdfResult } from '../typst-engine/typst-engine';
+import type { CompileResult, HtmlResult, TypstDiagnostic, TypstEngine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
 
 /**
@@ -28,7 +28,7 @@ export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher =
     }
   };
   /** Runs `task` until it misses no package that could still be downloaded. */
-  const withDownloads = async <R extends CompileResult | PdfResult>(task: () => R): Promise<R> => {
+  const withDownloads = async <R extends CompileResult | PdfResult | HtmlResult>(task: () => R): Promise<R> => {
     for (;;) {
       const result = task();
       const wanted = result.missingPackages.filter((spec) => !failed.has(spec));
@@ -39,13 +39,14 @@ export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher =
   return {
     compile: (main) => withDownloads(() => engine.compile(main)),
     exportPdf: (main) => withDownloads(() => engine.exportPdf(main)),
+    compileHtml: (main) => withDownloads(() => engine.compileHtml(main)),
   };
 }
 
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */
 export type PackageFetcher = (spec: string) => Promise<Uint8Array>;
 
-/** An engine's compile and PDF export, downloading the packages a document imports on the way. */
+/** An engine's compiles and PDF export, downloading the packages a document imports on the way. */
 export interface PackageEngine {
   /**
    * Compiles `main`; packages the document imports that the engine does not
@@ -55,6 +56,8 @@ export interface PackageEngine {
   compile(main: string): Promise<CompileResult>;
   /** `TypstEngine.exportPdf`, with packages downloaded like `compile`. */
   exportPdf(main: string): Promise<PdfResult>;
+  /** `TypstEngine.compileHtml`, with packages downloaded like `compile`. */
+  compileHtml(main: string): Promise<HtmlResult>;
 }
 
 /** Told the packages being downloaded (`@namespace/name:version`) whenever they change; empty: none any more. */

@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 typst = "=0.15.1"
 typst-svg = "=0.15.1"
 typst-pdf = "=0.15.1"
+typst-html = "=0.15.1"
+typst-bundle = "=0.15.1"
 typst-layout = "=0.15.1"
 typst-ide = "=0.15.1"
 serde = { version = "=1.0.229", features = ["derive"] }

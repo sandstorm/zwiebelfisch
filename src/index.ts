@@ -7,7 +7,8 @@
 //   Source and Visual editors). The Visual editor's node and mark specs come with the plain functions that read Typst
 //   calls, so an outside extension can add a Typst construct as the built-ins do (experimental).
 // - Disposable, EventEmitter and the value types (ProjectPath, FileContent, SourceOffset, SourceRange, PageIndex, Pt),
-//   made where values come in, e.g. to `open` a file at a range.
+//   made where values come in, e.g. to `open` a file at a range; what a preview renderer gets (HtmlFile, ElementLocation,
+//   HTML_ELEMENT_ATTRIBUTE).
 // - VISUAL_EDITOR and SOURCE_EDITOR, to open a file in one of the Typst editors or tell which one is shown.
 // - The optional extension collaboration, which a host adds with its connection.
 // See docs/30_configuration/02_embedding.typ and docs/40_architecture/08_extensions.typ.
@@ -19,7 +20,7 @@ export { type FileChange, FileContent, type ProjectFiles } from './core/project/
 export { ProjectPath } from './core/paths/paths';
 export { SourceOffset, SourceRange } from './core/typst-document/typst-document';
 export type { User } from './core/user/user';
-export { PageIndex, type PdfEntry, Pt } from './core/typst-engine/typst-engine';
+export { type ElementLocation, HTML_ELEMENT_ATTRIBUTE, type HtmlFile, PageIndex, type PdfEntry, Pt } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
 export type { ExtensionContext, ExtensionContributions, Memento, MenuContext, MenuItem, OpenOptions, SidePanel, SidePanelOptions, TypstExtension, Workbench } from './hosts/workbench/workbench';
@@ -62,7 +63,18 @@ export type {
   TextDocument,
 } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
-export type { PdfExportOption, PreviewContributions, PreviewEntry, PreviewToolbarItem, PreviewViewOption, ToolbarPlacement } from './hosts/preview/preview';
+export type {
+  HtmlBundle,
+  PdfExportOption,
+  PreviewContributions,
+  PreviewEntry,
+  PreviewRenderer,
+  PreviewRendererInfo,
+  PreviewRendererView,
+  PreviewToolbarItem,
+  PreviewViewOption,
+  ToolbarPlacement,
+} from './hosts/preview/preview';
 export { SOURCE_EDITOR, codeColors, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {
   ToolbarAction,

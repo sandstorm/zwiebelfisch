@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
-// Tests for preview.ts: the PDF export options registry, the view options, the click outline, the selection shading, the loader and
-// restarting a crashed engine (the engine worker is replaced by a stub that answers what `engine.answer` returns;
-// `engine.tell` sends its load events).
+// Tests for preview.ts: the PDF export options registry, the view options, the renderers, the click outline, the selection
+// shading, the loader and restarting a crashed engine (the engine worker is replaced by a stub that answers what
+// `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Preview, type PageClick, type PdfExportOption, type PreviewProgress, type PreviewViewOption } from './preview';
+import {
+  Preview,
+  type HtmlBundle,
+  type PageClick,
+  type PdfExportOption,
+  type PreviewProgress,
+  type PreviewRenderer,
+  type PreviewViewOption,
+} from './preview';
+import type { ElementLocation } from '../../core/typst-engine/typst-engine';
 import type { EngineRequest, LoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -486,5 +495,131 @@ describe('Preview.engineMemory', () => {
     }
     await vi.waitFor(() => expect(told).toEqual([10e6, 30e6]));
     expect(preview.engineMemory).toBe(30e6);
+  });
+});
+
+describe('Preview renderers', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+  });
+
+  const file = { path: 'index.html', hash: 'h', document: true, data: new TextEncoder().encode('<p>Hi</p>') };
+  const elements: ElementLocation[] = [{ path: 'index.html', element: '1a' }];
+
+  /** A renderer that logs what its view is told; the engine answers compiles of both kinds and cursor lookups. */
+  function setup() {
+    const log: string[] = [];
+    const requests: string[] = [];
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      requests.push(request.type);
+      if (request.type === 'compile') return { type: 'compile', result: { pages: [{ hash: 'p', width: 100, height: 100, svg: '<svg></svg>' }], diagnostics: [], missingPackages: [] } };
+      const warning = { severity: 'warning', message: 'ignored in HTML', hints: [], path: '/main.typ', from: 0, to: 1 };
+      if (request.type === 'html') return { type: 'html', result: { files: [file], diagnostics: [warning], missingPackages: [] } };
+      if (request.type === 'elements') return { type: 'elements', elements };
+      if (request.type === 'cursor') return { type: 'cursor', positions: [] };
+      if (request.type === 'boxes') return { type: 'boxes', boxes: [] };
+      return null;
+    };
+    const renderer: PreviewRenderer = {
+      id: 'html',
+      label: 'HTML',
+      output: 'html',
+      create(container) {
+        container.textContent = 'html view';
+        log.push('create');
+        return {
+          update: (output: HtmlBundle) => log.push(`update ${output.files.map((f) => f.path).join()}`),
+          reveal: (found) => log.push(`reveal ${found.map((e) => `${e.path}#${e.element}`).join()}`),
+          dispose: () => log.push('dispose'),
+        };
+      },
+    };
+    const container = document.createElement('div');
+    preview = new Preview(container);
+    return { log, requests, renderer, container };
+  }
+
+  it('lists the pages first, then the registered renderers; refuses an id twice', () => {
+    const { renderer } = setup();
+    expect(preview.renderers()).toEqual([{ id: 'pages', label: 'Pages' }]);
+    const registered = preview.registerRenderer(renderer);
+    expect(preview.renderers()).toEqual([{ id: 'pages', label: 'Pages' }, { id: 'html', label: 'HTML' }]);
+    expect(() => preview.registerRenderer(renderer)).toThrow(/already registered/);
+    expect(() => preview.registerRenderer({ ...renderer, id: 'pages' })).toThrow(/already registered/);
+    registered.dispose();
+    expect(preview.renderers()).toEqual([{ id: 'pages', label: 'Pages' }]);
+  });
+
+  it('shows the renderer asked for once it is registered, compiles HTML for it, its diagnostics the preview’s', async () => {
+    const { log, requests, renderer, container } = setup();
+    const changes: string[] = [];
+    preview.onDidChangeRenderers(() => changes.push(preview.activeRenderer));
+    const diagnostics: string[] = [];
+    preview.onDidChangeDiagnostics((found) => diagnostics.push(...found.map((d) => d.message)));
+    preview.setActiveRenderer('html');
+    expect(preview.activeRenderer).toBe('pages');
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(requests).toEqual(['compile']));
+    preview.registerRenderer(renderer);
+    expect(preview.activeRenderer).toBe('html');
+    expect(changes).toEqual(['html']);
+    expect(container.querySelector('.typst-preview__renderer')?.textContent).toBe('html view');
+    expect(container.querySelector<HTMLElement>('[data-testid="typst-preview"]')!.hidden).toBe(true);
+    await vi.waitFor(() => expect(log).toEqual(['create', 'update index.html']));
+    expect(requests).toEqual(['compile', 'html']);
+    expect(diagnostics).toContain('ignored in HTML');
+  });
+
+  it('starts a renderer shown later where the cursor was revealed last', async () => {
+    const { log, renderer } = setup();
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    preview.reveal(ProjectPath.of('/main.typ'), SourceRange.of({ from: 1, to: 1 }));
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    await vi.waitFor(() => expect(log).toEqual(['create', 'update index.html', 'reveal index.html#1a']));
+  });
+
+  it('hands the renderer the elements at the cursor, and goes back to the pages', async () => {
+    const { log, requests, renderer, container } = setup();
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(log).toContain('update index.html'));
+    preview.reveal(ProjectPath.of('/main.typ'), SourceRange.of({ from: 1, to: 1 }));
+    await vi.waitFor(() => expect(log).toContain('reveal index.html#1a'));
+    preview.setActiveRenderer('pages');
+    expect(log.at(-1)).toBe('dispose');
+    expect(container.querySelector('.typst-preview__renderer')).toBeNull();
+    await vi.waitFor(() => expect(requests.at(-1)).toBe('compile'));
+  });
+
+  it('hides the toolbar items of the other renderers', () => {
+    const { renderer, container } = setup();
+    const item = (text: string) => () => ({ elements: [Object.assign(document.createElement('span'), { textContent: text })] });
+    preview.registerToolbarItem(item('zoom'), { group: '2_view', renderer: 'pages' });
+    preview.registerToolbarItem(item('follow'), { group: '1_sync' });
+    const shown = () => [...container.querySelectorAll<HTMLElement>('[data-testid="typst-preview-toolbar"] > *')].filter((e) => !e.hidden).map((e) => e.textContent);
+    expect(shown()).toEqual(['follow', 'zoom']);
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    expect(shown()).toEqual(['follow']);
+    preview.setActiveRenderer('pages');
+    expect(shown()).toEqual(['follow', 'zoom']);
+  });
+
+  it('compiles the pages for a snippet while another renderer is shown, once per update', async () => {
+    const { log, requests, renderer } = setup();
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(log).toContain('update index.html'));
+    const range = SourceRange.of({ from: 0, to: 2 });
+    await Promise.all([preview.snippet(ProjectPath.of('/main.typ'), range, 'Hi'), preview.snippet(ProjectPath.of('/main.typ'), range, 'Hi')]);
+    expect(requests.filter((type) => type === 'compile')).toHaveLength(1);
+    await preview.snippet(ProjectPath.of('/main.typ'), range, 'Hi');
+    expect(requests.filter((type) => type === 'compile')).toHaveLength(1);
   });
 });

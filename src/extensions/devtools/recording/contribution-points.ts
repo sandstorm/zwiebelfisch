@@ -111,9 +111,14 @@ const POINTS: Readonly<Record<string, Describer>> = {
     return prioritized({ ...named(provider, 'document links'), details: [`language ${languages.join(', ')}`] }, record(options).priority);
   },
   'preview.registerToolbarItem': ([item, placement]) => {
-    const { group, order } = record(placement);
+    const { group, order, renderer } = record(placement);
     const place = String(group);
-    return { title: nameOf(item) ?? '(toolbar item)', details: [`group ${place}`, `order ${num(order, 0)}`], rank: [place === 'navigation' ? 0 : 1, place, num(order, 0)] };
+    const details = [`group ${place}`, `order ${num(order, 0)}`, ...(renderer === undefined ? [] : [`renderer ${String(renderer)}`])];
+    return { title: nameOf(item) ?? '(toolbar item)', details, rank: [place === 'navigation' ? 0 : 1, place, num(order, 0)] };
+  },
+  'preview.registerRenderer': ([renderer]) => {
+    const { id, label, output } = record(renderer);
+    return { title: String(id), details: [`"${String(label)}"`, `output ${String(output)}`] };
   },
   'preview.registerPdfExportOption': ([option, options]) => {
     const { id, label, default: value } = record(option);

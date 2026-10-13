@@ -3,7 +3,7 @@ import { type SourceOffset, SourceRange } from '../typst-document/typst-document
 import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm/typst_engine';
 
 /**
- * The Typst compiler, SVG renderer, PDF export and preview hit-testing (Rust → wasm).
+ * The Typst compiler, SVG renderer, PDF and HTML export and preview hit-testing (Rust → wasm).
  *
  * The typed TypeScript side of the wasm built from crates/typst-engine. The preview runs it in a worker and hands it
  * the project's files; it keeps the last compiled document, so clicks and cursors can be mapped between source and
@@ -40,6 +40,19 @@ export interface TypstEngine {
    * hit-testing uses, so `main` may be another entry than the preview's.
    */
   exportPdf(main: string): PdfResult;
+  /**
+   * Compiles `main` to HTML (Typst's bundle export: the files its `document(..)` and `asset(..)` calls make; a
+   * document without `document(..)` is one `index.html`). Each element made from source is marked with
+   * `HTML_ELEMENT_ATTRIBUTE`. Does not replace the document of the last `compile`; `elementsAtCursor` reads this one.
+   */
+  compileHtml(main: string): HtmlResult;
+  /**
+   * The elements of the last `compileHtml` that the cursor at `offset` produced: the first of each HTML document that
+   * has one, in bundle order. Where its text also shows elsewhere (a heading's text in a table of contents), only the
+   * places in an element of what encloses the cursor (the heading itself) count. Empty if it produced none (a `#let`,
+   * a comment).
+   */
+  elementsAtCursor(path: string, offset: SourceOffset): ElementLocation[];
   /** What is at a point of the last compiled document, or null for empty space. */
   jumpFromClick(page: PageIndex, x: Pt, y: Pt): SourceJump | null;
   /**
@@ -123,6 +136,39 @@ export interface PdfResult {
   /** As in `CompileResult`: add these packages and export again. */
   missingPackages: string[];
 }
+
+/** What `compileHtml` made. */
+export interface HtmlResult {
+  /** The bundle's files in bundle order; empty when compilation failed. */
+  files: HtmlFile[];
+  diagnostics: TypstDiagnostic[];
+  /** As in `CompileResult`: add these packages and compile again. */
+  missingPackages: string[];
+}
+
+/** A file of an HTML bundle: an HTML document, or an asset (style sheet, image, a paged document's PDF or SVG). */
+export interface HtmlFile {
+  /** Its path in the bundle, without leading slash: `index.html`, `chapters/intro.html`, `style.css`. */
+  path: string;
+  /** Changes if and only if `data` changes. */
+  hash: string;
+  /** Whether it is an HTML document (one the preview can show). */
+  document: boolean;
+  data: Uint8Array;
+}
+
+/** An element of an HTML document, by `HTML_ELEMENT_ATTRIBUTE`; `element` null: the document only. */
+export interface ElementLocation {
+  /** The document's bundle path (`HtmlFile.path`). */
+  path: string;
+  element: string | null;
+}
+
+/**
+ * The attribute `compileHtml` gives each element made from source: unique within its document, and the same after an
+ * edit elsewhere in the source.
+ */
+export const HTML_ELEMENT_ATTRIBUTE = 'data-typst-element';
 
 export interface Page {
   /** Changes if and only if the page's content changes. */
@@ -236,16 +282,11 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
     remove: (path) => call(() => engine.remove(path)),
     compile: (main) => report<CompileResult>(call(() => engine.compile(main))),
     exportPdf: (main) => {
-      const { pdf, json } = call(() => {
-        const exported = engine.exportPdf(main);
-        try {
-          return { pdf: exported.pdf() ?? null, json: exported.report() };
-        } finally {
-          exported.free();
-        }
-      });
+      const { pdf, json } = call(() => consume(engine.exportPdf(main), (exported) => ({ pdf: exported.pdf() ?? null, json: exported.report() })));
       return { pdf, ...report<Omit<PdfResult, 'pdf'>>(json) };
     },
+    compileHtml: (main) => call(() => consume(engine.compileHtml(main), (exported) => withData(report<HtmlReport>(exported.report()), exported))),
+    elementsAtCursor: (path, offset) => JSON.parse(call(() => engine.elementsAtCursor(path, offset))),
     jumpFromClick: (page, x, y) => {
       const json = call(() => engine.jumpFromClick(page, x, y));
       return json === undefined ? null : JSON.parse(json);
@@ -263,6 +304,23 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
 let panic: string | null = null;
 /** What every call throws once a call failed: the instance is broken for every engine. */
 let crash: TypstEngineCrash | null = null;
+
+/** What `read` reads of a result the wasm made, which is freed then. */
+function consume<T extends { free(): void }, R>(made: T, read: (made: T) => R): R {
+  try {
+    return read(made);
+  } finally {
+    made.free();
+  }
+}
+
+/** The report of an HTML compile: its files without their data. */
+type HtmlReport = Omit<HtmlResult, 'files'> & { files: Omit<HtmlFile, 'data'>[] };
+
+/** The report's files with their data. */
+function withData(result: HtmlReport, exported: { data(index: number): Uint8Array | undefined }): HtmlResult {
+  return { ...result, files: result.files.map((file, index) => ({ ...file, data: exported.data(index) ?? new Uint8Array() })) };
+}
 
 function megabytes(bytes: number): string {
   return (bytes / 1e6).toFixed(0);

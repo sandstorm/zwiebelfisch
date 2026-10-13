@@ -17,7 +17,7 @@ use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook, FontInfo};
 use typst::utils::LazyHash;
-use typst::{Library, LibraryExt, World};
+use typst::{Feature, Library, LibraryExt, World};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -104,7 +104,8 @@ pub struct MemoryWorld {
 impl MemoryWorld {
     pub fn new() -> Self {
         Self {
-            library: LazyHash::new(Library::default()),
+            // HTML and bundle export for the preview's HTML mode (`compileHtml`)
+            library: LazyHash::new(Library::builder().with_features([Feature::Html, Feature::Bundle].into_iter().collect()).build()),
             book: LazyHash::new(FontBook::new()),
             fonts: Vec::new(),
             added_book: FontBook::new(),

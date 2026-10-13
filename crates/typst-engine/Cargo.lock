@@ -1417,6 +1417,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
 
 [[package]]
+name = "pixglyph"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47945e80a49d08350e4a007ac4294c6498d23956c18ea5e6ff480dc93d31643c"
+dependencies = [
+ "ttf-parser",
+]
+
+[[package]]
 name = "plist"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2227,12 +2236,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-bundle"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3122ee6e0a317545e93ac5895117d73497f5a844f966af84facbd2258b1018c7"
+dependencies = [
+ "comemo",
+ "ecow",
+ "either",
+ "indexmap",
+ "rayon",
+ "rustc-hash",
+ "typst-html",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
+ "typst-pdf",
+ "typst-render",
+ "typst-svg",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
+]
+
+[[package]]
 name = "typst-engine"
 version = "0.0.0"
 dependencies = [
  "serde",
  "serde_json",
  "typst",
+ "typst-bundle",
+ "typst-html",
  "typst-ide",
  "typst-layout",
  "typst-pdf",
@@ -2461,6 +2496,29 @@ dependencies = [
  "typst-library",
  "typst-macros",
  "typst-syntax",
+ "typst-timing",
+ "typst-utils",
+]
+
+[[package]]
+name = "typst-render"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de8a657a5fa5b9b7d3d458f482978674de910b54889d46f3bb55ca89f570f83e"
+dependencies = [
+ "bytemuck",
+ "comemo",
+ "hayro",
+ "image",
+ "libm",
+ "pixglyph",
+ "resvg",
+ "tiny-skia",
+ "ttf-parser",
+ "typst-assets",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
  "typst-timing",
  "typst-utils",
 ]

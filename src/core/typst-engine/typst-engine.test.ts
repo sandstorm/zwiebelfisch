@@ -3,7 +3,16 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { type FontInfo, type TypstEngine, ENGINE_MEMORY_LIMIT, PageIndex, Pt, createEngine } from './typst-engine';
+import {
+  type ElementLocation,
+  type FontInfo,
+  type TypstEngine,
+  ENGINE_MEMORY_LIMIT,
+  HTML_ELEMENT_ATTRIBUTE,
+  PageIndex,
+  Pt,
+  createEngine,
+} from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import { withPackages } from '../typst-packages/typst-packages';
 
@@ -513,5 +522,92 @@ describe('TypstEngine.exportPdf', () => {
   it('reports packages it has no files of', () => {
     engine.setSource('/main.typ', '#import "@preview/absent:0.2.0": x');
     expect(engine.exportPdf('/main.typ')).toMatchObject({ pdf: null, missingPackages: ['@preview/absent:0.2.0'] });
+  });
+});
+
+describe('TypstEngine.compileHtml', () => {
+  let engine: TypstEngine;
+  beforeAll(async () => {
+    engine = await engineWithFonts();
+  });
+  const text = (data: Uint8Array) => new TextDecoder().decode(data);
+  const at = (path: string, source: string, needle: string, offset = 1) =>
+    engine.elementsAtCursor(path, SourceOffset.of(source.indexOf(needle) + offset));
+  /** The tag and text of the element `location` names, in its document's HTML. */
+  const element = (html: string, location: ElementLocation) => {
+    const id = location.element!.replace('.', '\\.');
+    const match = new RegExp(`<(\\w+)[^>]*${HTML_ELEMENT_ATTRIBUTE}="${id}"[^>]*>([^<]*)`).exec(html);
+    return match && `${match[1]}: ${match[2]}`;
+  };
+
+  it('makes one index.html of a document without document(..), its elements marked, without the experimental warnings', () => {
+    const source = '= Title\n\nHello *HTML*';
+    engine.setSource('/main.typ', source);
+    const { files, diagnostics, missingPackages } = engine.compileHtml('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(missingPackages).toEqual([]);
+    expect(files.map(({ path, document }) => ({ path, document }))).toEqual([{ path: 'index.html', document: true }]);
+    const html = text(files[0].data);
+    expect(html).toMatch(/^<!DOCTYPE html>/);
+    const [heading] = at('/main.typ', source, 'Title');
+    expect(heading.path).toBe('index.html');
+    expect(element(html, heading)).toBe('h2: Title');
+    expect(element(html, at('/main.typ', source, 'HTML')[0])).toBe('strong: HTML');
+  });
+
+  it('makes the files of a bundle, and finds the documents the cursor produced', () => {
+    const chapter = '= Chapter\n\nChapter text';
+    const main = [
+      '#let page(body) = { html.nav[Site navigation]; body }',
+      '#document("index.html", title: "Home", page[#outline()])',
+      '#document("chapters/one.html", title: "One", page(include "chapter.typ"))',
+      '#asset("style.css", "p { color: red }")',
+    ].join('\n');
+    engine.setSource('/chapter.typ', chapter);
+    engine.setSource('/main.typ', main);
+    const { files, diagnostics } = engine.compileHtml('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(files.map(({ path, document }) => ({ path, document }))).toEqual([
+      { path: 'index.html', document: true },
+      { path: 'chapters/one.html', document: true },
+      { path: 'style.css', document: false },
+    ]);
+    expect(text(files[2].data)).toBe('p { color: red }');
+    // the heading's text is in the outline on index.html too: the heading's page wins
+    const [heading, ...others] = at('/chapter.typ', chapter, 'Chapter');
+    expect(others).toEqual([]);
+    expect(heading.path).toBe('chapters/one.html');
+    expect(element(text(files[1].data), heading)).toBe('h2: Chapter');
+    expect(at('/chapter.typ', chapter, 'text').map((l) => l.path)).toEqual(['chapters/one.html']);
+    // what every page has
+    expect(at('/main.typ', main, 'Site navigation').map((l) => l.path)).toEqual(['index.html', 'chapters/one.html']);
+    // what makes no element
+    expect(at('/main.typ', main, 'let page')).toEqual([]);
+  });
+
+  it('keeps the element ids when the text before them changes', () => {
+    engine.setSource('/main.typ', 'First\n\nSecond');
+    const before = text(engine.compileHtml('/main.typ').files[0].data);
+    engine.setSource('/main.typ', 'First, longer\n\nSecond');
+    const after = text(engine.compileHtml('/main.typ').files[0].data);
+    const second = (html: string) => /<p [^>]*>Second/.exec(html)?.[0];
+    expect(second(before)).toBeDefined();
+    expect(second(after)).toBe(second(before));
+  });
+
+  it('gives no files but the errors for a document with errors, and finds nothing then', () => {
+    const source = 'Text #oops';
+    engine.setSource('/main.typ', source);
+    const { files, diagnostics } = engine.compileHtml('/main.typ');
+    expect(files).toEqual([]);
+    expect(diagnostics).toEqual([expect.objectContaining({ severity: 'error', path: '/main.typ', from: 6, to: 10 })]);
+    expect(at('/main.typ', source, 'Text')).toEqual([]);
+  });
+
+  it('leaves the paged document used for hit-testing as it is', () => {
+    engine.setSource('/main.typ', 'Preview text');
+    engine.compile('/main.typ');
+    engine.compileHtml('/main.typ');
+    expect(engine.jumpFromCursor('/main.typ', SourceOffset.of(3))).toHaveLength(1);
   });
 });
