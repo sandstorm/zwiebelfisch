@@ -1,6 +1,5 @@
 /* The search extension's styles: the "Find in files" panel (mode switch, query field and options, replace field,
-   scope, message, outcome of a replace, keys, result tree with the lines around each match and the replace preview)
-   and the matches highlighted in
+   scope, message, outcome of a replace, keys, result tree with the replace preview) and the matches highlighted in
    the editors.
    See search in search.ts, which registers it. */
 .typst-search {
@@ -176,19 +175,14 @@
   white-space: nowrap;
 }
 .typst-search__file { padding: 0 8px; color: var(--te-text); }
-.typst-search__match { padding: 0 8px 0 28px; }
-/* The lines around the matches (grep -C1): dimmed, not rows; a gap between blocks of lines that are not neighbours. */
-.typst-search__match,
-.typst-search__context { min-height: 20px; line-height: 20px; }
-.typst-search__context {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 0 8px 0 28px;
-  color: var(--te-muted-2);
-  white-space: nowrap;
+/* A match's row: its line wraps to at most three rows beside the line number (the match is early in it, see
+   match-preview.ts); "…" where it is clamped. */
+.typst-search__match {
+  align-items: flex-start;
+  padding: 2px 8px 2px 28px;
+  line-height: 18px;
+  white-space: normal;
 }
-.typst-search__gap { height: 0; margin: 3px 8px 3px 28px; border-top: 1px dashed var(--te-border); }
 .typst-search__file:hover,
 .typst-search__match:hover { background: var(--te-hover); }
 .typst-search__file:focus,
@@ -230,13 +224,17 @@
 }
 .typst-search__match .typst-search__line { color: var(--te-muted); }
 .typst-search__preview {
+  display: -webkit-box;
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: pre;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .typst-search__hit { border-radius: 2px; background: var(--te-highlight); color: var(--te-text); }
 /* Replace mode's preview: the match struck through, its replacement after it (VS Code's diff colors). */
@@ -257,7 +255,7 @@
 }
 .typst-search__row-action:hover { background: var(--te-hover); color: var(--te-text); }
 /* a match's replace shows on hover and on the row the tree is on; a file's always */
-.typst-search__match .typst-search__row-action { visibility: hidden; }
+.typst-search__match .typst-search__row-action { align-self: flex-start; visibility: hidden; }
 .typst-search__match:hover .typst-search__row-action,
 .typst-search__match:focus .typst-search__row-action { visibility: visible; }
 
