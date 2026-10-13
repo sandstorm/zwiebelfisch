@@ -248,11 +248,11 @@ describe('paste as', () => {
     expect(doc.text).toBe('Intro#x\n');
   });
 
-  it("offers the providers' edits after the editor's own, each as the providers resolve it", () => {
+  it("offers the providers' edits after the editor's own where they yield to them, each as the providers resolve it", () => {
     const { state, edits } = choices();
     const provided: VisualEditorPasteEdits = {
       ...edits,
-      provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }],
+      provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*', yieldTo: ['typst'] }],
       resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: `${edit.insertText}!` }),
     };
     const { doc, select, paste } = setup('Text\n', provided);
@@ -262,6 +262,16 @@ describe('paste as', () => {
     expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.loud', title: 'Loud' }]);
     state.open!.change('typst.loud');
     expect(doc.text).toBe('Text *LOUD*!\n');
+  });
+
+  it("pastes a provider's edit first where it yields to none", () => {
+    const { state, edits } = choices();
+    const provided: VisualEditorPasteEdits = { ...edits, provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }] };
+    const { doc, select, paste } = setup('Text\n', provided);
+    select(4);
+    paste({ 'text/plain': ' x' });
+    expect(doc.text).toBe('Text *LOUD*\n');
+    expect(state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.loud', 'typst']);
   });
 
   it('pastes plain characters first after Mod+Shift+V, a paragraph per line, and offers Typst', () => {

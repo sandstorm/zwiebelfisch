@@ -223,3 +223,61 @@ describe('paste as', () => {
     expect(text('/book/two/b.typ')).toBe('Intro\n');
   });
 });
+
+describe('Markdown pasted', () => {
+  const MARKDOWN = '## Setup\n\nRun **pnpm** and see [the docs](https://typst.app/docs).\n\n- [ ] open\n- [x] done\n';
+
+  it('goes into the Visual editor as Typst where it is clearly Markdown; the chip offers it as it is, in its undo step', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': MARKDOWN });
+    expect(text('/book/two/b.typ')).toContain('== Setup\n\nRun *pnpm* and see #link("https://typst.app/docs")[the docs].\n\n- [ ] open\n- [x] done');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst' });
+    expect(text('/book/two/b.typ')).toContain('Run **pnpm** and see [the docs](https://typst.app/docs).');
+    undo(b.view.dom);
+    expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+
+  it('ambiguous text (`*x*`) goes in as Typst; Markdown reads it as emphasis', async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection('Intro'.length + 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': ' a *x* b' });
+    expect(text('/book/two/b.typ')).toBe('Intro a *x* b\n');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro a _x_ b\n');
+  });
+
+  it("VS Code's Markdown goes into the Visual editor as Typst, not as a code block of Markdown", () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': '# Title\n\n*x*', 'vscode-editor-data': '{"version":1,"mode":"markdown"}' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n\n= Title\n\n_x_\n');
+  });
+
+  it('goes into the Source editor as it is; the chip offers it as Typst', async () => {
+    const { editor, source, text } = setup('Intro\n', SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: 'Intro\n'.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': '## Setup' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n## Setup');
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro\n== Setup');
+  });
+
+  it("a web page's HTML is not read as Markdown", async () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection('Intro'.length + 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': '**a**', 'text/html': '<span>**a**</span>' });
+    await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
+    expect(text('/book/two/b.typ')).toBe('Intro\\*\\*a\\*\\*\n');
+  });
+});

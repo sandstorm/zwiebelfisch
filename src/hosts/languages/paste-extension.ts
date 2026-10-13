@@ -8,7 +8,7 @@ import { sortPasteEdits, type DocumentPasteEditProvider, type LanguagesHost, typ
 
 /** The editor's own ways a paste can go in, and where its choice shows (see `pasteExtension`). */
 export interface PasteOptions {
-  /** The editor's own edits (the Source editor's: Typst, code, plain text), before the registered providers'. */
+  /** The editor's own edits (the Source editor's: Typst, code, plain text), after the registered providers'. */
   readonly provider: DocumentPasteEditProvider;
   /** Kinds a paste goes in as first where offered (`sortPasteEdits`). */
   readonly preferences?: readonly string[];
@@ -89,7 +89,7 @@ function pastesOf(
   { provider, preferences }: PasteOptions,
   { document, ranges, text, data }: { document: TextDocument; ranges: readonly SourceRange[]; text: string; data: DataTransfer },
 ): Paste[] {
-  const offered = [...(provider.provideDocumentPasteEdits?.(document, ranges, data) ?? []), ...host.provideDocumentPasteEdits(document, ranges, data)];
+  const offered = [...host.provideDocumentPasteEdits(document, ranges, data), ...(provider.provideDocumentPasteEdits?.(document, ranges, data) ?? [])];
   const edits = offered.length > 0 ? sortPasteEdits(offered, preferences) : [{ kind: '', title: '', insertText: text }];
   return edits.map((edit) => {
     const { kind, title, insertText, additionalEdit = [] } = host.resolveDocumentPasteEdit(edit, document, ranges, data);

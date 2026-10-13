@@ -68,7 +68,7 @@ export interface Languages {
   /**
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, in the Visual editor
    * and the Source editors. A paste offers the edits of every provider of `metadata.providedPasteEditKinds` whose
-   * `pasteMimeTypes` the clipboard has, after the editor's own (Typst, code, plain text; HTML), as alternatives: it goes
+   * `pasteMimeTypes` the clipboard has, before the editor's own (Typst, code, plain text; HTML), as alternatives: it goes
    * in as the first by `yieldTo`, the "Paste as" chip offers the others. Whichever goes in, every provider's
    * `resolveDocumentPasteEdit` changes it first, in registration order; additional edits that overlap the pasted ranges
    * or an earlier edit are dropped.
@@ -421,7 +421,7 @@ export class LanguagesHost implements Languages {
   /**
    * Runs the paste edit providers of the text's language around a copy, cut or paste in a CodeMirror editor, as in the
    * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers). A
-   * paste goes in as the first of the edits of the editor's own provider and the registered ones; its choice offers the
+   * paste goes in as the first of the edits of the registered providers and the editor's own; its choice offers the
    * others (see `pasteExtension`).
    */
   createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null, options: PasteOptions): Extension {

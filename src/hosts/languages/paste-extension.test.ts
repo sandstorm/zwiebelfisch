@@ -62,7 +62,7 @@ describe('paste as (CodeMirror)', () => {
     view.dispatch({ selection: { anchor: 4 } });
     paste(' *x*');
     expect(text()).toBe('// pasted\nText *x*\n');
-    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'text.plain', title: 'Text' }, { kind: 'typst.reversed', title: 'Reversed' }]);
+    expect(state.open?.kinds).toEqual([{ kind: 'typst', title: 'Typst' }, { kind: 'typst.reversed', title: 'Reversed' }, { kind: 'text.plain', title: 'Text' }]);
     state.open!.change('text.plain');
     expect(text()).toBe('// pasted\nText *X*\n');
     expect(state.open?.kind).toBe('text.plain');
@@ -105,10 +105,13 @@ describe('paste as (CodeMirror)', () => {
     expect(state.open).toBeNull();
   });
 
-  it("offers the registered providers' edits after the editor's own, by their yieldTo, the preferred kind first", () => {
+  it("offers the registered providers' edits before the editor's own unless they yield, the preferred kind first", () => {
     const yielding = setup('Text\n', { yieldTo: ['typst'], preferences: [] });
     yielding.paste('ab');
     expect(yielding.state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst', 'typst.reversed', 'text.plain']);
+    const before = setup('Text\n', { yieldTo: [], preferences: [] });
+    before.paste('ab');
+    expect(before.state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.reversed', 'typst', 'text.plain']);
     const first = setup('Text\n', { yieldTo: [], preferences: ['typst.reversed'] });
     first.paste('ab');
     expect(first.text()).toBe('// pasted\nbaText\n');

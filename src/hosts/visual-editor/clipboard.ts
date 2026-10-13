@@ -17,11 +17,11 @@ import type { VisualEditorPasteEdits } from './visual-editor';
  * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
  * source).
  *
- * A paste goes in as one of the paste edits the clipboard offers (`pasteEditsOf`): the editor's own
- * (`typstPasteEdits`: pasted Typst, plain text, and code, VS Code's or HTML that is code only, another language
+ * A paste goes in as one of the paste edits the clipboard offers (`pasteEditsOf`): the paste edit providers' (`pasteEdits`;
+ * Markdown as Typst), the editor's own (`typstPasteEdits`: pasted Typst, plain text, and code, VS Code's or HTML that is code only, another language
  * than Typst as a code block of it; the text as plain characters, escaped, a paragraph per line, first after
  * Mod+Shift+V), other HTML (a web page, a word processor) as ProseMirror reads it with the schema's HTML rules, printed
- * as Typst, and the paste edit providers' (`pasteEdits`), each as the providers resolve it (a copy gave them the
+ * as Typst; each as the providers resolve it (a copy gave them the
  * clipboard): its Typst read with the editor's specs, in place of the selection, as one step with its other changes of
  * the document's text: a paragraph's inline content into the text there, blocks as blocks (what no spec models: raw
  * boxes). Where there are others, the "Paste as" chip lets the user change it (`pasteWith`). Text into code (a code
@@ -96,8 +96,9 @@ interface PasteContext {
 
 /**
  * The ways a paste can go in, the one it goes in as first (`sortPasteEdits`; after Mod+Shift+V, `literal`: as plain
- * characters): the editor's own (Typst, code, plain text), the HTML as ProseMirror reads it with the schema's HTML
- * rules (`slice`; not with Typst a Visual editor copied, which the HTML lacks, nor `literal`), the providers'; each as
+ * characters): the providers' (as VS Code's, before the editor's: an edit not yielding to them goes in first), the
+ * editor's own (Typst, code, plain text), the HTML as ProseMirror reads it with the schema's HTML rules (`slice`; not
+ * with Typst a Visual editor copied, which the HTML lacks, nor `literal`); each as
  * the providers resolve it (asked now, while the clipboard can be read).
  */
 function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext, literal: boolean): DocumentPasteEdit[] {
@@ -110,9 +111,9 @@ function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext
     return serializeToTypst(state.schema.topNodeType.create({ trail: '' }, blocks));
   };
   const offered = [
+    ...(pasteEdits?.provideDocumentPasteEdits(document, ranges, data) ?? []),
     ...typstPasteEdits.provideDocumentPasteEdits(document, ranges, data),
     ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : []),
-    ...(pasteEdits?.provideDocumentPasteEdits(document, ranges, data) ?? []),
   ];
   return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => pasteEdits?.resolveDocumentPasteEdit(edit, document, ranges, data) ?? edit);
 }

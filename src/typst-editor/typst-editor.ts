@@ -7,6 +7,7 @@ import { fileNavigation } from '../extensions/file-navigation/file-navigation';
 import { files } from '../extensions/files/files';
 import { help } from '../extensions/help/help';
 import { imports } from '../extensions/imports/imports';
+import { markdown } from '../extensions/markdown/markdown';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -206,6 +207,7 @@ function builtinExtensions(): TypstExtension[] {
   return [
     typstLanguage(),
     imports(),
+    markdown(),
     documentLinks(),
     files(),
     fileNavigation(),
