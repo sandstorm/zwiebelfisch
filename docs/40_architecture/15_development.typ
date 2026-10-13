@@ -170,6 +170,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
   - the engine renders every page's SVG before the worker leaves the known ones out (28 MB of JSON per compile for the docs);
   - in the docs the first and last pages change with every compile.
 - *Search everywhere*: a bibliography group (`.bib` keys and titles); recently opened files first; commands listed while registered (no `enablement`); "Save to GitLab…" and "Download PDF" are no declared commands yet; a setting changed there is gone with the page.
+- *Find in files*: should the Source editor stop recording other origins' changes in its undo (its ⌘Z also takes back a replace)? Panel keys ⌥⌘C / ⌥⌘W / ⌥⌘R, F4; `filesToInclude`; the scope is not remembered; the quick-open tooltip doesn't name ⌘P.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only. Other file kinds would get VS Code's `languages.createDiagnosticCollection`.

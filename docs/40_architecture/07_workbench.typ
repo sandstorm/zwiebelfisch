@@ -17,12 +17,15 @@
 - *Generic contribution points*: extensions never depend on each other. A host offers a point, the consumer reads every contribution, and an explicit tie-breaker orders competing ones (table below).
 - *The frame*: `WorkbenchLayout` (a `SideBar` left and right, the editing area between, the status bar) and `EditorTabs` (a tab per editor of the shown file, the `editor/title` menu, "View ▾").
 - *Two sides*, as VS Code's primary and secondary side bar: a rail with a button per panel (`registerSidePanel(id, { side, alignment, order })`), one panel shown per side, sizes kept in the session. Narrower than 720 px, the left panel lies over the editing area.
+- *The rails*: left Files (order 10), Find in files (12, magnifier), search everywhere's button (15, a field over a list), Help (20); right the preview, Devtools at the far end. A rail tooltip names the key of `workbench.view.<id>` ("Files (⌃1)").
+- *`workbench.view.<id>`*: a command per side panel (VS Code's): shows and focuses it, or hides it when shown and focused. Extensions declare its key (`files` Alt+1, `search` Alt+3; ⌃1 / ⌃3 on the Mac; none on Linux).
+- *Keys* (`commands`): a `KeyboardEvent.code` with exactly the modifiers named (AltGr never counts as Alt), caught before any editor. Extensions declare them (`contributes.keybindings`); the workbench binds them and shows each command's key in command rows, menus and tooltips.
 - *The preview is the right side's built-in panel* (`preview`). It compiles whether shown or not.
 - *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source editor are the built-in ones for `*.typ`, registered by `TypstEditors` before any extension, as VS Code's built-in text editor.
 - *Tabs are "open with"*: a file several editors match gets a tab each; the one picked is remembered for later files.
 - *`TypstEditors`* keeps a document's editors alive while hidden (`retainContextWhenHidden`), with cursor, scroll and undo history. One `TextEditor` per document spans both; the one shown gets the other's selection.
 - *Menus*: the workbench keeps the entries (`registerMenuItem`) and pops them up with `window.showContextMenu(menuId, { anchor, title, context, args })`. An entry with `toggled` is a checkbox. Editors and side panels never draw menus of their own.
-- *Search everywhere* (`window/search/`): one quick pick over every `SearchProvider`, a group each, as IntelliJ's. Opened by Shift twice, `workbench.action.searchEverywhere` or the left rail's button. The workbench adds the groups for commands and settings.
+- *Search everywhere* (`window/search/`): one quick pick over every `SearchProvider`, a group each, as IntelliJ's. Opened by Shift twice, ⌘P (⌘⇧O files, ⌘⇧A commands), `workbench.action.searchEverywhere` or the left rail's button. The workbench adds the groups for commands and settings.
 - *State*: `StorageMemento` behind `globalState` and `workspaceState` (@architecture-workbench-api-state).
 
 #table(
@@ -39,7 +42,7 @@
 == Lifecycle <architecture-workbench-lifecycle>
 
 + The constructor makes every host and the frame and adds the CSS: the frame's, then each host's. Extensions add theirs at activation.
-+ `activate(list)` declares every extension's settings, languages and commands (`contributes`), so they are readable during activation.
++ `activate(list)` declares every extension's settings, languages and commands and binds its keys (`contributes`), so they are readable during activation.
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
 + The main file is shown (in the editor `viewType` names) and compiled. Views are created later, on demand.
 + `dispose()` disposes the extensions in reverse order, then the frame.

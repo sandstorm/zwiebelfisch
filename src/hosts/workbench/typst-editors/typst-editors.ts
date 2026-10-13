@@ -81,6 +81,7 @@ export class TypstEditors {
     };
     followVisibility();
     panel.onDidChangeViewState(followVisibility);
+    panel.onDidRequestReveal((range) => editor.reveal(range));
     panel.onDidDispose(() => {
       if (this.#active === owner && owner.viewType === viewType) this.#shown(null, viewType);
       editor.dispose();

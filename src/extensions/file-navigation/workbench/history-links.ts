@@ -35,13 +35,10 @@ export class HistoryLinks {
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-/**
- * VS Code's Go Back / Go Forward keys, as `registerKeybinding` takes them (forward first: unnamed modifiers are not
- * checked, so Ctrl+Minus would take Ctrl+Shift+Minus too). Not Ctrl+Minus outside the Mac: the browser's zoom.
- */
+/** VS Code's Go Back / Go Forward keys, as `registerKeybinding` takes them. Not Ctrl+Minus outside the Mac: the browser's zoom. */
 export const KEYBINDINGS = {
-  forward: 'Ctrl+Shift+Minus',
   back: MAC ? 'Ctrl+Minus' : 'Ctrl+Alt+Minus',
+  forward: 'Ctrl+Shift+Minus',
 } as const;
 
 /** The same keys as the user reads them. */

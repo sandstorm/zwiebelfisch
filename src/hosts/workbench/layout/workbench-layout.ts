@@ -1,7 +1,7 @@
 // See WorkbenchHost in ../workbench.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
-import { div, restoreSideBarState, SideBar, type Side } from './side-bar';
+import { div, restoreSideBarState, SideBar, type PanelCommands, type Side } from './side-bar';
 
 /**
  * The widget's regions in one grid: the left side (a rail with a button per side panel and the shown panel), the
@@ -23,13 +23,15 @@ export class WorkbenchLayout {
     private readonly host: HTMLElement,
     /** Where the layout keeps its state for the browser session (key `layout`). */
     memento: Memento,
+    /** Where each panel's command `workbench.view.<id>` goes, and the keys its rail button names. */
+    commands: PanelCommands,
   ) {
     const doc = host.ownerDocument;
     const saved = memento.get<unknown>('layout');
     const save = () => void memento.update('layout', { left: this.#sides.left.state, right: this.#sides.right.state });
     this.#sides = {
-      left: new SideBar(host, 'left', restoreSideBarState(saved, 'left'), save),
-      right: new SideBar(host, 'right', restoreSideBarState(saved, 'right'), save),
+      left: new SideBar(host, 'left', restoreSideBarState(saved, 'left'), { save, commands }),
+      right: new SideBar(host, 'right', restoreSideBarState(saved, 'right'), { save, commands }),
     };
     this.editor = div(doc, 'typst-editor__editor-area');
     this.statusBar = div(doc, 'typst-editor__status-bar');
@@ -40,7 +42,7 @@ export class WorkbenchLayout {
   /**
    * Adds side panel `id` with its rail button on `options.side` (default left), in the rail's top or bottom group
    * (`options.alignment`, default top), among the others there by `options.order` (lower first; equal: registration
-   * order): the element its content goes into, and how it opens.
+   * order): the element its content goes into, and how it opens; and its command `workbench.view.<id>`.
    */
   addPanel(id: string, options: SidePanelOptions): SidePanel {
     if (this.#sides.left.has(id) || this.#sides.right.has(id)) throw new Error(`There is a side panel ${id} already`);

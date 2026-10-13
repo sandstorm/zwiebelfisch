@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Tests for visual-editor.ts.
 import { EditorState } from '@codemirror/state';
+import { EditorView as CodeView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
@@ -57,6 +58,25 @@ describe('VisualEditor', () => {
     expect(scrolledTo).toEqual([pm.state.selection.head]);
     expect(document.activeElement).toBe(editable);
     expect(view.selection().from).toBe(source.indexOf('text'));
+  });
+
+  it('reveals a range inside a raw box in its code, selected; the whole box or a caret before it in the text', () => {
+    const source = 'Some #emph(text) here\n\n#set text(size: 12pt)\n';
+    const { view, parent } = setup(source);
+    const code = (selector: string) => CodeView.findFromDOM(parent.querySelector<HTMLElement>(`${selector} .cm-content`)!)!;
+    const reveal = (from: number, to: number) => view.reveal(SourceRange.of({ from, to }));
+    const selected = (box: CodeView) => box.state.sliceDoc(box.state.selection.main.from, box.state.selection.main.to);
+    reveal(source.indexOf('size'), source.indexOf('size') + 4);
+    expect(selected(code('.typst-visual__raw-block'))).toBe('size');
+    expect(code('.typst-visual__raw-block').hasFocus).toBe(true);
+    reveal(source.indexOf('(text)') + 1, source.indexOf('(text)') + 5);
+    expect(selected(code('.typst-visual__raw-inline'))).toBe('text');
+    const block = source.indexOf('#set');
+    reveal(block, block);
+    expect(code('.typst-visual__raw-block').hasFocus).toBe(false);
+    reveal(block, source.length - 1);
+    expect(code('.typst-visual__raw-block').hasFocus).toBe(false);
+    expect(view.selection()).toEqual({ from: block, to: source.length - 1 });
   });
 
   it('reports the selection as the source range it shows', () => {

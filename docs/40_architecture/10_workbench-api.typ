@@ -12,18 +12,23 @@ commands.registerKeybinding('Mod+Alt+KeyW', 'wordCount.count');
 
 - *`registerCommand`* throws for an id registered twice.
 - *`executeCommand<T>(id, ...args)`* runs the handler synchronously and resolves to its result. It rejects for an unknown id or a failing handler. The host runs commands with `editor.executeCommand(id, ...args)`.
-- *`registerKeybinding(key, command)`*: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is ⌘ or Ctrl). It runs the command without arguments, before any editor sees the key.
+- *`registerKeybinding(key, command, args?)`*: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is ⌘ or Ctrl), matched with exactly those modifiers (Alt+1 is not AltGr+1). It runs the command with `args`, before any editor sees the key.
+- *`contributes.keybindings`*: `[{ command, key, mac?, win?, linux?, args? }]`, as VS Code's; `''` means no key on that platform. The workbench binds them and shows each command's key where it offers the command.
 - *Commands for people* get a name in `contributes.commands`, as in VS Code. Search everywhere lists them as "Category: Title" and runs them without arguments, so declare only commands that work without any:
 
 ```ts
 export const wordCount = (): TypstExtension => ({
   id: 'word-count',
-  contributes: { commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }] },
+  contributes: {
+    commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }],
+    keybindings: [{ command: 'wordCount.count', key: 'Mod+Alt+KeyW' }],
+  },
   activate({ commands, subscriptions }) { subscriptions.push(commands.registerCommand('wordCount.count', () => { … })); },
 });
 ```
 
 - *`workbench.action.searchEverywhere(text?)`* opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
+- *`workbench.view.<id>`*: per side panel, shows and focuses it, or hides it when shown and focused. Search everywhere also opens with ⌘P, ⌘⇧O (`/`) and ⌘⇧A (`>`).
 
 == Menus <architecture-workbench-api-menus>
 
@@ -87,7 +92,7 @@ if (choice === 'Open') workbench.open(path);
 
 == Search everywhere <architecture-workbench-api-search>
 
-Shift twice, the magnifier on the left rail or `workbench.action.searchEverywhere` open one quick pick over every search provider, a group each: `window.registerSearchProvider(provider)`.
+Shift twice, the field-over-list button on the left rail, ⌘P or `workbench.action.searchEverywhere` open one quick pick over every search provider, a group each: `window.registerSearchProvider(provider)`.
 
 ```ts
 window.registerSearchProvider({
@@ -128,7 +133,7 @@ window.registerSearchProvider({
   columns: 2,
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; a higher `priority` sits further left],
-  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button; returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, `visible`, `onDidChangeVisibility`). One panel per side shows],
+  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button; returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, `show(preserveFocus?)`, `visible`, `onDidChangeVisibility`). One panel per side shows],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],
@@ -163,6 +168,7 @@ window.registerCustomEditorProvider('csv.table', {
 - *`priority`:* a number, `'default'` (100), `'fallback'` (files no other editor opens) or `'option'` (only when chosen).
 - *Which editor opens:* the one the user chose last, else the highest `priority`, then the most specific pattern (`*.drawio.png` over `*.png`).
 - *`displayName`* is its tab: a file several editors match gets a tab each. `icon` shows in the file panel.
+- *Reveal:* `panel.onDidRequestReveal(range)` asks the editor to select a range after `workbench.open(path, { selection })`.
 - *Panels:* every open gets a new one. Store edits with `workspace.applyEdit`, pending ones in `panel.onDidDispose`. `retainContextWhenHidden: true` keeps the panel while hidden.
 
 #table(

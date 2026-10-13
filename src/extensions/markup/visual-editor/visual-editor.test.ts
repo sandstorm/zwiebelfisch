@@ -13,7 +13,7 @@ function press(target: HTMLElement, key: string, shiftKey = false) {
 }
 
 describe('markup in a Visual editor', () => {
-  it('handles Mod-b, Mod-i, Mod-u, Mod-Shift-s and Mod-Shift-h itself instead of letting the browser act', () => {
+  it('handles Mod-b, Mod-i, Mod-u and Mod-Shift-s itself instead of letting the browser act; Mod-Shift-h is not its own', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     createVisualEditor(parent, new TypstDocument('Hello\n'));
     const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
@@ -22,7 +22,7 @@ describe('markup in a Visual editor', () => {
     expect(press(editable, 'i').defaultPrevented).toBe(true);
     expect(press(editable, 'u').defaultPrevented).toBe(true);
     expect(press(editable, 'S', true).defaultPrevented).toBe(true);
-    expect(press(editable, 'H', true).defaultPrevented).toBe(true);
+    expect(press(editable, 'H', true).defaultPrevented).toBe(false);
   });
 
   it('leaves inline code, code blocks and raw boxes out of spell checking', () => {
@@ -74,7 +74,7 @@ describe('markup in a Visual editor', () => {
     expect(doc.text).toBe(source);
   });
 
-  it('Mod-Shift-s strikes the selection through, Mod-Shift-h highlights it', () => {
+  it('Mod-Shift-s strikes the selection through', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     const view = createVisualEditor(parent, doc);
@@ -82,7 +82,5 @@ describe('markup in a Visual editor', () => {
     const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
     press(editable, 'S', true);
     expect(doc.text).toBe('Hello #strike[world]\n');
-    press(editable, 'H', true);
-    expect(doc.text).toBe('Hello #strike[#highlight[world]]\n');
   });
 });

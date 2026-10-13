@@ -27,8 +27,8 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
 )
 
 - *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name. In Collaborate and GitLab mode, a link opens a second window as another user.
-- *Left rail*: Files, Help, and the magnifier for search everywhere.
-- *Editing area*: a Typst file has the tabs Visual and Source; spreadsheets, diagrams and text files open in their own editor.
+- *Left rail*: Files, Find in files (the magnifier), search everywhere (a field over a list), Help.
+- *Editing area*: a Typst file has the tabs Visual and Source (switching keeps the cursor); spreadsheets, diagrams and text files open in their own editor.
 - *Right side*: the preview, or the devtools (@configuration-embedding-devtools).
 - *Status bar*: errors and warnings; in GitLab mode what is not saved yet.
 

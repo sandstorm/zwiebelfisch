@@ -41,17 +41,17 @@ export interface RawBoxes {
 
 /**
  * Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box; Alt+Enter follows its link. The
- * command `editRawBox` enters a box from code (a box just inserted, the caret inside its code).
+ * command `editRawBox` enters a box from code (a box just inserted, the caret inside its code; a range revealed in it).
  */
 export const RawBoxNavigation = Extension.create({
   name: 'typstRawBoxNavigation',
   addCommands() {
     return {
       editRawBox:
-        (pos, offset) =>
+        (pos, from, to = from) =>
         ({ view, dispatch }) => {
           const box = boxAt(view, pos);
-          if (box && dispatch) box.edit(offset);
+          if (box && dispatch) box.edit(from, to);
           return box !== undefined;
         },
     };
@@ -135,11 +135,12 @@ class RawBox implements NodeView {
     this.edit(side > 0 ? 0 : this.code.state.doc.length);
   }
 
-  /** Shows and focuses the code, the cursor at `offset` in it (kept within the code). */
-  edit(offset: number): void {
+  /** Shows and focuses the code, `from..to` in it selected (a cursor if equal; kept within the code), scrolled to. */
+  edit(from: number, to = from): void {
+    const clamp = (offset: number) => Math.min(Math.max(offset, 0), this.code.state.doc.length);
     this.rendered?.edit();
     this.code.focus();
-    this.code.dispatch({ selection: { anchor: Math.min(Math.max(offset, 0), this.code.state.doc.length) } });
+    this.code.dispatch({ selection: { anchor: clamp(from), head: clamp(to) }, scrollIntoView: true });
   }
 
   /** Follows the box's link, if it has one (Alt+Enter on the selected box). */
@@ -389,10 +390,11 @@ declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     typstRawBoxNavigation: {
       /**
-       * Shows and focuses the code of the raw box at `pos`, the cursor at `offset` in its `src` (e.g. inside the `$$` of
-       * a math box just inserted). Run it after the transaction that made the box: the box must be shown.
+       * Shows and focuses the code of the raw box at `pos`, the cursor at offset `from` in its `src` (e.g. inside the
+       * `$$` of a math box just inserted), or `from..to` selected (a match revealed in it). Run it after the transaction
+       * that made the box: the box must be shown.
        */
-      editRawBox: (pos: number, offset: number) => ReturnType;
+      editRawBox: (pos: number, from: number, to?: number) => ReturnType;
     };
   }
 }

@@ -16,7 +16,8 @@ import { icon } from './workbench/icons/icons';
  * (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, each on a row), offered in two
  * menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context
  * menu; context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row). Its badges
- * come from every FileDecorationProvider (e.g. where collaborators are). The setting `files.panel` says when it is open.
+ * come from every FileDecorationProvider (e.g. where collaborators are). The setting `files.panel` says when it is open;
+ * Alt+1 (⌃1 on the Mac, none on Linux) shows and focuses it (`workbench.view.files`).
  *
  * This entry is the controller over the workbench and the project. The views (FilePanel in workbench/) and the pure
  * tree model (model/) get what they need as options, so the panel is tested without a workbench.
@@ -25,7 +26,12 @@ import { icon } from './workbench/icons/icons';
 export function files(): TypstExtension {
   return {
     id: 'files',
-    contributes: { commands: COMMANDS, configuration: { properties: { 'files.panel': PANEL_SETTING } } },
+    contributes: {
+      commands: COMMANDS,
+      configuration: { properties: { 'files.panel': PANEL_SETTING } },
+      // ⌘1 / Ctrl+1 are the browser's tabs, ⌥1 types a character on the Mac, Linux browsers take Alt+1 and Ctrl+1
+      keybindings: [{ command: 'workbench.view.files', key: 'Alt+Digit1', mac: 'Ctrl+Digit1', linux: '' }],
+    },
     activate(context) {
       const { project, window, workspace, workbench, subscriptions } = context;
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');

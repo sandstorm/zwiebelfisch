@@ -1,4 +1,4 @@
-// The command that adds a note, its key binding and the Source editor's "Comment". See comments in ../comments.ts.
+// The command that adds a note and the Source editor's "Comment". See comments in ../comments.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';
@@ -9,8 +9,8 @@ import type { Workbench } from '../../../hosts/workbench/workbench';
 import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /**
- * "Comment" in the frame: the command `comments.addComment` adds a note in the active editor, Ctrl/Cmd+Alt+M runs
- * it, and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual editor has "Comment" in its own
+ * "Comment" in the frame: the command `comments.addComment` adds a note in the active editor (Ctrl/Cmd+Alt+M runs
+ * it: `contributes.keybindings`), and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual editor has "Comment" in its own
  * toolbar).
  */
 export function registerAddComment({ commands, window, workbench }: CommentContext, cards: NoteCards): Disposable {
@@ -19,7 +19,6 @@ export function registerAddComment({ commands, window, workbench }: CommentConte
       const editor = window.activeTextEditor;
       if (editor) addComment(editor, cards);
     }),
-    commands.registerKeybinding('Mod+Alt+KeyM', ADD_COMMENT),
     workbench.registerMenuItem('editor/title', {
       command: ADD_COMMENT,
       title: 'Comment',
@@ -41,7 +40,7 @@ export interface NoteCards {
 
 /** What "Comment" uses of the extension API: where to register, and the editor the user works in. */
 export interface CommentContext {
-  readonly commands: Pick<Commands, 'registerCommand' | 'registerKeybinding'>;
+  readonly commands: Pick<Commands, 'registerCommand'>;
   readonly window: Pick<WindowApi, 'activeTextEditor'>;
   readonly workbench: Pick<Workbench, 'registerMenuItem'>;
 }

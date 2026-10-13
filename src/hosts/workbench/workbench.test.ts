@@ -457,6 +457,7 @@ describe('WorkbenchHost: search everywhere', () => {
             { command: 'test.count', title: 'Count words', category: 'Test' },
             { command: 'test.unregistered', title: 'Never registered' },
           ],
+          keybindings: [{ command: 'test.count', key: 'Mod+Shift+KeyC' }],
           configuration: {
             properties: {
               'test.wrap': { type: 'boolean', default: false, description: 'Wrap lines.' },
@@ -480,6 +481,17 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(field().value).toBe('>');
     host.querySelector<HTMLElement>('[data-testid=typst-search-everywhere]')!.click();
     expect(field().value).toBe('');
+  });
+
+  it('opens on Mod+P, with the files prefix on Mod+Shift+O and the commands prefix on Mod+Shift+A', () => {
+    const { host, field } = setupSearch();
+    const press = (code: string, shiftKey = false) => host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey, bubbles: true, cancelable: true }));
+    expect(press('KeyP')).toBe(false);
+    expect(field().value).toBe('');
+    press('KeyO', true);
+    expect(field().value).toBe('/');
+    press('KeyA', true);
+    expect(field().value).toBe('>');
   });
 
   it("puts its rail button among the left rail's panels by order 15: after Files (10), before Help (20)", () => {
@@ -511,12 +523,32 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(field()).not.toBeNull();
   });
 
-  it('lists the declared commands that are registered, by category and title, and runs the one picked', async () => {
+  it('lists the declared commands that are registered, by category and title with their keys, and runs the one picked', async () => {
     const { workbench, ran, options, enter } = setupSearch();
     await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
-    expect(options().map((option) => option.textContent)).toEqual(['Test: Count words']);
+    expect(options().map((option) => option.textContent)).toEqual(['Test: Count words Ctrl+Shift+C']);
+    expect(options()[0].querySelector('kbd')!.textContent).toBe('Ctrl+Shift+C');
     enter();
     expect(ran).toEqual(['count']);
+  });
+
+  it('binds the declared keys and names them in the View menu, the tab bar and on the rail (workbench.view.<id>)', async () => {
+    const { host, workbench, ran } = setupSearch();
+    host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(ran).toEqual(['count']);
+    workbench.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
+    workbench.registerMenuItem('editor/title', { command: 'test.count', title: 'Count' });
+    const button = host.querySelector<HTMLElement>('.typst-editor__tab-action[data-command="test.count"]')!;
+    expect(button.title).toBe('Count (Ctrl+Shift+C)');
+    host.querySelector<HTMLElement>('.typst-editor__view-menu')!.click();
+    expect(host.querySelector('.typst-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
+    const panel = workbench.registerSidePanel('files', { label: 'Files', icon: workbench.ownerDocument.createElement('span') });
+    workbench.commands.registerKeybinding('Alt+Digit1', 'workbench.view.files');
+    const rail = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!;
+    rail.dispatchEvent(new Event('pointerenter'));
+    expect(rail.title).toBe('Files (Alt+1)');
+    await workbench.commands.executeCommand('workbench.view.files');
+    expect(panel.visible).toBe(true);
   });
 
   it('switches a boolean setting, and sets an enum setting through a second quick pick', async () => {

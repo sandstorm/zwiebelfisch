@@ -68,7 +68,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - *Picture:* with a box renderer, the box shows a picture (the preview's boxes of its range, @architecture-preview-concepts) until its code gets focus. Only boxes near the view are drawn again after a compile.
 - `view.title` heads the box; `view.tools` add tools (an image's resize handles).
 - *Link:* the picture leads where the box's Typst leads (`VisualEditorLinks`).
-- `editRawBox(pos, offset)`: a Tiptap command that focuses the box's code, e.g. after Insert → "Inline math".
+- `editRawBox(pos, from, to?)`: a Tiptap command that focuses the box's code with the cursor at `from` or `from..to` selected, e.g. after Insert → "Inline math", or to reveal a search match inside the box.
 - `setRawBoxDecorations`: hands the box's decorations to its code (another user's caret inside the box).
 
 == Toolbar <architecture-visual-editor-toolbar>

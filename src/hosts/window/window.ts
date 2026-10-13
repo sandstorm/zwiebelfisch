@@ -213,6 +213,8 @@ export interface SearchProvider {
 export interface SearchItem extends QuickPickItem {
   /** Where the provider matched the query: the item is shown as given, not matched again. */
   readonly highlights?: QuickPickHighlights;
+  /** The key that does the same, as people read it (`⌘⇧F`), at the row's end. */
+  readonly keybinding?: string;
   /**
    * Opens, runs or applies what the item stands for. Called once the search is closed and the focus is back where it
    * was, still within the user's key press or click (a file picker may open).
@@ -258,6 +260,8 @@ export interface ContributedMenuItem {
   readonly group?: string;
   /** Whether it is checked, asked with the menu's context; without: not a checkbox. */
   readonly toggled?: (context: Readonly<Record<string, unknown>>) => boolean;
+  /** The key of its command as people read it, at the entry's end. */
+  readonly keybinding?: string;
 }
 
 /**
@@ -371,6 +375,11 @@ export interface CustomEditorPanel {
   readonly visible: boolean;
   /** `visible` changed. */
   readonly onDidChangeViewState: Event<void>;
+  /**
+   * A range of the file is to be shown (`workbench.open(path, { selection })`, offsets into its text), right after the
+   * panel is shown: the editor selects it, scrolls it into view and takes the focus.
+   */
+  readonly onDidRequestReveal: Event<SourceRange>;
   /**
    * Fires once, right before the panel goes: another file (or this one again) is shown (unless retained), the file is
    * deleted (retained), the provider is disposed, or the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
@@ -522,10 +531,11 @@ export class WindowHost implements WindowApi {
 
   /**
    * Shows `file` in its custom editor (`viewType` if it matches, else the one chosen last or the one its name picks)
-   * in the editing area; returns that editor's view type, undefined when none matches (nothing is shown).
+   * in the editing area, revealing `selection` there; returns that editor's view type, undefined when none matches
+   * (nothing is shown).
    */
-  showCustomEditor(file: CustomDocument, viewType?: string): string | undefined {
-    return this.#customEditors.show(file, viewType);
+  showCustomEditor(file: CustomDocument, viewType?: string, selection?: SourceRange): string | undefined {
+    return this.#customEditors.show(file, viewType, selection);
   }
 
   /** The element of the custom editor's panel shown in the editing area; null while none is shown. */

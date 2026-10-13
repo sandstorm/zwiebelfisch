@@ -73,6 +73,14 @@ describe('text files', () => {
     await vi.waitFor(() => expect(view().state.facet(EditorView.darkTheme)).toBe(true));
   });
 
+  it('selects the range opened with (workbench.open with a selection), in a new editor and in the shown one', () => {
+    const { workbench, view } = setup();
+    workbench.open(path('/refs.bib'), { selection: SourceRange.of({ from: 1, to: 5 }) });
+    expect(view().state.selection.main).toMatchObject({ from: 1, to: 5 });
+    workbench.open(path('/refs.bib'), { selection: SourceRange.of({ from: 6, to: 7 }) });
+    expect(view().state.selection.main).toMatchObject({ from: 6, to: 7 });
+  });
+
   it('shows changes made elsewhere (bytes as UTF-8) in the open editor', () => {
     const { project, workbench, view } = setup();
     workbench.open(path('/refs.bib'));

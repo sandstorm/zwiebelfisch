@@ -28,26 +28,21 @@ export function textFiles(): TypstExtension {
     contributes: { languages: TEXT_LANGUAGES },
     activate(context) {
       const { project, window, workbench, languages, subscriptions } = context;
-      const editors = new Map<ProjectPath, TextFileEditor>();
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context, editors), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
+        window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
         languages.registerHelpProvider({ language: 'bibtex' }, { provideHelp: () => BIBTEX_HELP }),
-        window.registerSearchProvider(
-          textSearch({
-            project,
-            workbench,
-            isTextFile: (path) => isTextFile(path),
-            reveal: (path, from, to) => editors.get(path)?.reveal(from, to),
-          }),
-        ),
+        window.registerSearchProvider(textSearch({ project, workbench, isTextFile: (path) => isTextFile(path) })),
       );
     },
   };
 }
 
-/** A TextFileEditor per opened file (kept in `editors` while open), saving into the project and following the file's changes from elsewhere. */
-function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext, editors: Map<ProjectPath, TextFileEditor>): CustomEditorProvider {
+/**
+ * A TextFileEditor per opened file, saving into the project, following the file's changes from elsewhere and
+ * selecting what is to be revealed (`workbench.open(path, { selection })`).
+ */
+function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext): CustomEditorProvider {
   return {
     resolveCustomEditor({ path, content }, panel) {
       const editor = new TextFileEditor(panel.element, {
@@ -60,13 +55,12 @@ function textFileEditor({ project, window, workspace, languages, sourceEditor }:
         save: (saved) =>
           void workspace.applyEdit({ kind: 'update', path, content: saved }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
       });
-      editors.set(path, editor);
       const changes = project.onDidChangeFile((change) => {
         if (change.kind === 'update' && change.path === path) editor.reload(text(change.content));
       });
+      panel.onDidRequestReveal((range) => editor.reveal(range.from, range.to));
       panel.onDidDispose(() => {
         changes.dispose();
-        if (editors.get(path) === editor) editors.delete(path);
         editor.dispose();
       });
     },

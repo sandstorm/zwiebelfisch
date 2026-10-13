@@ -2,6 +2,7 @@
 // Tests for workbench-layout.ts (WorkbenchLayout) and its two sides (side-bar.ts).
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CommandsHost } from '../../commands/commands';
 import { StorageMemento } from '../memento/memento';
 import { WorkbenchLayout } from './workbench-layout';
 
@@ -19,7 +20,8 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   }
   const host = document.createElement('div');
   document.body.append(host);
-  const layout = new WorkbenchLayout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`));
+  const commands = new CommandsHost(host);
+  const layout = new WorkbenchLayout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`), commands);
   const sidePanel = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
   const body = sidePanel.body;
   body.textContent = 'tree';
@@ -33,7 +35,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   const isOpen = () => toggle.getAttribute('aria-pressed') === 'true' && !panel.hidden && !body.hidden;
   /** Adds the right side's panel `id`. */
   const right = (id = 'preview', label = 'Preview') => layout.addPanel(id, { label, icon: document.createElement('span'), side: 'right' });
-  return { host, layout, sidePanel, body, toggle, panel, setWidth, key, isOpen, right };
+  return { host, layout, commands, sidePanel, body, toggle, panel, setWidth, key, isOpen, right };
 }
 
 afterEach(() => {
@@ -275,6 +277,50 @@ describe('WorkbenchLayout', () => {
     layout.setDefaultPanel('right', 'preview');
     expect([preview.visible, devtools.visible]).toEqual([true, false]);
     expect(devtoolsChanges).toEqual([true, false]);
+  });
+
+  it('show() picks the panel as the rail would and focuses its first control, unless asked to keep the focus', () => {
+    const { host, layout, sidePanel, body, isOpen } = setup();
+    const field = body.appendChild(document.createElement('input'));
+    sidePanel.show(true);
+    expect(isOpen()).toBe(true);
+    expect(document.activeElement).not.toBe(field);
+    sidePanel.show();
+    expect(document.activeElement).toBe(field);
+    // a panel with nothing to focus gets the focus itself
+    const preview = layout.addPanel('preview', { label: 'Preview', icon: document.createElement('span'), side: 'right' });
+    preview.show();
+    expect(document.activeElement).toBe(preview.body);
+    expect(host.querySelector('[data-testid=typst-panel-toggle-preview]')!.getAttribute('aria-pressed')).toBe('true');
+    sidePanel.setAvailable(false);
+    sidePanel.show();
+    expect(sidePanel.visible).toBe(false);
+  });
+
+  it("workbench.view.<id> shows and focuses the panel, or hides it when it has the focus (the focus back where it was), until disposed", async () => {
+    const { layout, commands, sidePanel, body, isOpen } = setup();
+    const field = body.appendChild(document.createElement('input'));
+    const editor = layout.editor.appendChild(document.createElement('textarea'));
+    editor.focus();
+    await commands.executeCommand('workbench.view.files');
+    expect([isOpen(), document.activeElement]).toEqual([true, field]);
+    await commands.executeCommand('workbench.view.files');
+    expect([isOpen(), document.activeElement]).toEqual([false, editor]);
+    // shown but the focus elsewhere: focused, not hidden
+    sidePanel.show(true);
+    await commands.executeCommand('workbench.view.files');
+    expect([isOpen(), document.activeElement]).toEqual([true, field]);
+    sidePanel.dispose();
+    await expect(commands.executeCommand('workbench.view.files')).rejects.toThrow(/No command/);
+  });
+
+  it("names the key of workbench.view.<id> in the rail button's tooltip, also one bound after the panel was added", () => {
+    const { commands, toggle } = setup();
+    expect(toggle.title).toBe('Files');
+    commands.registerKeybinding('Alt+Digit1', 'workbench.view.files');
+    toggle.dispatchEvent(new Event('pointerenter'));
+    expect(toggle.title).toBe('Files (Alt+1)');
+    expect(toggle.getAttribute('aria-label')).toBe('Files');
   });
 
   it('when narrow, the right side stays beside the editing area', () => {

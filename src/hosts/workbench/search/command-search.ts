@@ -4,8 +4,8 @@ import type { SearchProvider } from '../../window/window';
 import type { CommandContribution } from '../workbench';
 
 /**
- * "Commands" (prefix `>`): every declared command that is registered, as "Category: Title"; picking one runs it
- * without arguments.
+ * "Commands" (prefix `>`): every declared command that is registered, as "Category: Title" with its key; picking one
+ * runs it without arguments. With the keys it is the overview of them, too.
  */
 export function commandSearch(options: CommandSearchOptions): SearchProvider {
   return {
@@ -19,14 +19,16 @@ export function commandSearch(options: CommandSearchOptions): SearchProvider {
         .filter(({ command }) => options.isRegistered(command))
         .map(({ command, title, category }) => ({
           label: category ? `${category}: ${title}` : title,
+          keybinding: options.keybindingLabel(command),
           accept: () => options.executeCommand(command),
         })),
   };
 }
 
-/** What the command search needs: the declared commands, which are registered now, and how one runs. */
+/** What the command search needs: the declared commands, which are registered now, their keys, and how one runs. */
 export interface CommandSearchOptions {
   declared(): readonly CommandContribution[];
   isRegistered(command: string): boolean;
+  keybindingLabel(command: string): string | undefined;
   executeCommand(command: string): Promise<unknown>;
 }
