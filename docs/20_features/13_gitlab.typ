@@ -1,4 +1,8 @@
+
 = GitLab <features-gitlab>
+
+#import "/template.typ": unreviewed
+#unreviewed
 #set heading(outlined: false)
 
 A project can be a branch of a GitLab repository: everyone edits the branch's files together, and the changes go back to GitLab as commits.
