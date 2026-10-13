@@ -67,6 +67,27 @@ describe('showInputBox', () => {
     expect(await second).toBeUndefined();
   });
 
+  it("gives an editor its caret back with the focus (focusing it again would put the caret at its start, as Chromium does)", async () => {
+    const { host, quickInput, box } = setup();
+    const editable = host.appendChild(document.createElement('div'));
+    editable.contentEditable = 'true';
+    editable.tabIndex = 0; // focusable in jsdom
+    editable.innerHTML = '<p>Results</p><p>The runs:</p>';
+    const text = editable.lastChild!.firstChild!;
+    const focus = editable.focus.bind(editable);
+    editable.focus = () => {
+      focus();
+      document.getSelection()!.collapse(editable.firstChild!.firstChild!, 0);
+    };
+    editable.focus();
+    document.getSelection()!.collapse(text, 9);
+    const answer = quickInput.showInputBox();
+    (box() as HTMLFormElement).requestSubmit();
+    await answer;
+    expect(document.activeElement).toBe(editable);
+    expect([document.getSelection()!.anchorNode, document.getSelection()!.anchorOffset]).toEqual([text, 9]);
+  });
+
   it('cancels the open box when another one opens', async () => {
     const { host, quickInput } = setup();
     const first = quickInput.showInputBox({ title: 'First' });

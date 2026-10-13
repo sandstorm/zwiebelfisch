@@ -63,6 +63,8 @@ test('the Visual editor takes typing while the compiler loads; raw boxes show th
   await expect(visual.locator('h1')).toHaveText('Typst in five minutes again');
 
   wasm.release();
+  // pictures come to boxes near the view; the equation is further down the page
+  await equation.scrollIntoViewIfNeeded();
   await expect(equation.locator('img.typst-visual__rendering')).toBeVisible();
   await expect(equation.locator('.typst-visual__code')).toBeHidden();
 });

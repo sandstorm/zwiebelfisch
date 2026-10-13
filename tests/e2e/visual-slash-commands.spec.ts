@@ -28,7 +28,8 @@ test('/ lists the Insert menu and the text styles at the caret; typing filters, 
   const below = box!.y >= caret!.y + caret!.height - 1;
   const above = box!.y + box!.height <= caret!.y + 1;
   expect(below || above).toBe(true);
-  await page.keyboard.type('spreadsheet');
+  // a keyword of the table only ("spreadsheet" also names Insert spreadsheet)
+  await page.keyboard.type('grid');
   await expect(list(page).getByRole('option')).toHaveText([/^Insert table/]);
 });
 
