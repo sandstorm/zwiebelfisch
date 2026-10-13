@@ -8,9 +8,10 @@ Temporary working note: concept for an HTML preview next to today's SVG pages. D
 - Modes: `pages` (today's SVG, default) and `html` as an **extra option**. No PDF mode.
 - HTML works with Typst 0.15's **multi-page bundle** export (`document(path)` per page, `asset(path, bytes)`), as
   `mise run docs:html` builds this book.
-- No page picker: the preview **follows the edited file** — the bundle page whose name matches the Typst file
-  (`40_architecture/09_server.typ` → `40_architecture/09_server.html`). Fallback when no name matches: the page whose
-  `document(..)` call or content comes from that file (span → file), else `index.html`.
+- No page picker: the preview **follows the cursor** — the bundle page holding the element the text at the cursor
+  produced (Typst keeps a span per HTML element internally; the engine maps cursor → element → page, as the SVG
+  pages do), scrolled to that element. A file contributing to every page (`template.typ`) or to none (data, `#let`s
+  only): keep the current page. An element without a span: the nearest ancestor with one.
 - Later: server-side SVG preview (see below).
 
 ## Design
@@ -29,7 +30,7 @@ preview.registerRenderer({
 - `html`: engine `compileHtml(main)` → bundle `{ path → bytes }` (a document without `document(path)` →
   `index.html`). Shown in a sandboxed iframe; updated in place (DOM diff) so scrolling survives; links between
   bundle pages switch the page inside the preview; assets served from memory (blob URLs). No source sync (Typst's
-  HTML carries no spans). Its export warnings are diagnostics.
+  HTML carries no spans; click → source would need our own data attributes). Its export warnings are diagnostics.
 - Switch "Pages / HTML" in the preview toolbar (group `2_view`), remembered in `globalState`; page-only items (page
   number, zoom) declare the mode they need.
 
