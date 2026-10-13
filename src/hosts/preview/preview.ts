@@ -2,7 +2,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { TypstDiagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
+import type { ElementLocation, HtmlFile, TypstDiagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
 import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -25,8 +25,10 @@ import css from './preview.css?inline';
  * The preview keeps the mechanism: the engine worker, the page list that renders only the pages near the view,
  * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
  * page number, "Follow cursor", "Download PDF"), the PDF export options, the view options (Typst run before the main
- * file in the preview only: page guides, box outlines), and when to reveal or shade what (preview-sync). While the
- * engine loads, the pane shows what it waits for.
+ * file in the preview only: page guides, box outlines), when to reveal or shade what (preview-sync), and other ways to
+ * show the document than its pages (`registerRenderer`: the HTML preview). Only the active renderer's output is
+ * compiled: pages, or HTML; snippets compile the pages when they are asked for. While the engine loads, the pane shows
+ * what it waits for.
  *
  * When the engine crashes (a bug in Typst, memory running out), the preview starts a new one and compiles the newest
  * files again, and tells (`PreviewProgress` `failed`). If that crashes again before the next `update()`, it stays off
@@ -50,11 +52,19 @@ export class Preview implements PreviewContributions {
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
   /** The toolbar's items in toolbar order. */
-  private readonly items: { made: ToolbarItemElements; group: string; order: number }[] = [];
+  private readonly items: { made: ToolbarItemElements; group: string; order: number; renderer: string | null }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
   /** The view options, with their priority, in registration order. */
   private readonly registeredViewOptions: { option: PreviewViewOption; priority: number }[] = [];
+  /** The renderers registered besides the built-in pages, in registration order. */
+  private readonly registeredRenderers: PreviewRenderer[] = [];
+  /** The renderer `setActiveRenderer` asked for last (maybe not registered yet: then the pages are shown). */
+  private requestedRenderer = PAGES.id;
+  /** The registered renderer shown instead of the pages; null: the pages are shown. */
+  private active: ActiveRenderer | null = null;
+  /** The pages compiled for snippets while another renderer is active, of `compile`. */
+  private pagesOnDemand: { compile: Compile; done: Promise<void> } | null = null;
   /** The view options' values by id as last set (also of ids not registered yet); the others are at their default. */
   private viewOptionValues: Readonly<Record<string, boolean>> = {};
   /** What `update()` gave last, compiled again when the view options change; null before the first update. */
@@ -73,6 +83,7 @@ export class Preview implements PreviewContributions {
   private readonly clicked = new EventEmitter<PageClick>();
   private readonly viewOptionsChanged = new EventEmitter<void>();
   private readonly engineMemoryChanged = new EventEmitter<void>();
+  private readonly renderersChanged = new EventEmitter<void>();
   /** The engine's memory as its last compile answered. */
   private memoryInUse = 0;
   readonly onDidChangeViewOptions = this.viewOptionsChanged.event;
@@ -80,6 +91,7 @@ export class Preview implements PreviewContributions {
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
   readonly onDidChangeEngineMemory = this.engineMemoryChanged.event;
+  readonly onDidChangeRenderers = this.renderersChanged.event;
   /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
@@ -163,6 +175,7 @@ export class Preview implements PreviewContributions {
    */
   async snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null> {
     await this.compiles.idle();
+    if (this.active) await this.pagesOfLatest();
     const { files, pages } = this.compiled;
     const compiled = files[path];
     if (typeof compiled !== 'string' || compiled.slice(range.from, range.to) !== text) return null;
@@ -189,13 +202,41 @@ export class Preview implements PreviewContributions {
 
   registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
     const made = item(this.context);
-    const entry = { made, group: placement.group, order: placement.order ?? 0 };
+    const entry = { made, group: placement.group, order: placement.order ?? 0, renderer: placement.renderer ?? null };
     // the sort is stable: equal places stay in registration order
     this.items.push(entry);
     this.items.sort(byPlacement);
     this.toolbar.append(...this.items.flatMap((each) => each.made.elements));
+    this.showItems();
     this.scheduleStatus();
     return new Disposable(() => this.removeItem(made));
+  }
+
+  registerRenderer(renderer: PreviewRenderer): Disposable {
+    if (this.renderers().some(({ id }) => id === renderer.id)) throw new Error(`Preview renderer '${renderer.id}' is already registered`);
+    this.registeredRenderers.push(renderer);
+    this.showRenderer();
+    this.renderersChanged.fire();
+    return new Disposable(() => {
+      const index = this.registeredRenderers.indexOf(renderer);
+      if (index < 0) return;
+      this.registeredRenderers.splice(index, 1);
+      this.showRenderer();
+      this.renderersChanged.fire();
+    });
+  }
+
+  renderers(): readonly PreviewRendererInfo[] {
+    return [PAGES, ...this.registeredRenderers.map(({ id, label }) => ({ id, label }))];
+  }
+
+  get activeRenderer(): string {
+    return this.active?.renderer.id ?? PAGES.id;
+  }
+
+  setActiveRenderer(id: string): void {
+    this.requestedRenderer = id;
+    if (this.showRenderer()) this.renderersChanged.fire();
   }
 
   registerPdfExportOption(option: PdfExportOption, options: { priority?: number } = {}): Disposable {
@@ -239,6 +280,8 @@ export class Preview implements PreviewContributions {
   }
 
   dispose(): void {
+    this.active?.view.dispose();
+    this.renderersChanged.dispose();
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
@@ -270,23 +313,59 @@ export class Preview implements PreviewContributions {
     item.dispose?.();
   }
 
+  /**
+   * Shows the requested renderer if it is registered, else the pages; compiles for it when that changed. Returns
+   * whether it changed.
+   */
+  private showRenderer(): boolean {
+    const renderer = this.registeredRenderers.find(({ id }) => id === this.requestedRenderer) ?? null;
+    if (renderer === (this.active?.renderer ?? null)) return false;
+    if (this.active) {
+      this.active.view.dispose();
+      this.active.container.remove();
+    }
+    this.active = null;
+    if (renderer) {
+      const container = div(this.pane.ownerDocument, 'typst-preview__renderer');
+      this.scroller.insertBefore(container, this.loader.element);
+      this.active = { renderer, container, view: renderer.create(container), shown: false };
+    }
+    this.pages.hidden = renderer !== null;
+    this.showItems();
+    this.progressChanged();
+    this.viewChanged();
+    return true;
+  }
+
+  /** Hides the toolbar items of another renderer than the active one (the others' `hidden` is their own). */
+  private showItems(): void {
+    for (const { made, renderer } of this.items) {
+      if (renderer !== null) for (const element of made.elements) element.hidden = renderer !== this.activeRenderer;
+    }
+  }
+
   /** Compiles the last files again with the view options as they are now; toolbar items show the new options. */
   private viewChanged(): void {
     if (this.latest) this.compiles.push(this.latest);
     this.scheduleStatus();
   }
 
-  private async compile({ files, main }: Compile, superseded: () => boolean): Promise<void> {
+  private async compile(compile: Compile, superseded: () => boolean): Promise<void> {
+    if (this.active) await this.compileHtml(compile, this.active, superseded);
+    else await this.compilePages(compile, superseded);
+  }
+
+  /**
+   * Compiles the pages and shows them. `quiet`: for snippets while another renderer is active, so neither diagnostics
+   * nor `onDidRender` (the active renderer's compile tells those).
+   */
+  private async compilePages({ files, main }: Compile, superseded: () => boolean, quiet = false): Promise<void> {
     const entry = viewEntry(this.viewOptions(), this.viewOptionValues);
     // with no prelude, the main file itself, as an export compiles it
     const compiled = entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
     const response = await this.engine.request({ type: 'compile', files: compiled.files, main: compiled.main });
     if (response.type !== 'compile') return;
-    this.loading.compiled();
-    if (response.memoryInUse !== this.memoryInUse) {
-      this.memoryInUse = response.memoryInUse;
-      this.engineMemoryChanged.fire();
-    }
+    this.answered(response.memoryInUse);
     const { pages } = response.result;
     // Keep showing the last good pages while the document has errors, dimmed as stale.
     const failed = pages.length === 0;
@@ -298,13 +377,46 @@ export class Preview implements PreviewContributions {
       this.scheduleStatus();
       this.compiled = { files, pages };
       if (this.selection) this.highlights.push(this.selection);
-      this.rendered.fire();
+      if (!quiet) this.rendered.fire();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
     this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
     // what goes wrong in the view options' Typst is in no project file
-    if (!superseded()) this.diagnosed.fire(response.result.diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d)));
+    if (!quiet && !superseded()) this.diagnosed.fire(response.result.diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d)));
+  }
+
+  /** Compiles HTML for `active` and has it show the files; its diagnostics are the preview's. View options are for pages. */
+  private async compileHtml({ files, main }: Compile, active: ActiveRenderer, superseded: () => boolean): Promise<void> {
+    const response = await this.engine.request({ type: 'html', files, main });
+    if (response.type !== 'html') return;
+    this.answered(response.memoryInUse);
+    // Keep showing the last good files while the document has errors, dimmed as stale.
+    const failed = response.result.files.length === 0;
+    if (!failed && this.active === active) {
+      active.view.update({ files: response.result.files });
+      active.shown = true;
+      this.rendered.fire();
+    }
+    active.container.classList.toggle('typst-preview--stale', failed);
+    this.progressChanged();
+    if (!superseded()) this.diagnosed.fire(response.result.diagnostics);
+  }
+
+  /** A compile answered: the engine is loaded, and its memory is what it says. */
+  private answered(memoryInUse: number): void {
+    this.loading.compiled();
+    if (memoryInUse === this.memoryInUse) return;
+    this.memoryInUse = memoryInUse;
+    this.engineMemoryChanged.fire();
+  }
+
+  /** While another renderer is active, compiles the pages of the newest files once, when a snippet needs them. */
+  private pagesOfLatest(): Promise<void> {
+    const latest = this.latest;
+    if (!latest || this.compiled.files === latest.files) return Promise.resolve();
+    if (this.pagesOnDemand?.compile !== latest) this.pagesOnDemand = { compile: latest, done: this.compilePages(latest, () => true, true) };
+    return this.pagesOnDemand.done;
   }
 
   /** Starts the engine again and compiles the newest files, once per `update()`; after that, stays off until the next. */
@@ -328,11 +440,19 @@ export class Preview implements PreviewContributions {
   /** Shows what the preview waits for: in the pane while it has no pages, and to whoever listens. */
   private progressChanged(): void {
     const progress = this.loading.current();
-    this.loader.show(this.compiled.pages.length === 0 ? progress : null);
+    const nothingShown = this.active ? !this.active.shown : this.compiled.pages.length === 0;
+    this.loader.show(nothingShown ? progress : null);
     this.options.onDidChangeProgress?.(progress);
   }
 
   private async lookUp({ path, from }: Reveal, superseded: () => boolean): Promise<void> {
+    const active = this.active;
+    if (active) {
+      if (!active.view.reveal) return;
+      const found = await this.engine.request({ type: 'elements', path, offset: from });
+      if (!superseded() && found.type === 'elements' && this.active === active) active.view.reveal(found.elements);
+      return;
+    }
     const response = await this.engine.request({ type: 'cursor', path, offset: from });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.follow(response.positions[0]);
@@ -429,6 +549,22 @@ export interface PreviewContributions {
    * option with the same `id` is registered.
    */
   registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
+  /**
+   * Adds a way to show the document instead of its pages, until disposed; `setActiveRenderer` chooses which is shown.
+   * Throws when a renderer with the same `id` is registered (`pages` is the built-in one's).
+   */
+  registerRenderer(renderer: PreviewRenderer): Disposable;
+  /** The built-in pages (`pages`, first) and the registered renderers, in registration order. */
+  renderers(): readonly PreviewRendererInfo[];
+  /** The id of the renderer shown: the one `setActiveRenderer` asked for while it is registered, else `pages`. */
+  readonly activeRenderer: string;
+  /**
+   * Shows the renderer `id` (also one registered later; until then, and once it is disposed, the pages), and compiles
+   * what it shows.
+   */
+  setActiveRenderer(id: string): void;
+  /** A renderer was registered or disposed, or the active one changed. */
+  readonly onDidChangeRenderers: Event<void>;
   /** The registered PDF export options, in the order an export applies them. */
   pdfExportOptions(): readonly PdfExportOption[];
   /**
@@ -441,6 +577,7 @@ export interface PreviewContributions {
   /**
    * Scrolls the preview to where source range `range` of `path` is drawn (its start), only if that is off-screen;
    * nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the newest is looked up.
+   * Another renderer than the pages gets the elements the start produced (`PreviewRendererView.reveal`).
    */
   reveal(path: ProjectPath, range: SourceRange): void;
   /**
@@ -500,6 +637,51 @@ export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemElement
 export interface ToolbarPlacement {
   readonly group: string;
   readonly order?: number;
+  /**
+   * Shown only while this renderer is active (zoom and page number: `pages`), by the elements' `hidden`; none: always
+   * (an item may then hide its elements itself).
+   */
+  readonly renderer?: string;
+}
+
+/**
+ * A way to show the document in the preview instead of its pages (the HTML preview): it gets what the engine makes
+ * for it, and shows it in a container of its own. The preview compiles only for the active renderer.
+ */
+export interface PreviewRenderer extends PreviewRendererInfo {
+  /** What the engine makes for it: `html`, the files of Typst's HTML bundle export. */
+  readonly output: 'html';
+  /** Makes its view in `container` (filling the preview below the toolbar) when it becomes the active renderer. */
+  create(container: HTMLElement): PreviewRendererView;
+}
+
+/** A renderer as the preview lists it. */
+export interface PreviewRendererInfo {
+  /** The key in `setActiveRenderer`, e.g. `html`; `pages` is the built-in pages'. */
+  readonly id: string;
+  /** Its name in a switch ("HTML"). */
+  readonly label: string;
+}
+
+/** A renderer's view while it is the active one. */
+export interface PreviewRendererView {
+  /** Shows what a successful compile made (a failed compile keeps the last, dimmed). */
+  update(output: HtmlBundle): void;
+  /**
+   * The cursor moved (`reveal`): the elements its text produced, the first of each document, in bundle order. Empty:
+   * none (a `#let`, a comment, or the last compile failed).
+   */
+  reveal?(elements: readonly ElementLocation[]): void;
+  /** It is no longer the active renderer, or the preview closes; the preview removes the container. */
+  dispose(): void;
+}
+
+/**
+ * What Typst's HTML bundle export makes: HTML documents and their assets. Every element made from source carries
+ * `HTML_ELEMENT_ATTRIBUTE` (core/typst-engine), which `ElementLocation.element` names.
+ */
+export interface HtmlBundle {
+  readonly files: readonly HtmlFile[];
 }
 
 /** A toolbar item as made for one preview. */
@@ -616,6 +798,11 @@ export interface PreviewOptions {
 }
 
 type Compile = { files: Record<string, FileContent>; main: string };
+/** The registered renderer shown, its container and view; `shown`: it was given a compile's output. */
+type ActiveRenderer = { renderer: PreviewRenderer; container: HTMLElement; view: PreviewRendererView; shown: boolean };
+
+/** The built-in renderer: the pages, as SVG. */
+const PAGES: PreviewRendererInfo = { id: 'pages', label: 'Pages' };
 type Reveal = { path: ProjectPath; from: SourceOffset };
 type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
 

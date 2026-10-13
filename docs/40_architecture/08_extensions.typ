@@ -162,7 +162,8 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, shared CodeMirror extension, menu, command],
   [`slashCommands`], [`/` lists the Insert menu and the text styles; the hint "Type / for commands"], [completion, Tiptap decoration],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`],
-  [`previewControls`], [zoom, page number; a View menu entry per view option], [preview toolbar, menu `view`, commands],
+  [`previewControls`], [zoom, page number (pages only); the switch "Pages | HTML" between the renderers, remembered per viewer; a View menu entry per view option], [preview toolbar, menu `view`, commands],
+  [`previewHtml`], [the renderer `html`: Typst's HTML export page by page, following the cursor (@architecture-preview-renderers)], [renderer],
   [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-extensions-guides)], [view options],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [command, preview toolbar],
 )
@@ -182,6 +183,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [paste edit providers], [`markdown`, `imports`, `labels`], [the Visual and Source editors (the "Paste as" chip)],
   [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`, `help`],
   [view options], [`previewGuides`, `comments`], [`previewControls`],
+  [preview renderers], [`previewHtml`], [`previewControls`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
   [menu `explorer/context`], [`files`, `search`], [`files`],
 )

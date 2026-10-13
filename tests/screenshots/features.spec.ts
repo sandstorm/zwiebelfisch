@@ -87,6 +87,14 @@ test('bidirectional-navigation', async ({ page }) => {
   await shoot(page, 'bidirectional-navigation', [visual(page).locator('h1').first(), highlights], { padding: 24 });
 });
 
+test('html-preview', async ({ page }) => {
+  await open(page, '/');
+  await hideFiles(page);
+  await page.getByTestId('typst-preview-renderers').getByRole('button', { name: 'HTML' }).click();
+  await expect(page.frameLocator('[data-testid="typst-preview-html"]').locator('h1, h2').first()).toBeVisible();
+  await shoot(page, 'html-preview', [page.locator('.typst-preview-pane')]);
+});
+
 test('files', async ({ page }) => {
   await open(page, '/?example=advanced');
   // the panel wider, so the context menu stays inside it

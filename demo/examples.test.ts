@@ -40,15 +40,20 @@ describe('demo examples', () => {
     engine = await engineWithFonts();
   });
 
-  /** Compiles a project on its own (from `main`): the files of earlier projects are removed first. */
-  function compile(files: ProjectFiles, main = '/main.typ') {
+  /** Gives the engine a project on its own: the files of earlier projects are removed first. */
+  function load(files: ProjectFiles) {
     loaded.forEach((path) => engine.remove(path));
     loaded = Object.keys(files);
     for (const [path, content] of Object.entries(files)) {
       if (typeof content === 'string') engine.setSource(path, content);
       else engine.setBinary(path, content);
     }
-    return withPackages(engine, cachedPackage).compile(main);
+    return withPackages(engine, cachedPackage);
+  }
+
+  /** Compiles a project on its own (from `main`). */
+  function compile(files: ProjectFiles, main = '/main.typ') {
+    return load(files).compile(main);
   }
 
   // the docs draw seven Mermaid diagrams (merman's wasm): seconds, more under a parallel test run
@@ -154,9 +159,17 @@ describe('demo examples', () => {
     expect(files['/data/runs.ic']).toBeInstanceOf(Uint8Array);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic)$/);
+      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$/);
     }
   });
+
+  it("the documentation's HTML entry, site.typ, is the docs site in the HTML preview: a page per chapter, its style sheet and logo", async () => {
+    const { files, diagnostics } = await load(exampleFiles('docs')).compileHtml('/site.typ');
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const paths = files.map((file) => file.path);
+    expect(paths).toEqual(expect.arrayContaining(['index.html', '40_architecture/06_preview.html', 'style.css', 'assets/sandstorm-logo.svg']));
+    expect(files.filter((file) => file.document).length).toBeGreaterThan(10);
+  }, 60_000);
 
   it('the documentation example sets its text in its own font, Gabarito, given as project files', async () => {
     const files = exampleFiles('docs');

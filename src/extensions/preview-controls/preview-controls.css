@@ -1,4 +1,18 @@
-/* The preview-controls extension's styles: the preview toolbar's zoom and page number.
+/* The preview-controls extension's styles: the preview toolbar's renderer switch, zoom and page number.
    See preview-controls.ts, which registers it; colors from the widget's --te-* tokens. */
 .typst-preview-controls__zoom { margin-left: 4px; color: var(--te-muted); font-variant-numeric: tabular-nums; }
 .typst-preview-controls__page-number { margin-left: auto; color: var(--te-muted); font-variant-numeric: tabular-nums; }
+.typst-preview-controls__renderers { display: inline-flex; margin-right: 8px; }
+.typst-preview-controls__renderers[hidden] { display: none; }
+.typst-preview-controls__renderers > button {
+  border: 1px solid var(--te-border);
+  padding: 2px 8px;
+  background: var(--te-surface);
+  color: var(--te-text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-preview-controls__renderers > button:first-child { border-radius: 4px 0 0 4px; }
+.typst-preview-controls__renderers > button:last-child { border-radius: 0 4px 4px 0; }
+.typst-preview-controls__renderers > button + button { border-left: 0; }
+.typst-preview-controls__renderers > button[aria-pressed='true'] { background: var(--te-subtle); color: var(--te-text); font-weight: 600; }

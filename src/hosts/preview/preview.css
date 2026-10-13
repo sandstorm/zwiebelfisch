@@ -1,6 +1,6 @@
-/* The preview's pane, toolbar, pages (inverted in the dark), the outline of a click, the shading of highlighted source
-   ranges, the dimming of a failed compile and the loader. See Preview in preview.ts, whose styleSheet the workbench
-   adds. */
+/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, the outline of a click, the
+   shading of highlighted source ranges, the dimming of a failed compile and the loader. See Preview in preview.ts,
+   whose styleSheet the workbench adds. */
 .typst-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--te-preview-bg); }
 .typst-preview__toolbar {
   display: flex;
@@ -29,6 +29,9 @@
   padding: 16px 16px 32px;
   box-sizing: border-box;
 }
+.typst-preview[hidden] { display: none; }
+/* A registered renderer's container (registerRenderer), in place of the pages: it fills the pane and scrolls itself. */
+.typst-preview__renderer { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .typst-preview__page {
   position: relative;
   flex: none;

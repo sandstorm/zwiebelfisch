@@ -105,6 +105,11 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       setViewOptionValues(values: Readonly<Record<string, boolean>>) {
         this.viewValues = values;
       }
+      registerRenderer = () => new Disposable(() => {});
+      renderers = () => [{ id: 'pages', label: 'Pages' }];
+      activeRenderer = 'pages';
+      setActiveRenderer() {}
+      onDidChangeRenderers = () => new Disposable(() => {});
       dispose() {}
     },
   };
@@ -387,13 +392,13 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.typst-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
+  it('fills the preview toolbar: "Follow cursor", the renderer switch, zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
+    const all = ['typst-preview-sync__follow', 'typst-preview-renderers', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
-    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
+    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 4));
     editor.updateSettings({ 'pdfExport.download': false });
-    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 3));
+    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 4));
     // back in its place, by its group and order
     editor.updateSettings({ 'pdfExport.download': undefined });
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
@@ -593,7 +598,7 @@ describe('the built-in extensions', () => {
     });
     expect(seen).toEqual(['Wörter']);
     await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview-page-number']);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-renderers', 'typst-preview-zoom', 'typst-preview-page-number']);
     // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
     setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'preview-sync') });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));
