@@ -41,7 +41,9 @@ Size (today): `typst-editor` 556 hits / 131 files; `TypstEditor*` 164 / 37; `cre
 
 - API entry: `createEditor(host, options)` (types `Editor`, `EditorOptions`, …): the package name says whose.
 - Web component: `<zwiebelfisch-editor>`.
-- Env prefix and CSS/test-id prefix: open — not `ZF_`/`zf-` (reads as Zend Framework).
+- Env prefix: `ZWF_` (`ZWF_GITLAB_TOKEN`, `ZWF_PLAIN_ROOMS`, …); not `ZF_` (reads as Zend Framework).
+- CSS class and `data-testid` prefix: `zwf-` (`zwf-visual`, `zwf-preview__page`); storage keys `zwf:…`.
+- Open: `TypstExtension` → `Extension` or keep.
 
 ## Questions for the user (original)
 
