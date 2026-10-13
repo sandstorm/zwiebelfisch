@@ -93,9 +93,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     get settings() {
       return workbench.settings;
     },
-    set settings(settings: Settings) {
-      workbench.settings = settings;
-    },
+    updateSettings: (settings) => workbench.updateSettings(settings),
     get activeFile() {
       return workbench.window.activeFile;
     },
@@ -179,7 +177,7 @@ export interface TypstEditorOptions {
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
    * 'show', 'workbench.theme': 'dark' }` (see docs/30_configuration/01_options.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
-   * `TypstEditor.settings`.
+   * `TypstEditor.updateSettings`.
    */
   settings?: Settings;
   /**
@@ -202,11 +200,13 @@ export interface TypstEditor {
    * the differing middle changes), reported through `onDidChangeFiles` as an `update`.
    */
   source: string;
+  /** The settings the host set (`settings`, `updateSettings`) or the user changed in quick open, by full id. */
+  readonly settings: Settings;
   /**
-   * The settings the host set, by full id. Assigning replaces them (ids left out go back to their default); the
-   * extensions follow at once.
+   * Merges `settings` into the current ones, as Monaco's `updateOptions`: ids left out keep their value, an id given
+   * `undefined` goes back to its default. The extensions follow at once.
    */
-  settings: Settings;
+  updateSettings(settings: Settings): void;
   /** The path of the file shown in the editing area. */
   readonly activeFile: ProjectPath;
   /** Shows `path` in the editing area (if the project has it). */

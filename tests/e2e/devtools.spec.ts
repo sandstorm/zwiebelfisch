@@ -22,7 +22,7 @@ test('the devtools are on the right side in place of the preview, which keeps co
 
 test('the setting devtools.enabled removes the panel and its rail button, and brings them back', async ({ page }) => {
   const setEnabled = (enabled: boolean) =>
-    page.evaluate((value) => ((window as unknown as { editor: { settings: object } }).editor.settings = { 'devtools.enabled': value }), enabled);
+    page.evaluate((value) => (window as unknown as { editor: { updateSettings(settings: object): void } }).editor.updateSettings({ 'devtools.enabled': value }), enabled);
   await setEnabled(false);
   await expect(page.getByTestId('typst-panel-toggle-devtools')).toBeHidden();
   await expect(page.getByTestId('typst-devtools')).toBeHidden();

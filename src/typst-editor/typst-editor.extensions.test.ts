@@ -392,16 +392,16 @@ describe('the built-in extensions', () => {
     const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
     expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
-    editor.settings = { 'pdfExport.download': false };
+    editor.updateSettings({ 'pdfExport.download': false });
     expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 3));
     // back in its place, by its group and order
-    editor.settings = {};
+    editor.updateSettings({ 'pdfExport.download': undefined });
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
   });
 
   it('switches "Follow cursor" when the host changes previewSync.followCursor', () => {
     const { editor, preview, source } = setup({ source: '= Hi\n', settings: { 'previewSync.followCursor': false } });
-    editor.settings = { 'previewSync.followCursor': true };
+    editor.updateSettings({ 'previewSync.followCursor': true });
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
@@ -458,11 +458,23 @@ describe('the built-in extensions', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
     const button = (id: string) => host.querySelector<HTMLElement>(`[data-testid=typst-panel-toggle-${id}]`)!;
     expect(button('files').hidden).toBe(false);
-    editor.settings = { 'files.panel': 'hide' };
+    editor.updateSettings({ 'files.panel': 'hide' });
     expect(button('files').hidden).toBe(true);
     expect(button('help').hidden).toBe(false);
-    editor.settings = {};
+    editor.updateSettings({ 'files.panel': undefined });
     expect(button('files').hidden).toBe(false);
+  });
+
+  it('updateSettings merges: ids left out keep their value, undefined resets one to its default', () => {
+    const { host, editor } = setup({ source: '= Hi', settings: { 'files.panel': 'hide' } });
+    const files = () => host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!;
+    editor.updateSettings({ 'pdfExport.download': false });
+    expect(editor.settings).toEqual({ 'files.panel': 'hide', 'pdfExport.download': false });
+    expect(files().hidden).toBe(true);
+    editor.updateSettings({ 'files.panel': undefined });
+    expect(editor.settings).toEqual({ 'pdfExport.download': false });
+    expect(Object.keys(editor.settings)).toEqual(['pdfExport.download']);
+    expect(files().hidden).toBe(false);
   });
 
   it('keeps the preview in step (preview-sync): it follows the focused selection, and a click selects its source', () => {
@@ -537,7 +549,7 @@ describe('the built-in extensions', () => {
       vi.advanceTimersByTime(100);
       expect(preview.cleared).toBe(1);
       expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 15 }]]]);
-      editor.settings = { 'previewSync.highlightSelection': false };
+      editor.updateSettings({ 'previewSync.highlightSelection': false });
       expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
       source().dispatch({ selection: { anchor: 0, head: 4 } });
       vi.advanceTimersByTime(100);

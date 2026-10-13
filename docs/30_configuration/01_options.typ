@@ -1,22 +1,31 @@
 = Configuration options <configuration-options>
 
-There are two kinds, as in VS Code:
+The _options_ are the object `createTypstEditor(host, options)` takes. They hold three parts; the settings are one of them.
 
-- *Settings* are values by id `<section>.<key>`, each declared by the extension of its feature. They can change while the editor runs.
-- *Options* are what `createTypstEditor` takes once: files, the main file, the user, the extensions (@configuration-options-editor).
+#table(
+  columns: 3,
+  [Part], [What], [Change later],
+  [Content], [`files`, `source`, `mainFile`], [`editor.files`, `editor.source`; the user: edits, "Set as main file"],
+  [Settings], [Values by id `<section>.<key>`, each declared by its feature's extension (@configuration-options-settings)], [`editor.updateSettings`; the user: quick open (`:`)],
+  [Wiring], [`extensions`, `user`, `allowFileChange`, `viewType`], [No: fixed at creation],
+)
+
+As in Monaco: `updateSettings` ≈ `updateOptions`, `files` ≈ models, `extensions` ≈ `overrideServices`.
 
 == Setting values <configuration-options-setting>
 
 ```ts
 const editor = createTypstEditor(host, { settings: { 'files.panel': 'show' } });
-editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };   // replaces all; ids left out go back to their default
+editor.updateSettings({ 'workbench.theme': 'dark' });   // merges: other ids keep their value
+editor.updateSettings({ 'files.panel': undefined });    // back to the default
 ```
 
 ```html
 <typst-editor settings='{"files.panel": "show", "pdfExport.download": false}'></typst-editor>
 ```
 
-- The editor *follows a change at once*. On `<typst-editor>`, the attribute is read on connect and on every change.
+- The editor *follows a change at once*. `editor.settings` is the current values.
+- On `<typst-editor>`, the attribute is read on connect and on every change; a new value replaces the attribute's own ids. `element.updateSettings` merges, as on the editor.
 - Unknown ids and values of the wrong type are ignored with a console warning.
 - An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-overview-settings).
 
@@ -58,7 +67,7 @@ editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };   // replac
   [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[mainFile.path]`.],
   [`viewType`], [`'visualEditor'` (default), `'sourceEditor'`], [The editor Typst files open in, until the user picks the other tab.],
   [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them. `color` is their cursor color.],
-  [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings).],
+  [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings); later `editor.updateSettings`.],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
   [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],
 )

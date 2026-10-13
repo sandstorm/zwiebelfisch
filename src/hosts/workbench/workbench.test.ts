@@ -121,9 +121,9 @@ describe('WorkbenchHost', () => {
     }, { settings: { 'workbench.rightSidePanel': 'devtools' } });
     const shown = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__side--right .typst-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
     expect(shown()).toEqual(['devtools']);
-    workbench.settings = { 'workbench.rightSidePanel': null };
+    workbench.updateSettings({ 'workbench.rightSidePanel': null });
     expect(shown()).toEqual([]);
-    workbench.settings = {};
+    workbench.updateSettings({ 'workbench.rightSidePanel': undefined });
     expect(shown()).toEqual(['preview']);
   });
 
@@ -387,8 +387,8 @@ describe('WorkbenchHost', () => {
         },
       },
     ]);
-    workbench.settings = { 'test.size': 5 };
-    workbench.settings = {};
+    workbench.updateSettings({ 'test.size': 5 });
+    workbench.updateSettings({ 'test.size': undefined });
     expect(seen).toEqual([3, 5, 1]);
     expect(workbench.settings).toEqual({});
   });
@@ -396,9 +396,9 @@ describe('WorkbenchHost', () => {
   it('takes the theme from the setting workbench.theme, also when it changes', () => {
     const { host, workbench } = setup(undefined, { settings: { 'workbench.theme': 'dark' } });
     expect(host.dataset.theme).toBe('dark');
-    workbench.settings = { 'workbench.theme': 'light' };
+    workbench.updateSettings({ 'workbench.theme': 'light' });
     expect(host.dataset.theme).toBe('light');
-    workbench.settings = {};
+    workbench.updateSettings({ 'workbench.theme': undefined });
     expect(host.dataset.theme).toBeUndefined();
   });
 

@@ -89,7 +89,7 @@ export class WorkspaceHost implements Workspace {
     private readonly project: Project,
     private readonly options: WorkspaceOptions = {},
   ) {
-    this.#values = { ...options.settings };
+    this.#values = mergeSettings({}, options.settings ?? {});
   }
 
   async applyEdit(change: FileChange): Promise<string | null> {
@@ -127,12 +127,14 @@ export class WorkspaceHost implements Workspace {
     return { ...this.#values };
   }
 
-  /** Replaces the values the host set (missing ids go back to their default) and tells who listens what changed. */
+  /**
+   * Merges `values` into the values the host set (as Monaco's `updateOptions`): ids left out keep theirs, an id given
+   * `undefined` goes back to its default. Tells who listens what changed.
+   */
   update(values: Settings): void {
     const before = this.#values;
-    this.#values = { ...values };
-    const ids = [...new Set([...Object.keys(before), ...Object.keys(values)])];
-    const changed = ids.filter((id) => !same(this.#effective(id, before), this.#effective(id, this.#values)));
+    this.#values = mergeSettings(before, values);
+    const changed = Object.keys(values).filter((id) => !same(this.#effective(id, before), this.#effective(id, this.#values)));
     for (const id of changed) this.#warnIfInvalid(id, values[id]);
     if (changed.length === 0) return;
     this.#changed.fire({ affectsConfiguration: (section) => changed.some((id) => id === section || id.startsWith(`${section}.`)) });
@@ -182,6 +184,13 @@ export class WorkspaceHost implements Workspace {
     if (!property) console.warn(`Unknown setting ${id} (no extension declares it): ignored`);
     else console.warn(`Setting ${id}: ${JSON.stringify(value)} is not a valid value; using the default ${JSON.stringify(property.default)}`);
   }
+}
+
+/** `changes` over `settings`, id by id; an id whose value is `undefined` is removed. */
+export function mergeSettings(settings: Settings, changes: Settings): Settings {
+  const merged: Record<string, unknown> = { ...settings, ...changes };
+  for (const [id, value] of Object.entries(changes)) if (value === undefined) delete merged[id];
+  return merged;
 }
 
 /** Equal values (settings are JSON-like: objects and arrays by content). */

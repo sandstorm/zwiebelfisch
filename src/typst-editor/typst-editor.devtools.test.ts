@@ -93,7 +93,7 @@ describe('devtools', () => {
     const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
     expect(toggle.hidden).toBe(true);
     engine.compiled(300 * 2 ** 20);
-    editor.settings = {};
+    editor.updateSettings({ 'devtools.enabled': undefined });
     expect(toggle.hidden).toBe(false);
     toggle.click();
     expect(memory().querySelector('summary')!.textContent).toBe('Typst engine memory: 300 MB of 4 GB (7%)');

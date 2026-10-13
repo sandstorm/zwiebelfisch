@@ -3,7 +3,7 @@ import type { FileChange, FileContent, ProjectFiles } from '../core/project/proj
 import type { ProjectPath } from '../core/paths/paths';
 import type { Disposable } from '../core/disposable/disposable';
 import type { Event } from '../core/event-emitter/event-emitter';
-import type { Settings } from '../hosts/workspace/workspace';
+import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
 
 /**
  * `<typst-editor>`: the editor widget as a custom element, for pages that should need no glue code.
@@ -20,8 +20,9 @@ import type { Settings } from '../hosts/workspace/workspace';
  * - `options` (`Partial<TypstEditorOptions>`): everything `createTypstEditor` takes, read when the element
  *   connects.
  * - `settings` attribute: JSON of settings by full id (`settings='{"pdfExport.download": false}'`), over
- *   `options.settings` id by id; read on connect and whenever it changes. The `settings` property is the current
- *   settings; setting it replaces them.
+ *   `options.settings` id by id; read on connect and whenever it changes: a new value replaces the attribute's ids
+ *   (an id it no longer has goes back to `options.settings`' value, else its default), other ids keep theirs.
+ *   The `settings` property is the current settings; `updateSettings` merges, as `TypstEditor.updateSettings`.
  * - `value` attribute (wins over `options.source`); without it (attribute or property), the element's text content
  *   (common indentation removed), if any, is the main file's text.
  * - `files` (all files, the main one included) and `value` (the main file's text, a shortcut) are the
@@ -50,7 +51,7 @@ export class TypstEditorElement extends Base() {
   constructor() {
     super();
     // Set on the element before it was defined (upgraded): own properties that hide the accessors below.
-    for (const property of ['options', 'value', 'files', 'settings'] as const) {
+    for (const property of ['options', 'value', 'files'] as const) {
       if (!Object.hasOwn(this, property)) continue;
       const value = this[property] as never;
       delete this[property];
@@ -87,14 +88,15 @@ export class TypstEditorElement extends Base() {
     this.#quietly((editor) => (editor.files = files));
   }
 
-  /** The settings by full id (see `TypstEditor.settings`); setting them replaces them. */
+  /** The settings by full id (see `TypstEditor.settings`). */
   get settings(): Settings {
     return this.#editor?.settings ?? this.#settings ?? this.#initialSettings();
   }
 
-  set settings(settings: Settings) {
-    this.#settings = settings;
-    if (this.#editor) this.#editor.settings = settings;
+  /** Merges `settings` into the current ones; `undefined` resets an id to its default (see `TypstEditor.updateSettings`). */
+  updateSettings(settings: Settings): void {
+    if (this.#editor) this.#editor.updateSettings(settings);
+    else this.#settings = mergeSettings(this.settings, settings);
   }
 
   /** Runs an extension's command (see `TypstEditor.executeCommand`); rejects while not connected. */
@@ -139,9 +141,9 @@ export class TypstEditorElement extends Base() {
     this.shadowRoot?.replaceChildren();
   }
 
-  attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
     if (name === 'value') this.value = value ?? '';
-    else if (this.#editor) this.settings = this.#initialSettings();
+    else if (this.#editor) this.updateSettings(this.#attributeChange(old, value));
   }
 
   /** Subscribes to the events of EVENTS on `editor`, each dispatching its DOM events. */
@@ -172,6 +174,12 @@ export class TypstEditorElement extends Base() {
   #initialSource(): string | undefined {
     const inline = inlineSource(this.textContent ?? '');
     return this.getAttribute('value') ?? (inline === '' ? undefined : inline) ?? this.options.source;
+  }
+
+  /** The `settings` attribute's change from `old` to `value`: its ids, and those it dropped back to `options.settings`. */
+  #attributeChange(old: string | null, value: string | null): Settings {
+    const dropped = Object.keys(parseSettings(old, false)).map((id) => [id, this.options.settings?.[id]]);
+    return { ...Object.fromEntries(dropped), ...parseSettings(value) };
   }
 
   /** `options.settings`, and over them those of the `settings` attribute (JSON; ignored, with a warning, if it is not an object). */
@@ -242,7 +250,8 @@ function inlineSource(text: string): string {
   return lines.map((line) => (line.slice(indent).trimEnd() === '' ? '' : line.slice(indent))).join('\n') + '\n';
 }
 
-function parseSettings(json: string | null): Settings {
+/** The settings in the JSON of a `settings` attribute; none if it is no JSON object (with a warning, if `warn`). */
+function parseSettings(json: string | null, warn = true): Settings {
   if (json === null) return {};
   try {
     const parsed: unknown = JSON.parse(json);
@@ -250,7 +259,7 @@ function parseSettings(json: string | null): Settings {
   } catch {
     // reported below
   }
-  console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
+  if (warn) console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
   return {};
 }
 

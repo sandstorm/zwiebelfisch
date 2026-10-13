@@ -92,7 +92,7 @@ What `activate` gets (`ExtensionContext`):
 Settings work as VS Code's (see the example above):
 
 - *Declare* each in `contributes.configuration.properties` as `<section>.<key>`, with `type`, `default`, `description` and an optional `enum`.
-- *Read* with `workspace.getConfiguration(section).get(key)`, and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.settings`).
+- *Read* with `workspace.getConfiguration(section).get(key)`, and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.updateSettings`).
 - *A wrong value* (wrong type, outside `enum`) counts as unset; an undeclared setting is ignored. Both log a warning. An id declared twice is an error.
 
 == Rules <architecture-extensions-overview-rules>

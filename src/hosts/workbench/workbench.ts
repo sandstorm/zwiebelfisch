@@ -476,12 +476,13 @@ export class WorkbenchHost implements Workbench {
     return this.options.user;
   }
 
-  /** The settings' values the host set, by full id. Assigning replaces them; listeners hear what changed. */
+  /** The settings' values the host set, by full id. */
   get settings(): Settings {
     return this.#workspace.values;
   }
 
-  set settings(settings: Settings) {
+  /** Merges `settings` into them (`undefined` resets an id to its default); listeners hear what changed. */
+  updateSettings(settings: Settings): void {
     this.#workspace.update(settings);
   }
 
@@ -647,7 +648,7 @@ export class WorkbenchHost implements Workbench {
         settingSearch({
           properties: () => this.#workspace.properties,
           value: (id) => this.#workspace.getConfiguration().get(id),
-          update: (id, value) => (this.settings = { ...this.settings, [id]: value }),
+          update: (id, value) => this.updateSettings({ [id]: value }),
           window: this.window,
         }),
       ),

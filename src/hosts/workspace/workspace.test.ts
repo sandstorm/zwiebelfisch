@@ -81,10 +81,11 @@ describe('WorkspaceHost settings', () => {
     ]);
   });
 
-  it('replaces the values and fires once for what changed, by setting and by section', () => {
+  it('merges the values (undefined resets an id to its default) and fires once for what changed, by setting and by section', () => {
     const { configuration, events } = setup({ 'pdfExport.download': false, 'files.panel': 'show' });
-    configuration.update({ 'files.panel': 'show', 'workbench.theme': 'dark' });
+    configuration.update({ 'pdfExport.download': undefined, 'files.panel': 'show', 'workbench.theme': 'dark' });
     expect(configuration.values).toEqual({ 'files.panel': 'show', 'workbench.theme': 'dark' });
+    expect(Object.keys(configuration.values)).toEqual(['files.panel', 'workbench.theme']);
     expect(events).toHaveLength(1);
     const [event] = events;
     expect(event.affectsConfiguration('pdfExport.download')).toBe(true);

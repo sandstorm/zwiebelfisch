@@ -94,8 +94,22 @@ describe('<typst-editor>', () => {
     expect(el.settings).toEqual({ 'workbench.theme': 'dark', 'files.panel': 'show' });
     el.setAttribute('settings', '{"workbench.theme": "auto"}');
     expect(widget().dataset.theme).toBe('auto');
-    el.settings = {};
+  });
+
+  it('updateSettings merges, also while not connected; a new settings attribute replaces only its own ids', () => {
+    const el = document.createElement('typst-editor');
+    el.setAttribute('settings', '{"workbench.theme": "dark", "pdfExport.download": false}');
+    el.options = { settings: { 'workbench.theme': 'light' } };
+    el.updateSettings({ 'files.panel': 'show' });
+    document.body.append(el);
+    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!;
+    expect(el.settings).toEqual({ 'workbench.theme': 'dark', 'pdfExport.download': false, 'files.panel': 'show' });
+    el.updateSettings({ 'workbench.theme': undefined });
     expect(widget().dataset.theme).toBeUndefined();
+    // dropped from the attribute: pdfExport.download to its default, workbench.theme back to options.settings
+    el.setAttribute('settings', '{"previewSync.followCursor": false}');
+    expect(el.settings).toEqual({ 'workbench.theme': 'light', 'files.panel': 'show', 'previewSync.followCursor': false });
+    expect(widget().dataset.theme).toBe('light');
   });
 
   it('ignores a settings attribute that is not a JSON object, with a warning', () => {
