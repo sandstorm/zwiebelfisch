@@ -3,6 +3,7 @@
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
+import type { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
@@ -155,10 +156,10 @@ describe('raw boxes', () => {
     picture.dispatchEvent(new MouseEvent('mouseleave'));
     expect(leave).toHaveBeenCalledTimes(1);
     expect(linkOf).toHaveBeenCalledTimes(1); // once per visit
-    picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
+    picture.dispatchEvent(new MouseEvent('click', { ...modifier, button: 0, cancelable: true }));
     expect(follow).toHaveBeenCalledTimes(1);
     expect(picture.hidden).toBe(false);
-    picture.dispatchEvent(new MouseEvent('mousedown', { button: 0, cancelable: true }));
+    picture.dispatchEvent(new MouseEvent('click', { button: 0, cancelable: true }));
     expect(follow).toHaveBeenCalledTimes(1);
     expect(picture.hidden).toBe(true);
   });
@@ -178,9 +179,79 @@ describe('raw boxes', () => {
     picture.dispatchEvent(new MouseEvent('mouseenter'));
     picture.dispatchEvent(new MouseEvent('mousemove'));
     expect(picture.hasAttribute('title')).toBe(false);
-    picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
+    picture.dispatchEvent(new MouseEvent('click', { ...modifier, button: 0, cancelable: true }));
     expect(follow).not.toHaveBeenCalled();
     expect(picture.hidden).toBe(true);
+  });
+});
+
+/** The browser starting a drag of `source` (jsdom has no drag events: a plain event, a stand-in `dataTransfer`). */
+function dragStart(source: Element) {
+  source.dispatchEvent(dragEvent('dragstart'));
+}
+
+/** What was dragged dropped on `target`, at position `pos` of `view` (jsdom has no layout to tell it). */
+function drop(view: ProseMirrorView, target: Element, pos: number) {
+  const posAtCoords = vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos, inside: -1 });
+  target.dispatchEvent(dragEvent('drop'));
+  posAtCoords.mockRestore();
+}
+
+function dragEvent(type: string): Event {
+  const data = new Map<string, string>();
+  const dataTransfer = { files: [], clearData: () => data.clear(), setData: (f: string, v: string) => data.set(f, v), getData: (f: string) => data.get(f) ?? '' };
+  return Object.assign(new Event(type, { bubbles: true, cancelable: true }), { dataTransfer, clientX: 0, clientY: 0 });
+}
+
+describe('dragging raw boxes', () => {
+  const tiptapOf = (parent: HTMLElement) => (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+  const press = (target: Element) => target.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+
+  it('a block box is dragged by its frame and picture, not by its code; inline boxes are not', async () => {
+    const { parent } = setupLinked('#set text(size: 12pt)\n\nSee $x$.\n');
+    const [block, inline] = [parent.querySelector<HTMLElement>('.typst-visual__raw-block')!, parent.querySelector<HTMLElement>('.typst-visual__raw-inline')!];
+    const picture = await shownPicture(parent);
+    press(picture);
+    expect(block.draggable).toBe(true);
+    press(block.querySelector('.cm-content')!);
+    expect(block.draggable).toBe(false);
+    press(block);
+    expect(block.draggable).toBe(true);
+    press(inline);
+    expect(inline.draggable).toBe(false);
+  });
+
+  it('dropped elsewhere, a block box moves there, its Typst verbatim, in one undo step', () => {
+    const text = '#set text(size: 12pt)\n\nHello\n\nWorld\n';
+    const { doc, parent } = setup(text);
+    const tiptap = tiptapOf(parent);
+    const box = parent.querySelector<HTMLElement>('.typst-visual__raw-block')!;
+    press(box);
+    dragStart(box);
+    expect(tiptap.view.dragging?.move).toBe(true);
+    drop(tiptap.view, parent.querySelectorAll('p')[1], tiptap.state.doc.content.size);
+    expect(doc.text).toBe('Hello\n\nWorld\n\n#set text(size: 12pt)\n');
+    tiptap.commands.undo();
+    expect(doc.text).toBe(text);
+  });
+
+  it('what the editor drags is dropped beside a box it lands on, not into its code', () => {
+    const { doc, parent } = setup('Hello\n\n#let a = 1\n\n#let b = 2\n');
+    const tiptap = tiptapOf(parent);
+    const [first, second] = parent.querySelectorAll<HTMLElement>('.typst-visual__raw-block');
+    press(first);
+    dragStart(first);
+    drop(tiptap.view, second.querySelector('.cm-content')!, tiptap.state.doc.content.size);
+    expect(doc.text).toBe('Hello\n\n#let b = 2\n\n#let a = 1\n');
+  });
+
+  it('a drag in the code stays in the code (text, not the box)', () => {
+    const { parent } = setup(RAW);
+    const tiptap = tiptapOf(parent);
+    const code = parent.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!;
+    press(code);
+    dragStart(code);
+    expect(tiptap.view.dragging).toBeNull();
   });
 });
 

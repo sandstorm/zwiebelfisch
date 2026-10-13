@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 // Tests for the custom styles' entries of the text style menu, the Styles menu of the selection bar and the style applier (visual-editor.ts), through the Visual editor.
 import simpleStyles from '../../../../demo/examples/simple/styles.typ?raw';
+import type { Editor } from '@tiptap/core';
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/typst-style-index';
 import { scanStyles, type TypstStyle } from '../model/discover';
-import { createVisualEditor } from '../../../testing/testing';
+import { createVisualEditor, dragStart, drop } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles, styleApplier } from './visual-editor';
@@ -180,5 +181,20 @@ describe('styleApplier', () => {
     expect(applier.apply(doc, NOTE)).toBe(true);
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n');
     expect(applier.apply(new TypstDocument('Other\n'), NOTE)).toBe(false);
+  });
+});
+
+describe('block styles in the Visual editor', () => {
+  it('a styled block is dragged by its frame and moves with its call verbatim, in one undo step', () => {
+    const text = '#note(kind: "tip")[A *noted* paragraph.]\n\nAfter\n';
+    const { doc, parent } = setup(text);
+    const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    const frame = parent.querySelector<HTMLElement>('.typst-styles__block')!;
+    dragStart(frame);
+    expect(tiptap.view.dragging?.move).toBe(true);
+    drop(tiptap.view, parent.querySelector('p:last-child')!, tiptap.state.doc.content.size);
+    expect(doc.text).toBe('After\n\n#note(kind: "tip")[A *noted* paragraph.]\n');
+    tiptap.commands.undo();
+    expect(doc.text).toBe(text);
   });
 });

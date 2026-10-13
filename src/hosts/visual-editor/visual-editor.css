@@ -28,6 +28,9 @@
 }
 .typst-visual__raw-block,
 .typst-visual__raw-inline { cursor: text; transition: box-shadow 0.15s, background 0.15s; }
+/* A block box is dragged by its frame and title (and picture); its code is text */
+.typst-visual__raw-block { cursor: grab; }
+.typst-visual__raw-block > .typst-visual__code { cursor: text; }
 .typst-visual__raw-block:hover,
 .typst-visual__raw-inline:hover { background: var(--te-hover); }
 .typst-visual__raw-block:focus-within,

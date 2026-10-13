@@ -307,7 +307,7 @@ function hovered(box: HTMLElement): { picture: HTMLImageElement; hint: string } 
 
 /** A click on `element` holding the link modifier (⌘ on Mac, Ctrl elsewhere: both held). */
 function modClick(element: HTMLElement) {
-  element.dispatchEvent(new MouseEvent('mousedown', { button: 0, ctrlKey: true, metaKey: true, bubbles: true, cancelable: true }));
+  element.dispatchEvent(new MouseEvent('click', { button: 0, ctrlKey: true, metaKey: true, bubbles: true, cancelable: true }));
 }
 
 describe('the built-in extensions', () => {

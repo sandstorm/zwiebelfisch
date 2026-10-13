@@ -10,6 +10,9 @@
   border-radius: 0 6px 6px 0;
   background: var(--te-accent-faint);
 }
+/* dragged by its frame and name; its blocks are text */
+.typst-styles__block { cursor: grab; }
+:where(.typst-styles__block > *) { cursor: text; }
 .typst-styles__block::before {
   content: attr(data-style-title);
   display: block;

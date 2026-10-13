@@ -60,7 +60,7 @@ describe('rendered raw boxes', () => {
     const { parent } = await setup(MATH_DOC, renderer);
     const box = parent.querySelector('.typst-visual__raw-block')!;
     const { picture, code } = parts(box);
-    picture!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    picture!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(code.hidden).toBe(false);
     expect(picture!.hidden).toBe(true);
     box.querySelector('.cm-content')!.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
@@ -83,7 +83,7 @@ describe('rendered raw boxes', () => {
       const { picture, code } = parts(box);
       const shown = () => ({ picture: getComputedStyle(picture!).display !== 'none', code: getComputedStyle(code).display !== 'none' });
       expect(shown()).toEqual({ picture: true, code: false });
-      picture!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      picture!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
       expect(shown()).toEqual({ picture: false, code: true });
       expect(box.classList.contains('typst-visual__raw--rendered')).toBe(false);
       box.querySelector('.cm-content')!.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));

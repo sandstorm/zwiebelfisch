@@ -1,7 +1,8 @@
 import { Editor } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
-import { expect } from 'vitest';
+import type { EditorView } from '@tiptap/pm/view';
+import { expect, vi } from 'vitest';
 import { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import { ProjectPath } from '../core/paths/paths';
@@ -228,6 +229,30 @@ export function opened(button: HTMLButtonElement): HTMLButtonElement {
   const trigger = button.closest('.typst-toolbar__menu')?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
   if (trigger?.getAttribute('aria-expanded') === 'false') trigger.click();
   return button;
+}
+
+/**
+ * The browser starting a drag of `source` (the element it drags: a `draggable` one). jsdom has no drag events and no
+ * layout: a plain event with a stand-in `dataTransfer`, at (0, 0).
+ */
+export function dragStart(source: Element): void {
+  source.dispatchEvent(dragEvent('dragstart'));
+}
+
+/** What was dragged dropped on `target`, at the document position `pos` of `view` (jsdom cannot tell it from coordinates). */
+export function drop(view: EditorView, target: Element, pos: number): void {
+  const posAtCoords = vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos, inside: -1 });
+  try {
+    target.dispatchEvent(dragEvent('drop'));
+  } finally {
+    posAtCoords.mockRestore();
+  }
+}
+
+function dragEvent(type: string): Event {
+  const data = new Map<string, string>();
+  const dataTransfer = { files: [], clearData: () => data.clear(), setData: (f: string, v: string) => data.set(f, v), getData: (f: string) => data.get(f) ?? '' };
+  return Object.assign(new Event(type, { bubbles: true, cancelable: true }), { dataTransfer, clientX: 0, clientY: 0 });
 }
 
 /** `doc` after the transaction `change` builds on a fresh state of it. */
