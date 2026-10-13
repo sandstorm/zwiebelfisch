@@ -35,18 +35,29 @@ export async function compiled(page: Page): Promise<void> {
  * Clicks into `block` (a paragraph or heading of the Visual editor) and puts
  * the caret at its very end.
  *
- * Not `End`: that goes to the end of the visual line, and the demo's first
- * paragraph wraps, with its centre (where Playwright clicks) right on the
- * line boundary (Chromium lands on line 2, Firefox on line 1). And not right
- * after the click: 20 ms after the editor gains focus, ProseMirror writes its
- * own selection back to the DOM unless it has seen the DOM selection by then,
- * undoing a caret move made in between. Returns once ProseMirror has seen
+ * Not `End` (on macOS Cmd+→; End scrolls the page there): that goes to the end
+ * of the visual line, and the demo's first paragraph wraps, with its centre
+ * (where Playwright clicks) right on the line boundary (Chromium lands on
+ * line 2, Firefox on line 1). And not right after the click: 20 ms after the
+ * editor gains focus, ProseMirror writes its own selection back to the DOM
+ * unless it has seen the DOM selection by then, undoing a caret move made in
+ * between (on a busy page, e.g. two users compiling, it may not have seen even
+ * the click's: the caret goes back to where it was). Returns once ProseMirror has seen
  * the new caret (its `selectionchange` listener runs before the one here), so
  * toolbar clicks, which do not read the DOM selection, act on it.
  */
 export async function caretAtEnd(block: Locator): Promise<void> {
+  await caretAtEdge(block, 'end');
+}
+
+/** Clicks into `block` and puts the caret at its very start (not `Home`: see `caretAtEnd`). */
+export async function caretAtStart(block: Locator): Promise<void> {
+  await caretAtEdge(block, 'start');
+}
+
+async function caretAtEdge(block: Locator, edge: 'start' | 'end'): Promise<void> {
   await clickAndSettle(block);
-  await block.evaluate(async (element) => {
+  await block.evaluate(async (element, edge) => {
     const doc = element.ownerDocument;
     const seen = new Promise((resolve) => {
       doc.addEventListener('selectionchange', resolve, { once: true });
@@ -54,9 +65,10 @@ export async function caretAtEnd(block: Locator): Promise<void> {
     });
     const selection = doc.getSelection()!;
     selection.selectAllChildren(element);
-    selection.collapseToEnd();
+    if (edge === 'end') selection.collapseToEnd();
+    else selection.collapseToStart();
     await seen;
-  });
+  }, edge);
 }
 
 /**

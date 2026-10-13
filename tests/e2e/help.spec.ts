@@ -2,7 +2,8 @@
 // in Files' place on the left, its sheet following the shown file (.typ → .mmd), and its rows dragged into the Source,
 // the text and the Visual editor, and inserted with Enter.
 import { expect, type Locator, type Page } from '@playwright/test';
-import { LINE_END, test, fileRow } from './fixtures';
+import { test, fileRow } from './fixtures';
+import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -52,8 +53,7 @@ test('a Typst row dragged into the Visual editor is read as Typst; Enter inserts
   await expect.poll(value(page)).toBe('Hello\n\n= Heading\n');
   await expect(editor(page).getByTestId('typst-visual').getByRole('heading', { name: 'Heading' })).toBeVisible();
 
-  await editor(page).getByTestId('typst-visual').locator('p').first().click();
-  await page.keyboard.press(LINE_END);
+  await caretAtEnd(editor(page).getByTestId('typst-visual').locator('p').first());
   await row(page, '*strong*').click();
   await page.keyboard.press('Enter');
   // read as Typst: strong text right after a word is written as the function (`*` only works at word boundaries)

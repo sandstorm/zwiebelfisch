@@ -39,8 +39,8 @@ describe('presence in the Source editor', () => {
     view.setPresence([{ ...ann, anchor: 4, head: 4 }]);
     const caret = parent.querySelector<HTMLElement>('.typst-collaboration__caret')!;
     expect(caret.dataset.user).toBe('Ann');
-    expect(caret.closest('.cm-line')!.textContent).toBe('Ann');
-    expect(caret.querySelector('.typst-collaboration__caret-flag')!.textContent).toBe('Ann');
+    // the name flag is drawn from data-user (CSS): no text of the line
+    expect(caret.closest('.cm-line')!.textContent).toBe('');
     expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
     view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
     expect(carets(parent)).toEqual(['on']);

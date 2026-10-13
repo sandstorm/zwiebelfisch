@@ -73,16 +73,6 @@ export async function clickGlyph(glyph: Locator, options: { clickCount?: number 
   await glyph.page().mouse.click(point.x, point.y, options);
 }
 
-/**
- * The keys that move the caret to the end / start of its (visual) line, for `keyboard.press` (with `Shift+` they
- * select). On macOS Playwright follows the platform's key bindings: End and Home scroll the page there
- * (scrollToEndOfDocument:), so a contenteditable such as the Visual editor keeps its caret; Cmd+→ / Cmd+← move it.
- * CodeMirror handles both on every platform.
- */
-const MAC = process.platform === 'darwin';
-export const LINE_END = MAC ? 'Meta+ArrowRight' : 'End';
-export const LINE_START = MAC ? 'Meta+ArrowLeft' : 'Home';
-
 /** The playground server (server/cmd/fake-gitlab, as `mise run test:e2e-gitlab` / `test:e2e-collab` start it). */
 export const SERVER = 'http://127.0.0.1:1234';
 
