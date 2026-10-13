@@ -73,6 +73,26 @@ func TestSignInChecksWhatGitLabChecks(t *testing.T) {
 	require.Equal(t, "2", profile["sub"])
 }
 
+func TestTheSignInPageSignsInAsTheNamePicked(t *testing.T) {
+	g := newGitLab()
+	sum := sha256.Sum256([]byte("a-verifier-of-enough-length-for-pkce-0123456789"))
+	authorize := url.Values{
+		"client_id": {fakegitlab.ClientID}, "redirect_uri": {"http://127.0.0.1:1234/auth/callback"}, "response_type": {"code"},
+		"code_challenge": {base64.RawURLEncoding.EncodeToString(sum[:])}, "code_challenge_method": {"S256"}, "state": {"s"},
+	}
+	page := httptest.NewRecorder()
+	g.IdentityProvider().ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+authorize.Encode(), nil))
+	require.Equal(t, http.StatusOK, page.Code)
+	require.Contains(t, page.Body.String(), "Sign in to the fake GitLab")
+
+	// the page's form sends its (empty) Name field and the name button clicked: user=&user=Cleo
+	authorize["user"] = []string{"", "Cleo"}
+	res := httptest.NewRecorder()
+	g.IdentityProvider().ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+authorize.Encode(), nil))
+	require.Equal(t, http.StatusFound, res.Code, res.Body.String())
+	require.True(t, strings.HasPrefix(res.Header().Get("Location"), "http://127.0.0.1:1234/auth/callback?"))
+}
+
 func TestMembersAndProtectedBranches(t *testing.T) {
 	g := newGitLab()
 	ann := g.SetAccess("Ann", fakegitlab.Reporter)

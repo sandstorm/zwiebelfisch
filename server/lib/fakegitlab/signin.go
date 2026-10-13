@@ -152,9 +152,12 @@ func (p *IdentityProvider) authorize(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Expected response_type=code with an S256 code_challenge", http.StatusBadRequest)
 		return
 	}
-	name := strings.TrimSpace(q.Get("user"))
-	if name == "" {
-		name = strings.TrimSpace(q.Get("login_hint"))
+	// the page's form sends its Name field and the name button clicked (user=&user=Cleo): the first name given
+	name := ""
+	for _, n := range append(q["user"], q.Get("login_hint")) {
+		if name = strings.TrimSpace(n); name != "" {
+			break
+		}
 	}
 	if name == "" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

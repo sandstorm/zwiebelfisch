@@ -13,6 +13,7 @@
 package ydoc
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"unicode/utf16"
@@ -48,8 +49,28 @@ func (d *Doc) Apply(update []byte, origin any) error {
 }
 
 // OnUpdate calls fn after every change (local or applied) with the change as a Yjs v1 update and the origin
-// it was made with. Pointer origins must point to non-zero-size types, or distinct ones compare equal.
-func (d *Doc) OnUpdate(fn func(update []byte, origin any)) (stop func()) { return d.d.OnUpdate(fn) }
+// it was made with. Pointer origins must point to non-zero-size types, or distinct ones compare equal. As in
+// Yjs, an update that changes nothing (one the document holds already, as a client sends on connecting) is
+// not a change.
+func (d *Doc) OnUpdate(fn func(update []byte, origin any)) (stop func()) {
+	// ygo tells every transaction. Its update is the items added (none: a first byte 0) and the whole delete
+	// set, so with no item added it changed nothing if it is the update of no change made before it.
+	unchanged := d.unchanged()
+	return d.d.OnUpdate(func(update []byte, origin any) {
+		switch {
+		case len(update) > 0 && update[0] == 0 && bytes.Equal(update, unchanged):
+			return
+		case len(update) > 0 && update[0] == 0:
+			unchanged = update // deletions only
+		default:
+			unchanged = d.unchanged()
+		}
+		fn(update, origin)
+	})
+}
+
+// unchanged is the update of no change: no item, the delete set.
+func (d *Doc) unchanged() []byte { return crdt.EncodeStateAsUpdateV1(d.d, d.d.StateVector()) }
 
 // Texts returns the texts in root map m (key → text); values that are not Y.Text are left out.
 func (d *Doc) Texts(m string) map[string]string {
