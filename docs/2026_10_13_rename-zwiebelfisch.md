@@ -37,7 +37,13 @@ Size (today): `typst-editor` 556 hits / 131 files; `TypstEditor*` 164 / 37; `cre
    too: copy `~/.claude/projects/-Users-sebastian-src-typst-experiment/memory` to the new path's folder).
 5. No backwards compatibility: no aliases for the old element name, API name, env vars or storage keys.
 
-## Questions for the user
+## Decided (user, 2026-10-13)
+
+- API entry: `createEditor(host, options)` (types `Editor`, `EditorOptions`, …): the package name says whose.
+- Web component: `<zwiebelfisch-editor>`.
+- Env prefix and CSS/test-id prefix: open — not `ZF_`/`zf-` (reads as Zend Framework).
+
+## Questions for the user (original)
 
 1. API entry: `createZwiebelfisch(host, options)`, or neutral `createEditor(host, options)` (the package name says
    whose)?
