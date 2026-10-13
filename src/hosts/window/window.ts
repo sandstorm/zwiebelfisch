@@ -3,7 +3,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent } from '../../core/project/project';
-import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { type CustomEditorChoice, CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { ContextMenu } from './menus/context-menu';
@@ -408,6 +408,18 @@ export interface TextEditor {
    * text, blocks after the block holding the cursor.
    */
   insertSnippet(snippet: string): void;
+  /**
+   * Changes the document by the edits `callback` makes (source coordinates of the text before them, not overlapping),
+   * as one edit of that editor: one undo step there (VS Code's `edit`).
+   */
+  edit(callback: (editBuilder: TextEditorEdit) => void): void;
+}
+
+/** What `TextEditor.edit` gives its callback to make the edits with (VS Code's `TextEditorEdit`). */
+export interface TextEditorEdit {
+  replace(range: SourceRange, value: string): void;
+  insert(offset: SourceOffset, value: string): void;
+  delete(range: SourceRange): void;
 }
 
 export interface TextEditorSelectionChangeEvent {

@@ -178,6 +178,11 @@ export class SourceEditor {
     this.view.focus();
   }
 
+  /** Applies `changes` of the source (its coordinates now) as one transaction: one undo step. */
+  edit(changes: readonly TextChange[]): void {
+    this.view.dispatch({ changes: [...changes] });
+  }
+
   /** The selected source range (the main selection). */
   selection(): SourceRange {
     return SourceRange.of(this.view.state.selection.main);

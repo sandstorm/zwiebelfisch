@@ -1,10 +1,10 @@
 // See WorkbenchHost in ../workbench.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
-import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceRange, TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { SOURCE_EDITOR, type SourceEditor, SourceEditorHost } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../visual-editor/visual-editor';
-import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/window';
+import type { CustomEditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../window/window';
 
 /**
  * The Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`, `sourceEditor`), the
@@ -147,6 +147,16 @@ export class DocumentEditor implements TextEditor {
 
   insertSnippet(snippet: string): void {
     this.editors.get(this.viewType)!.editor.insert(snippet);
+  }
+
+  edit(callback: (editBuilder: TextEditorEdit) => void): void {
+    const changes: TextChange[] = [];
+    callback({
+      replace: ({ from, to }, insert) => changes.push({ from, to, insert }),
+      insert: (offset, insert) => changes.push({ from: offset, to: offset, insert }),
+      delete: ({ from, to }) => changes.push({ from, to, insert: '' }),
+    });
+    this.editors.get(this.viewType)!.editor.edit(changes);
   }
 }
 

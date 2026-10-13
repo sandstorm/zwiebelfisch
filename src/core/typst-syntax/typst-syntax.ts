@@ -89,7 +89,9 @@ export interface ImportRequest {
  * Null when an import before `use` already brings it (by name or `*`); else
  * the name is added to the item list of the first such import of the module
  * (`: a, b` → `: a, b, name`; a bare `#import "m"` gets `: name`), or
- * `create()` goes at the top. Never a duplicate.
+ * `create()` goes at the top, also when an import after `use` brings the
+ * name already (the caller decides about that one: two imports of a name are
+ * valid Typst).
  */
 export function calculateImportChange(text: string, request: ImportRequest): TextChange | null {
   const use = request.use ?? text.length;
