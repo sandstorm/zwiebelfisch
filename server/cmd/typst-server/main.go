@@ -57,7 +57,7 @@ func run() error {
 	server := &http.Server{Handler: rooms, ReadHeaderTimeout: 10 * time.Second}
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
-	log.Info().Str("db", cfg.Collab.DB).Bool("token", cfg.Collab.Token != "").
+	log.Info().Str("db", cfg.Collab.DB).Bool("token", cfg.Collab.Token != nil).
 		Msgf("collaboration server on ws://%s", listener.Addr())
 
 	stop, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -117,7 +117,7 @@ The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only. Other file kinds would get VS Code's `languages.createDiagnosticCollection`.
-- *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
+- *Server*: decided Go with `reearth/ygo` (`docs/2026_10_13_go-server.md`); the spike is built (`server/lib/`, `server/cmd/typst-server`, `server:go:dev`, `server:go:test`). Next: run `TestServerBinary` where a port can be bound; the Playwright collaboration spec against the Go server; the Dockerfile's runtime stage; switch `server:dev` to Go; read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); rename the module path `typst-editor` once the GitHub remote exists. Then step 2, GitLab rooms: a bot token commits (editors as `Co-authored-by:`), user tokens stay in memory, and the provider seams of `docs/2026_10_13_gitlab-projects.md`.
 
 == Releasing <architecture-development-release>
 

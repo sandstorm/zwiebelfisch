@@ -33,7 +33,7 @@ const (
 )
 
 func newServer(t *testing.T, st collab.Store, opts ...func(*collab.Options)) *collab.Server {
-	o := collab.Options{Store: st, Authenticate: collab.SharedToken("secret"), Debounce: 20 * time.Millisecond, Log: zerolog.Nop()}
+	o := collab.Options{Store: st, Authenticate: collab.SharedToken(ptr("secret")), Debounce: 20 * time.Millisecond, Log: zerolog.Nop()}
 	for _, f := range opts {
 		f(&o)
 	}
@@ -260,7 +260,7 @@ func TestStoresDebouncedAndWhenTheLastClientLeaves(t *testing.T) {
 
 func TestCloseStoresOpenRooms(t *testing.T) {
 	st := memStore(t)
-	s := collab.New(collab.Options{Store: st, Authenticate: collab.SharedToken(""), Debounce: time.Hour, Log: zerolog.Nop()})
+	s := collab.New(collab.Options{Store: st, Authenticate: collab.SharedToken(nil), Debounce: time.Hour, Log: zerolog.Nop()})
 	a := dial(t, s, "open", "anything")
 	a.edit(func(w *ydoc.Writer) { w.SetText("files", "/x", "unsaved") })
 	a.eventually("acknowledged", func() bool { return a.acks >= 1 })
@@ -351,10 +351,16 @@ func TestBadMessageClosesTheConnection(t *testing.T) {
 }
 
 func TestSharedToken(t *testing.T) {
-	_, err := collab.SharedToken("")("anything", "r")
+	_, err := collab.SharedToken(nil)("anything", "r")
 	require.NoError(t, err, "no token configured: everyone")
-	_, err = collab.SharedToken("s3cret")("s3cret", "r")
+	_, err = collab.SharedToken(ptr("s3cret"))("s3cret", "r")
 	require.NoError(t, err)
-	_, err = collab.SharedToken("s3cret")("", "r")
+	_, err = collab.SharedToken(ptr("s3cret"))("", "r")
 	require.ErrorIs(t, err, collab.ErrInvalidToken)
+	_, err = collab.SharedToken(ptr(""))("anything", "r")
+	require.ErrorIs(t, err, collab.ErrInvalidToken, "an empty token configured is still a check")
+	_, err = collab.SharedToken(ptr(""))("", "r")
+	require.NoError(t, err)
 }
+
+func ptr(s string) *string { return &s }
