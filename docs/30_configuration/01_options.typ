@@ -70,7 +70,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
   [`mainFile`], [`{ path, locked? }` (`{ path: '/main.typ' }`)], [The compiled file. It cannot be renamed or deleted. Users can make another `.typ` file the main one, for this page only; a collaboration room shares it (not a GitLab room). `locked: true` keeps it fixed, also against the room.],
   [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[mainFile.path]`.],
   [`viewType`], [`'visualEditor'` (default), `'sourceEditor'`], [The editor Typst files open in, until the user picks the other tab.],
-  [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them. `color` is their cursor color.],
+  [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them (on a collaboration server: the name signed in there). `color` is their cursor color.],
   [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings); later `editor.updateSettings`.],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
   [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],

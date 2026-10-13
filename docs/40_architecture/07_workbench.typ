@@ -141,7 +141,8 @@ window.registerSearchProvider({
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],
-  [`workbench.user`], [Who works here, as the host said; `undefined`: anonymous],
+  [`workbench.user`], [Who works here, as the host said or an extension set since; `undefined`: anonymous. Read it when needed],
+  [`workbench.setUser(user)`], [Replaces it (the collaboration extension: the account signed in at the server)],
   [`workbench.isEditorFocused()`], [Whether the focus is in the editing area],
 )
 

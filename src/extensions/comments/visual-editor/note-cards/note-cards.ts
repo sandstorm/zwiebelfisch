@@ -13,7 +13,7 @@ import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setN
 /** The floating note card (see `NoteCardPopover`) in every Visual editor. */
 export function noteCards(options: NoteCardsOptions = {}): NoteCardsContribution {
   const popovers = new Map<TypstDocument, NoteCardPopover>();
-  const me = options.user?.name.trim() || 'Anonymous';
+  const me = () => options.user?.name.trim() || 'Anonymous';
   return {
     id: 'note-cards',
     activate({ visualEditor, subscriptions }) {
@@ -39,8 +39,11 @@ export function noteCards(options: NoteCardsOptions = {}): NoteCardsContribution
 }
 
 export interface NoteCardsOptions {
-  /** Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). */
-  user?: { name: string };
+  /**
+   * Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). Read each
+   * time, so it may change (a getter: the workbench's user, once signed in at a server).
+   */
+  readonly user?: { name: string };
 }
 
 /** The note cards as a contribution, and a way to open one (the Comment action opens the new note's card). */
@@ -87,7 +90,7 @@ class NoteCardPopover {
   private current: NoteCard | undefined;
   private readonly resize: ResizeObserver | null = null;
 
-  constructor(private readonly view: EditorView, private readonly me: string) {
+  constructor(private readonly view: EditorView, private readonly me: () => string) {
     this.container = view.dom.parentElement!;
     const win = this.container.ownerDocument.defaultView;
     if (win && 'ResizeObserver' in win) this.resize = new win.ResizeObserver(() => this.place());
@@ -212,7 +215,7 @@ class NoteCardPopover {
   };
 
   private readonly cardActions: CardActions = {
-    reply: (key, text) => this.rewrite(key, (note) => addReply(note, { author: this.me, date: localDate(), text })),
+    reply: (key, text) => this.rewrite(key, (note) => addReply(note, { author: this.me(), date: localDate(), text })),
     edit: (key, index, text) => this.rewrite(key, (note) => editMessage(note, index, text)),
     deleteMessage: (key, index) => {
       const note = this.note(key);

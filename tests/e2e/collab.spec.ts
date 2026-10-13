@@ -28,6 +28,14 @@ const marginGlyphs = (page: Page) => () =>
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
 
+/**
+ * The keys that move the Visual editor's caret to its line's end / start. On macOS End and Home scroll the page
+ * (Playwright follows the platform's key bindings), Cmd+→ / Cmd+← move the caret there.
+ */
+const MAC = process.platform === 'darwin';
+const LINE_END = MAC ? 'Meta+ArrowRight' : 'End';
+const LINE_START = MAC ? 'Meta+ArrowLeft' : 'Home';
+
 async function users(browser: Browser, baseURL: string, project: string) {
   const room = `e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const ann = await join(browser, baseURL, room, 'Ann');
@@ -39,6 +47,8 @@ test('an edit in one Source editor shows up in the other user’s Visual and Sou
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: 'Typst is a markup' }).click();
+  // the line wraps in the narrow editor: Home goes to the start of the row clicked, again to the line's
+  await ann.keyboard.press('Home');
   await ann.keyboard.press('Home');
   await ann.keyboard.type('Together: ');
   await expect(bob.getByTestId('typst-visual')).toContainText('Together: Typst is');
@@ -49,10 +59,10 @@ test('an edit in one Source editor shows up in the other user’s Visual and Sou
 test('edits from both Visual editors converge', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
-  await ann.keyboard.press('End');
+  await ann.keyboard.press(LINE_END);
   await ann.keyboard.type(' (Ann)');
   await bob.getByTestId('typst-visual').locator('li', { hasText: 'Type something.' }).click();
-  await bob.keyboard.press('End');
+  await bob.keyboard.press(LINE_END);
   await bob.keyboard.type(' (Bob)');
   for (const page of [ann, bob]) {
     await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes (Ann)');
@@ -71,7 +81,7 @@ test('the other user’s selection is shown with their name', async ({ browser, 
 test('the other user’s caret shows with their name in both editors, where they moved it last, and their file is marked in the tree', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
-  await ann.keyboard.press('End');
+  await ann.keyboard.press(LINE_END);
   const visualCaret = bob.getByTestId('typst-visual').locator('h1 .typst-collaboration__caret[data-user="Ann"]');
   await expect(visualCaret).toHaveCount(1);
   await expect(visualCaret.locator('.typst-collaboration__caret-flag')).toBeVisible();
@@ -85,7 +95,7 @@ test('the other user’s caret shows with their name in both editors, where they
       return range.toString();
     });
   await expect.poll(textBefore).toBe('Typst in five minutes');
-  await ann.keyboard.press('Home');
+  await ann.keyboard.press(LINE_START);
   await expect.poll(textBefore).toBe('');
   // the collaboration extension's file decoration: Ann's initial on her file in Bob's file tree (the panel may be closed)
   const decoration = bob.getByTestId('typst-files').locator('[data-path="/main.typ"] .typst-files__decoration');
@@ -104,7 +114,8 @@ test('a caret on an empty line shows in the other user’s Source editor', async
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: /^$/ }).first().click();
   await bob.getByRole('tab', { name: 'Source' }).click();
-  const caret = bob.getByTestId('typst-source').locator('.typst-collaboration__caret[data-user="Ann"]');
+  // `has` looks inside each line: the caret's locator starts there, not at the page
+  const caret = bob.locator('.typst-collaboration__caret[data-user="Ann"]');
   await expect(bob.getByTestId('typst-source').locator('.cm-line', { has: caret })).toHaveText('Ann');
 });
 

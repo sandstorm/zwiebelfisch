@@ -8,7 +8,7 @@ import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engi
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
-import type { TypstExtension } from '../hosts/workbench/workbench';
+import type { TypstExtension, Workbench } from '../hosts/workbench/workbench';
 import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
@@ -368,6 +368,18 @@ describe('the built-in extensions', () => {
     expect(editor.source).toContain('Hi#margin-note[]');
   });
 
+  it('signs replies as the user an extension set since (the account signed in at a server), not as the host said', () => {
+    let workbench: Workbench | undefined;
+    const account: TypstExtension = { id: 'test.account', activate: (context) => void (workbench = context.workbench) };
+    const { host, editor } = setup({ viewType: VISUAL_EDITOR, source: 'A #margin-note[] b.\n', user: { name: 'Demo user' }, extensions: (builtins) => [...builtins, account] });
+    workbench!.setUser({ name: 'Ann' });
+    host.querySelector('[data-testid="typst-note-marker"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    const field = host.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] .typst-comments__card-reply')!;
+    field.value = 'Hi';
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
+    expect(editor.source).toMatch(/^A #margin-note\[- \*Ann\* \(\d{4}-\d{2}-\d{2}\): Hi\] b\.\n$/);
+  });
+
   it('counts the diagnostics in the status bar and underlines them in the Source editor', async () => {
     const { host, preview } = setup({ source: '= Hi' });
     preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) }]);
@@ -638,6 +650,23 @@ describe('collaboration', () => {
     await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-editing-progress]')).toBeNull());
     expect(area.hasAttribute('inert')).toBe(false);
     expect(source().state.doc.toString()).toBe('Room text');
+  });
+
+  it('makes the account signed in at the server the workbench\'s user (comments are signed with the name the others see)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ provider: 'gitlab', id: '2', name: 'Ann' }))));
+    let workbench: Workbench | undefined;
+    const probe: TypstExtension = { id: 'test.probe', activate: (context) => void (workbench = context.workbench) };
+    const { editor } = setup({
+      source: '',
+      user: { name: 'Demo user', color: '#123456' },
+      extensions: (builtins) => [...builtins, collaboration({ url: 'ws://127.0.0.1:9', room: 'r1' }), probe],
+    });
+    try {
+      await vi.waitFor(() => expect(workbench!.user).toEqual({ name: 'Ann', color: '#123456' }));
+    } finally {
+      editor.dispose();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("a replace in files reaches the other widget as exact edits: what the other typed meanwhile stays, and its results follow", async () => {

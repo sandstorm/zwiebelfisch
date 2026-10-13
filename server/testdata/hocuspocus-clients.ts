@@ -11,9 +11,12 @@
 // status 1.
 //   edit: two clients edit one room and see each other's text and presence; a third without the cookie is
 //         refused and gets nothing.
+//   converge: one client seeds the room with the demo's example, a second joins; both type at once, key by key, and
+//         end with the same text; a caret (relative position) of one is in the same place for the other.
 //   read: one client prints what the room holds (after a server restart).
 //   refused: one client is refused (a plain room on a server without them) and prints the reason it got.
 import { HocuspocusProvider } from '@hocuspocus/provider';
+import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import * as Y from 'yjs';
 
@@ -145,6 +148,36 @@ async function edit() {
   return { texts: texts(a), denied, intruderTexts: texts(intruder), intruderSynced: intruder.synced };
 }
 
+// Like two users of the demo: a seeds the room with the example, b joins later, both type at once.
+async function converge() {
+  const example = readFileSync('demo/examples/simple/main.typ', 'utf8');
+  const a = client(cookie);
+  await until('a is synced', () => a.synced);
+  a.document.transact(() => {
+    for (const path of ['/styles.typ', '/data/budget.ic.gen.typ', '/main.typ']) {
+      const text = new Y.Text();
+      files(a).set(path, text);
+      text.insert(0, readFileSync(`demo/examples/simple${path}`, 'utf8'));
+    }
+  });
+  const b = client(cookie);
+  await until('b sees the example', () => files(b).get('/main.typ')?.toString() === example);
+  const heading = '= Typst in five minutes';
+  const at = (p: HocuspocusProvider, s: string) => files(p).get('/main.typ')!.toString().indexOf(s) + s.length;
+  // a's caret, as the editors publish it, read back by b
+  const caret = Y.createRelativePositionFromTypeIndex(files(a).get('/main.typ')!, at(a, heading));
+  const caretAtB = Y.createAbsolutePositionFromRelativePosition(Y.decodeRelativePosition(Y.encodeRelativePosition(caret)), b.document)?.index;
+  // typed: one update per key, the two users' keys interleaved
+  for (const [i, char] of [...' (Ann)'].entries()) {
+    files(a).get('/main.typ')!.insert(at(a, heading + ' (Ann)'.slice(0, i)), char);
+    files(b).get('/main.typ')!.insert(at(b, 'Type something.' + ' (Bob)'.slice(0, i)), ' (Bob)'[i]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  const want = example.replace(heading, `${heading} (Ann)`).replace('Type something.', 'Type something. (Bob)');
+  await until('both converge', () => texts(a)['/main.typ'] === want && texts(b)['/main.typ'] === want, 3000).catch(() => {});
+  return { a: texts(a)['/main.typ'], b: texts(b)['/main.typ'], want, caretAtB, caretAtA: example.indexOf(heading) + heading.length };
+}
+
 async function read() {
   const d = client(cookie);
   await until('synced', () => d.synced);
@@ -159,7 +192,7 @@ async function refused() {
 }
 
 try {
-  const result = await ({ edit, read, refused } as Record<string, () => Promise<object>>)[scenario]();
+  const result = await ({ converge, edit, read, refused } as Record<string, () => Promise<object>>)[scenario]();
   print({ t: 'result', ...result });
 } catch (error) {
   print({ t: 'error', message: String(error) });

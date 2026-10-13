@@ -12,7 +12,7 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  *
  * In the Visual editor a note shows in the text as a speech-bubble marker, a range note's text highlighted
  * (visual-editor/margin-notes.ts); its thread of replies opens in a card floating at the marker (NoteCardPopover), not
- * in a column beside the text. Replies are signed as the workbench's `user`; only own messages can be edited.
+ * in a column beside the text. Replies are signed as the workbench's `user` at the time (in a room, the signed-in account); only own messages can be edited.
  * "Comment" (the command `comments.addComment`, Ctrl/Cmd+Alt+M) adds a note: in the Visual editor's toolbar, and in
  * the tab bar for the Source editor. A note added in the Visual editor opens its card. Search everywhere finds the
  * notes by text and author ("Comments", prefix `!`). The preview draws the notes in the page margin (drafting's own).
@@ -33,7 +33,11 @@ export function comments(): TypstExtension {
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, commands, window, workbench, preview, subscriptions } = context;
-      const notes = noteCards({ user: workbench.user });
+      const notes = noteCards({
+        get user() {
+          return workbench.user;
+        },
+      });
       subscriptions.push(
         registerAddComment(context, notes),
         registerIncludeComments(preview, project),

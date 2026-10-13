@@ -24,7 +24,7 @@ export class NoteCard {
   /** The message being edited, if any: its index and its text area. */
   private editing: { index: number; field: HTMLTextAreaElement } | null = null;
 
-  constructor(doc: Document, private readonly key: string, private readonly me: string, private readonly actions: CardActions) {
+  constructor(doc: Document, private readonly key: string, private readonly me: () => string, private readonly actions: CardActions) {
     this.dom = doc.createElement('div');
     this.dom.className = 'typst-comments__card';
     this.dom.dataset.testid = 'typst-note-card';
@@ -96,7 +96,7 @@ export class NoteCard {
     meta.className = 'typst-comments__card-meta';
     if (message.author !== null) meta.append(span(doc, 'typst-comments__card-author', message.author));
     if (message.date !== null) meta.append(span(doc, 'typst-comments__card-date', message.date));
-    const own = message.author === this.me;
+    const own = message.author === this.me();
     if (own || message.author === null) meta.insertAdjacentHTML('beforeend', EDIT_BUTTON);
     if (own && index === this.messages.length - 1) meta.insertAdjacentHTML('beforeend', DELETE_BUTTON);
     item.append(span(doc, 'typst-comments__card-text', message.text));

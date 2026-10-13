@@ -132,8 +132,13 @@ export interface ExtensionContext {
 export interface Workbench {
   /** The document the widget lives in, to create elements for it. */
   readonly ownerDocument: Document;
-  /** Who works in the widget, as the host said (`createTypstEditor({ user })`); undefined: anonymous. */
+  /**
+   * Who works in the widget: as the host said (`createTypstEditor({ user })`), until an extension knows better
+   * (`setUser`); undefined: anonymous. Read it when it is needed: it may change.
+   */
   readonly user: User | undefined;
+  /** Replaces `user`, e.g. with the account signed in at a server (the collaboration extension's): others see that name. */
+  setUser(user: User): void;
   /**
    * Shows `path` in the editing area (if the project has it), in a custom editor (`window.registerCustomEditorProvider`;
    * a Typst file's are the Visual and the Source editor): the one `viewType` names, else the one the user chose last,
@@ -384,6 +389,8 @@ export class WorkbenchHost implements Workbench {
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscription: Disposable;
+  /** Who works here since `setUser` (else the host's `user`). */
+  #user: User | undefined;
 
   readonly onDidDropFiles: Event<File[]>;
   readonly onDidChangeMenu = this.#menus.onDidChange;
@@ -474,7 +481,11 @@ export class WorkbenchHost implements Workbench {
   }
 
   get user(): User | undefined {
-    return this.options.user;
+    return this.#user ?? this.options.user;
+  }
+
+  setUser(user: User): void {
+    this.#user = user;
   }
 
   /** The settings' values the host set, by full id. */

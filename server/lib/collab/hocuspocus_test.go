@@ -121,3 +121,12 @@ func runClients(t *testing.T, s *collab.Server, scenario, cookie string) map[str
 	require.NotNil(t, result, "no result")
 	return result
 }
+
+// Two real providers typing at once in the demo's example: the server (its ygo document, the updates it relays)
+// keeps them equal, and positions mean the same on both sides.
+func TestRealProvidersConverge(t *testing.T) {
+	result := runClients(t, newServer(t, memStore(t)), "converge", "session=secret")
+	require.Equal(t, result["caretAtA"], result["caretAtB"], "a's caret is at the same place for b")
+	require.Equal(t, result["want"], result["a"])
+	require.Equal(t, result["want"], result["b"])
+}

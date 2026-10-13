@@ -53,6 +53,8 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
       const presences = new Presences((document) => project.pathOf(document));
       const user = workbench.user;
       const account = 'url' in options ? signInOut(new Account(options.url), context) : null;
+      // whoever signed in at the server is the one working here: comments are signed with the name the others see
+      if (account) subscriptions.push(account.onDidChange(() => account.identity && workbench.setUser({ ...user, name: account.identity.name })));
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
           const editor = window.activeTextEditor;
