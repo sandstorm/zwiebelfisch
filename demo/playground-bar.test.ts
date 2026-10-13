@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { GITLAB_ROOM } from './playground';
 import { renderPlaygroundBar, type BarActions } from './playground-bar';
 
-function render(search: string, actions: Partial<BarActions> = {}) {
+function render(search: string, actions: Partial<BarActions> = {}, options = { server: true }) {
   const root = document.createElement('header');
   document.body.replaceChildren(root);
   const navigate = vi.fn<BarActions['navigate']>();
   const simulateUpstream = vi.fn<BarActions['simulateUpstream']>(async () => 'GitLab: abc “Add a paragraph”');
-  const bar = renderPlaygroundBar(root, new URLSearchParams(search), { navigate, simulateUpstream, ...actions });
+  const bar = renderPlaygroundBar(root, new URLSearchParams(search), { navigate, simulateUpstream, ...actions }, options);
   const nav = (label: string) => root.querySelector<HTMLElement>(`nav[aria-label="${label}"]`)!;
   const link = (label: string, text: string) => [...nav(label).querySelectorAll('a')].find((a) => a.textContent === text)!;
   const status = () => root.querySelector<HTMLElement>('[role="status"]')!;
@@ -27,6 +27,17 @@ describe('playground bar', () => {
     expect(status().textContent).toMatch(/no server needed/);
     expect(button()).toBeUndefined();
     expect(root.querySelector('[data-testid="second-window"]')).toBeNull();
+  });
+
+  it('without a server (the static site): Collaborate and GitLab are shown, unavailable', () => {
+    const { link } = render('?example=docs', {}, { server: false });
+    expect(link('Mode', 'Local').getAttribute('aria-current')).toBe('page');
+    for (const mode of ['Collaborate', 'GitLab (fake)']) {
+      expect(link('Mode', mode).hasAttribute('href')).toBe(false);
+      expect(link('Mode', mode).getAttribute('aria-disabled')).toBe('true');
+      expect(link('Mode', mode).title).toMatch(/playground server/);
+    }
+    expect(link('Examples', 'Simple').hasAttribute('href')).toBe(true);
   });
 
   it('the name field reloads with the new user', () => {
