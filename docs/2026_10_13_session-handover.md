@@ -27,7 +27,7 @@ State at writing: HEAD `e4f7c1bf` (+ this note and the two concept notes), all u
 ## Waiting for the user
 
 - **GitLab projects** (`docs/2026_10_13_gitlab-projects.md`): chooser after OAuth (IntelliJ-like, recents, open from a pasted GitLab URL). Open questions there: branch part of the project? recents on server or browser? `api` scope vs service token? auto-commit after everyone left? one or several GitLab instances?
-- **Go server** (`docs/2026_10_13_go-server.md`): decided Go + Yjs via `reearth/ygo`, no fallback; server compile via wazero. Open there: Go module in `server/` or repo root; zerolog or `slog`.
+- **Go server** (`docs/2026_10_13_go-server.md`): decided Go + Yjs via `reearth/ygo`, no fallback; server compile via wazero, module in `server/`, zerolog. No open questions left.
 - **Find in files**: should the Source editor stop recording other origins' changes in its undo (⌘Z there also undoes a replace)?
 - **Paste**: a paste provider that throws drops the whole paste silently — harden?
 - **Docs**: merge draw.io + Mermaid into one "Diagrams" chapter? `docs/diagrams/comment-card.mmd` unused — delete? The `tables` screenshot has no spec.
