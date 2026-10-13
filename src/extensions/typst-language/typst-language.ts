@@ -1,7 +1,7 @@
 import { ProjectPath } from '../../core/paths/paths';
 import { quote } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { typstSyntax } from './source-editor/typst-syntax';
 import { TYPST_HELP } from './workbench/typst-help';
 
@@ -16,7 +16,7 @@ import { TYPST_HELP } from './workbench/typst-help';
  * that their text is Typst is contributed here once for both. Errors come from the compiler only (the diagnostics
  * extension), not from the syntax: see `typstSyntax`. See docs/40_architecture/05_source-editor.typ.
  */
-export function typstLanguage(): TypstExtension {
+export function typstLanguage(): Extension {
   return {
     id: 'typst-language',
     activate({ sourceEditor, visualEditor, languages, subscriptions }) {

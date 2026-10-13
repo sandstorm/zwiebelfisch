@@ -82,7 +82,7 @@ test('⌘/Ctrl+click on a web link opens its address in a new tab; a plain click
   await page.context().route('https://typst.app/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Typst</title>' }));
   await page.goto('/examples/plain-html/');
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
-  await page.locator('typst-editor').evaluate((el: Editor) => {
+  await page.locator('zwiebelfisch-editor').evaluate((el: Editor) => {
     el.value = 'Made with #link("https://typst.app/")[Typst].\n';
   });
   const link = visual(page).locator('.typst-markup__link');

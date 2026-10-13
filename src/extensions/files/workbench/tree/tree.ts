@@ -73,7 +73,7 @@ export class FileTree {
   }
 
   private draw(): void {
-    // The root's active element: inside <typst-editor>'s shadow root the document only sees the host.
+    // The root's active element: inside <zwiebelfisch-editor>'s shadow root the document only sees the host.
     const hadFocus = this.element.contains((this.element.getRootNode() as Document | ShadowRoot).activeElement);
     const state = this.state;
     if (!state) return;

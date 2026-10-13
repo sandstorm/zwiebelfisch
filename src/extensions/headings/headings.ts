@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
 import { HEADING, HEADING_STYLES } from './visual-editor/visual-editor';
@@ -16,7 +16,7 @@ import { headingSearch } from './workbench/heading-search';
  * the code the active editor's document starts with, or removes the document's heading numbering.
  * See docs/40_architecture/08_extensions.typ.
  */
-export function headings(): TypstExtension {
+export function headings(): Extension {
   return {
     id: 'headings',
     contributes: { commands: [{ command: TOGGLE_NUMBERING, title: 'Number headings on / off', category: 'Headings' }] },

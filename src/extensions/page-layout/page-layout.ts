@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './page-layout.css?inline';
 import { HORIZONTAL_RULE, INSERT_HORIZONTAL_RULE } from './visual-editor/horizontal-rule';
 import { INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-editor/page-break';
@@ -11,7 +11,7 @@ import { INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-editor/page-break';
  * these calls are raw boxes, like any Typst the Visual editor has no construct for.
  * See docs/20_features/04_full-typst-support.typ.
  */
-export function pageLayout(): TypstExtension {
+export function pageLayout(): Extension {
   return {
     id: 'page-layout',
     activate({ workbench, visualEditor, subscriptions }) {

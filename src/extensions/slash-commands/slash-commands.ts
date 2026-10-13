@@ -1,8 +1,8 @@
-import { Extension, type Editor } from '@tiptap/core';
+import { Extension as TiptapExtension, type Editor } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { CompletionItem, CompletionItemProvider, TextStyle, ToolbarAction } from '../../hosts/visual-editor/visual-editor';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
 /**
@@ -14,7 +14,7 @@ import css from './slash-commands.css?inline';
  * (through the completion context), so the list grows with them, and the whole feature can be left out.
  * See docs/20_features/01_wysiwyg-editing.typ and docs/40_architecture/04_visual-editor.typ, "Completion lists".
  */
-export function slashCommands(): TypstExtension {
+export function slashCommands(): Extension {
   return {
     id: 'slash-commands',
     activate({ workbench, visualEditor, subscriptions }) {
@@ -93,7 +93,7 @@ function textStyleItem(style: TextStyle): CompletionItem {
  * Placeholder with `showOnlyCurrent`): a node decoration whose `data-hint` CSS draws, so it is never document text.
  * Decorations are asked for with every state, including the focus and blur transactions Tiptap dispatches.
  */
-const SlashCommandsHint = Extension.create({
+const SlashCommandsHint = TiptapExtension.create({
   name: 'typstSlashCommandsHint',
   addProseMirrorPlugins() {
     const editor = this.editor;

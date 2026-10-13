@@ -1,6 +1,6 @@
 // Tests for contributions.ts.
 import { describe, expect, it } from 'vitest';
-import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../../hosts/workbench/workbench';
 import { ContributionLog } from './contributions';
 
 /** A namespace as the hosts make them: a class with private state and a getter. */
@@ -32,12 +32,12 @@ describe('ContributionLog', () => {
   it('records each register… call by extension, and the settings an extension declares', () => {
     const log = new ContributionLog();
     const commands = new Commands();
-    const files: TypstExtension = {
+    const files: Extension = {
       id: 'files',
       contributes: { configuration: { properties: { 'files.panel': { type: 'string', default: 'auto', description: '' } } } },
       activate: ({ commands }) => void commands.registerCommand('files.newFile', () => 'made'),
     };
-    const outline: TypstExtension = { id: 'outline', activate: ({ commands }) => void commands.registerCommand('outline.show', () => {}) };
+    const outline: Extension = { id: 'outline', activate: ({ commands }) => void commands.registerCommand('outline.show', () => {}) };
 
     for (const extension of [files, outline]) log.instrument(extension).activate(context(commands));
 

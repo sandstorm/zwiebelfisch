@@ -322,7 +322,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
   return chars;
 }
 
-/** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.prosemirror-typst.test.ts). */
+/** Checks the position map of `doc` exhaustively against its printed source (see editor/editor.prosemirror-typst.test.ts). */
 export function expectPreciseMap(doc: Node): void {
   const source = serializeToTypst(doc);
   for (const { pos, char } of visibleChars(doc)) {

@@ -1,13 +1,13 @@
 // Tests for extension-host.ts.
 import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
-import type { ExtensionContext, TypstExtension } from '../workbench';
+import type { ExtensionContext, Extension } from '../workbench';
 import { ExtensionHost, type OwnContext, type SharedContext } from './extension-host';
 
 const shared = {} as SharedContext;
 const own = () => ({}) as OwnContext;
 
-function extension(id: string, activate: (context: ExtensionContext) => void): TypstExtension {
+function extension(id: string, activate: (context: ExtensionContext) => void): Extension {
   return { id, activate };
 }
 

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: the setting `workbench.theme` (light, dark, auto; default: as the page). Preview mocked: no worker in jsdom.
+// Tests for editor.ts: the setting `workbench.theme` (light, dark, auto; default: as the page). Preview mocked: no worker in jsdom.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
-import { createTypstEditor } from './typst-editor';
+import { createEditor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -34,7 +34,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 
 function mount(theme?: 'light' | 'dark' | 'auto') {
   const host = document.body.appendChild(document.createElement('div'));
-  return { host, editor: createTypstEditor(host, { source: '= Hello', viewType: SOURCE_EDITOR, settings: theme ? { 'workbench.theme': theme } : {} }) };
+  return { host, editor: createEditor(host, { source: '= Hello', viewType: SOURCE_EDITOR, settings: theme ? { 'workbench.theme': theme } : {} }) };
 }
 
 afterEach(() => document.body.replaceChildren());
@@ -43,7 +43,7 @@ describe('the setting workbench.theme', () => {
   it('marks the widget with the chosen scheme, which its stylesheet turns into a color-scheme', () => {
     const { host } = mount('dark');
     expect(host.dataset.theme).toBe('dark');
-    const css = readFileSync('src/typst-editor/typst-editor.css', 'utf8');
+    const css = readFileSync('src/editor/editor.css', 'utf8');
     expect(css).toContain(".typst-editor[data-theme='dark'] { color-scheme: dark; }");
   });
 

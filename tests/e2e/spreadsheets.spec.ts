@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root, and the demo): a
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root, and the demo): a
 // spreadsheet (.ic) edited in IronCalc's workbook UI, imported by Typst through its generated Typst file, whose path leads to it.
 import { readFileSync } from 'node:fs';
 import init, { Model } from '@ironcalc/wasm';
@@ -7,7 +7,7 @@ import { test, fileRow, openFile } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const fileText = (page: Page, path: string) => () =>
   editor(page).evaluate((el: Editor, path) => {
     const file = el.files[path];

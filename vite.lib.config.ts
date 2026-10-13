@@ -16,7 +16,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/lib',
     emptyOutDir: true,
-    lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'typst-editor' },
+    lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'zwiebelfisch' },
     // never inline the 40 MB wasm as base64
     assetsInlineLimit: 0,
     copyPublicDir: false,

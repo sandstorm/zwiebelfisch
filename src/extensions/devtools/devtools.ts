@@ -1,4 +1,4 @@
-import type { ExtensionContext, SidePanel, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, SidePanel, Extension } from '../../hosts/workbench/workbench';
 import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
 import { EngineMemoryLog } from './model/engine-memory';
@@ -10,7 +10,7 @@ import type { ShownDocument } from './workbench/document-tab';
 
 /**
  * `extensions` with their contributions recorded, followed by the devtools extension, whose right side panel shows
- * what the widget is made of while it runs. Always there: createTypstEditor gives it the whole list (built-ins and the
+ * what the widget is made of while it runs. Always there: createEditor gives it the whole list (built-ins and the
  * host's), last. The setting `devtools.enabled` (default true) shows or removes the panel and its rail button.
  *
  * On top, the Typst engine's memory (the preview's `engineMemory`: it only grows, up to 4 GB, where the engine
@@ -27,12 +27,12 @@ import type { ShownDocument } from './workbench/document-tab';
  * (ContributionLog in recording/contributions.ts), not by a listing in the hosts. See docs/30_configuration/02_embedding.typ,
  * "Devtools".
  */
-export function devtools(extensions: readonly TypstExtension[]): TypstExtension[] {
+export function devtools(extensions: readonly Extension[]): Extension[] {
   const contributions = new ContributionLog();
   return [...extensions, devtoolsExtension(contributions)].map((extension) => contributions.instrument(extension));
 }
 
-function devtoolsExtension(contributions: ContributionLog): TypstExtension {
+function devtoolsExtension(contributions: ContributionLog): Extension {
   return {
     id: 'devtools',
     contributes: { configuration: { properties: { 'devtools.enabled': ENABLED_SETTING } } },

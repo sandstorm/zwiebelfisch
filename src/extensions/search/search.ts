@@ -2,7 +2,7 @@ import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import { type Commands, keyLabel } from '../../hosts/commands/commands';
 import type { SearchProvider } from '../../hosts/window/window';
-import type { ExtensionContext, SidePanel, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, SidePanel, Extension } from '../../hosts/workbench/workbench';
 import { Replacement } from './model/replace';
 import { SearchResults } from './model/search-results';
 import css from './search.css?inline';
@@ -38,7 +38,7 @@ import { type FindOptions, type Mode, SearchPanel } from './workbench/search-pan
  * replace with its undo (model/replace.ts) are pure; the view (workbench/search-panel.ts) gets them through its
  * options, so it is tested without a workbench.
  */
-export function search(): TypstExtension {
+export function search(): Extension {
   return {
     id: 'search',
     // search.findInFolder needs a folder: offered on the file panel's rows only, not in command search

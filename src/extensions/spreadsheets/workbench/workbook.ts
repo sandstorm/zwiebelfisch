@@ -12,7 +12,7 @@ import { followColorScheme } from './color-scheme';
 /**
  * Shows IronCalc's workbook UI in `container` for the spreadsheet `bytes`
  * (IronCalc's own format; empty: a new workbook named `name`). Its styles go
- * into the container's root (the document, or `<typst-editor>`'s shadow
+ * into the container's root (the document, or `<zwiebelfisch-editor>`'s shadow
  * root); its menus open inside the container. After every edit (cells,
  * sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
  * `fileName` (e.g. `budget.ic`) is named in that file's header.

@@ -2,7 +2,7 @@ import { pageNumber } from './preview/page-number';
 import { rendererSwitch } from './preview/renderer-switch';
 import { zoomControls } from './preview/zoom-controls';
 import { registerViewOptionsMenu } from './workbench/view-options-menu';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './preview-controls.css?inline';
 
 /**
@@ -16,7 +16,7 @@ import css from './preview-controls.css?inline';
  * the top right of the editing area (menu `view`, group `preview`, below what the editors contribute there); which are
  * on is remembered per viewer. See docs/40_architecture/06_preview.typ.
  */
-export function previewControls(): TypstExtension {
+export function previewControls(): Extension {
   return {
     id: 'preview-controls',
     activate({ workbench, preview, commands, globalState, subscriptions }) {

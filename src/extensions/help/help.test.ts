@@ -10,7 +10,7 @@ import { SourceRange } from '../../core/typst-document/typst-document';
 import type { HelpSheet } from '../../hosts/languages/languages';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import type { WindowApi } from '../../hosts/window/window';
-import { type TypstExtension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { help } from './help';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -43,7 +43,7 @@ const TYPST: HelpSheet = {
 const MERMAID: HelpSheet = { title: 'Mermaid basics', sections: [{ title: 'Flowchart', rows: [{ snippet: 'A --> B', description: 'An arrow' }] }] };
 
 /** Sheets for `typst` and `mermaid` (`.mmd` declared here), as the languages' extensions register them. */
-const sheets: TypstExtension = {
+const sheets: Extension = {
   id: 'sheets',
   contributes: { languages: [{ id: 'mermaid', extensions: ['.mmd'] }] },
   activate: ({ languages, subscriptions }) =>

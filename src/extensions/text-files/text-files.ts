@@ -2,7 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
 import type { LanguageContribution } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './text-files.css?inline';
 import { BIBTEX_HELP } from './workbench/bibtex-help';
 import { TextFileEditor } from './workbench/text-file-editor';
@@ -22,7 +22,7 @@ import { textSearch } from './workbench/text-search';
  * Which files are text files is decided here, by their ending; the window and the workbench only offer the custom
  * editor and the saving (`workspace.applyEdit`). See docs/20_features/05_multiple-files.typ.
  */
-export function textFiles(): TypstExtension {
+export function textFiles(): Extension {
   return {
     id: 'text-files',
     contributes: { languages: TEXT_LANGUAGES },

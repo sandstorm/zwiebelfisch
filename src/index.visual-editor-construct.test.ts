@@ -9,11 +9,11 @@ import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from './core/typst-document/typst-document';
 import {
   callArguments, decodeString, namedArgument, quote, trailingContent, withHash,
-  type ToolbarItem, type TypstExtension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
+  type ToolbarItem, type Extension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
 } from './index';
 import { createVisualEditor } from './testing/testing';
 
-// ----- the example, as in docs/40_architecture/04_visual-editor.typ (there it imports from 'typst-editor') -----
+// ----- the example, as in docs/40_architecture/04_visual-editor.typ (there it imports from 'zwiebelfisch') -----
 
 /** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
 interface CalloutLayout {
@@ -103,7 +103,7 @@ const INSERT_CALLOUT: ToolbarItem = {
 
 const CSS = '.callout { border-left: 3px solid var(--te-accent); padding: 4px 12px; } .callout input { font-weight: 600; border: none; }';
 
-export function callout(): TypstExtension {
+export function callout(): Extension {
   return {
     id: 'callout',
     activate({ workbench, visualEditor, subscriptions }) {

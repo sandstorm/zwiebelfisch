@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): the panel
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): the panel
 // "Find in files" shown by its key from the Visual editor, a match opened there selected, Replace all across files
 // (confirmed) and its Undo, the way in from search everywhere and the file panel, and the keys the browser would
 // otherwise take (print, bookmarks, tab search) kept by the editor.
@@ -7,7 +7,7 @@ import { fileRow, test } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const panel = (page: Page) => editor(page).getByTestId('typst-search');
 const findField = (page: Page) => panel(page).getByRole('textbox', { name: 'Find' });
 const message = (page: Page) => panel(page).locator('.typst-search__message');
@@ -29,7 +29,7 @@ function file(page: Page, name: string): Promise<string> {
 /** The shadow root's own selection where the browser has one (Chromium), else the document's. */
 function selected(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
-    const root = document.querySelector('typst-editor')!.shadowRoot as ShadowRoot & { getSelection?(): Selection | null };
+    const root = document.querySelector('zwiebelfisch-editor')!.shadowRoot as ShadowRoot & { getSelection?(): Selection | null };
     return (root.getSelection?.() ?? document.getSelection())?.toString();
   });
 }

@@ -5,7 +5,7 @@ import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { isLightText } from '../../core/color-scheme/color-scheme';
 
-/** A token of typst-editor.css (`--te-syn-*`), with CodeMirror's default light color as fallback. */
+/** A token of editor.css (`--te-syn-*`), with CodeMirror's default light color as fallback. */
 const token = (name: string, light: string) => `var(--te-syn-${name}, ${light})`;
 
 /** CodeMirror's default highlight style, its colors taken from the widget's tokens. */

@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('includes other files and shows images given as bytes', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const preview = editor.getByTestId('typst-preview');
   await expect(preview.locator('.typst-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
@@ -32,7 +32,7 @@ test('downloads an imported @preview package', async ({ page, context }) => {
   await context.route('https://packages.typst.org/preview/greet-0.1.0.tar.gz', (route) =>
     route.fulfill({ body: greet, contentType: 'application/gzip' }),
   );
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
     el.value = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
@@ -43,7 +43,7 @@ test('downloads an imported @preview package', async ({ page, context }) => {
 
 test('reports a package that cannot be downloaded', async ({ page, context }) => {
   await context.route('https://packages.typst.org/**', (route) => route.fulfill({ status: 404 }));
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
     el.value = '#import "@preview/nope:1.0.0": x';

@@ -11,12 +11,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function load(page: Page, value: string) {
-  await page.locator('typst-editor').evaluate((el: Editor, text) => (el.value = text), value);
+  await page.locator('zwiebelfisch-editor').evaluate((el: Editor, text) => (el.value = text), value);
 }
 
 const visual = (page: Page) => page.getByTestId('typst-visual');
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
-const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
 test('a code block shows its language and text; typing edits the code in place', async ({ page }) => {
   await load(page, 'Intro\n\n```rust\nfn main() {}\n```\n');

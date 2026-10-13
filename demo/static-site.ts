@@ -1,5 +1,5 @@
 // The demo as a static site (GitHub Pages, .github/workflows/pages.yml): no server, nothing saved. See main.ts.
-import type { TypstExtension } from '../src';
+import type { Extension } from '../src';
 
 /**
  * Whether this page is the static-site build (`mise run build:demo -- --mode static`): served as plain files next to
@@ -29,7 +29,7 @@ export function readOnlyBanner(document: Document): HTMLElement {
  * Save (`workbench.action.files.save`, ⌘S / Ctrl+S) on the static site: saves nothing, says so instead of the
  * browser's "Save page as".
  */
-export function readOnlySave(): TypstExtension {
+export function readOnlySave(): Extension {
   return {
     id: 'read-only-save',
     contributes: {

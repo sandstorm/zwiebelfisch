@@ -14,7 +14,7 @@ import { SourceOffset, SourceRange } from '../../core/typst-document/typst-docum
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
 import type { CustomEditorPanel, WindowApi } from '../../hosts/window/window';
-import { type TypstExtension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { search } from './search';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -43,7 +43,7 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
   let window!: WindowApi;
   const revealed: SourceRange[] = [];
   // a text file: one with a declared language; its editor notes what it is to reveal
-  const probe: TypstExtension = {
+  const probe: Extension = {
     id: 'probe',
     contributes: { languages: [{ id: 'plaintext', extensions: ['.txt'] }] },
     activate: (context) => {

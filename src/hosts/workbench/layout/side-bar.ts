@@ -54,7 +54,7 @@ export class SideBar {
     if (side === 'left') this.element.append(this.#rail, this.#panel);
     else this.element.append(this.#panel, this.#rail);
     this.#listen(doc, 'pointerdown', (event) => {
-      // composedPath: inside <typst-editor>'s shadow root the document sees the host as the target.
+      // composedPath: inside <zwiebelfisch-editor>'s shadow root the document sees the host as the target.
       if (this.#overlay && this.#shown && !event.composedPath().includes(this.element)) this.show(null);
     });
     this.element.addEventListener('keydown', (event) => {

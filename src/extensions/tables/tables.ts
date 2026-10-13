@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './tables.css?inline';
 import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/visual-editor';
 
@@ -11,7 +11,7 @@ import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/vis
  * stays a raw box. A table as a figure's body gets its caption from the figures extension (node group
  * `figureBody`). See docs/20_features/03_writing.typ.
  */
-export function tables(): TypstExtension {
+export function tables(): Extension {
   return {
     id: 'tables',
     activate({ workbench, visualEditor, subscriptions }) {

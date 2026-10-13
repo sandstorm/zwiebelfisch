@@ -2,7 +2,7 @@ import type { FileChange, Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
 import { calculateSheetFigure, droppedSpreadsheet, firstSheet } from './model/sheet-figure';
 import { spreadsheetPath, typstPath } from './model/typst-file';
@@ -27,7 +27,7 @@ import type { WorkbookEdit } from './workbench/workbook';
  * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
  * (workbench/workbook.ts). See docs/20_features/08_spreadsheets.typ.
  */
-export function spreadsheets(): TypstExtension {
+export function spreadsheets(): Extension {
   return {
     id: 'spreadsheets',
     contributes: {

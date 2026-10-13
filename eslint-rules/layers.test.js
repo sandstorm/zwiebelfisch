@@ -22,7 +22,7 @@ describe('layers', () => {
     expect(await broken('src/extensions/styles/styles.ts', "import { TypstStyleIndex } from './model/typst-style-index';")).toEqual([]);
   });
 
-  it('keeps hosts free of extensions, typst-editor/ and testing/', async () => {
+  it('keeps hosts free of extensions, editor/ and testing/', async () => {
     expect(await broken('src/hosts/workbench/workbench.ts', "import { files } from '../../extensions/files/files';")).toEqual(['local/dependencies']);
     expect(await broken('src/hosts/workbench/workbench.test.ts', "import { schema } from '../../testing/testing';")).toEqual(['local/dependencies']);
     expect(await broken('src/hosts/workbench/workbench.ts', "import { Preview } from '../preview/preview';")).toEqual([]);
@@ -36,8 +36,8 @@ describe('layers', () => {
   });
 
   it('lets only tests import testing/', async () => {
-    expect(await broken('src/typst-editor/typst-editor.ts', "import { schema } from '../testing/testing';")).toEqual(['local/dependencies']);
-    expect(await broken('src/typst-editor/typst-editor.files.test.ts', "import { schema } from '../testing/testing';")).toEqual([]);
+    expect(await broken('src/editor/editor.ts', "import { schema } from '../testing/testing';")).toEqual(['local/dependencies']);
+    expect(await broken('src/editor/editor.files.test.ts', "import { schema } from '../testing/testing';")).toEqual([]);
   });
 
   it('keeps core to core: no other folder, no Yjs, no editor library, no DOM', async () => {

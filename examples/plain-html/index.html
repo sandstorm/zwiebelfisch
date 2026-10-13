@@ -6,23 +6,23 @@
     <title>Typst Editor — plain HTML</title>
     <!-- No bundler: the library build is loaded as a plain ES module.
          Build it first with `mise run build:lib`, then serve the repository root. -->
-    <script type="module" src="../../dist/lib/typst-editor.js"></script>
+    <script type="module" src="../../dist/lib/zwiebelfisch.js"></script>
     <style>
       body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }
-      typst-editor { height: 70vh; }
+      zwiebelfisch-editor { height: 70vh; }
       /* hide the raw source until the element is defined */
-      typst-editor:not(:defined) { visibility: hidden; }
+      zwiebelfisch-editor:not(:defined) { visibility: hidden; }
     </style>
   </head>
   <body>
     <!-- settings: what the editor's features let you configure, as one JSON attribute (docs/30_configuration/01_options.typ) -->
-    <typst-editor id="editor" settings='{"workbench.theme": "light"}'>
+    <zwiebelfisch-editor id="editor" settings='{"workbench.theme": "light"}'>
       #set page(width: 12cm, height: auto, margin: 1cm)
 
       = Plain HTML
 
-      Embedded with a single `&lt;typst-editor&gt;` tag.
-    </typst-editor>
+      Embedded with a single `&lt;zwiebelfisch-editor&gt;` tag.
+    </zwiebelfisch-editor>
     <p>
       Characters: <output id="length" data-testid="length"></output>
       <label><input type="checkbox" id="dark" data-testid="dark" /> Dark</label>
@@ -33,7 +33,7 @@
       const length = document.getElementById('length');
       const show = () => (length.value = String(editor.value.length));
       editor.addEventListener('change', show);
-      customElements.whenDefined('typst-editor').then(show);
+      customElements.whenDefined('zwiebelfisch-editor').then(show);
       // settings change at any time: the editor follows the attribute
       const dark = document.getElementById('dark');
       const pdf = document.getElementById('pdf');

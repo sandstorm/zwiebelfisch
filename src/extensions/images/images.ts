@@ -4,7 +4,7 @@ import type { FileChange, FileContent, Project } from '../../core/project/projec
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage, uploadFolder } from './model/image-files';
 import { imageSource } from './visual-editor/image-syntax';
@@ -24,7 +24,7 @@ import { imageEditor } from './workbench/image-editor';
  * on its path, as every box's picture does (⌘/Ctrl+click opens the file). An edit on an image box rewrites
  * only the argument it touches (model/image-call.ts). See docs/40_architecture/08_extensions.typ.
  */
-export function images(): TypstExtension {
+export function images(): Extension {
   return {
     id: 'images',
     activate(context) {

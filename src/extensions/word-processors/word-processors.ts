@@ -1,6 +1,6 @@
-import { Extension } from '@tiptap/core';
+import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { wordProcessorHtml } from './visual-editor/word-processor-html';
 
 /**
@@ -10,7 +10,7 @@ import { wordProcessorHtml } from './visual-editor/word-processor-html';
  * Its HTML is cleaned before the Visual editor reads it with its HTML rules (ProseMirror's `transformPastedHTML`), so
  * the paste's HTML edit (`typst.html`) is the cleaned one. See docs/20_features/01_wysiwyg-editing.typ (Copy and paste).
  */
-export function wordProcessors(): TypstExtension {
+export function wordProcessors(): Extension {
   return {
     id: 'wordProcessors',
     activate({ visualEditor, subscriptions }) {
@@ -19,7 +19,7 @@ export function wordProcessors(): TypstExtension {
   };
 }
 
-const WordProcessorPaste = Extension.create({
+const WordProcessorPaste = TiptapExtension.create({
   name: 'typstWordProcessorPaste',
   addProseMirrorPlugins() {
     return [new Plugin({ props: { transformPastedHTML: wordProcessorHtml } })];

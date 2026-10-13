@@ -3,7 +3,7 @@ import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import type { TextEditor } from '../../hosts/window/window';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './file-navigation.css?inline';
 import { type NavigationLocation, NavigationHistory } from './model/navigation-history';
 import { FileNavigation } from './workbench/file-navigation';
@@ -22,7 +22,7 @@ import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
  * Every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code, and no feature needs to
  * know about the history. See docs/20_features/05_multiple-files.typ.
  */
-export function fileNavigation(): TypstExtension {
+export function fileNavigation(): Extension {
   return {
     id: 'file-navigation',
     activate({ project, window, workbench, commands, subscriptions }) {

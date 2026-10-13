@@ -1,6 +1,6 @@
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { HtmlView } from './preview/html-view';
 import css from './preview-html.css?inline';
 
@@ -18,7 +18,7 @@ import css from './preview-html.css?inline';
  * Which renderer is shown, and the switch for it, is the preview controls' (they list every renderer). No source sync
  * from a click in the page yet. See docs/40_architecture/06_preview.typ.
  */
-export function previewHtml(): TypstExtension {
+export function previewHtml(): Extension {
   return {
     id: 'preview-html',
     activate({ project, preview, workbench, subscriptions }) {

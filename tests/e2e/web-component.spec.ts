@@ -1,14 +1,14 @@
-// End-to-end tests (Playwright, against the demo build): the <typst-editor> element from the library build.
+// End-to-end tests (Playwright, against the demo build): the <zwiebelfisch-editor> element from the library build.
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 
-// examples/plain-html loads dist/lib/typst-editor.js without any bundler.
+// examples/plain-html loads dist/lib/zwiebelfisch.js without any bundler.
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
 });
 
-test('renders the inline Typst source of <typst-editor>', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+test('renders the inline Typst source of <zwiebelfisch-editor>', async ({ page }) => {
+  const editor = page.locator('zwiebelfisch-editor');
   // Playwright locators pierce the open shadow root.
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
   // the Source editor is made when first shown
@@ -19,7 +19,7 @@ test('renders the inline Typst source of <typst-editor>', async ({ page }) => {
 });
 
 test('keeps its styles inside the shadow root', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-preview')).toBeVisible();
   expect(await page.locator('head #typst-editor-styles').count()).toBe(0);
   const inShadow = await editor.evaluate((el) => el.shadowRoot!.querySelector('#typst-editor-styles') !== null);
@@ -27,7 +27,7 @@ test('keeps its styles inside the shadow root', async ({ page }) => {
 });
 
 test('dispatches change with the path and new content of the edited file while typing', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   // one change per keystroke: the last one carries all of the typed text
   await editor.evaluate((el) => {
     const changes: { path: string; content: unknown }[] = [];
@@ -46,7 +46,7 @@ test('dispatches change with the path and new content of the edited file while t
 });
 
 test('setting the value property updates the preview without a change event', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const preview = editor.getByTestId('typst-preview');
   await expect(preview.locator('.typst-preview__page')).toHaveCount(1);
   const changes = await editor.evaluate((el: HTMLElement & { value: string }) => {
@@ -62,7 +62,7 @@ test('setting the value property updates the preview without a change event', as
 });
 
 test('maps the settings attribute onto the settings, also when it changes', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const widget = editor.locator('.typst-editor');
   const toolbar = editor.getByTestId('typst-preview-toolbar');
   await expect(widget).toHaveAttribute('data-theme', 'light');
@@ -86,7 +86,7 @@ test('maps the settings attribute onto the settings, also when it changes', asyn
 });
 
 test('runs commands of the extensions', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
   const type = await editor.evaluate(async (el: HTMLElement & { executeCommand(id: string, ...args: unknown[]): Promise<Blob> }) => {
     const blob = await el.executeCommand('pdfExport.export');
@@ -96,7 +96,7 @@ test('runs commands of the extensions', async ({ page }) => {
 });
 
 test('the value attribute replaces the source', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await editor.evaluate((el) => el.setAttribute('value', '= From attribute\n'));
   await editor.getByRole('tab', { name: 'Source' }).click();
   await expect(editor.getByTestId('typst-source').locator('.cm-content')).toHaveText('= From attribute');

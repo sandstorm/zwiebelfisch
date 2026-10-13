@@ -195,7 +195,7 @@ class RawBox implements NodeView {
     return new CodeView({
       parent,
       // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root
-      // (<typst-editor>) it would read focus and selection from the document and style the wrong tree.
+      // (<zwiebelfisch-editor>) it would read focus and selection from the document and style the wrong tree.
       root: this.tiptap.view.root,
       doc: this.node.attrs.src,
       extensions: [

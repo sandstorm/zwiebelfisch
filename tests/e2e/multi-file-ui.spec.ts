@@ -10,14 +10,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('a single-file widget keeps the file panel collapsed to its rail button', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-files')).toBeHidden();
   await editor.getByTestId('typst-panel-toggle-files').click();
   await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('clicking text of another file in the preview opens that file; editing it updates the preview', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const preview = editor.getByTestId('typst-preview');
   await editor.evaluate((el: Editor) => {
     el.files = { '/chapter1.typ': '#pagebreak()\nChapter text' };
@@ -43,7 +43,7 @@ test('clicking text of another file in the preview opens that file; editing it u
 });
 
 test('creates and deletes a file from the file panel', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await editor.evaluate((el: Editor) => {
     el.files = { '/notes.typ': 'Notes' };
   });
@@ -64,7 +64,7 @@ test('creates and deletes a file from the file panel', async ({ page }) => {
 });
 
 test('the main file cannot be renamed or deleted', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await editor.evaluate((el: Editor) => {
     el.files = { '/notes.typ': 'Notes' };
   });
@@ -76,7 +76,7 @@ test('the main file cannot be renamed or deleted', async ({ page }) => {
 });
 
 test('shows an image file; dragged from the file panel into the text, it is inserted there', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await editor.evaluate((el: Editor) => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>';
     el.files = { '/logo.svg': new TextEncoder().encode(svg) };

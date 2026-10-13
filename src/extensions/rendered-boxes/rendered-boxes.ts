@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './rendered-boxes.css?inline';
 import { snippetRenderer } from './visual-editor/visual-editor';
 
@@ -13,7 +13,7 @@ import { snippetRenderer } from './visual-editor/visual-editor';
  * the document's current path) is decided here. Image boxes are drawn by the images extension's renderer (priority 110,
  * over this one's 100). See docs/40_architecture/04_visual-editor.typ, "Raw boxes".
  */
-export function renderedBoxes(): TypstExtension {
+export function renderedBoxes(): Extension {
   return {
     id: 'rendered-boxes',
     activate({ project, preview, visualEditor, workbench, subscriptions }) {

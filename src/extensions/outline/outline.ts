@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { INSERT_OUTLINE, OUTLINE } from './visual-editor/visual-editor';
 
 /**
@@ -9,7 +9,7 @@ import { INSERT_OUTLINE, OUTLINE } from './visual-editor/visual-editor';
  * rendered-boxes extension), it shows the compiled outline.
  * See docs/20_features/03_writing.typ.
  */
-export function outline(): TypstExtension {
+export function outline(): Extension {
   return {
     id: 'outline',
     activate({ visualEditor, subscriptions }) {

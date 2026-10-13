@@ -44,7 +44,7 @@ export function darkThemeVariables(color: (token: ColorToken) => string): Record
   };
 }
 
-/** The widget's color tokens (`--te-<name>`, typst-editor.css) the dark workbook is made of. */
+/** The widget's color tokens (`--te-<name>`, editor.css) the dark workbook is made of. */
 export type ColorToken =
   | 'bg'
   | 'subtle'

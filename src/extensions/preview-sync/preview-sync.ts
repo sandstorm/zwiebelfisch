@@ -2,7 +2,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PreviewContributions } from '../../hosts/preview/preview';
-import type { Memento, TypstExtension } from '../../hosts/workbench/workbench';
+import type { Memento, Extension } from '../../hosts/workbench/workbench';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
@@ -23,7 +23,7 @@ import css from './preview-sync.css?inline';
  * where a click leads is decided here. Without this extension the preview neither follows, shades nor jumps.
  * See docs/40_architecture/06_preview.typ.
  */
-export function previewSync(): TypstExtension {
+export function previewSync(): Extension {
   return {
     id: 'preview-sync',
     contributes,
@@ -91,7 +91,7 @@ export function previewSync(): TypstExtension {
 }
 
 /** Its settings: `previewSync.followCursor`, `previewSync.highlightSelection`. */
-const contributes: TypstExtension['contributes'] = {
+const contributes: Extension['contributes'] = {
   configuration: {
     properties: {
       'previewSync.followCursor': {

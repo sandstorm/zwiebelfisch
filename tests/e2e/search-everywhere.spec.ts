@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): search
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): search
 // everywhere opened by double Shift inside the editors and by the rail button, its groups and prefixes, and picking
 // (a heading in another file, a text match, a command, a file).
 import { expect, type Page } from '@playwright/test';
@@ -6,7 +6,7 @@ import { test } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const search = (page: Page) => editor(page).getByRole('combobox', { name: 'Search everywhere' });
 /** Its rows (not the options of the toolbar's Text style menu). */
 const options = (page: Page) => editor(page).getByRole('dialog', { name: 'Search everywhere' }).getByRole('option');
@@ -54,7 +54,7 @@ test('double Shift in the Source editor; % finds text in every file and selects 
   // the shadow root's own selection where the browser has one (Chromium), else the document's
   const selected = () =>
     page.evaluate(() => {
-      const root = document.querySelector('typst-editor')!.shadowRoot as ShadowRoot & { getSelection?(): Selection | null };
+      const root = document.querySelector('zwiebelfisch-editor')!.shadowRoot as ShadowRoot & { getSelection?(): Selection | null };
       return (root.getSelection?.() ?? document.getSelection())?.toString();
     });
   await expect.poll(selected).toBe('measured');

@@ -40,13 +40,13 @@ describe('entry-imports', () => {
     expect(lint('src/extensions/styles/styles.ts', "import { x } from '../labels/model/label-index';")).toEqual([
       expect.stringContaining('through its entry file extensions/labels/labels.ts'),
     ]);
-    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../testing/testing';")).toEqual([]);
-    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../typst-editor-element/typst-editor-element';")).toEqual([]);
+    expect(lint('src/editor/editor.ts', "import { x } from '../testing/testing';")).toEqual([]);
+    expect(lint('src/editor/editor.ts', "import { x } from '../editor-element/editor-element';")).toEqual([]);
   });
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {
-    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../hosts/workbench/workbench';")).toEqual([]);
-    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../hosts/workbench/layout/workbench-layout';")).toEqual([
+    expect(lint('src/editor/editor.ts', "import { x } from '../hosts/workbench/workbench';")).toEqual([]);
+    expect(lint('src/editor/editor.ts', "import { x } from '../hosts/workbench/layout/workbench-layout';")).toEqual([
       expect.stringContaining('through its entry file hosts/workbench/workbench.ts'),
     ]);
   });
@@ -60,7 +60,7 @@ describe('entry-imports', () => {
     expect(lint('tests/rooms/rooms.test.ts', inProcess, options)).toEqual([]);
     expect(lint('tests/rooms/rooms.ts', inProcess, options)).toHaveLength(1);
     expect(lint('tests/rooms/rooms.test.ts', inProcess)).toHaveLength(1);
-    expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';", options)).toHaveLength(1);
+    expect(lint('src/editor/editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';", options)).toHaveLength(1);
   });
 
   it('checks paths in new URL(…, import.meta.url) and vi.mock(…)', () => {

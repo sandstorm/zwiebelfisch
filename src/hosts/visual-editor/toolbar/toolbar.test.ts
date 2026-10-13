@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for toolbar.ts, with the host's own items (undo, redo) and an item defined here. The built-in extensions'
-// items are tested together in typst-editor/typst-editor.toolbar.test.ts.
+// items are tested together in editor/editor.toolbar.test.ts.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';

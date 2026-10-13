@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments, registerShowComments } from './preview/preview';
 import { marginNotes } from './visual-editor/margin-notes';
@@ -23,7 +23,7 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  * set it when they compile, the documents hold plain drafting (NOTE_STYLE in preview/preview.ts). `model/` knows the
  * note syntax (margin-note-syntax.ts) and the thread format (note-thread.ts). See docs/20_features/10_comments.typ.
  */
-export function comments(): TypstExtension {
+export function comments(): Extension {
   return {
     id: 'comments',
     contributes: {

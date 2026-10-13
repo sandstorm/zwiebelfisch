@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { expect, it } from 'vitest';
-import { createTypstEditor } from '../../src/typst-editor/typst-editor';
+import { createEditor } from '../../src/editor/editor';
 import type { ProjectFiles } from '../../src/core/project/project';
 import { Profiler, summarize } from './cpu-profile';
 import { InProcessWorker } from './in-process-worker';
@@ -100,7 +100,7 @@ const NEAR_BLOCKS = 30;
 
 it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('typing: $name', async (scenario) => {
   const host = document.body.appendChild(document.createElement('div'));
-  const widget = createTypstEditor(host, { files: folderFiles(scenario.folder) });
+  const widget = createEditor(host, { files: folderFiles(scenario.folder) });
   await settled();
   widget.open(scenario.path);
   const tiptap = visualEditor(host);
@@ -154,7 +154,7 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
   process.stdout.write(`${report(result)}\n`);
 }, 600_000);
 
-/** The files of an example folder as `createTypstEditor` takes them: `.typ` as text, the rest as bytes. */
+/** The files of an example folder as `createEditor` takes them: `.typ` as text, the rest as bytes. */
 function folderFiles(folder: string): ProjectFiles {
   const files: ProjectFiles = {};
   const walk = (dir: string) => {

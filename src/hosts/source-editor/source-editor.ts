@@ -15,7 +15,7 @@ import css from './source-editor.css?inline';
  * Makes the Source editors (CodeMirror 6 bound to a `TypstDocument`) and applies what extensions contribute to them.
  *
  * The Source editor shows a Typst file as plain text. It is one of the two built-in custom editors for `*.typ`, next
- * to the Visual editor; the workbench registers both (`TypstEditors`) and calls `createEditor`. The editor itself
+ * to the Visual editor; the workbench registers both (`DocumentEditors`) and calls `createEditor`. The editor itself
  * keeps only the mechanism: text and selection in sync with the document both ways, reveal, selection reporting.
  * Its look is `codeColors`, CodeMirror's default in the widget's light or dark scheme, which every CodeMirror in the
  * widget uses (raw boxes, the text files' editor). Everything else is a CodeMirror extension someone contributes: the

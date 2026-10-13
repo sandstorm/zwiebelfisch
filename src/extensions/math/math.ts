@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { insertDisplayMath, insertInlineMath, MathInput } from './visual-editor/visual-editor';
 
 /**
@@ -14,7 +14,7 @@ import { insertDisplayMath, insertInlineMath, MathInput } from './visual-editor/
  * its code (the host's `editRawBox`); the slash commands find them under "math", "equation", "formula".
  * See docs/20_features/04_full-typst-support.typ.
  */
-export function math(): TypstExtension {
+export function math(): Extension {
   return {
     id: 'math',
     activate({ visualEditor, subscriptions }) {

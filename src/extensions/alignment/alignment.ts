@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual-editor/visual-editor';
 
 /**
@@ -13,7 +13,7 @@ import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual
  * `model/` reads and writes the alignment syntax; `visual-editor/` holds the node, its commands and the menu (see
  * TextAlign in visual-editor/text-align.ts). See docs/40_architecture/08_extensions.typ.
  */
-export function alignment(): TypstExtension {
+export function alignment(): Extension {
   return {
     id: 'alignment',
     activate({ visualEditor, subscriptions }) {

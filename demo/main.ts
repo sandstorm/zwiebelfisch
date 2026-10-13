@@ -10,7 +10,7 @@
 // The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview
 // (docs-files/plugin.ts). The static site (GitHub Pages, static-site.ts) opens that example, saves nothing and offers
 // Local mode only. See docs/10_getting-started/01_getting-started.typ, "The demo".
-import { collaboration, createTypstEditor, type ProjectFiles } from '../src';
+import { collaboration, createEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery } from './playground';
@@ -45,7 +45,7 @@ async function start(): Promise<void> {
   const server = await probe();
   const { files, collaboration: room } = editorOptions(state, server?.kind ?? null);
   const docs = state.example === 'docs' && state.mode === 'local' && !STATIC_SITE ? docsSync(files ?? {}) : null;
-  const editor = createTypstEditor(document.getElementById('editor')!, {
+  const editor = createEditor(document.getElementById('editor')!, {
     files,
     extensions: (builtinExtensions) => [
       ...builtinExtensions,

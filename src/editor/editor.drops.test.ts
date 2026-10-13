@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: project files dragged from the file panel into the Visual and the Source editor, made into
+// Tests for editor.ts: project files dragged from the file panel into the Visual and the Source editor, made into
 // Typst by the built-in extensions' drop edit providers (which one wins), with their imports; files from the computer
 // dropped there, uploaded first (preview mocked: no worker in jsdom). Files to upload are Node's (jsdom's have no
 // `arrayBuffer`).
@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
 import { PROJECT_PATH_TYPE } from '../hosts/workbench/workbench';
-import { createTypstEditor } from './typst-editor';
+import { createEditor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -80,7 +80,7 @@ describe('a project file dropped into the Source editor', () => {
   /** The main file's text after `path` was dropped at its end. */
   function dropped(path: string): string {
     const host = document.body.appendChild(document.createElement('div'));
-    const editor = createTypstEditor(host, { viewType: SOURCE_EDITOR, files: FILES });
+    const editor = createEditor(host, { viewType: SOURCE_EDITOR, files: FILES });
     const view = CodeMirrorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)!;
     vi.spyOn(CodeMirrorView.prototype, 'posAtCoords').mockReturnValue(view.state.doc.length);
     view.contentDOM.dispatchEvent(rowDrop(path));
@@ -116,7 +116,7 @@ describe('a project file dropped into the Source editor', () => {
 describe('a project file dropped into the Visual editor', () => {
   it('a spreadsheet becomes its figure after the paragraph it was dropped on, its import at the top', () => {
     const host = document.body.appendChild(document.createElement('div'));
-    const editor = createTypstEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' } });
+    const editor = createEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' } });
     vi.spyOn(ProseMirrorView.prototype, 'posAtCoords').mockReturnValue({ pos: 2, inside: -1 });
     host.querySelector('[contenteditable]')!.dispatchEvent(rowDrop('/data/budget.ic'));
     expect(editor.source).toBe('#import "data/budget.ic.gen.typ": sheets\n\nOne\n\n#figure(sheets.Budget, caption: [ ])\n\nTwo\n');
@@ -125,7 +125,7 @@ describe('a project file dropped into the Visual editor', () => {
   it('an image is inserted where it is dropped, without an upload', () => {
     const host = document.body.appendChild(document.createElement('div'));
     const filesChanged = vi.fn();
-    const editor = createTypstEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' } });
+    const editor = createEditor(host, { viewType: VISUAL_EDITOR, files: { ...FILES, '/main.typ': 'One\n\nTwo\n' } });
     editor.onDidChangeFiles(filesChanged);
     vi.spyOn(ProseMirrorView.prototype, 'posAtCoords').mockReturnValue({ pos: 2, inside: -1 });
     host.querySelector('[contenteditable]')!.dispatchEvent(rowDrop('/img/logo.png'));
@@ -138,10 +138,10 @@ describe('a file from the computer dropped into the text', () => {
   const SPREADSHEET = { '/budget.ic': BYTES, '/budget.ic.gen.typ': FILES['/data/budget.ic.gen.typ'] };
 
   /** A widget showing `main` in `viewType` (a spreadsheet with its Typst file at the top), and every file change it reports. */
-  function setup(viewType: string, main: string, options: Partial<Parameters<typeof createTypstEditor>[1]> = {}) {
+  function setup(viewType: string, main: string, options: Partial<Parameters<typeof createEditor>[1]> = {}) {
     const host = document.body.appendChild(document.createElement('div'));
     const changes: string[] = [];
-    const editor = createTypstEditor(host, { viewType, files: { ...FILES, ...SPREADSHEET, '/main.typ': main }, ...options });
+    const editor = createEditor(host, { viewType, files: { ...FILES, ...SPREADSHEET, '/main.typ': main }, ...options });
     editor.onDidChangeFiles((change) => changes.push(change.path));
     return { host, editor, changes };
   }

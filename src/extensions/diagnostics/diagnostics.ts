@@ -1,6 +1,6 @@
 import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
 import { DiagnosticCollection } from './model/model';
 import { summarizeDiagnostics } from './model/diagnostics-summary';
@@ -18,7 +18,7 @@ import { DiagnosticsStatus } from './workbench/workbench';
  * (model/) splits them by document, and each editor of a document reads its own from there, whenever it is made.
  * See docs/40_architecture/08_extensions.typ.
  */
-export function diagnostics(): TypstExtension {
+export function diagnostics(): Extension {
   return {
     id: 'diagnostics',
     activate({ project, window, workbench, sourceEditor, visualEditor, preview, subscriptions }) {

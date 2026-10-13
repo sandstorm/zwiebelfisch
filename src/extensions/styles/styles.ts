@@ -1,5 +1,5 @@
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';
@@ -16,7 +16,7 @@ import { styleSearch } from './workbench/style-search';
  *
  * Calls of functions not declared as styles stay raw boxes. See docs/20_features/06_custom-styles.typ.
  */
-export function styles(): TypstExtension {
+export function styles(): Extension {
   return {
     id: 'styles',
     activate(context) {

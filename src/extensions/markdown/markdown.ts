@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { markdownLikelihood } from './model/markdown-signals';
 import { markdownToTypst } from './model/markdown-to-typst';
 
@@ -14,7 +14,7 @@ import { markdownToTypst } from './model/markdown-to-typst';
  * escape what Text escapes). Nothing for Typst a Visual editor copied, nor for a web page's HTML (the Visual editor
  * reads that itself). See docs/40_architecture/07_workbench.typ (Copy and paste).
  */
-export function markdown(): TypstExtension {
+export function markdown(): Extension {
   return {
     id: 'markdown',
     activate({ languages, subscriptions }) {

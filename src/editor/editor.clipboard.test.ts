@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: copy and paste of Typst between files in the composed widget, the imports following,
+// Tests for editor.ts: copy and paste of Typst between files in the composed widget, the imports following,
 // labels the project has already renamed (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
-import type { Editor } from '@tiptap/core';
+import type { Editor as TiptapEditor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import googleDocs from '../extensions/word-processors/visual-editor/fixtures/google-docs.html?raw';
 import libreOffice from '../extensions/word-processors/visual-editor/fixtures/libreoffice.html?raw';
 import word from '../extensions/word-processors/visual-editor/fixtures/word.html?raw';
-import { createTypstEditor, type TypstEditor } from './typst-editor';
+import { createEditor, type Editor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -46,7 +46,7 @@ const IMPORTS = 'application/x-typst-imports';
 /** The widget with `/book/one/a.typ` (main, importing `mermaid` from `/book/template.typ`) and `/book/two/b.typ`. */
 function setup(b = 'Intro\n', viewType?: string) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, {
+  const editor = createEditor(host, {
     mainFile: { path: '/book/one/a.typ' },
     files: { '/book/one/a.typ': A, '/book/two/b.typ': b, '/book/template.typ': '#let mermaid(..args) = none\n' },
     viewType,
@@ -54,7 +54,7 @@ function setup(b = 'Intro\n', viewType?: string) {
   editors.push(editor);
   const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden && p.querySelector('[contenteditable]'))!;
   /** The shown Visual editor's Tiptap editor (Tiptap keeps it on its element). */
-  const visual = () => (pane().querySelector('.typst-visual') as HTMLElement & { editor: Editor }).editor;
+  const visual = () => (pane().querySelector('.typst-visual') as HTMLElement & { editor: TiptapEditor }).editor;
   const source = () => EditorView.findFromDOM(pane().querySelector<HTMLElement>('.cm-editor')!)!;
   return { editor, visual, source, text: (path: string) => editor.files[path] as string };
 }
@@ -73,7 +73,7 @@ function clipboard(target: HTMLElement, type: 'copy' | 'cut' | 'paste', items: R
 
 const undo = (target: HTMLElement) => target.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
 
-const editors: TypstEditor[] = [];
+const editors: Editor[] = [];
 
 afterEach(() => {
   for (const editor of editors.splice(0)) editor.dispose();

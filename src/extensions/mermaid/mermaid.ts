@@ -2,7 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { calculateMermaidFigure, isMermaid, MERMAN } from './model/mermaid-figure';
 import { insertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';
@@ -21,7 +21,7 @@ import { MERMAID_HELP } from './workbench/mermaid-help';
  * opens in whatever editor `.mmd` has (the text-files extension's). Typst draws the diagram, so nothing is rendered
  * here. See docs/20_features/09_mermaid-diagrams.typ.
  */
-export function mermaid(): TypstExtension {
+export function mermaid(): Extension {
   return {
     id: 'mermaid',
     activate(context) {

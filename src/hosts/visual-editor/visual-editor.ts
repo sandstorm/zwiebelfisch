@@ -35,7 +35,7 @@ import css from './visual-editor.css?inline';
  * The editor keeps only the mechanism: paragraphs, text, raw boxes, the clipboard (in Typst), the toolbar's frame,
  * highlights, completion lists, the blocks' drag handle (`block-handle.ts`), the caret between blocks (`block-gaps.ts`) and Tab staying in the text (`tab-keys.ts`; Escape, then Tab leaves). Every other construct (headings, tables, labels, comments, …) and feature is contributed through
  * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
- * editors for `*.typ`, next to the Source editor; the workbench's `TypstEditors` makes it.
+ * editors for `*.typ`, next to the Source editor; the workbench's `DocumentEditors` makes it.
  * See docs/40_architecture/04_visual-editor.typ.
  */
 export class VisualEditor {
@@ -321,7 +321,7 @@ export interface ContributionContext {
 /**
  * A construct or feature contributing to the Visual editor: `activate` registers
  * its parts and pushes each registration's Disposable to `subscriptions`.
- * Shaped like an extension (`TypstExtension`): a construct without
+ * Shaped like an extension (`Extension`): a construct without
  * configuration is one, in the widget's list of built-in extensions; a
  * feature's extension activates the contributions it configures.
  */

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for typst-editors.ts, shown through the window's custom editors as the workbench does.
+// Tests for document-editors.ts, shown through the window's custom editors as the workbench does.
 import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
@@ -11,7 +11,7 @@ import { SourceOffset, SourceRange } from '../../../core/typst-document/typst-do
 import { SOURCE_EDITOR } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditorHost } from '../../visual-editor/visual-editor';
 import { type TextEditorSelectionChangeEvent, WindowHost } from '../../window/window';
-import { TypstEditors } from './typst-editors';
+import { DocumentEditors } from './document-editors';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -24,7 +24,7 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const area = host.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': 'Alpha\n', '/b.typ': 'Beta\n', '/logo.png': new Uint8Array([1]) });
-  const editors = new TypstEditors(project, { visualEditor: VisualEditorHost.from([]), onSelection: (editor) => options.onSelection?.(editor.selection) });
+  const editors = new DocumentEditors(project, { visualEditor: VisualEditorHost.from([]), onSelection: (editor) => options.onSelection?.(editor.selection) });
   const window = new WindowHost({
     exists: (at) => project.has(at),
     host,
@@ -46,7 +46,7 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   return { area, editors, window, show, visible, change };
 }
 
-describe('TypstEditors', () => {
+describe('DocumentEditors', () => {
   it('keeps the selection when a document switches between the Visual and the Source editor', () => {
     const { editors, show } = setup();
     show('/main.typ');
@@ -143,7 +143,7 @@ describe('TypstEditors', () => {
   });
 });
 
-describe('TypstEditors frame', () => {
+describe('DocumentEditors frame', () => {
   it('puts the frame elements first and last in the visible editor, following editor and document switches', () => {
     const { area, editors, show, visible } = setup();
     const top = document.createElement('nav');

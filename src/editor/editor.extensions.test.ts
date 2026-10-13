@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: the built-in extensions in the composed widget, through the workbench's contribution
+// Tests for editor.ts: the built-in extensions in the composed widget, through the workbench's contribution
 // points (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
@@ -8,7 +8,7 @@ import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engi
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
-import type { TypstExtension, Workbench } from '../hosts/workbench/workbench';
+import type { Extension, Workbench } from '../hosts/workbench/workbench';
 import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
@@ -17,7 +17,7 @@ import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import * as Y from 'yjs';
 import { collaboration } from '../extensions/collaboration/collaboration';
 import { FILES_MAP } from '../core/room-protocol/room-protocol';
-import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
+import { createEditor, type EditorOptions } from './editor';
 import { SourceOffset, type SourceRange } from '../core/typst-document/typst-document';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -115,10 +115,10 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
   };
 });
 
-function setup(options: TypstEditorOptions) {
+function setup(options: EditorOptions) {
   const host = document.createElement('div');
   document.body.append(host);
-  const editor = createTypstEditor(host, { viewType: SOURCE_EDITOR, ...options });
+  const editor = createEditor(host, { viewType: SOURCE_EDITOR, ...options });
   const source = () => {
     const visible = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
@@ -259,10 +259,10 @@ describe('spreadsheets', () => {
   const FILES = { '/data/budget.ic': new Uint8Array(), '/data/budget.ic.gen.typ': GENERATED };
 
   /** The widget, and the merged document links of its main file (as every editor gets them), resolved. */
-  function withLinks(options: TypstEditorOptions) {
+  function withLinks(options: EditorOptions) {
     let languages: LanguagesHost | null = null;
     // the host's merged links (the extensions get none: no extension shows links itself)
-    const probe: TypstExtension = { id: 'probe', activate: (context) => void (languages = context.languages as LanguagesHost) };
+    const probe: Extension = { id: 'probe', activate: (context) => void (languages = context.languages as LanguagesHost) };
     const shown = setup({ ...options, extensions: (builtinExtensions) => [...builtinExtensions, probe] });
     const links = () =>
       languages!.provideDocumentLinks({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: SOURCE }).map((link) => languages!.resolveDocumentLink(link));
@@ -370,7 +370,7 @@ describe('the built-in extensions', () => {
 
   it('signs replies as the user an extension set since (the account signed in at a server), not as the host said', () => {
     let workbench: Workbench | undefined;
-    const account: TypstExtension = { id: 'test.account', activate: (context) => void (workbench = context.workbench) };
+    const account: Extension = { id: 'test.account', activate: (context) => void (workbench = context.workbench) };
     const { host, editor } = setup({ viewType: VISUAL_EDITOR, source: 'A #margin-note[] b.\n', user: { name: 'Demo user' }, extensions: (builtins) => [...builtins, account] });
     workbench!.setUser({ name: 'Ann' });
     host.querySelector('[data-testid="typst-note-marker"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
@@ -441,7 +441,7 @@ describe('the built-in extensions', () => {
     };
     let registration: Disposable | undefined;
     // what the collaboration extension does for a GitLab room; source-control knows only the registry
-    const room: TypstExtension = {
+    const room: Extension = {
       id: 'room',
       activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
@@ -595,7 +595,7 @@ describe('the built-in extensions', () => {
   it("runs the host's own extensions with the built-ins, with their settings, and leaves out built-ins by id", async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const seen: unknown[] = [];
-    const counter: TypstExtension = {
+    const counter: Extension = {
       id: 'word-count',
       contributes: { configuration: { properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'The label.' } } } },
       activate: ({ workspace, commands, subscriptions }) => {
@@ -655,7 +655,7 @@ describe('collaboration', () => {
   it('makes the account signed in at the server the workbench\'s user (comments are signed with the name the others see)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ provider: 'gitlab', id: '2', name: 'Ann' }))));
     let workbench: Workbench | undefined;
-    const probe: TypstExtension = { id: 'test.probe', activate: (context) => void (workbench = context.workbench) };
+    const probe: Extension = { id: 'test.probe', activate: (context) => void (workbench = context.workbench) };
     const { editor } = setup({
       source: '',
       user: { name: 'Demo user', color: '#123456' },

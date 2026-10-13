@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports } from './model/pasted-imports';
 
 /**
@@ -17,7 +17,7 @@ import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports
  * it adds the imports to the clipboard on a copy and the import change to whatever a paste puts in (it resolves every
  * paste edit). See docs/20_features/01_wysiwyg-editing.typ.
  */
-export function imports(): TypstExtension {
+export function imports(): Extension {
   return {
     id: 'imports',
     activate({ languages, subscriptions }) {

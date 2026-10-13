@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './markup.css?inline';
 import {
   BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, HIGHLIGHT, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS, STRIKE,
@@ -18,7 +18,7 @@ import { urlLinks } from './workbench/url-links';
  * raw boxes. Web and mail addresses are document links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new
  * tab. See docs/40_architecture/04_visual-editor.typ.
  */
-export function markup(): TypstExtension {
+export function markup(): Extension {
   return {
     id: 'markup',
     activate({ window, workbench, languages, visualEditor, subscriptions }) {

@@ -1,6 +1,6 @@
 // What each extension contributes, recorded as it activates (and later). See devtools in ../devtools.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
-import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../../hosts/workbench/workbench';
 import { describeContribution, describeSetting, type Description } from './contribution-points';
 import { formatValue } from '../model/describe';
 
@@ -20,7 +20,7 @@ export class ContributionLog {
   readonly onDidChange: Event<void> = this.#changed.event;
 
   /** `extension`, recording what it declares and registers. */
-  instrument(extension: TypstExtension): TypstExtension {
+  instrument(extension: Extension): Extension {
     return {
       id: extension.id,
       contributes: extension.contributes,

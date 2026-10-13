@@ -40,8 +40,8 @@ export const layers = [
   { importers: '^src/core/', forbidden: '^src/(?!core/)', message: 'core/ imports only core/.' },
   {
     importers: '^src/hosts/',
-    forbidden: '^src/(extensions|typst-editor|typst-editor-element|testing)/',
-    message: "hosts never import extensions/, testing/ or typst-editor/ (a host's tests use its own nodes and specs).",
+    forbidden: '^src/(extensions|editor|editor-element|testing)/',
+    message: "hosts never import extensions/, testing/ or editor/ (a host's tests use its own nodes and specs).",
   },
   {
     importers: '^src/extensions/([^/]+)/',
@@ -55,7 +55,7 @@ export const layers = [
   },
   {
     importers: '^src/extensions/[^/]+/model/',
-    forbidden: '^src/(hosts|typst-editor|typst-editor-element)/',
+    forbidden: '^src/(hosts|editor|editor-element)/',
     message: "model/ builds on core/ only: hosts are views (the extension's view folders use them).",
   },
   {

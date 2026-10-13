@@ -1,5 +1,5 @@
 // The playground's state, all of it in the URL, and the editor options it means. See main.ts.
-import type { CollaborationOptions, TypstEditorOptions } from '../src';
+import type { CollaborationOptions, EditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
 
 /**
@@ -83,9 +83,9 @@ export function userQuery(user: string, params: URLSearchParams): string {
  * there (`null` in Local mode, which never asks). Without a server a room
  * falls back to a local copy of the example; the bar says so.
  */
-export function editorOptions(state: PlaygroundState, server: ServerKind | null): EditorOptions {
+export function editorOptions(state: PlaygroundState, server: ServerKind | null): PlaygroundOptions {
   const files = exampleFiles(state.example);
-  const local: EditorOptions = { files };
+  const local: PlaygroundOptions = { files };
   if (state.room === null || server === null || server === 'offline') return local;
   const collaboration = { url: SERVER.ws, room: state.room };
   // A GitLab room is loaded from the repository (local files would only shadow its images).
@@ -97,4 +97,4 @@ const GITLAB_PREFIX = 'gitlab:';
 const ROOM_PREFIX = 'playground-';
 
 /** The files to start from, and the room to join (main.ts adds the collaboration extension for it). */
-type EditorOptions = Pick<TypstEditorOptions, 'files'> & { collaboration?: CollaborationOptions };
+type PlaygroundOptions = Pick<EditorOptions, 'files'> & { collaboration?: CollaborationOptions };

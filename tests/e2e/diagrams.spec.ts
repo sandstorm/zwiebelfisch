@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): a
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): a
 // `.drawio.png` made with "New diagram…", edited in the embedded editor, saved without pressing Save, shown by Typst.
 // diagrams.net itself is not loaded: a stub page at its URL speaks the embed protocol (init, load, autosave,
 // export as xmlpng), drawing a bigger rectangle on every "Draw". A diagram is an image, too: the tabs switch editors.
@@ -37,7 +37,7 @@ const STUB = `<!doctype html>
 </script>
 </body></html>`;
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const diagramBytes = (page: Page) => () =>
   editor(page).evaluate((el: Editor) => {
     const file = el.files['/flow.drawio.png'];

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: a project's custom block style holding a code block, through the composed widget with the
+// Tests for editor.ts: a project's custom block style holding a code block, through the composed widget with the
 // built-ins: the docs' `example` (docs/template.typ) in a chapter of the docs (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import template from '../../docs/template.typ?raw';
-import { createTypstEditor } from './typst-editor';
+import { createEditor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -66,7 +66,7 @@ const CHAPTER = [
 function setup() {
   const host = document.body.appendChild(document.createElement('div'));
   const files = { '/main.typ': `#include "${CHAPTER_PATH.slice(1)}"\n`, '/template.typ': template, [CHAPTER_PATH]: CHAPTER };
-  const editor = createTypstEditor(host, { files });
+  const editor = createEditor(host, { files });
   editor.open(CHAPTER_PATH);
   const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
   const tiptap = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
@@ -104,7 +104,7 @@ describe("the docs' example block style", () => {
     for (const [path, text] of Object.entries(CHAPTERS)) {
       const files = { '/main.typ': '', '/template.typ': template, [path]: text };
       const host = document.body.appendChild(document.createElement('div'));
-      const editor = createTypstEditor(host, { files });
+      const editor = createEditor(host, { files });
       editor.open(path);
       const blocks = [...host.querySelectorAll<HTMLElement>('.typst-styles__block')].filter((b) => !b.closest('[hidden]'));
       expect(blocks.map((b) => [b.dataset.styleTitle, b.querySelectorAll('.typst-markup__code-block').length]), path).toEqual(text.split('#example[').slice(1).map(() => ['Example', 1]));

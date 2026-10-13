@@ -45,15 +45,15 @@ const PHOTO = png(900, 1600);
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
-  await page.locator('typst-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
+  await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Title');
 });
 
-const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
 /** Where the editing column and the preview column are, and whether anything sticks out sideways. */
 async function layout(page: Page) {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const box = async (locator: Locator) => (await locator.boundingBox())!;
   const left = await box(editor.locator('.typst-editor__editor-area'));
   const right = await box(editor.locator('.typst-editor__side--right'));
@@ -65,7 +65,7 @@ async function layout(page: Page) {
 
 /** The editing area still shows main.typ: Visual editor and toolbar visible, no image editor, preview beside it. */
 async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof layout>>) {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   await expect(editor.getByTestId('typst-visual')).toBeVisible();
   await expect(editor.getByRole('toolbar', { name: 'Formatting' })).toBeVisible();
   await expect(editor.getByTestId('typst-asset')).toBeHidden();
@@ -88,7 +88,7 @@ async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof 
 
 test('uploading an image with Insert image keeps the layout and the page setup', async ({ page }) => {
   const before = await layout(page);
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   // No click into the text first: the selection is still on the #set page block.
   await chooseFrom(editor.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   const pick = editor.getByRole('dialog', { name: 'Insert image' });
@@ -116,7 +116,7 @@ test('uploading an image with Insert image keeps the layout and the page setup',
 
 test('an image file dropped into the text is uploaded and inserted there, the page stays', async ({ page }) => {
   const before = await layout(page);
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const dataTransfer = await page.evaluateHandle((base64) => {
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
     const transfer = new DataTransfer();
@@ -130,7 +130,7 @@ test('an image file dropped into the text is uploaded and inserted there, the pa
 });
 
 test('a file dropped on the preview does not replace the page', async ({ page }) => {
-  const editor = page.locator('typst-editor');
+  const editor = page.locator('zwiebelfisch-editor');
   const dataTransfer = await page.evaluateHandle(() => {
     const transfer = new DataTransfer();
     transfer.items.add(new File(['x'], 'notes.txt', { type: 'text/plain' }));

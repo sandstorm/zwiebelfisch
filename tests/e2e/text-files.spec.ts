@@ -1,11 +1,11 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): a `.bib` opened
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): a `.bib` opened
 // in the text editor (plain CodeMirror), edited, saved without pressing Save, and cited by the document.
 import { expect, type Page } from '@playwright/test';
 import { test, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const fileText = (page: Page, path: string) => () =>
   editor(page).evaluate((el: Editor, path) => {
     const file = el.files[path];

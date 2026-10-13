@@ -3,7 +3,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDiagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
 
@@ -19,7 +19,7 @@ import { downloadPdf } from './preview/preview';
  * them or not). How they are offered, and whether there is a button at all, is decided here.
  * See docs/40_architecture/06_preview.typ, "Contribution points".
  */
-export function pdfExport(): TypstExtension {
+export function pdfExport(): Extension {
   return {
     id: 'pdf-export',
     contributes: {

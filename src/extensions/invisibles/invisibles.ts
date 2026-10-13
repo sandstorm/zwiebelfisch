@@ -1,7 +1,7 @@
 import { highlightWhitespace } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Memento, TypstExtension } from '../../hosts/workbench/workbench';
+import type { Memento, Extension } from '../../hosts/workbench/workbench';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import css from './invisibles.css?inline';
 import { invisibleMarks } from './visual-editor/invisible-marks';
@@ -21,7 +21,7 @@ import { invisibleMarks } from './visual-editor/invisible-marks';
  * command `invisibles.toggle` turns them on or off, from search everywhere or "Invisible characters" in the View menu
  * (menu `view`, group `editor`, checked while they are shown).
  */
-export function invisibles(): TypstExtension {
+export function invisibles(): Extension {
   return {
     id: 'invisibles',
     contributes,
@@ -60,7 +60,7 @@ export function invisibles(): TypstExtension {
 export const TOGGLE = 'invisibles.toggle';
 
 /** Its setting `invisibles.show` and its command. */
-const contributes: TypstExtension['contributes'] = {
+const contributes: Extension['contributes'] = {
   configuration: {
     properties: {
       'invisibles.show': {

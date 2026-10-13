@@ -1,7 +1,7 @@
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 
 /**
@@ -17,7 +17,7 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hos
  * links on some paths with a higher priority (the diagrams' "Edit diagram").
  * See docs/40_architecture/05_source-editor.typ, "Document links".
  */
-export function documentLinks(): TypstExtension {
+export function documentLinks(): Extension {
   return {
     id: 'document-links',
     activate({ project, commands, languages, workspace, workbench, subscriptions }) {

@@ -8,8 +8,8 @@ import type { FileChange, Project } from '../../core/project/project';
  * host's veto (`allowFileChange`), so a page embedding the widget decides in one place what may happen.
  *
  * Settings keep the widget free of feature options. Each extension declares its own settings
- * (`contributes.configuration`). The host passes all values as one map by full id (`createTypstEditor({ settings })`,
- * or the `<typst-editor>` element's `settings` attribute) and may replace it later. Extensions read their section
+ * (`contributes.configuration`). The host passes all values as one map by full id (`createEditor({ settings })`,
+ * or the `<zwiebelfisch-editor>` element's `settings` attribute) and may replace it later. Extensions read their section
  * (`getConfiguration('pdfExport')`) and hear about changes (`onDidChangeConfiguration`). A value that is undeclared
  * or of the wrong type is ignored with a warning. See docs/40_architecture/07_workbench.typ, "Changes and settings".
  */

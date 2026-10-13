@@ -1,5 +1,5 @@
 // Tests for hosts/prosemirror-typst: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
-// here. The built-in extensions' specs are tested together in typst-editor/typst-editor.prosemirror-typst.test.ts.
+// here. The built-in extensions' specs are tested together in editor/editor.prosemirror-typst.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';

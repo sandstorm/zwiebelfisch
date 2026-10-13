@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: the invisible characters (the built-in `invisibles`) in the composed widget, in the
+// Tests for editor.ts: the invisible characters (the built-in `invisibles`) in the composed widget, in the
 // Visual editor, the Source editor, raw boxes and the text files' editor; preview mocked: no worker in jsdom.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
-import { createTypstEditor } from './typst-editor';
+import { createEditor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -43,7 +43,7 @@ const TOGGLE = 'invisibles.toggle';
 
 function setup(options: { viewType?: string; settings?: Record<string, unknown> } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, { files: { '/main.typ': MAIN, '/notes.txt': 'a b\tc\n' }, ...options });
+  const editor = createEditor(host, { files: { '/main.typ': MAIN, '/notes.txt': 'a b\tc\n' }, ...options });
   const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
   const visual = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.view;
   const count = (selector: string) => pane().querySelectorAll(selector).length;

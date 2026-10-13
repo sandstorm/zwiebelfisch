@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function load(page: Page, value: string, files: Record<string, string> = {}) {
-  await page.locator('typst-editor').evaluate(
+  await page.locator('zwiebelfisch-editor').evaluate(
     (el: Editor, [value, files]) => {
       el.files = Object.fromEntries(Object.entries(files).map(([path, text]) => [path, new TextEncoder().encode(text)]));
       el.value = value;
@@ -27,7 +27,7 @@ async function load(page: Page, value: string, files: Record<string, string> = {
 const visual = (page: Page) => page.getByTestId('typst-visual');
 const picture = (box: Locator) => box.locator('img.typst-visual__rendering');
 const code = (box: Locator) => box.locator('.typst-visual__code');
-const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
 test('display math shows as compiled; clicking it shows the code, Escape the rendering again', async ({ page }) => {
   await load(page, 'Intro\n\n$ x^2 + 1/2 $\n\nOutro\n');
@@ -95,6 +95,6 @@ test('Insert image uploads a file into the project and inserts it', async ({ pag
   await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'Upload image…' }).click();
   await (await chooser).setFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
   await expect.poll(value(page)).toContain('#image("images/cat.png")');
-  expect(await page.locator('typst-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/images/cat.png');
+  expect(await page.locator('zwiebelfisch-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/images/cat.png');
   await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
 });

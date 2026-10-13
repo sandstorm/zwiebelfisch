@@ -2,7 +2,7 @@
 // Tests for the devtools extension (extensions/devtools/devtools.ts) in the widget, every extension instrumented
 // (preview mocked: no worker in jsdom; `engine.compiled(bytes)` tells the engine's memory after a compile).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
+import { createEditor, type EditorOptions } from './editor';
 
 const engine = vi.hoisted(() => {
   const listeners = new Set<() => void>();
@@ -48,9 +48,9 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   },
 }));
 
-function mount(options: Partial<TypstEditorOptions> = {}) {
+function mount(options: Partial<EditorOptions> = {}) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, { source: '= Hello\n\n#foo()', ...options });
+  const editor = createEditor(host, { source: '= Hello\n\n#foo()', ...options });
   const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
   const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
   /** Shows the devtools panel (instead of the preview), or the preview again. */

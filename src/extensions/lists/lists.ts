@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';
 import { BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';
 import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lists';
@@ -11,7 +11,7 @@ import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lis
  * the boxes only with the Universe package cheq: an edit that adds a task item also adds cheq's import and show rule
  * if they are missing (model/checklist-preamble.ts). See docs/40_architecture/08_extensions.typ.
  */
-export function lists(): TypstExtension {
+export function lists(): Extension {
   return {
     id: 'lists',
     activate({ workbench, visualEditor, subscriptions }) {

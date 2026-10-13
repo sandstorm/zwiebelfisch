@@ -25,12 +25,12 @@ import { PasteAs } from './paste-as/paste-as';
 import { StyleSheets } from './style-sheets/style-sheets';
 import { commandSearch } from './search/command-search';
 import { settingSearch } from './search/setting-search';
-import { TypstEditors } from './typst-editors/typst-editors';
+import { DocumentEditors } from './document-editors/document-editors';
 import css from './workbench.css?inline';
 
 /**
  * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
- * Hosts write their own the same way and give them to `createTypstEditor({ extensions })`.
+ * Hosts write their own the same way and give them to `createEditor({ extensions })`.
  *
  * The workbench is the widget's frame, and it knows no feature by name. Every feature is an extension: it registers
  * what it adds (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at
@@ -44,7 +44,7 @@ import css from './workbench.css?inline';
  * before any extension, so the editing area treats every file alike. See docs/40_architecture/07_workbench.typ and
  * docs/40_architecture/08_extensions.typ.
  */
-export interface TypstExtension {
+export interface Extension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */
   readonly id: string;
   /**
@@ -60,7 +60,7 @@ export interface TypstExtension {
 export interface ExtensionContributions {
   /**
    * Its settings by full id, `<section>.<key>` with the extension's own section (`pdfExport.download`). The host sets
-   * values with `createTypstEditor({ settings })`; the extension reads them with `workspace.getConfiguration`.
+   * values with `createEditor({ settings })`; the extension reads them with `workspace.getConfiguration`.
    */
   readonly configuration?: { readonly properties: Readonly<Record<string, ConfigurationProperty>> };
   /**
@@ -133,7 +133,7 @@ export interface Workbench {
   /** The document the widget lives in, to create elements for it. */
   readonly ownerDocument: Document;
   /**
-   * Who works in the widget: as the host said (`createTypstEditor({ user })`), until an extension knows better
+   * Who works in the widget: as the host said (`createEditor({ user })`), until an extension knows better
    * (`setUser`); undefined: anonymous. Read it when it is needed: it may change.
    */
   readonly user: User | undefined;
@@ -149,7 +149,7 @@ export interface Workbench {
   open(path: ProjectPath, options?: OpenOptions): void;
 
   /**
-   * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<typst-editor>`), after the
+   * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<zwiebelfisch-editor>`), after the
    * widget's own stylesheet, until disposed. An extension styles what it adds this way, under class names of its own,
    * with the colors of the `--te-*` tokens (light and dark). Widgets in one root share each stylesheet.
    */
@@ -320,7 +320,7 @@ export interface WorkbenchOptions {
  * extensions. It makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`, `workspace`)
  * and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions
  * first (their contributions are in place before any editor exists), then the main file is shown and compiled.
- * createTypstEditor creates it; extensions see it as `Workbench`.
+ * createEditor creates it; extensions see it as `Workbench`.
  */
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
@@ -329,7 +329,7 @@ export class WorkbenchHost implements Workbench {
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
   readonly #layout: WorkbenchLayout;
-  readonly #typstEditors: TypstEditors;
+  readonly #documentEditors: DocumentEditors;
   readonly #tabs: EditorTabs;
   /** The window, for the widget's `activeFile`. */
   readonly window: WindowHost;
@@ -419,7 +419,7 @@ export class WorkbenchHost implements Workbench {
       commands: this.commands,
       showContextMenu: (menuId, menuOptions) => this.window.showContextMenu(menuId, menuOptions),
     });
-    this.#typstEditors = new TypstEditors(project, {
+    this.#documentEditors = new DocumentEditors(project, {
       visualEditor: this.#visualEditor,
       sourceEditors: this.#sourceEditors,
       // Fired from the editors' own updates: the DOM's selectionchange fires before
@@ -463,7 +463,7 @@ export class WorkbenchHost implements Workbench {
    * Declares the settings, keys and languages of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
    * Values set for settings no one declares are reported (console) and ignored.
    */
-  activate(extensions: readonly TypstExtension[]): void {
+  activate(extensions: readonly Extension[]): void {
     for (const extension of extensions) {
       this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
       this.#languages.declare(extension.contributes?.languages ?? []);
@@ -523,11 +523,11 @@ export class WorkbenchHost implements Workbench {
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
     if (this.#frame) throw new Error('There is an editor frame already');
     this.#frame = frame;
-    this.#typstEditors.setFrame(frame);
+    this.#documentEditors.setFrame(frame);
     this.#placeFrame();
     return new Disposable(() => {
       this.#frame = null;
-      this.#typstEditors.setFrame(null);
+      this.#documentEditors.setFrame(null);
       frame.top.remove();
       frame.bottom.remove();
     });
@@ -581,12 +581,12 @@ export class WorkbenchHost implements Workbench {
       onDidChangeFile: this.project.onDidChangeFile,
       activeFile: () => this.#active,
       onDidChangeActiveFile: this.#shown.event,
-      activeTextEditor: () => this.#typstEditors.activeTextEditor,
+      activeTextEditor: () => this.#documentEditors.activeTextEditor,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
       menuItems: (menuId, context) => this.#menus.items(menuId, context).map((item) => ({ ...item, keybinding: this.commands.keybindingLabel(item.command) })),
       executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
     });
-    this.#typstEditors.register(window);
+    this.#documentEditors.register(window);
     return window;
   }
 
@@ -611,11 +611,11 @@ export class WorkbenchHost implements Workbench {
   }
 
   /**
-   * The editor frame around the shown custom editor's panel, unless a Typst editor is shown (TypstEditors puts it into
+   * The editor frame around the shown custom editor's panel, unless a Typst editor is shown (DocumentEditors puts it into
    * the editor's scrolling content then).
    */
   #placeFrame(): void {
-    if (!this.#frame || this.#typstEditors.activeTextEditor) return;
+    if (!this.#frame || this.#documentEditors.activeTextEditor) return;
     const panel = this.window.activeCustomEditorElement();
     if (panel) {
       panel.before(this.#frame.top);

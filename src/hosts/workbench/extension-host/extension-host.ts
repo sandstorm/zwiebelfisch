@@ -1,6 +1,6 @@
-// See TypstExtension in ../workbench.ts.
+// See Extension in ../workbench.ts.
 import { Disposable } from '../../../core/disposable/disposable';
-import type { ExtensionContext, TypstExtension } from '../workbench';
+import type { ExtensionContext, Extension } from '../workbench';
 
 /**
  * Runs a list of extensions: each is activated once, in list order, with its own `subscriptions`; `dispose`
@@ -15,7 +15,7 @@ export class ExtensionHost {
     private readonly own: (id: string) => OwnContext,
   ) {}
 
-  activate(extensions: readonly TypstExtension[]): void {
+  activate(extensions: readonly Extension[]): void {
     const ids = new Set<string>();
     for (const extension of extensions) {
       if (ids.has(extension.id)) throw new Error(`Extension ${extension.id} is in the list twice`);

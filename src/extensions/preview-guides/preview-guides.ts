@@ -1,5 +1,5 @@
 import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/preview';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 
 /**
  * Page guides, box outlines and block spacing in the preview: three view options (in the View menu), off by default.
@@ -19,7 +19,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
  * stay as they are. The colors are mid-tones, readable on the inverted pages of the dark mode too. The pictures of
  * raw boxes are cut from the preview's pages, so they show the guides, outlines and bands as well.
  */
-export function previewGuides(): TypstExtension {
+export function previewGuides(): Extension {
   return {
     id: 'preview-guides',
     activate({ preview, subscriptions }) {

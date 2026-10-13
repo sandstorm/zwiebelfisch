@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: references, links to labels and web links followed in the composed widget, in the Source
+// Tests for editor.ts: references, links to labels and web links followed in the composed widget, in the Source
 // and the Visual editor (⌘/Ctrl+click, Alt+Enter, the hover), and where the preview goes; preview mocked: no worker in
 // jsdom (where its engine places a source offset: typst-engine.test.ts).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
-import { createTypstEditor } from './typst-editor';
+import { createEditor } from './editor';
 
 /** What the preview was asked to reveal: the file and offset. */
 const revealed = vi.hoisted(() => [] as [string, number][]);
@@ -48,7 +48,7 @@ const MOD = { ctrlKey: true, metaKey: true };
 
 function setup(viewType?: string, files: Record<string, string> = { '/main.typ': MAIN, '/ch2.typ': CH2 }) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, { files, viewType });
+  const editor = createEditor(host, { files, viewType });
   const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
   const visual = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.view;
   const source = () => EditorView.findFromDOM(pane().querySelector<HTMLElement>('.cm-editor')!)!;

@@ -12,7 +12,7 @@ import type { CustomEditorPanel, TextEditor, TextEditorEdit, WindowApi } from '.
  * the document is shown in it, in its custom editor's panel; kept (with scroll and undo history) while hidden,
  * disposed with the panel (the file deleted). Switching a document between the two keeps the selection (the cursor).
  */
-export class TypstEditors {
+export class DocumentEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();
   /** The document editor shown, if any. */
   #active: DocumentEditor | null = null;
@@ -23,7 +23,7 @@ export class TypstEditors {
 
   constructor(
     private readonly project: Project,
-    private readonly options: TypstEditorsOptions = {},
+    private readonly options: DocumentEditorsOptions = {},
   ) {
     this.#visualEditor = options.visualEditor ?? new VisualEditorHost();
     this.#sourceEditors = options.sourceEditors ?? new SourceEditorHost();
@@ -113,7 +113,7 @@ export class TypstEditors {
   }
 }
 
-export interface TypstEditorsOptions {
+export interface DocumentEditorsOptions {
   /** What every document's Visual editor shows and offers (default: paragraphs and raw Typst only). */
   visualEditor?: VisualEditorHost;
   /** Makes the Source editors, with what is registered there (language, lint, file links, …); default: plain ones. */

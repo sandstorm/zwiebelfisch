@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): the Insert
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): the Insert
 // entries that make a new file and put it into the text as a figure — a spreadsheet (Insert menu), a draw.io diagram
 // and a Mermaid diagram (slash commands) — each opened in its editor afterwards. diagrams.net itself is not loaded: a
 // stub page at its URL only says it is ready.
@@ -8,7 +8,7 @@ import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const visual = (page: Page) => editor(page).getByTestId('typst-visual');
 const value = (page: Page) => () => editor(page).evaluate((el: Editor) => el.value);
 const fileText = (page: Page, path: string) => () =>

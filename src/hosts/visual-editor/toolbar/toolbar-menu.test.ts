@@ -109,7 +109,7 @@ describe('ToolbarMenu', () => {
   });
 });
 
-describe('ToolbarMenu in a shadow root (as in <typst-editor>)', () => {
+describe('ToolbarMenu in a shadow root (as in <zwiebelfisch-editor>)', () => {
   it('a press on an item is not "outside": the item gets its click', () => {
     const host = document.createElement('div');
     document.body.append(host);

@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './figures.css?inline';
 import { FIGURE, FIGURE_CAPTION } from './visual-editor/visual-editor';
 import { figureSearch } from './workbench/figure-search';
@@ -13,7 +13,7 @@ import { figureSearch } from './workbench/figure-search';
  * `figureBody` that their specs join. So images and tables do not know figures, and figures know neither. Without an
  * extension that offers a body, no figure is modelled. See docs/40_architecture/08_extensions.typ.
  */
-export function figures(): TypstExtension {
+export function figures(): Extension {
   return {
     id: 'figures',
     activate({ project, window, workbench, visualEditor, subscriptions }) {

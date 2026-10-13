@@ -1,4 +1,4 @@
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';
 import { renamePastedLabels } from './model/pasted-labels';
@@ -20,7 +20,7 @@ import { labelSearch } from './workbench/label-search';
  * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
  * through the figures extension, by caption. See docs/20_features/03_writing.typ.
  */
-export function labels(): TypstExtension {
+export function labels(): Extension {
   return {
     id: 'labels',
     activate(context) {

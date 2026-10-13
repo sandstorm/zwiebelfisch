@@ -35,13 +35,13 @@ import { math } from '../extensions/math/math';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
-import { type TypstExtension, WorkbenchHost } from '../hosts/workbench/workbench';
+import { type Extension, WorkbenchHost } from '../hosts/workbench/workbench';
 import type { Settings } from '../hosts/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import { type Event, EventEmitter } from '../core/event-emitter/event-emitter';
-import widgetStyles from './typst-editor.css?inline';
+import widgetStyles from './editor.css?inline';
 
 /**
  * Mounts the editor widget into `host`: the editors and the live preview of a project of Typst files.
@@ -56,12 +56,12 @@ import widgetStyles from './typst-editor.css?inline';
  * says which file that is. What the widget tells the host are events on the returned handle (VS Code's shape:
  * `onDid…` subscribes, the result unsubscribes). What a feature lets
  * the host configure is a setting its extension declares (`settings: { 'pdfExport.download': false }`), so the
- * options stay the same when features come and go. `<typst-editor>` wraps this function as a custom element.
+ * options stay the same when features come and go. `<zwiebelfisch-editor>` wraps this function as a custom element.
  *
  * Styles go into the root node `host` is attached to: `document.head`, or the shadow root `host` lives in. Attach
- * `host` before calling this. See docs/30_configuration/02_embedding.typ, "createTypstEditor".
+ * `host` before calling this. See docs/30_configuration/02_embedding.typ, "createEditor".
  */
-export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
+export function createEditor(host: HTMLElement, options: EditorOptions): Editor {
   const main = ProjectPath.of(options.mainFile?.path ?? '/main.typ');
   const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
   const project = new Project(main, files, { mainLocked: options.mainFile?.locked });
@@ -118,9 +118,9 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 /**
  * The handle's events, from the project's and the window's. Subscribed after the workbench's and the extensions'
  * listeners, so the host hears about a change once the widget shows it. Nothing is reported for the files the host
- * gave, so a listener added once createTypstEditor returned misses nothing. `dispose` drops every listener.
+ * gave, so a listener added once createEditor returned misses nothing. `dispose` drops every listener.
  */
-function hostEvents(project: Project, workbench: WorkbenchHost): Pick<TypstEditor, 'onDidChangeFiles' | 'onDidChangeMainFile' | 'onDidChangeActiveFile' | 'dispose'> {
+function hostEvents(project: Project, workbench: WorkbenchHost): Pick<Editor, 'onDidChangeFiles' | 'onDidChangeMainFile' | 'onDidChangeActiveFile' | 'dispose'> {
   const filesChanged = new EventEmitter<FileChange>();
   const mainFileChanged = new EventEmitter<ProjectPath>();
   const activeFileChanged = new EventEmitter<ProjectPath>();
@@ -145,7 +145,7 @@ function hostEvents(project: Project, workbench: WorkbenchHost): Pick<TypstEdito
   };
 }
 
-export interface TypstEditorOptions {
+export interface EditorOptions {
   /**
    * The project's files by absolute path, the main file included: `.typ` files (editable, each in its own
    * editors), images and data files (shown read-only). `@preview` packages need no entry: they are downloaded
@@ -178,7 +178,7 @@ export interface TypstEditorOptions {
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
    * 'show', 'workbench.theme': 'dark' }` (see docs/30_configuration/01_options.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
-   * `TypstEditor.updateSettings`.
+   * `Editor.updateSettings`.
    */
   settings?: Settings;
   /**
@@ -186,10 +186,10 @@ export interface TypstEditorOptions {
    * mine]`), leave one out or replace it (`builtinExtensions.filter((e) => e.id !== 'pdf-export')`). Default: the built-ins.
    * The devtools come after them in any case; the setting `devtools.enabled` removes their panel.
    */
-  extensions?(builtinExtensions: readonly TypstExtension[]): readonly TypstExtension[];
+  extensions?(builtinExtensions: readonly Extension[]): readonly Extension[];
 }
 
-export interface TypstEditor {
+export interface Editor {
   /**
    * Every file of the project, the main file included, with its current content. Assigning replaces them all
    * (reported through `onDidChangeFiles`) and recompiles; the main file cannot be deleted, so without an entry
@@ -244,9 +244,9 @@ export interface TypstEditor {
  * document links, custom editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
  * extensions); toolbar and menu items (the tab bar's too) have a `group` + `order`, status bar items an `alignment` +
  * `priority`. Collaboration is not among them: the host adds it with its connection. Nor are the devtools: they wrap
- * the final list (createTypstEditor).
+ * the final list (createEditor).
  */
-function builtinExtensions(): TypstExtension[] {
+function builtinExtensions(): Extension[] {
   return [
     typstLanguage(),
     imports(),

@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): the Help panel
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <zwiebelfisch-editor>'s shadow root): the Help panel
 // in Files' place on the left, its sheet following the shown file (.typ → .mmd), and its rows dragged into the Source,
 // the text and the Visual editor, and inserted with Enter.
 import { expect, type Locator, type Page } from '@playwright/test';
@@ -7,7 +7,7 @@ import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const editor = (page: Page) => page.locator('typst-editor');
+const editor = (page: Page) => page.locator('zwiebelfisch-editor');
 const value = (page: Page) => () => editor(page).evaluate((el: Editor) => el.value);
 const help = (page: Page) => editor(page).getByTestId('typst-help');
 /** The help row showing `snippet`. */

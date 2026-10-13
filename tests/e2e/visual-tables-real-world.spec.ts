@@ -7,7 +7,7 @@ type Editor = HTMLElement & { value: string; files: Record<string, string | Uint
 
 const visual = (page: Page) => page.locator('[data-testid=typst-visual]:visible');
 
-/** The text of `path` in the demo's project (the demo page has no <typst-editor>: `window.editor`). */
+/** The text of `path` in the demo's project (the demo page has no <zwiebelfisch-editor>: `window.editor`). */
 const fileText = (page: Page, path: string) => () =>
   page.evaluate((path) => {
     const file = (window as unknown as { editor: Editor }).editor.files[path];
@@ -16,12 +16,12 @@ const fileText = (page: Page, path: string) => () =>
 
 test.describe('a table with expression cells (plain page, boxes rendered)', () => {
   const SOURCE = '#let ms(v) = [#v ms]\n\n#table(\n    columns: 2,\n    table.header([*Pages*], [*Cold*]),\n    [1], ms(18),\n  )\n';
-  const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+  const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/examples/plain-html/');
     await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
-    await page.locator('typst-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
+    await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   });
 
   // `ms(18)` is drawn by the body of `ms`: its glyphs carry spans there, not in the cell, so the
@@ -47,12 +47,12 @@ test.describe('a table with expression cells (plain page, boxes rendered)', () =
 
 test.describe('a table with track-size columns (plain page)', () => {
   const SOURCE = '#table(\n  columns: (auto, 2fr, 1fr),\n  table.header[Extension][What it adds][Through],\n  [`files`], [file panel], [side panel],\n)\n';
-  const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+  const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/examples/plain-html/');
     await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
-    await page.locator('typst-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
+    await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   });
 
   test('is a Visual table; typing in a cell changes only it; columns change the array', async ({ page }) => {

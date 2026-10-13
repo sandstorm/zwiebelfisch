@@ -2,7 +2,7 @@ import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import { ProgressLocation } from '../../hosts/window/window';
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
 import { Account } from './account';
 import { CollaborationLink } from './collaboration-link';
@@ -35,7 +35,7 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  * docs/20_features/12_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and
  * docs/40_architecture/09_server.typ.
  */
-export function collaboration(options: CollaborationOptions): TypstExtension {
+export function collaboration(options: CollaborationOptions): Extension {
   const server = 'url' in options;
   return {
     id: 'collaboration',

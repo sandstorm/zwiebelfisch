@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for open-file-hash.ts, in the widget (Source editor). Preview mocked: no worker in jsdom.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTypstEditor, type ExtensionContext, ProjectPath, SOURCE_EDITOR, SourceOffset, type TypstEditor } from '../src';
+import { createEditor, type ExtensionContext, ProjectPath, SOURCE_EDITOR, SourceOffset, type Editor } from '../src';
 import { hashForLocation, locationFromHash, openFileHash } from './open-file-hash';
 
 vi.mock('../src/hosts/preview/preview', async (importOriginal) => ({
@@ -33,7 +33,7 @@ vi.mock('../src/hosts/preview/preview', async (importOriginal) => ({
 
 const FILES = { '/main.typ': '= Main\n\nText', '/chapter.typ': 'one\ntwo\nthree\nfour' };
 
-let editor: TypstEditor | undefined;
+let editor: Editor | undefined;
 afterEach(() => {
   editor?.dispose();
   vi.useRealTimers();
@@ -46,7 +46,7 @@ async function mount(hash: string, files: Record<string, string> = FILES) {
   let context: ExtensionContext | undefined;
   const probe = { id: 'probe', activate: (c: ExtensionContext) => void (context = c) };
   const host = document.body.appendChild(document.createElement('div'));
-  editor = createTypstEditor(host, { files, viewType: SOURCE_EDITOR, extensions: (builtins) => [...builtins, openFileHash(), probe] });
+  editor = createEditor(host, { files, viewType: SOURCE_EDITOR, extensions: (builtins) => [...builtins, openFileHash(), probe] });
   await Promise.resolve();
   const caret = () => {
     const textEditor = context!.window.activeTextEditor!;

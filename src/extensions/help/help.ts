@@ -1,4 +1,4 @@
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './help.css?inline';
 import { snippetDrops, TYPST_SNIPPET_TYPE } from './visual-editor/snippet-drops';
 import { HelpPanel } from './workbench/help-panel';
@@ -14,7 +14,7 @@ import { HelpPanel } from './workbench/help-panel';
  * typst-language, Mermaid in mermaid, …). The panel only renders what `languages.provideHelp` gives for the shown
  * file's language, so a language brings its help without the panel knowing it.
  */
-export function help(): TypstExtension {
+export function help(): Extension {
   return {
     id: 'help',
     activate(context) {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// Tests for typst-editor-element.ts: options, attributes, `value` / `files` and the events (preview mocked: no worker in jsdom).
+// Tests for editor-element.ts: options, attributes, `value` / `files` and the events (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
-import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
+import { defineEditorElement, type EditorChangeDetail, type EditorElement } from './editor-element';
 import type { FileChange, Project } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
@@ -34,18 +34,18 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   },
 }));
 
-defineTypstEditorElement();
+defineEditorElement();
 
-function element(html = '<typst-editor></typst-editor>'): TypstEditorElement {
+function element(html = '<zwiebelfisch-editor></zwiebelfisch-editor>'): EditorElement {
   const template = document.createElement('template');
   template.innerHTML = html;
-  return template.content.firstElementChild as TypstEditorElement;
+  return template.content.firstElementChild as EditorElement;
 }
 
-function events(el: TypstEditorElement) {
-  const changes: TypstEditorChangeDetail[] = [];
+function events(el: EditorElement) {
+  const changes: EditorChangeDetail[] = [];
   const fileChanges: FileChange[] = [];
-  el.addEventListener('change', (event) => changes.push((event as CustomEvent<TypstEditorChangeDetail>).detail));
+  el.addEventListener('change', (event) => changes.push((event as CustomEvent<EditorChangeDetail>).detail));
   el.addEventListener('files-change', (event) => fileChanges.push((event as CustomEvent<FileChange>).detail));
   return { changes, fileChanges };
 }
@@ -55,7 +55,7 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe('<typst-editor>', () => {
+describe('<zwiebelfisch-editor>', () => {
   it('starts from `options` (files with the main file, its path)', () => {
     const el = element();
     el.options = { mainFile: { path: '/thesis.typ' }, files: { '/thesis.typ': '= Thesis', '/a.typ': 'A' } };
@@ -65,11 +65,11 @@ describe('<typst-editor>', () => {
   });
 
   it('takes the text content, and the `value` attribute over it and over `options.source`', () => {
-    const inline = element('<typst-editor>\n  = Inline\n</typst-editor>');
+    const inline = element('<zwiebelfisch-editor>\n  = Inline\n</zwiebelfisch-editor>');
     inline.options = { source: '= Option' };
     document.body.append(inline);
     expect(inline.value).toBe('= Inline\n');
-    const attribute = element('<typst-editor value="= Attribute">= Inline</typst-editor>');
+    const attribute = element('<zwiebelfisch-editor value="= Attribute">= Inline</zwiebelfisch-editor>');
     document.body.append(attribute);
     expect(attribute.value).toBe('= Attribute');
     const option = element();
@@ -80,7 +80,7 @@ describe('<typst-editor>', () => {
 
   it('takes the source written inside it without the indentation HTML gives it', () => {
     const value = (html: string) => {
-      const el = element(`<typst-editor>${html}</typst-editor>`);
+      const el = element(`<zwiebelfisch-editor>${html}</zwiebelfisch-editor>`);
       document.body.append(el);
       return el.value;
     };
@@ -91,7 +91,7 @@ describe('<typst-editor>', () => {
   });
 
   it('maps the settings attribute (JSON) onto the settings, over options.settings, also when it changes', () => {
-    const el = element(`<typst-editor settings='{"workbench.theme": "dark"}'></typst-editor>`);
+    const el = element(`<zwiebelfisch-editor settings='{"workbench.theme": "dark"}'></zwiebelfisch-editor>`);
     el.options = { settings: { 'workbench.theme': 'light', 'files.panel': 'show' } };
     document.body.append(el);
     const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!;
@@ -102,7 +102,7 @@ describe('<typst-editor>', () => {
   });
 
   it('updateSettings merges, also while not connected; a new settings attribute replaces only its own ids', () => {
-    const el = document.createElement('typst-editor');
+    const el = document.createElement('zwiebelfisch-editor');
     el.setAttribute('settings', '{"workbench.theme": "dark", "pdfExport.download": false}');
     el.options = { settings: { 'workbench.theme': 'light' } };
     el.updateSettings({ 'files.panel': 'show' });
@@ -119,7 +119,7 @@ describe('<typst-editor>', () => {
 
   it('ignores a settings attribute that is not a JSON object, with a warning', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const el = element(`<typst-editor settings="dark"></typst-editor>`);
+    const el = element(`<zwiebelfisch-editor settings="dark"></zwiebelfisch-editor>`);
     document.body.append(el);
     expect(el.settings).toEqual({});
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('not a JSON object'));
@@ -174,11 +174,11 @@ describe('<typst-editor>', () => {
   });
 
   it('takes `options`, `value` and `files` set before the element was defined', () => {
-    const el = document.createElement('late-editor') as TypstEditorElement;
+    const el = document.createElement('late-editor') as EditorElement;
     el.options = { viewType: SOURCE_EDITOR, files: { '/a.typ': 'A' } };
     el.value = '= Early';
     document.body.append(el);
-    defineTypstEditorElement('late-editor');
+    defineEditorElement('late-editor');
     expect(el.value).toBe('= Early');
     expect(el.files).toEqual({ '/main.typ': '= Early', '/a.typ': 'A' });
   });

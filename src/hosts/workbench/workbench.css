@@ -1,6 +1,6 @@
 /* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
    editors' panels, the editor/title menu) and the status bar. See WorkbenchHost in workbench.ts, which puts it in
-   first, after the tokens and the frame of typst-editor.css. */
+   first, after the tokens and the frame of editor.css. */
 .typst-editor__side {
   grid-row: 1;
   position: relative;

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import { type TypstExtension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { files } from './files';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -25,7 +25,7 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-function setup(more: TypstExtension[] = [], { mainLocked = false } = {}) {
+function setup(more: Extension[] = [], { mainLocked = false } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/chapters/a.typ': 'A\n', '/chapters/data.csv': 'a,b\n' }, { mainLocked });
   const workbench = new WorkbenchHost(host, project, { settings: { 'files.panel': 'show' } });

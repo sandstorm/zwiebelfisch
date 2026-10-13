@@ -57,7 +57,7 @@ test.describe('in a paragraph (plain page, boxes rendered)', () => {
     await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
   });
 
-  const load = (page: Page, value: string) => page.locator('typst-editor').evaluate((el: Editor, value) => (el.value = value), value);
+  const load = (page: Page, value: string) => page.locator('zwiebelfisch-editor').evaluate((el: Editor, value) => (el.value = value), value);
 
   test('inline code that is not compiled is a one-line chip', async ({ page }) => {
     // as in the advanced example: what `ms` draws comes from its definition, so there is no snippet of the call

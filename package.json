@@ -1,22 +1,22 @@
 {
-  "name": "typst-editor",
+  "name": "zwiebelfisch",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Embeddable Typst editor widget: source + WYSIWYG views with live preview",
-  "module": "./dist/lib/typst-editor.js",
+  "description": "Zwiebelfisch: an embeddable Typst editor widget with source and WYSIWYG views and a live preview",
+  "module": "./dist/lib/zwiebelfisch.js",
   "types": "./dist/lib/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/lib/types/index.d.ts",
-      "import": "./dist/lib/typst-editor.js"
+      "import": "./dist/lib/zwiebelfisch.js"
     }
   },
   "files": [
     "dist/lib"
   ],
   "sideEffects": [
-    "./dist/lib/typst-editor.js",
+    "./dist/lib/zwiebelfisch.js",
     "./src/index.ts"
   ],
   "packageManager": "pnpm@10.34.6",

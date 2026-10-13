@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 
 async function load(page: Page, value: string) {
   // evaluate runs in the page: SVG travels as an argument (a closure over it is not serialized).
-  await page.locator('typst-editor').evaluate(
+  await page.locator('zwiebelfisch-editor').evaluate(
     (el: Editor, { value, svg }) => {
       el.files = { '/logo.svg': new TextEncoder().encode(svg) };
       el.value = value;
@@ -24,7 +24,7 @@ async function load(page: Page, value: string) {
 }
 
 const visual = (page: Page) => page.getByTestId('typst-visual');
-const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 const imageBox = (page: Page) => visual(page).locator('.typst-images__box');
 const picture = (page: Page) => imageBox(page).locator('img.typst-visual__rendering');
 const imageBar = (page: Page) => page.getByRole('toolbar', { name: 'Image' });

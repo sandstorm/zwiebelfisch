@@ -24,7 +24,7 @@ export class ToolbarMenu implements ToolbarControl {
   private shown = '';
   /** The items while the menu is open. */
   private items: MenuItems = { buttons: [], refresh: () => {} };
-  /** Closes on a mousedown outside; the composed path sees through shadow roots (`<typst-editor>`). */
+  /** Closes on a mousedown outside; the composed path sees through shadow roots (`<zwiebelfisch-editor>`). */
   private readonly outside = (event: MouseEvent) => {
     if (!event.composedPath().includes(this.element)) this.close();
   };

@@ -95,7 +95,7 @@ describe('WorkbenchLayout', () => {
 
   it('the right side column is a share of the widget, so an opening left panel narrows only the editing column', () => {
     // Regression (image-upload.spec): with `1fr 1fr` the panel's width came out of both columns and the preview moved.
-    const css = readFileSync('src/typst-editor/typst-editor.css', 'utf8');
+    const css = readFileSync('src/editor/editor.css', 'utf8');
     const columns = /\.typst-editor \{[^}]*grid-template-columns:\s*([^;]+);/.exec(css)?.[1].trim();
     expect(columns).toBe('auto minmax(min(20rem, 25%), 1fr) var(--te-right-side, auto)');
   });

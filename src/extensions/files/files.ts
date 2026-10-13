@@ -1,6 +1,6 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { ExtensionContext, MenuContext, TypstExtension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, MenuContext, Extension } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
 import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';
@@ -23,7 +23,7 @@ import { icon } from './workbench/icons/icons';
  * tree model (model/) get what they need as options, so the panel is tested without a workbench.
  * See docs/20_features/05_multiple-files.typ.
  */
-export function files(): TypstExtension {
+export function files(): Extension {
   return {
     id: 'files',
     contributes: {

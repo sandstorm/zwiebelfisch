@@ -1,6 +1,6 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/workbench/workbench';
 import type { SourceControl } from '../../hosts/scm/scm';
 import css from './source-control.css?inline';
 import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './workbench/workbench';
@@ -17,7 +17,7 @@ import { commit, commitTitle, resourceDecorations, SourceControlStatus } from '.
  * `scm.registerSourceControl` and tells its outcomes itself. This extension only shows what is registered, so neither
  * knows the other. See docs/40_architecture/07_workbench.typ, "Source controls".
  */
-export function sourceControl(): TypstExtension {
+export function sourceControl(): Extension {
   return {
     id: 'source-control',
     activate(context) {

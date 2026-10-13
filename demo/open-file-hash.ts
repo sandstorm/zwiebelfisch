@@ -1,5 +1,5 @@
 // The demo's extension keeping the shown file and the cursor's line in the URL fragment. See main.ts.
-import { ProjectPath, SourceOffset, type TypstExtension, type WindowApi } from '../src';
+import { ProjectPath, SourceOffset, type Extension, type WindowApi } from '../src';
 
 /**
  * The shown file and the cursor's line in the URL fragment (`#/chapters/intro.typ:12`, the line 1-based like GitHub's
@@ -12,7 +12,7 @@ import { ProjectPath, SourceOffset, type TypstExtension, type WindowApi } from '
  * meanwhile the fragment names the shown file. While the user works, the fragment follows (history.replaceState: no
  * history entries): at once for another file, after a pause for the cursor.
  */
-export function openFileHash(): TypstExtension {
+export function openFileHash(): Extension {
   return {
     id: 'open-file-hash',
     activate({ project, window, workbench, subscriptions }) {

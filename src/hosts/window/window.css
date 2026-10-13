@@ -163,7 +163,7 @@
 }
 @keyframes typst-editor-spin { to { transform: rotate(360deg); } }
 /* withProgress, ProgressLocation.EditingArea: a note over the editing area, in its grid cell (the frame's column 2,
-   typst-editor.css), while the area is inert. */
+   editor.css), while the area is inert. */
 .typst-editor__editing-progress {
   grid-column: 2;
   grid-row: 1;
