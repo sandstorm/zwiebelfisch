@@ -3,7 +3,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
-import type { FileChange } from '../core/project/project';
+import type { FileChange, Project } from '../core/project/project';
+import { ProjectPath } from '../core/paths/paths';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -50,9 +51,9 @@ afterEach(() => {
 });
 
 describe('<typst-editor>', () => {
-  it('starts from `options` (files with the main file, main path)', () => {
+  it('starts from `options` (files with the main file, its path)', () => {
     const el = element();
-    el.options = { main: '/thesis.typ', files: { '/thesis.typ': '= Thesis', '/a.typ': 'A' } };
+    el.options = { mainFile: { path: '/thesis.typ' }, files: { '/thesis.typ': '= Thesis', '/a.typ': 'A' } };
     document.body.append(el);
     expect(el.value).toBe('= Thesis');
     expect(el.files).toEqual({ '/thesis.typ': '= Thesis', '/a.typ': 'A' });
@@ -130,6 +131,21 @@ describe('<typst-editor>', () => {
     expect(changes).toEqual([{ path: '/main.typ', content: '= Main!' }]);
     expect(fileChanges).toEqual([{ kind: 'update', path: '/main.typ', content: '= Main!' }]);
     expect(onFilesChange).toHaveBeenCalledWith({ kind: 'update', path: '/main.typ', content: '= Main!' });
+  });
+
+  it('fires `main-file-change` with the path when another file becomes the main file, and calls `onMainFileChange`', () => {
+    const el = element();
+    let project: Project | undefined;
+    const onMainFileChange = vi.fn();
+    const probe = { id: 'probe', activate: (context: { project: Project }) => void (project = context.project) };
+    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' }, onMainFileChange, extensions: (builtins) => [...builtins, probe] };
+    document.body.append(el);
+    const details: unknown[] = [];
+    el.addEventListener('main-file-change', (event) => details.push((event as CustomEvent).detail));
+    project!.setMain(ProjectPath.of('/a.typ'));
+    expect(details).toEqual([{ path: '/a.typ' }]);
+    expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
+    expect(el.value).toBe('A');
   });
 
   it('dispatches nothing when the host sets `value` or `files`', () => {

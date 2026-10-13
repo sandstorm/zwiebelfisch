@@ -25,7 +25,8 @@ import type { Settings } from '../hosts/workspace/workspace';
  * - `files` (all files, the main one included) and `value` (the main file's text, a shortcut) are the
  *   current content; setting them replaces it without events, as with `<input>`.
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
- *   `files-change` with every `FileChange` (`onFilesChange`), `open` with `{ path }` (`onOpen`).
+ *   `files-change` with every `FileChange` (`onFilesChange`), `main-file-change` with `{ path }` (`onMainFileChange`),
+ *   `open` with `{ path }` (`onOpen`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
  *
  * See docs/30_configuration/02_embedding.typ, "Custom element".
@@ -202,6 +203,7 @@ const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { d
 /** The editor's callbacks the element forwards as DOM events. */
 const EVENTS: Record<string, Forward> = {
   onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
+  onMainFileChange: (path: ProjectPath) => [['main-file-change', { path }]],
   onOpen: (path: ProjectPath) => [['open', { path }]],
 };
 

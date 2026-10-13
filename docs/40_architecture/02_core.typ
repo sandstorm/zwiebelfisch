@@ -36,7 +36,7 @@ type FileChange =
 ```
 
 - *Files by `ProjectPath`:* a `.typ` file is a `TypstDocument` (kept across renames, so open editors survive); any other file is a `FileContent` (`string | Uint8Array`).
-- *The main file* always exists and cannot be renamed or deleted. `.typ` files keep their ending.
+- *The main file* (`main`) always exists and cannot be renamed or deleted. `setMain(path)` makes another `.typ` file the main one (a reason or null; refused when the host locked it, `mainLocked`), `onDidChangeMain` tells. `.typ` files keep their ending.
 - `check(change)` returns a reason or null; `apply(change)` throws where `check` refuses.
 - `replace(files)` reports a `delete`, `create` or `update` per file and keeps the documents of paths that stay.
 - `onDidChangeFile` fires for every change, document edits included (as `update`). Nobody refreshes by hand.

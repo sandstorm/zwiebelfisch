@@ -42,7 +42,7 @@ const IMPORTS = 'application/x-typst-imports';
 function setup(b = 'Intro\n', viewType?: string) {
   const host = document.body.appendChild(document.createElement('div'));
   const editor = createTypstEditor(host, {
-    main: '/book/one/a.typ',
+    mainFile: { path: '/book/one/a.typ' },
     files: { '/book/one/a.typ': A, '/book/two/b.typ': b, '/book/template.typ': '#let mermaid(..args) = none\n' },
     viewType,
   });

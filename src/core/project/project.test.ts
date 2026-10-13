@@ -100,6 +100,35 @@ describe('Project', () => {
     expect(p.check({ kind: 'delete', path: path('/zeta.typ') })).toBeNull();
   });
 
+  it('makes another Typst file the main file, which then is protected and listed first', () => {
+    const p = project();
+    const listener = vi.fn();
+    p.onDidChangeMain(listener);
+    expect(p.setMain(path('/chapter.typ'))).toBeNull();
+    expect(p.main).toBe('/chapter.typ');
+    expect(listener).toHaveBeenCalledWith('/chapter.typ');
+    expect(p.paths()[0]).toBe('/chapter.typ');
+    expect(p.check({ kind: 'delete', path: path('/chapter.typ') })).toMatch(/main file/);
+    expect(p.check({ kind: 'rename', from: path('/chapter.typ'), path: path('/c.typ') })).toMatch(/main file/);
+    expect(p.check({ kind: 'delete', path: path('/main.typ') })).toBeNull();
+    p.replace({ '/zeta.typ': 'Z' });
+    expect(p.paths()).toEqual([path('/chapter.typ'), path('/zeta.typ')]);
+  });
+
+  it('refuses a main file that is no Typst file, missing, or locked, and tells nobody about the same one', () => {
+    const p = project();
+    const listener = vi.fn();
+    p.onDidChangeMain(listener);
+    expect(p.setMain(path('/data.csv'))).toMatch(/\.typ/);
+    expect(p.setMain(path('/missing.typ'))).toMatch(/no file/);
+    expect(p.setMain(path('/main.typ'))).toBeNull();
+    const locked = new Project(path('/main.typ'), { '/a.typ': 'A' }, { mainLocked: true });
+    expect(locked.setMain(path('/a.typ'))).toMatch(/cannot be changed/);
+    expect(locked.main).toBe('/main.typ');
+    expect(p.main).toBe('/main.typ');
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('applies updates to text files through their document', () => {
     const p = project();
     p.apply({ kind: 'update', path: path('/chapter.typ'), content: 'new' });

@@ -4,8 +4,8 @@ A collaboration room (@configuration-collaboration-server) can be a branch of a 
 
 ```ts
 createTypstEditor(host, {
-  main: '/thesis.typ',      // the repository's main file; no source or files needed
-  user: { name: 'Ada' },    // the commit author
+  mainFile: { path: '/thesis.typ' },   // the repository's main file; no source or files needed
+  user: { name: 'Ada' },               // the commit author
   extensions: (builtinExtensions) => [
     ...builtinExtensions,
     collaboration({ url: 'wss://collab.example.org', room: 'gitlab:group/thesis@main', token }),

@@ -5,7 +5,8 @@ import { ProjectPath } from '../paths/paths';
 
 /**
  * The files of a Typst project. Every `.typ` file is a `TypstDocument` that editors edit directly; other files
- * (images, data) are kept as given. The main file always exists and cannot be renamed or deleted.
+ * (images, data) are kept as given. The main file (the one compiled) always exists and cannot be renamed or deleted;
+ * `setMain` makes another `.typ` file the main one, unless the host locked it (`mainLocked`).
  *
  * The one place that knows which files a project has and which changes to them are allowed (`check`, `apply`). Many
  * parts derive something from the files: editors, indexes, collaboration, the preview. They all subscribe to
@@ -18,13 +19,33 @@ export class Project {
   private readonly changed = new EventEmitter<FileChange>();
   /** Fires after every change of a file: `apply`, `replace`, and every text edit of a document (as `update`). */
   readonly onDidChangeFile: Event<FileChange> = this.changed.event;
+  private readonly mainChanged = new EventEmitter<ProjectPath>();
+  /** Fires with the new main file after `setMain` changed it. */
+  readonly onDidChangeMain: Event<ProjectPath> = this.mainChanged.event;
+  /** Whether the host fixed the main file: `setMain` refuses every change. */
+  readonly mainLocked: boolean;
+  #main: ProjectPath;
 
-  constructor(
-    readonly main: ProjectPath,
-    files: ProjectFiles,
-  ) {
+  constructor(main: ProjectPath, files: ProjectFiles, options: { mainLocked?: boolean } = {}) {
+    this.#main = main;
+    this.mainLocked = options.mainLocked ?? false;
     for (const [path, content] of this.parse(files)) this.add(path, content);
     if (!this.entries.has(main)) this.add(main, '');
+  }
+
+  /** The main file: the one compiled. */
+  get main(): ProjectPath {
+    return this.#main;
+  }
+
+  /** Makes `path`, an existing `.typ` file, the main file; why it cannot, in words for people, or null once it is. */
+  setMain(path: ProjectPath): string | null {
+    if (path === this.#main) return null;
+    if (this.mainLocked) return 'The main file cannot be changed here.';
+    if (!this.document(path)) return this.entries.has(path) ? 'Only a .typ file can be the main file.' : `There is no file ${path}.`;
+    this.#main = path;
+    this.mainChanged.fire(path);
+    return null;
   }
 
   /** The main file, then other Typst files, then the rest; each group sorted. */
@@ -104,6 +125,7 @@ export class Project {
   dispose(): void {
     for (const path of [...this.entries.keys()]) this.remove(path);
     this.changed.dispose();
+    this.mainChanged.dispose();
   }
 
   /** Host-given files by path; a key that is no path, or bytes for a Typst file, is the host's mistake: throws. */

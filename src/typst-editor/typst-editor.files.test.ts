@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
+import type { Project } from '../core/project/project';
+import { ProjectPath } from '../core/paths/paths';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -47,6 +49,22 @@ afterEach(() => {
 });
 
 describe('files and source', () => {
+  it('`mainFile` names the main file; `source` and `onMainFileChange` follow when another becomes it, unless locked', () => {
+    let project: Project | undefined;
+    const onMainFileChange = vi.fn();
+    const files = { '/thesis.typ': '= Thesis', '/a.typ': 'A' };
+    const probe = { id: 'probe', activate: (context: { project: Project }) => void (project = context.project) };
+    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files, onMainFileChange, extensions: (builtins) => [...builtins, probe] });
+    expect(editor.source).toBe('= Thesis');
+    expect(project!.setMain(ProjectPath.of('/a.typ'))).toBeNull();
+    expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
+    expect(editor.source).toBe('A');
+    editor.source = 'A!';
+    expect(editor.files['/a.typ']).toBe('A!');
+    setup({ mainFile: { path: '/thesis.typ', locked: true }, files, extensions: (builtins) => [...builtins, probe] });
+    expect(project!.setMain(ProjectPath.of('/a.typ'))).toMatch(/cannot be changed/);
+  });
+
   it('`files` holds every file, the main one included; `source` is the main file\'s text', () => {
     const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' } });
     expect(editor.files).toEqual({ '/main.typ': '= Main', '/a.typ': 'A' });
