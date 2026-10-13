@@ -45,7 +45,7 @@ function resolver(host: HTMLElement): (token: ColorToken) => string {
   return (token) => {
     const probe = host.ownerDocument.createElement('span');
     probe.hidden = true;
-    probe.style.color = `var(--te-${token})`;
+    probe.style.color = `var(--zwf-${token})`;
     host.append(probe);
     const color = getComputedStyle(probe).color;
     probe.remove();

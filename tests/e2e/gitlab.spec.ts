@@ -7,7 +7,7 @@ import { SERVER, SERVER_DEMO, fileRow, openFile, serve, signIn, test } from './f
 // (ws://127.0.0.1:1234; every test gets a fresh branch of demo/report, which
 // holds the demo's advanced example: template, chapters, SVG images). Everyone
 // signs in at the fake GitLab first (any name; everyone is a Developer).
-test.skip(!process.env.TYPST_GITLAB_E2E, 'needs the collaboration server with a fake GitLab: mise run test:e2e-gitlab');
+test.skip(!process.env.ZWF_GITLAB_E2E, 'needs the collaboration server with a fake GitLab: mise run test:e2e-gitlab');
 test.use({ baseURL: SERVER_DEMO });
 
 /** Opens the room as `user`, signed in in a browser session of their own (main.typ shown). */
@@ -23,10 +23,10 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
 }
 
 /** The account's status bar entry ("Sign in", or the user's name). */
-const account = (page: Page) => page.locator('.typst-collaboration__account');
+const account = (page: Page) => page.locator('.zwf-collaboration__account');
 
 /** Text in the Visual editor of the file shown (each opened file keeps a hidden Visual editor of its own). */
-const visualText = (page: Page, text: string) => page.getByTestId('typst-visual').getByText(text);
+const visualText = (page: Page, text: string) => page.getByTestId('zwf-visual').getByText(text);
 
 /** A fresh room: a branch of its own. */
 const newRoom = (project: string) => `gitlab:demo/report@e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -43,28 +43,28 @@ async function saveToGitLab(page: Page, message: string): Promise<void> {
 }
 
 /** The messages shown to `page`'s user (outcomes and news of the source control). */
-const messages = (page: Page) => page.getByTestId('typst-notifications');
+const messages = (page: Page) => page.getByTestId('zwf-notifications');
 
 /** The source control's status bar entry ("Not in GitLab: …" / "Saved · …"). */
-const scmStatus = (page: Page) => page.locator('.typst-source-control__entry');
+const scmStatus = (page: Page) => page.locator('.zwf-source-control__entry');
 
 /** The M / A / D badge of `path` in the file panel (the panel may be closed). */
 const changeBadge = (page: Page, path: string) =>
-  page.getByTestId('typst-files').locator(`[data-path="${path}"] .typst-files__decoration[title$="not in GitLab yet"]`);
+  page.getByTestId('zwf-files').locator(`[data-path="${path}"] .zwf-files__decoration[title$="not in GitLab yet"]`);
 
 test('the branch is loaded with its files, images from the repository', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await expect(fileRow(ann, 'template.typ')).toBeVisible();
   await fileRow(ann, 'assets').click();
   await expect(fileRow(ann, 'assets/compile-times.svg')).toBeVisible();
-  await expect(ann.locator('[data-testid=typst-preview] svg image, [data-testid=typst-preview] svg use').first()).toBeAttached();
+  await expect(ann.locator('[data-testid=zwf-preview] svg image, [data-testid=zwf-preview] svg use').first()).toBeAttached();
 });
 
 test('Save to GitLab commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   // the main file's Visual editor is all raw boxes, so Ann types in Source
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.press('Enter');
   await ann.keyboard.press('Enter');
@@ -107,7 +107,7 @@ test('a conflict with upstream is shown to everyone, also to who joins later, un
   const { room, ann, bob } = await users(browser, baseURL!, info.project.name);
   await openFile(ann, 'chapters/introduction.typ');
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '= Introduction' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '= Introduction' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.type(' mine');
   await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
@@ -117,16 +117,16 @@ test('a conflict with upstream is shown to everyone, also to who joins later, un
   const cleo = await join(browser, baseURL!, room, 'Cleo');
   for (const page of [ann, bob, cleo]) {
     await expect(scmStatus(page).first()).toHaveText('Conflict with GitLab: chapters/introduction.typ');
-    await expect(scmStatus(page).first()).toHaveClass(/typst-source-control__entry--warning/);
+    await expect(scmStatus(page).first()).toHaveClass(/zwf-source-control__entry--warning/);
   }
   // Ann has the file open (its folder, too)
-  await expect(ann.getByTestId('typst-files').locator('[data-path="/chapters/introduction.typ"] .typst-files__decoration[title^="Conflicts"]')).toHaveText('!');
+  await expect(ann.getByTestId('zwf-files').locator('[data-path="/chapters/introduction.typ"] .zwf-files__decoration[title^="Conflicts"]')).toHaveText('!');
 });
 
 test('a save that cannot reach GitLab stays a warning for everyone, also who joins later, until a save succeeds', async ({ browser, baseURL, request }, info) => {
   const { room, ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.type(' Unsaved.');
   await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
@@ -139,7 +139,7 @@ test('a save that cannot reach GitLab stays a warning for everyone, also who joi
   const cleo = await join(browser, baseURL!, room, 'Cleo');
   for (const page of [ann, bob, cleo]) {
     await expect(scmStatus(page).first()).toHaveText('Saving to GitLab failed');
-    await expect(scmStatus(page).first()).toHaveClass(/typst-source-control__entry--warning/);
+    await expect(scmStatus(page).first()).toHaveClass(/zwf-source-control__entry--warning/);
   }
 
   expect((await outage(false)).ok()).toBe(true);
@@ -154,11 +154,11 @@ test('leaving as the last user with unsaved changes asks first, when the server 
   expect((await request.post(`${SERVER}/playground/auto-commit?room=${encodeURIComponent(room)}`)).ok()).toBe(true);
   const { ann, bob } = await users(browser, baseURL!, info.project.name, room);
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.type(' Unsaved.');
   await expect(scmStatus(bob)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
-  const annInTree = bob.getByTestId('typst-files').locator('[data-path="/main.typ"] .typst-files__decoration[title="Ann"]');
+  const annInTree = bob.getByTestId('zwf-files').locator('[data-path="/main.typ"] .zwf-files__decoration[title="Ann"]');
   await expect(annInTree).toHaveCount(1);
 
   // Bob is still there: Ann leaves without a question
@@ -171,7 +171,7 @@ test('leaving as the last user with unsaved changes asks first, when the server 
   await expect(annInTree).toHaveCount(0);
 
   // Bob is the last one: the browser asks
-  await bob.getByTestId('typst-source').or(bob.getByTestId('typst-visual')).first().click();
+  await bob.getByTestId('zwf-source').or(bob.getByTestId('zwf-visual')).first().click();
   const dialog = bob.waitForEvent('dialog');
   await bob.close({ runBeforeUnload: true });
   expect((await dialog).type()).toBe('beforeunload');
@@ -183,7 +183,7 @@ test('leaving as the last user while a conflict blocks saving asks first, also w
   const ann = await join(browser, baseURL!, room, 'Ann');
   await openFile(ann, 'chapters/introduction.typ');
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '= Introduction' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '= Introduction' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.type(' mine');
   await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');

@@ -44,9 +44,9 @@ const PHOTO = png(900, 1600);
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Title');
+  await expect(page.getByTestId('zwf-visual').locator('h1')).toHaveText('Title');
 });
 
 const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
@@ -55,10 +55,10 @@ const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate
 async function layout(page: Page) {
   const editor = page.locator('zwiebelfisch-editor');
   const box = async (locator: Locator) => (await locator.boundingBox())!;
-  const left = await box(editor.locator('.typst-editor__editor-area'));
-  const right = await box(editor.locator('.typst-editor__side--right'));
+  const left = await box(editor.locator('.zwf-editor__editor-area'));
+  const right = await box(editor.locator('.zwf-editor__side--right'));
   const overflow = await editor
-    .locator('.typst-editor__pane:visible')
+    .locator('.zwf-editor__pane:visible')
     .evaluate((pane) => pane.scrollWidth - pane.clientWidth);
   return { left, right, overflow };
 }
@@ -66,9 +66,9 @@ async function layout(page: Page) {
 /** The editing area still shows main.typ: Visual editor and toolbar visible, no image editor, preview beside it. */
 async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof layout>>) {
   const editor = page.locator('zwiebelfisch-editor');
-  await expect(editor.getByTestId('typst-visual')).toBeVisible();
+  await expect(editor.getByTestId('zwf-visual')).toBeVisible();
   await expect(editor.getByRole('toolbar', { name: 'Formatting' })).toBeVisible();
-  await expect(editor.getByTestId('typst-asset')).toBeHidden();
+  await expect(editor.getByTestId('zwf-asset')).toBeHidden();
   await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
   const after = await layout(page);
   // The file panel opens beside the editing column once there are two files (auto): the editing
@@ -80,7 +80,7 @@ async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof 
   for (const side of ['left', 'right'] as const) expect(Math.abs(after[side].height - before[side].height)).toBeLessThanOrEqual(1);
   expect(after.overflow).toBeLessThanOrEqual(0);
   // A big photo shows scaled down, not filling the editing area.
-  const picture = editor.getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering').first();
+  const picture = editor.getByTestId('zwf-visual').locator('.zwf-images__box img.zwf-visual__rendering').first();
   await expect(picture).toBeVisible();
   expect((await picture.boundingBox())!.height).toBeLessThan(after.left.height * 0.7);
   expect(page.url()).toContain('/examples/plain-html/');
@@ -108,10 +108,10 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   expect(text).toContain('\n\n#image("images/photo.png")\n\n');
   expect(text).toContain('= Title\n\nSome text.\n');
   await expect(pick).toBeHidden();
-  await expect(editor.getByTestId('typst-files')).toBeVisible(); // the project has two files now: the panel opens
+  await expect(editor.getByTestId('zwf-files')).toBeVisible(); // the project has two files now: the panel opens
   await expectLayoutIntact(page, before);
-  await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page image')).toHaveCount(1);
-  await expect(editor.getByTestId('typst-visual')).toBeFocused();
+  await expect(editor.getByTestId('zwf-preview').locator('.zwf-preview__page image')).toHaveCount(1);
+  await expect(editor.getByTestId('zwf-visual')).toBeFocused();
 });
 
 test('an image file dropped into the text is uploaded and inserted there, the page stays', async ({ page }) => {
@@ -123,7 +123,7 @@ test('an image file dropped into the text is uploaded and inserted there, the pa
     transfer.items.add(new File([bytes], 'dropped.png', { type: 'image/png' }));
     return transfer;
   }, PHOTO.toString('base64'));
-  await editor.getByTestId('typst-visual').locator('p').first().dispatchEvent('drop', { dataTransfer });
+  await editor.getByTestId('zwf-visual').locator('p').first().dispatchEvent('drop', { dataTransfer });
   await expect.poll(value(page)).toContain('#image("images/dropped.png")');
   expect(await value(page)()).toContain('#set page(width: 12cm, height: auto, margin: 1cm)');
   await expectLayoutIntact(page, before);
@@ -136,10 +136,10 @@ test('a file dropped on the preview does not replace the page', async ({ page })
     transfer.items.add(new File(['x'], 'notes.txt', { type: 'text/plain' }));
     return transfer;
   });
-  const preview = editor.getByTestId('typst-preview');
+  const preview = editor.getByTestId('zwf-preview');
   await preview.dispatchEvent('dragover', { dataTransfer });
   await preview.dispatchEvent('drop', { dataTransfer });
-  await expect(preview.locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(preview.locator('.zwf-preview__page svg').first()).toBeVisible();
   expect(page.url()).toContain('/examples/plain-html/');
   expect(await value(page)()).toBe(SOURCE);
 });

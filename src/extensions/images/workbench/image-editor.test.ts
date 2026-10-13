@@ -15,7 +15,7 @@ describe('imageEditor', () => {
     const disposed = new EventEmitter<void>();
     const panel = { element, visible: true, onDidChangeViewState: new EventEmitter<void>().event, onDidDispose: disposed.event, onDidRequestReveal: new EventEmitter<SourceRange>().event };
     imageEditor.resolveCustomEditor({ path: ProjectPath.of('/img/logo.png'), content: new Uint8Array(2048) }, panel);
-    const root = element.querySelector<HTMLElement>('.typst-images__file')!;
+    const root = element.querySelector<HTMLElement>('.zwf-images__file')!;
     expect(root.querySelector('img')?.getAttribute('src')).toBe('blob:logo');
     expect(root.textContent).toContain('img/logo.png');
     expect(root.textContent).toContain('2.0 KB');

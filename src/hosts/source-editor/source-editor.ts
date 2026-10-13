@@ -113,7 +113,7 @@ export interface SourceEditorOptions {
 
 /**
  * CodeMirror's default look in the widget, for every CodeMirror in it (Source editors, raw boxes, other editors):
- * CodeMirror's default highlight style with its colors from the widget's `--te-syn-*` tokens, and CodeMirror's light
+ * CodeMirror's default highlight style with its colors from the widget's `--zwf-syn-*` tokens, and CodeMirror's light
  * or dark theme (cursor, selection, gutters, panels, tooltips) following the widget's color scheme around the editor.
  */
 export const codeColors: Extension = [syntaxHighlighting(highlightStyle), followColorScheme];
@@ -151,7 +151,7 @@ export class SourceEditor {
         }),
       ],
     });
-    this.view.dom.dataset.testid = 'typst-source';
+    this.view.dom.dataset.testid = 'zwf-source';
     this.subscriptions = [
       document.onDidChange(({ contentChanges, origin }) => {
         if (origin !== this) this.view.dispatch({ changes: [...contentChanges], annotations: fromDocument.of({ origin }) });
@@ -212,7 +212,7 @@ const highlightField = StateField.define<{ from: number; to: number } | null>({
   },
   provide: (field) =>
     EditorView.decorations.from(field, (range) =>
-      range ? Decoration.set(Decoration.mark({ class: 'typst-source__jump' }).range(range.from, range.to)) : Decoration.none,
+      range ? Decoration.set(Decoration.mark({ class: 'zwf-source__jump' }).range(range.from, range.to)) : Decoration.none,
     ),
 });
 

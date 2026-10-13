@@ -55,7 +55,7 @@ export const remotePresence: Extension = StateField.define<readonly Shown[]>({
  */
 export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
   const caret = doc.createElement('span');
-  caret.className = 'typst-collaboration__caret';
+  caret.className = 'zwf-collaboration__caret';
   caret.dataset.user = user.name;
   caret.setAttribute('aria-hidden', 'true');
   caret.contentEditable = 'false';
@@ -95,8 +95,8 @@ function decorations(state: EditorState, shown: readonly Shown[]): DecorationSet
 
 function selectionMark(user: PresenceUser): Decoration {
   return Decoration.mark({
-    class: 'typst-collaboration__selection',
-    attributes: { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` },
+    class: 'zwf-collaboration__selection',
+    attributes: { 'data-user': user.name, style: `--zwf-remote-color: ${user.color}` },
   });
 }
 
@@ -116,7 +116,7 @@ class CaretWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const caret = caretElement(view.dom.ownerDocument, this.user);
     // The flag shows briefly after a move, then on hover only.
-    caret.classList.add('typst-collaboration__caret--transient');
+    caret.classList.add('zwf-collaboration__caret--transient');
     return caret;
   }
 
@@ -127,6 +127,6 @@ class CaretWidget extends WidgetType {
 
 /** CSS custom properties for elements drawn in a user's color: the color and a readable text color on it. */
 function presenceStyle(element: HTMLElement, user: PresenceUser): void {
-  element.style.setProperty('--typst-remote-color', user.color);
-  element.style.setProperty('--typst-remote-text', textColorOn(user.color));
+  element.style.setProperty('--zwf-remote-color', user.color);
+  element.style.setProperty('--zwf-remote-text', textColorOn(user.color));
 }

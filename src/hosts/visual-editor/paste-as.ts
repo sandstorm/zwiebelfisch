@@ -128,7 +128,7 @@ function anchorOf(editor: Editor): Anchor {
 function chip(editor: Editor, choices: PasteChoices): ToolbarControl {
   const button = editor.view.dom.ownerDocument.createElement('button');
   button.type = 'button';
-  button.className = 'typst-toolbar__button typst-toolbar__button--text';
+  button.className = 'zwf-toolbar__button zwf-toolbar__button--text';
   button.addEventListener('click', () => {
     const pasted = key.getState(editor.state);
     if (pasted) choices.pickPasteKind(pasted.choice);

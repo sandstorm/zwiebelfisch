@@ -22,17 +22,17 @@ export class ImageTools implements RawBoxTools {
   constructor(private readonly host: RawBoxToolsHost, node: Node) {
     this.node = node;
     const doc = host.dom.ownerDocument;
-    host.dom.classList.add('typst-images__box');
+    host.dom.classList.add('zwf-images__box');
     if (host.picture) {
       this.frame = doc.createElement('div');
-      this.frame.className = 'typst-images__frame';
+      this.frame.className = 'zwf-images__frame';
       this.badge = doc.createElement('span');
-      this.badge.className = 'typst-images__size';
+      this.badge.className = 'zwf-images__size';
       this.frame.append(host.picture, ...HANDLES.map((h) => this.handle(h)), this.badge);
       this.frame.addEventListener('dblclick', () => host.editCode());
       const picture = host.picture;
       // an SVG with only a viewBox has no size of its own: it would shrink to nothing, so it fills the text width
-      picture.addEventListener('load', () => this.frame!.classList.toggle('typst-images__frame--no-size', picture.naturalWidth === 0));
+      picture.addEventListener('load', () => this.frame!.classList.toggle('zwf-images__frame--no-size', picture.naturalWidth === 0));
       host.dom.insertBefore(this.frame, host.code);
     }
     this.update(node);
@@ -59,12 +59,12 @@ export class ImageTools implements RawBoxTools {
 
   private showWidth(width: string): void {
     this.frame!.style.width = width;
-    this.frame!.classList.toggle('typst-images__frame--sized', width !== '');
+    this.frame!.classList.toggle('zwf-images__frame--sized', width !== '');
   }
 
   private handle(name: string): HTMLElement {
     const handle = this.host.dom.ownerDocument.createElement('span');
-    handle.className = 'typst-images__resize-handle';
+    handle.className = 'zwf-images__resize-handle';
     handle.dataset.handle = name;
     handle.addEventListener('pointerdown', (event) => this.startDrag(event, name.includes('w') ? -1 : 1));
     return handle;
@@ -98,12 +98,12 @@ export class ImageTools implements RawBoxTools {
     this.stopDrag = () => {
       doc.removeEventListener('pointermove', move);
       doc.removeEventListener('pointerup', up);
-      frame.classList.remove('typst-images__frame--resizing');
+      frame.classList.remove('zwf-images__frame--resizing');
       this.stopDrag = null;
     };
     doc.addEventListener('pointermove', move);
     doc.addEventListener('pointerup', up);
-    frame.classList.add('typst-images__frame--resizing');
+    frame.classList.add('zwf-images__frame--resizing');
     this.badge!.textContent = `${percent}%`;
   }
 }

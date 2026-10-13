@@ -1,24 +1,24 @@
 /* The styles extension's styles: custom styles in the Visual editor (styled blocks, inline styles).
-   See styles.ts, which registers it; colors from the widget's --te-* tokens. */
+   See styles.ts, which registers it; colors from the widget's --zwf-* tokens. */
 /* Custom styles (extensions/styles): a block style's blocks in a frame with its name; text in an inline style
-   underlined dotted, its name as tooltip. Hosts style one by its class, typst-styles--<name>. */
-.typst-styles__block {
+   underlined dotted, its name as tooltip. Hosts style one by its class, zwf-styles--<name>. */
+.zwf-styles__block {
   position: relative;
   margin: 0 0 0.7em;
   padding: 0.35em 0.8em 0.1em;
-  border-left: 3px solid var(--te-accent-line);
+  border-left: 3px solid var(--zwf-accent-line);
   border-radius: 0 6px 6px 0;
-  background: var(--te-accent-faint);
+  background: var(--zwf-accent-faint);
 }
-.typst-styles__block::before {
+.zwf-styles__block::before {
   content: attr(data-style-title);
   display: block;
   margin-bottom: 0.15em;
-  color: var(--te-hint);
+  color: var(--zwf-hint);
   font: 600 11px system-ui, sans-serif;
   letter-spacing: 0.02em;
   pointer-events: none;
   user-select: none;
 }
-.typst-styles__block > :last-child { margin-bottom: 0.4em; }
-.typst-styles__inline { text-decoration: underline dotted var(--te-hint); text-underline-offset: 3px; }
+.zwf-styles__block > :last-child { margin-bottom: 0.4em; }
+.zwf-styles__inline { text-decoration: underline dotted var(--zwf-hint); text-underline-offset: 3px; }

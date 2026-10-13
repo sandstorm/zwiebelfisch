@@ -15,8 +15,8 @@ export default defineConfig({
   plugins: [docsFiles({ root: fileURLToPath(new URL('docs', import.meta.url)) })],
   test: {
     root: '.',
-    // `mise run perf:typing` (TYPST_PERF) runs the measurements in tests/perf/ instead
-    include: process.env.TYPST_PERF ? ['tests/perf/**/*.perf.ts'] : ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],
+    // `mise run perf:typing` (ZWF_PERF) runs the measurements in tests/perf/ instead
+    include: process.env.ZWF_PERF ? ['tests/perf/**/*.perf.ts'] : ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],
     // layout stubs for the jsdom environment (no-op in node)
     setupFiles: ['tests/jsdom-setup.ts'],
   },

@@ -22,41 +22,41 @@ async function holdBack(page: Page, url: string | RegExp, serve: (route: Route) 
   return { release, held };
 }
 
-const preview = (page: Page) => page.getByTestId('typst-preview');
-const loader = (page: Page) => page.getByTestId('typst-preview-loader');
+const preview = (page: Page) => page.getByTestId('zwf-preview');
+const loader = (page: Page) => page.getByTestId('zwf-preview-loader');
 /** What the preview loads shows in its pane only: the status bar has no progress entry for it. */
-const statusBarProgress = (page: Page) => page.getByTestId('typst-progress');
+const statusBarProgress = (page: Page) => page.getByTestId('zwf-progress');
 
 test('the text shows and takes typing before the compiler is there; the preview says it loads it, then shows the pages', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
   await page.goto('/');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
+  await expect(page.getByTestId('zwf-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(loader(page).getByRole('status')).toHaveText('Loading the Typst compiler…');
   await expect(loader(page).getByRole('progressbar')).toBeVisible();
   await expect(statusBarProgress(page)).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.getByTestId('typst-source').locator('.cm-content').click();
+  await page.getByTestId('zwf-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('\n\nTyped while the compiler loads');
-  await expect(page.getByTestId('typst-source')).toContainText('Typed while the compiler loads');
-  await expect(preview(page).locator('.typst-preview__page')).toHaveCount(0);
+  await expect(page.getByTestId('zwf-source')).toContainText('Typed while the compiler loads');
+  await expect(preview(page).locator('.zwf-preview__page')).toHaveCount(0);
   expect(wasm.held).toHaveLength(1);
 
   wasm.release();
-  await expect(preview(page).locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(preview(page).locator('.zwf-preview__page svg').first()).toBeVisible();
   await expect(loader(page)).toBeHidden();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('the Visual editor takes typing while the compiler loads; raw boxes show their code until their pictures come', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
   await page.goto('/');
-  const visual = page.getByTestId('typst-visual');
+  const visual = page.getByTestId('zwf-visual');
   // the equation is a raw box: its code first
-  const equation = visual.locator('.typst-visual__raw-block', { hasText: 'integral_0^1' });
-  await expect(equation.locator('.typst-visual__code')).toContainText('integral_0^1');
-  await expect(equation.locator('img.typst-visual__rendering')).toBeHidden();
+  const equation = visual.locator('.zwf-visual__raw-block', { hasText: 'integral_0^1' });
+  await expect(equation.locator('.zwf-visual__code')).toContainText('integral_0^1');
+  await expect(equation.locator('img.zwf-visual__rendering')).toBeHidden();
   // the caret set as a selection the editor has taken (a bare click races its focus handling while the page loads)
   await selectText(visual.locator('h1'), 'minutes');
   await page.keyboard.type('minutes again');
@@ -65,8 +65,8 @@ test('the Visual editor takes typing while the compiler loads; raw boxes show th
   wasm.release();
   // pictures come to boxes near the view; the equation is further down the page
   await equation.scrollIntoViewIfNeeded();
-  await expect(equation.locator('img.typst-visual__rendering')).toBeVisible();
-  await expect(equation.locator('.typst-visual__code')).toBeHidden();
+  await expect(equation.locator('img.zwf-visual__rendering')).toBeVisible();
+  await expect(equation.locator('.zwf-visual__code')).toBeHidden();
 });
 
 test('the preview says when it loads fonts', async ({ page }) => {
@@ -75,7 +75,7 @@ test('the preview says when it loads fonts', async ({ page }) => {
   await expect(loader(page).getByRole('status')).toHaveText('Loading fonts…');
   await expect(statusBarProgress(page)).toHaveCount(0);
   fonts.release();
-  await expect(preview(page).locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(preview(page).locator('.zwf-preview__page svg').first()).toBeVisible();
 });
 
 test('the preview names a package while it downloads', async ({ page }) => {
@@ -87,6 +87,6 @@ test('the preview names a package while it downloads', async ({ page }) => {
   await expect(loader(page).getByRole('status')).toHaveText('Downloading @preview/merman 0.4.0…', { timeout: 30_000 });
   await expect(statusBarProgress(page)).toHaveCount(0);
   merman.release();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
-  await expect(preview(page).locator('.typst-preview__page').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await expect(preview(page).locator('.zwf-preview__page').first()).toBeVisible();
 });

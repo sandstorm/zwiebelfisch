@@ -28,7 +28,7 @@ test('source-editor', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.locator('[data-testid=typst-source]:visible .cm-content')).toBeVisible();
+  await expect(page.locator('[data-testid=zwf-source]:visible .cm-content')).toBeVisible();
   await shoot(page, 'source-editor', [editingArea(page)]);
 });
 
@@ -37,7 +37,7 @@ test('styling-and-shortcuts', async ({ page }) => {
   await hideFiles(page);
   // a selected word: the bar above it offers the marks (bold, italic, …)
   await visual(page).locator('p').first().dblclick();
-  await expect(page.locator('.typst-floating-bar:visible').first()).toBeVisible();
+  await expect(page.locator('.zwf-floating-bar:visible').first()).toBeVisible();
   await shoot(page, 'styling-and-shortcuts', [editingArea(page)]);
 });
 
@@ -48,7 +48,7 @@ test('slash-commands', async ({ page }) => {
   await page.keyboard.press('Enter');
   // filtered to the Insert entries: a list short enough to show whole (the unfiltered one scrolls)
   await page.keyboard.type('/ins');
-  const list = page.locator('[data-testid="typst-suggest"][data-trigger="/"]:visible');
+  const list = page.locator('[data-testid="zwf-suggest"][data-trigger="/"]:visible');
   await expect(list).toBeVisible();
   await expect.poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
   await shoot(page, 'slash-commands', [visual(page).locator('p', { hasText: '/ins' }), list], { padding: 12 });
@@ -58,8 +58,8 @@ test('images', async ({ page }) => {
   await open(page, '/?example=advanced');
   await openFile(page, 'chapters/results.typ');
   await hideFiles(page);
-  const image = visual(page).locator('.typst-images__box').first();
-  await image.locator('img.typst-visual__rendering').click();
+  const image = visual(page).locator('.zwf-images__box').first();
+  await image.locator('img.zwf-visual__rendering').click();
   const controls = page.getByRole('toolbar', { name: 'Image' });
   await expect(controls).toBeVisible();
   // the whole box in the window, its bar above it included
@@ -71,7 +71,7 @@ test('labels-and-references', async ({ page }) => {
   await open(page, '/?example=advanced');
   await openFile(page, 'chapters/introduction.typ');
   await hideFiles(page);
-  const ref = visual(page).locator('.typst-labels__ref[data-target="method"]');
+  const ref = visual(page).locator('.zwf-labels__ref[data-target="method"]');
   await ref.hover();
   await expect(page.getByRole('tooltip')).toBeVisible();
   await shoot(page, 'labels-and-references', [visual(page).locator('p', { has: ref }), page.getByRole('tooltip')], { padding: 12 });
@@ -82,7 +82,7 @@ test('bidirectional-navigation', async ({ page }) => {
   await hideFiles(page);
   // the heading clicked in the preview, highlighted there, and selected in the Visual editor
   await clickFirstGlyph(page);
-  const highlights = page.getByTestId('typst-preview').locator('.typst-preview__highlight');
+  const highlights = page.getByTestId('zwf-preview').locator('.zwf-preview__highlight');
   await expect(highlights.first()).toBeVisible();
   await shoot(page, 'bidirectional-navigation', [visual(page).locator('h1').first(), highlights], { padding: 24 });
 });
@@ -90,9 +90,9 @@ test('bidirectional-navigation', async ({ page }) => {
 test('html-preview', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
-  await page.getByTestId('typst-preview-renderers').getByRole('button', { name: 'HTML' }).click();
-  await expect(page.frameLocator('[data-testid="typst-preview-html"]').locator('h1, h2').first()).toBeVisible();
-  await shoot(page, 'html-preview', [page.locator('.typst-preview-pane')]);
+  await page.getByTestId('zwf-preview-renderers').getByRole('button', { name: 'HTML' }).click();
+  await expect(page.frameLocator('[data-testid="zwf-preview-html"]').locator('h1, h2').first()).toBeVisible();
+  await shoot(page, 'html-preview', [page.locator('.zwf-preview-pane')]);
 });
 
 test('files', async ({ page }) => {
@@ -108,15 +108,15 @@ test('files', async ({ page }) => {
   await fileRow(page, 'chapters/method.typ').click({ button: 'right' });
   const menu = page.locator('[role=menu]:visible');
   await expect(menu).toBeVisible();
-  await shoot(page, 'files', [page.getByTestId('typst-files').getByRole('treeitem'), menu], { padding: 8 });
+  await shoot(page, 'files', [page.getByTestId('zwf-files').getByRole('treeitem'), menu], { padding: 8 });
 });
 
 test('search-everywhere', async ({ page }) => {
   await open(page, '/?example=advanced');
-  await page.getByTestId('typst-search-everywhere').click();
+  await page.getByTestId('zwf-search-everywhere').click();
   await page.keyboard.type('compile');
-  await expect(page.locator('.typst-quick-pick__heading').first()).toBeVisible();
-  await shoot(page, 'search-everywhere', [page.locator('.typst-quick-pick:visible')]);
+  await expect(page.locator('.zwf-quick-pick__heading').first()).toBeVisible();
+  await shoot(page, 'search-everywhere', [page.locator('.zwf-quick-pick:visible')]);
 });
 
 test('drawio-diagrams', async ({ page }) => {
@@ -125,8 +125,8 @@ test('drawio-diagrams', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
   // the draw.io figure's box, found by its file
-  const image = visual(page).locator('.typst-images__box', { has: page.locator('img[alt*="diagrams/editor.drawio.png"]') });
-  await image.locator('img.typst-visual__rendering').hover();
+  const image = visual(page).locator('.zwf-images__box', { has: page.locator('img[alt*="diagrams/editor.drawio.png"]') });
+  await image.locator('img.zwf-visual__rendering').hover();
   await expect(page.getByRole('tooltip')).toBeVisible();
   await shoot(page, 'drawio-diagrams', [image, page.getByRole('tooltip')], { padding: 12 });
 });
@@ -134,7 +134,7 @@ test('drawio-diagrams', async ({ page }) => {
 test('spreadsheets', async ({ page }) => {
   await open(page, '/');
   await openFile(page, 'data/budget.ic');
-  const sheet = page.getByTestId('typst-spreadsheet');
+  const sheet = page.getByTestId('zwf-spreadsheet');
   await expect(sheet.locator('.ic-root')).toBeVisible();
   // its toolbars and the budget's rows, not the empty ones below
   await shoot(page, 'spreadsheets', [sheet], { height: 330 });
@@ -145,16 +145,16 @@ test('multi-file-projects', async ({ page }) => {
   await openFile(page, 'chapters/method.typ');
   await hideFiles(page);
   // the links to the previous and the next chapter above the file, and its first heading
-  const links = page.locator('nav.typst-file-navigation--top:visible');
+  const links = page.locator('nav.zwf-file-navigation--top:visible');
   await expect(links).toBeVisible();
   await shoot(page, 'multi-file-projects', [links, visual(page).locator('h1').first()], { padding: 12 });
 });
 
 test('comments', async ({ page }) => {
   await open(page, '/?user=Grace');
-  const marker = visual(page).locator('[data-testid="typst-note-marker"][title^="Ada:"]');
+  const marker = visual(page).locator('[data-testid="zwf-note-marker"][title^="Ada:"]');
   await marker.click();
-  const card = page.getByTestId('typst-note-card');
+  const card = page.getByTestId('zwf-note-card');
   await expect(card).toBeVisible();
   // the commented text with its marker, and the open thread
   await shoot(page, 'comments', [visual(page).locator('p', { has: marker }), card], { padding: 12 });
@@ -162,37 +162,37 @@ test('comments', async ({ page }) => {
 
 test('find-in-files', async ({ page }) => {
   await open(page, '/?example=advanced');
-  await page.getByTestId('typst-panel-toggle-search').click();
-  const panel = page.getByTestId('typst-search');
+  await page.getByTestId('zwf-panel-toggle-search').click();
+  const panel = page.getByTestId('zwf-search');
   await panel.getByRole('textbox', { name: 'Find' }).fill('compile');
   await expect(panel.getByRole('status').first()).toHaveText(/results? in \d+ files?/);
   // Replace mode: each match struck through, its replacement after it
   await panel.getByRole('button', { name: 'Replace', exact: true }).first().click();
   await panel.getByRole('textbox', { name: 'Replace' }).fill('build');
-  await expect(panel.locator('.typst-search__new').first()).toHaveText('build');
+  await expect(panel.locator('.zwf-search__new').first()).toHaveText('build');
   await shoot(page, 'find-in-files', [panel], { height: 520 });
 });
 
 /** Opens the demo at `query` (Local mode unless it names a room) and waits for the first compile. */
 async function open(page: Page, query: string): Promise<void> {
   await page.goto(query);
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 60_000 });
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/, { timeout: 60_000 });
 }
 
 /** The shown file's Visual editor (each open file keeps one). */
 function visual(page: Page): Locator {
-  return page.locator('[data-testid=typst-visual]:visible');
+  return page.locator('[data-testid=zwf-visual]:visible');
 }
 
 /** Hides the file panel, so the editing area gets its room. */
 async function hideFiles(page: Page): Promise<void> {
-  if (await page.getByTestId('typst-files').isVisible()) await page.getByTestId('typst-panel-toggle-files').click();
-  await expect(page.getByTestId('typst-files')).toBeHidden();
+  if (await page.getByTestId('zwf-files').isVisible()) await page.getByTestId('zwf-panel-toggle-files').click();
+  await expect(page.getByTestId('zwf-files')).toBeHidden();
 }
 
 /** The tab bar and the editor of the shown file, without the sides. */
 function editingArea(page: Page): Locator {
-  return page.locator('.typst-editor__editor-area');
+  return page.locator('.zwf-editor__editor-area');
 }
 
 /**
@@ -223,7 +223,7 @@ async function shoot(page: Page, name: string, targets: Locator[], { padding = 0
 
 /** Waits until nothing changes any more: compiled, the fonts loaded, every picture in the widget decoded. */
 async function settle(page: Page): Promise<void> {
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await expect
     .poll(() => page.locator('#editor img:visible').evaluateAll((images) => images.every((image) => (image as HTMLImageElement).complete)))

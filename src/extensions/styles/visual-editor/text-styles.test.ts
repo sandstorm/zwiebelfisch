@@ -93,11 +93,11 @@ describe('custom styles in the text style menu', () => {
 
   it('follows the declared styles: a call shows styled once its style is declared', () => {
     const { parent, declare, labels } = setup('#note[Hi]\n', []);
-    expect(parent.querySelector('.typst-styles__block')).toBeNull();
+    expect(parent.querySelector('.zwf-styles__block')).toBeNull();
     expect(labels()).toEqual([]);
     declare([NOTE]);
-    expect(parent.querySelector('.typst-styles__block')?.getAttribute('data-style-title')).toBe('Note');
-    expect(parent.querySelector('.typst-styles__block p')?.textContent).toBe('Hi');
+    expect(parent.querySelector('.zwf-styles__block')?.getAttribute('data-style-title')).toBe('Note');
+    expect(parent.querySelector('.zwf-styles__block p')?.textContent).toBe('Hi');
     expect(labels()).toEqual([['Block styles', 'Note']]);
   });
 
@@ -125,7 +125,7 @@ describe('the Styles menu of the selection bar', () => {
   it('lists the inline styles of the simple example (Key), not the block styles', () => {
     const { parent, view, doc } = setup('A term here\n', SIMPLE);
     view.reveal(SourceRange.of({ from: doc.text.indexOf('term'), to: doc.text.indexOf('term') + 4 }));
-    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(false);
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.zwf-toolbar__menu')!.hidden).toBe(false);
     expect(open(parent).map((item) => item.getAttribute('aria-label'))).toEqual(['Key']);
   });
 
@@ -145,10 +145,10 @@ describe('the Styles menu of the selection bar', () => {
   it('is left out while the project has no inline styles, and follows the styles as they are declared', () => {
     const { parent, view, doc, declare } = setup('A term here\n', [NOTE]);
     view.reveal(SourceRange.of({ from: 2, to: 6 }));
-    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(true);
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.zwf-toolbar__menu')!.hidden).toBe(true);
     declare([NOTE, KEY]);
     view.reveal(SourceRange.of({ from: 2, to: doc.text.indexOf(' here') }));
-    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(false);
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.zwf-toolbar__menu')!.hidden).toBe(false);
     expect(open(parent).map((item) => item.getAttribute('aria-label'))).toEqual(['Keyword']);
   });
 });

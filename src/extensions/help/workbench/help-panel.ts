@@ -22,8 +22,8 @@ export class HelpPanel {
   ) {
     const doc = parent.ownerDocument;
     this.#root = doc.createElement('div');
-    this.#root.className = 'typst-help';
-    this.#root.dataset.testid = 'typst-help';
+    this.#root.className = 'zwf-help';
+    this.#root.dataset.testid = 'zwf-help';
     parent.append(this.#root);
     this.#root.addEventListener('click', (event) => this.#select(this.#indexOf(event.target)));
     this.#root.addEventListener('keydown', (event) => this.#keydown(event));
@@ -41,18 +41,18 @@ export class HelpPanel {
     this.#rows = [];
     this.#selected = -1;
     this.#root.replaceChildren();
-    if (sheets.length === 0) this.#root.append(element(doc, 'p', 'typst-help__empty', 'No help for this file type.'));
+    if (sheets.length === 0) this.#root.append(element(doc, 'p', 'zwf-help__empty', 'No help for this file type.'));
     for (const sheet of sheets) this.#root.append(...this.#sheet(doc, sheet));
     this.#rows[0]?.element.setAttribute('tabindex', '0');
   }
 
   #sheet(doc: Document, { title, sections, links = [] }: HelpSheet): HTMLElement[] {
-    const parts: HTMLElement[] = [element(doc, 'h2', 'typst-help__title', title)];
+    const parts: HTMLElement[] = [element(doc, 'h2', 'zwf-help__title', title)];
     for (const section of sections) {
-      const part = element(doc, 'section', 'typst-help__section');
-      const heading = part.appendChild(element(doc, 'h3', 'typst-help__heading', section.title));
-      heading.id = `typst-help-${Math.random().toString(36).slice(2, 10)}`;
-      const list = part.appendChild(element(doc, 'ul', 'typst-help__rows'));
+      const part = element(doc, 'section', 'zwf-help__section');
+      const heading = part.appendChild(element(doc, 'h3', 'zwf-help__heading', section.title));
+      heading.id = `zwf-help-${Math.random().toString(36).slice(2, 10)}`;
+      const list = part.appendChild(element(doc, 'ul', 'zwf-help__rows'));
       list.setAttribute('role', 'listbox');
       list.setAttribute('aria-labelledby', heading.id);
       for (const row of section.rows) list.append(this.#row(doc, row));
@@ -64,18 +64,18 @@ export class HelpPanel {
   }
 
   #row(doc: Document, row: HelpRow): HTMLElement {
-    const item = element(doc, 'li', 'typst-help__row');
+    const item = element(doc, 'li', 'zwf-help__row');
     item.setAttribute('role', 'option');
     item.setAttribute('aria-selected', 'false');
     item.tabIndex = -1;
     item.draggable = true;
-    item.append(element(doc, 'code', 'typst-help__snippet', row.snippet), element(doc, 'span', 'typst-help__description', row.description));
+    item.append(element(doc, 'code', 'zwf-help__snippet', row.snippet), element(doc, 'span', 'zwf-help__description', row.description));
     this.#rows.push({ element: item, row });
     return item;
   }
 
   #indexOf(target: EventTarget | null): number {
-    const item = target instanceof Element ? target.closest('.typst-help__row') : null;
+    const item = target instanceof Element ? target.closest('.zwf-help__row') : null;
     return this.#rows.findIndex(({ element }) => element === item);
   }
 
@@ -144,13 +144,13 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
 
 /** The links of a sheet, each opening in a new tab. */
 function linkList(doc: Document, links: readonly HelpLink[]): HTMLElement {
-  const list = element(doc, 'ul', 'typst-help__links');
+  const list = element(doc, 'ul', 'zwf-help__links');
   for (const { label, href } of links) {
-    const anchor = element(doc, 'a', 'typst-help__link', label);
+    const anchor = element(doc, 'a', 'zwf-help__link', label);
     anchor.href = href;
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
-    list.appendChild(element(doc, 'li', 'typst-help__links-item')).append(anchor);
+    list.appendChild(element(doc, 'li', 'zwf-help__links-item')).append(anchor);
   }
   return list;
 }

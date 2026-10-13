@@ -35,23 +35,23 @@ export class ToolbarMenu implements ToolbarControl {
     private readonly content: MenuContent,
   ) {
     this.element = doc.createElement('div');
-    this.element.className = 'typst-toolbar__menu';
+    this.element.className = 'zwf-toolbar__menu';
     this.trigger = doc.createElement('button');
     this.trigger.type = 'button';
-    this.trigger.className = 'typst-toolbar__button typst-toolbar__menu-button';
+    this.trigger.className = 'zwf-toolbar__button zwf-toolbar__menu-button';
     this.trigger.setAttribute('aria-label', label);
     this.trigger.setAttribute('aria-haspopup', 'menu');
     this.trigger.setAttribute('aria-expanded', 'false');
     this.trigger.title = label;
     this.glyph = doc.createElement('span');
-    this.glyph.className = 'typst-toolbar__menu-icon';
+    this.glyph.className = 'zwf-toolbar__menu-icon';
     const caret = doc.createElement('span');
-    caret.className = 'typst-toolbar__caret';
+    caret.className = 'zwf-toolbar__caret';
     caret.setAttribute('aria-hidden', 'true');
     this.trigger.append(this.glyph, caret);
     this.trigger.addEventListener('click', () => (this.isOpen ? this.close() : this.open()));
     this.list = doc.createElement('div');
-    this.list.className = 'typst-toolbar__menu-list';
+    this.list.className = 'zwf-toolbar__menu-list';
     this.list.setAttribute('role', 'menu');
     this.list.setAttribute('aria-label', label);
     this.list.hidden = true;
@@ -101,7 +101,7 @@ export class ToolbarMenu implements ToolbarControl {
     const doc = this.element.ownerDocument;
     for (const item of items.buttons) {
       item.setAttribute('role', 'menuitem');
-      item.classList.add('typst-toolbar__menu-item');
+      item.classList.add('zwf-toolbar__menu-item');
       const text = doc.createElement('span');
       text.textContent = item.getAttribute('aria-label');
       item.append(text);

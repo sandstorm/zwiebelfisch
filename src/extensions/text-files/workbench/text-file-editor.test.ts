@@ -39,7 +39,7 @@ describe('TextFileEditor', () => {
 
   it('shows the file with its name', () => {
     const { parent, view } = setup();
-    expect(parent.querySelector('[data-testid=typst-text-file] h2')?.textContent).toBe('refs.bib');
+    expect(parent.querySelector('[data-testid=zwf-text-file] h2')?.textContent).toBe('refs.bib');
     expect(view.state.doc.toString()).toBe('@book{a}\n');
   });
 
@@ -59,7 +59,7 @@ describe('TextFileEditor', () => {
     type('x');
     editor.dispose();
     expect(save).toHaveBeenCalledExactlyOnceWith('@book{a}\nx');
-    expect(parent.querySelector('[data-testid=typst-text-file]')).toBeNull();
+    expect(parent.querySelector('[data-testid=zwf-text-file]')).toBeNull();
     vi.advanceTimersByTime(SAVE_DELAY);
     expect(save).toHaveBeenCalledOnce();
   });

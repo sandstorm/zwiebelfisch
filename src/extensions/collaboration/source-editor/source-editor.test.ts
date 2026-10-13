@@ -29,7 +29,7 @@ describe('presence in the Source editor', () => {
   const ann = { id: '1', user: { name: 'Ann', color: '#b58900' } };
   /** The line text before each caret. */
   const carets = (parent: HTMLElement) =>
-    [...parent.querySelectorAll<HTMLElement>('.cm-line .typst-collaboration__caret')].map((caret) => {
+    [...parent.querySelectorAll<HTMLElement>('.cm-line .zwf-collaboration__caret')].map((caret) => {
       const nodes = [...caret.closest('.cm-line')!.childNodes];
       return nodes.slice(0, nodes.indexOf(caret)).map((node) => node.textContent).join('');
     });
@@ -37,11 +37,11 @@ describe('presence in the Source editor', () => {
   it('draws a named caret at the position, also on an empty line', () => {
     const { view, parent } = withPresence('one\n\nthree\n');
     view.setPresence([{ ...ann, anchor: 4, head: 4 }]);
-    const caret = parent.querySelector<HTMLElement>('.typst-collaboration__caret')!;
+    const caret = parent.querySelector<HTMLElement>('.zwf-collaboration__caret')!;
     expect(caret.dataset.user).toBe('Ann');
     // the name flag is drawn from data-user (CSS): no text of the line
     expect(caret.closest('.cm-line')!.textContent).toBe('');
-    expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
+    expect(caret.style.getPropertyValue('--zwf-remote-color')).toBe('#b58900');
     view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
     expect(carets(parent)).toEqual(['on']);
   });
@@ -49,12 +49,12 @@ describe('presence in the Source editor', () => {
   it('tints the selection and keeps it on its text through edits', () => {
     const { doc, view, parent } = withPresence('Some bold text\n');
     view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
-    expect(marked(parent, '.typst-collaboration__selection[data-user="Ann"]')).toEqual(['bold']);
+    expect(marked(parent, '.zwf-collaboration__selection[data-user="Ann"]')).toEqual(['bold']);
     doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'Really. ' }], 'visual');
-    expect(marked(parent, '.typst-collaboration__selection')).toEqual(['bold']);
+    expect(marked(parent, '.zwf-collaboration__selection')).toEqual(['bold']);
     expect(carets(parent)).toEqual(['Really. Some bold']);
     view.setPresence([]);
-    expect(parent.querySelector('.typst-collaboration__caret, .typst-collaboration__selection')).toBeNull();
+    expect(parent.querySelector('.zwf-collaboration__caret, .zwf-collaboration__selection')).toBeNull();
   });
 
   it('draws the places known when the editor is made, and only those in its file', () => {
@@ -65,17 +65,17 @@ describe('presence in the Source editor', () => {
     host.registerCodeMirrorExtension(sourcePresence(presences));
     const parent = document.body.appendChild(document.createElement('div'));
     host.createEditor(parent, doc);
-    expect(marked(parent, '.typst-collaboration__selection')).toEqual(['bold']);
+    expect(marked(parent, '.zwf-collaboration__selection')).toEqual(['bold']);
   });
 
   it('redraws the caret (showing the name again) only when it moved', () => {
     const { view, parent } = withPresence('Some bold text\n');
     view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
-    const first = parent.querySelector('.typst-collaboration__caret');
-    expect(first!.classList).toContain('typst-collaboration__caret--transient');
+    const first = parent.querySelector('.zwf-collaboration__caret');
+    expect(first!.classList).toContain('zwf-collaboration__caret--transient');
     view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
-    expect(parent.querySelector('.typst-collaboration__caret')).toBe(first);
+    expect(parent.querySelector('.zwf-collaboration__caret')).toBe(first);
     view.setPresence([{ ...ann, anchor: 3, head: 3 }]);
-    expect(parent.querySelector('.typst-collaboration__caret')).not.toBe(first);
+    expect(parent.querySelector('.zwf-collaboration__caret')).not.toBe(first);
   });
 });

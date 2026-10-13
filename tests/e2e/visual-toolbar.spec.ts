@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 
 async function source(page: Page) {
   await page.getByRole('tab', { name: 'Source' }).click();
-  return page.getByTestId('typst-source');
+  return page.getByTestId('zwf-source');
 }
 
 test('Bold button wraps the selection in *…*', async ({ page }) => {
@@ -117,7 +117,7 @@ test('Undo and Redo buttons revert and reapply an edit', async ({ page }) => {
 });
 
 test('raw blocks are editable in place and change only their source', async ({ page }) => {
-  const box = visual(page).locator('.typst-visual__raw-block').first();
+  const box = visual(page).locator('.zwf-visual__raw-block').first();
   await box.locator('.cm-content').click();
   // not End on the first line: the box wraps long lines, and End stops at the wrap point
   await page.keyboard.press('ControlOrMeta+Home');
@@ -127,12 +127,12 @@ test('raw blocks are editable in place and change only their source', async ({ p
 
 test('arrow down on the last line of a raw block moves onto the gap after it, then into the next block', async ({ page }) => {
   // the demo's first raw block (imports, set and show rules) ends in `#show link: underline`
-  await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-line').last().click();
+  await visual(page).locator('.zwf-visual__raw-block').first().locator('.cm-line').last().click();
   await page.keyboard.press('Home');
   await page.keyboard.press('ArrowDown');
-  await expect(visual(page).locator('.typst-visual__block-gap')).toHaveCount(1);
+  await expect(visual(page).locator('.zwf-visual__block-gap')).toHaveCount(1);
   await page.keyboard.press('ArrowDown');
-  await expect(visual(page).locator('.typst-visual__block-gap')).toHaveCount(0);
+  await expect(visual(page).locator('.zwf-visual__block-gap')).toHaveCount(0);
   await page.keyboard.type('X');
   await expect(visual(page).locator('h1')).toHaveText('XTypst in five minutes');
 });
@@ -142,8 +142,8 @@ test("the selection bar's Styles menu toggles the simple example's inline style 
   await selectText(paragraph, 'markup');
   await chooseFrom(selectionBar(page), 'Styles', 'Key');
   await expect.poll(sourceText(page)).toContain('Typst is a #key[markup] language');
-  await expect(paragraph.locator('.typst-styles__inline')).toHaveText('markup');
-  await selectText(paragraph.locator('.typst-styles__inline'), 'markup');
+  await expect(paragraph.locator('.zwf-styles__inline')).toHaveText('markup');
+  await selectText(paragraph.locator('.zwf-styles__inline'), 'markup');
   await selectionBar(page).getByRole('button', { name: 'Styles', exact: true }).click();
   const key = selectionBar(page).getByRole('menuitem', { name: 'Key', exact: true });
   await expect(key).toHaveAttribute('aria-pressed', 'true');

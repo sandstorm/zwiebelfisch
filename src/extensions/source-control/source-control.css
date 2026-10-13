@@ -1,26 +1,26 @@
 /* The source-control extension's styles: the source controls' status bar entries ("Not in GitLab: 3 files · 14 min").
-   See source-control.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-source-control__status {
+   See source-control.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-source-control__status {
   display: flex;
   align-items: baseline;
   gap: 4px;
   padding: 4px 0 4px 8px;
   font-size: 12px;
 }
-.typst-source-control__entry {
+.zwf-source-control__entry {
   font: inherit;
   border: 0;
   padding: 2px 6px;
   border-radius: 3px;
   background: none;
-  color: var(--te-text);
+  color: var(--zwf-text);
   white-space: nowrap;
   cursor: pointer;
 }
-.typst-source-control__entry:hover { background: var(--te-hover); }
-.typst-source-control__entry--warning,
-.typst-source-control__entry--warning:hover {
-  background: var(--te-warning);
-  color: var(--te-bg);
+.zwf-source-control__entry:hover { background: var(--zwf-hover); }
+.zwf-source-control__entry--warning,
+.zwf-source-control__entry--warning:hover {
+  background: var(--zwf-warning);
+  color: var(--zwf-bg);
   font-weight: 600;
 }

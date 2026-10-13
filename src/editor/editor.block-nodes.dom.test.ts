@@ -28,7 +28,7 @@ describe('page breaks and horizontal rules', () => {
     view.reveal(SourceRange.of({ from: 5, to: 5 }));
     button('Insert page break').click();
     expect(doc.text).toBe('Hello\n\n#pagebreak()\n');
-    expect(parent.querySelector('.typst-page-layout__page-break')?.textContent).toBe('Page break');
+    expect(parent.querySelector('.zwf-page-layout__page-break')?.textContent).toBe('Page break');
   });
 
   it('"Horizontal rule" adds #line(length: 100%)', () => {
@@ -36,7 +36,7 @@ describe('page breaks and horizontal rules', () => {
     view.reveal(SourceRange.of({ from: 5, to: 5 }));
     button('Horizontal rule').click();
     expect(doc.text).toBe('Hello\n\n#line(length: 100%)\n');
-    expect(parent.querySelector('.typst-page-layout__rule hr')).not.toBeNull();
+    expect(parent.querySelector('.zwf-page-layout__rule hr')).not.toBeNull();
   });
 
   it('"---" in an empty paragraph becomes a rule', () => {
@@ -84,7 +84,7 @@ describe('table header row', () => {
     const source = 'Hi\n\n#table(columns: 2, [a], [b], [c], [d])\n';
     const { doc, view, button, parent } = setup(source);
     view.reveal(SourceRange.of({ from: 1, to: 1 }));
-    expect(button('Header row').closest<HTMLElement>('.typst-floating-bar')!.hidden).toBe(true);
+    expect(button('Header row').closest<HTMLElement>('.zwf-floating-bar')!.hidden).toBe(true);
     view.reveal(SourceRange.of({ from: source.indexOf('c'), to: source.indexOf('c') }));
     expect(button('Header row').getAttribute('aria-pressed')).toBe('false');
     button('Header row').click();
@@ -156,7 +156,7 @@ describe('heading numbers', () => {
   it('shows the numbers the set rule gives, beside the headings, following edits', () => {
     const { doc, parent } = setup('#set heading(numbering: "1.1")\n\n= A\n\n== B\n\n= C\n');
     expect(numbers(parent)).toEqual(['1 A', '1.1 B', '2 C']);
-    expect(parent.querySelector('.typst-visual')!.classList.contains('typst-headings--numbered')).toBe(true);
+    expect(parent.querySelector('.zwf-visual')!.classList.contains('zwf-headings--numbered')).toBe(true);
     doc.setText('#set heading(numbering: "1.1")\n\n= A\n\n= New\n\n== B\n\n= C\n', 'source');
     expect(numbers(parent)).toEqual(['1 A', '2 New', '2.1 B', '3 C']);
   });
@@ -174,9 +174,9 @@ describe('real-world tables', () => {
 
   it('a figure table with expression cells is a table: cells, code boxes, the caption as text', () => {
     const { parent } = setup(source);
-    expect(parent.querySelector('.typst-visual__raw-block')).toBeNull();
+    expect(parent.querySelector('.zwf-visual__raw-block')).toBeNull();
     expect([...parent.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['Pages', 'Cold']);
-    expect(parent.querySelector('td .typst-visual__raw-inline')?.textContent).toContain('ms(18)');
+    expect(parent.querySelector('td .zwf-visual__raw-inline')?.textContent).toContain('ms(18)');
     expect(parent.querySelector('figcaption')?.textContent).toBe('Times');
   });
 

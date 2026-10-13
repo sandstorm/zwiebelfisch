@@ -61,11 +61,11 @@ class MenuList {
   constructor(container: HTMLElement, label: string, entries: readonly Entry[], anchor: MenuAnchor) {
     const doc = container.ownerDocument;
     this.#returnFocus = (container.getRootNode() as Document | ShadowRoot).activeElement;
-    this.#element = element(doc, 'div', 'typst-context-menu');
+    this.#element = element(doc, 'div', 'zwf-context-menu');
     this.#element.setAttribute('role', 'menu');
     this.#element.setAttribute('aria-label', label);
     // a column for the check marks, so every entry's label starts at the same place
-    this.#element.classList.toggle('typst-context-menu--checks', entries.some((entry) => entry.checked !== undefined));
+    this.#element.classList.toggle('zwf-context-menu--checks', entries.some((entry) => entry.checked !== undefined));
     entries.forEach((entry, index) => {
       if (index > 0 && (entry.group ?? '') !== (entries[index - 1].group ?? '')) this.#element.append(separator(doc));
       this.#element.append(this.#item(doc, entry));
@@ -87,16 +87,16 @@ class MenuList {
   }
 
   #item(doc: Document, entry: Entry): HTMLButtonElement {
-    const item = element(doc, 'button', 'typst-context-menu__item');
+    const item = element(doc, 'button', 'zwf-context-menu__item');
     item.type = 'button';
     item.setAttribute('role', entry.checked === undefined ? 'menuitem' : 'menuitemcheckbox');
     if (entry.checked !== undefined) item.setAttribute('aria-checked', String(entry.checked));
     item.tabIndex = -1;
-    const check = element(doc, 'span', 'typst-context-menu__check');
+    const check = element(doc, 'span', 'zwf-context-menu__check');
     check.setAttribute('aria-hidden', 'true');
     check.textContent = entry.checked ? '✓' : '';
     item.append(check, entry.label);
-    if (entry.keybinding) item.append(' ', element(doc, 'kbd', 'typst-context-menu__keybinding', entry.keybinding));
+    if (entry.keybinding) item.append(' ', element(doc, 'kbd', 'zwf-context-menu__keybinding', entry.keybinding));
     item.addEventListener('click', () => {
       this.close();
       entry.run();
@@ -149,7 +149,7 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
 }
 
 function separator(doc: Document): HTMLElement {
-  const node = element(doc, 'div', 'typst-context-menu__separator');
+  const node = element(doc, 'div', 'zwf-context-menu__separator');
   node.setAttribute('role', 'separator');
   return node;
 }

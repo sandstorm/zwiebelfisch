@@ -1,10 +1,10 @@
 /* Messages (show…Message), input boxes and quick picks, menus (showContextMenu), a custom editor's panel, progress
    (withProgress). See WindowHost in window.ts, whose styleSheet the workbench adds. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
-.typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.typst-editor__custom-editor[hidden] { display: none; }
+.zwf-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.zwf-editor__custom-editor[hidden] { display: none; }
 /* Messages (showInformationMessage, …): stacked at the bottom right, above the status bar. */
-.typst-editor__notifications {
+.zwf-editor__notifications {
   position: absolute;
   right: 12px;
   bottom: 32px;
@@ -16,81 +16,81 @@
   max-width: min(420px, calc(100% - 24px));
   pointer-events: none;
 }
-.typst-notification {
+.zwf-notification {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
   padding: 8px 8px 8px 12px;
-  border: 1px solid var(--te-border);
-  border-left: 4px solid var(--te-accent);
+  border: 1px solid var(--zwf-border);
+  border-left: 4px solid var(--zwf-accent);
   border-radius: 8px;
-  background: var(--te-surface);
+  background: var(--zwf-surface);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
-  color: var(--te-text);
+  color: var(--zwf-text);
   font: 13px/1.4 system-ui, sans-serif;
   pointer-events: auto;
 }
-.typst-notification--warning { border-left-color: var(--te-warning); }
-.typst-notification--error { border-left-color: var(--te-danger); }
-.typst-notification__message { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
-.typst-notification__actions { display: flex; gap: 6px; }
-.typst-notification__actions:empty { display: none; }
-.typst-notification__item,
-.typst-quick-input__ok {
-  border: 1px solid var(--te-accent);
+.zwf-notification--warning { border-left-color: var(--zwf-warning); }
+.zwf-notification--error { border-left-color: var(--zwf-danger); }
+.zwf-notification__message { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.zwf-notification__actions { display: flex; gap: 6px; }
+.zwf-notification__actions:empty { display: none; }
+.zwf-notification__item,
+.zwf-quick-input__ok {
+  border: 1px solid var(--zwf-accent);
   border-radius: 6px;
   padding: 3px 10px;
-  background: var(--te-accent);
+  background: var(--zwf-accent);
   color: white;
   font: inherit;
   cursor: pointer;
 }
-.typst-notification__close {
+.zwf-notification__close {
   border: 0;
   border-radius: 6px;
   padding: 0 6px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: inherit;
   font-size: 16px;
   cursor: pointer;
 }
-.typst-notification__close:hover { background: var(--te-hover); color: var(--te-text); }
+.zwf-notification__close:hover { background: var(--zwf-hover); color: var(--zwf-text); }
 /* Menus (showContextMenu): at a right click's point or below a button, kept inside the viewport. */
-.typst-context-menu {
+.zwf-context-menu {
   position: fixed;
   z-index: 50;
   display: flex;
   flex-direction: column;
   min-width: 160px;
   padding: 4px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 8px;
-  background: var(--te-surface);
+  background: var(--zwf-surface);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
   font: 13px system-ui, sans-serif;
 }
-.typst-context-menu__item {
+.zwf-context-menu__item {
   display: flex;
   align-items: baseline;
   border: 0;
   border-radius: 6px;
   padding: 4px 10px;
   background: none;
-  color: var(--te-text);
+  color: var(--zwf-text);
   font: inherit;
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
 }
-.typst-context-menu__item:hover,
-.typst-context-menu__item:focus { background: var(--te-hover); outline: none; }
-.typst-context-menu__check { display: none; }
-.typst-context-menu--checks .typst-context-menu__check { display: inline-block; width: 1.25em; color: var(--te-accent); }
-.typst-context-menu__separator { height: 1px; margin: 4px 2px; background: var(--te-divider); }
+.zwf-context-menu__item:hover,
+.zwf-context-menu__item:focus { background: var(--zwf-hover); outline: none; }
+.zwf-context-menu__check { display: none; }
+.zwf-context-menu--checks .zwf-context-menu__check { display: inline-block; width: 1.25em; color: var(--zwf-accent); }
+.zwf-context-menu__separator { height: 1px; margin: 4px 2px; background: var(--zwf-divider); }
 /* Input boxes and quick picks (showInputBox, showQuickPick): below what the user just used. */
-.typst-quick-input {
+.zwf-quick-input {
   position: absolute;
   z-index: 40;
   display: flex;
@@ -99,32 +99,32 @@
   box-sizing: border-box;
   width: min(360px, calc(100% - 16px));
   padding: 8px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 8px;
-  background: var(--te-surface);
+  background: var(--zwf-surface);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-  color: var(--te-text);
+  color: var(--zwf-text);
   font: 13px/1.4 system-ui, sans-serif;
 }
-.typst-quick-input__title { font-weight: 600; color: var(--te-text-2); }
-.typst-quick-input__row { display: flex; gap: 6px; }
-.typst-quick-input__field {
+.zwf-quick-input__title { font-weight: 600; color: var(--zwf-text-2); }
+.zwf-quick-input__row { display: flex; gap: 6px; }
+.zwf-quick-input__field {
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
-  background: var(--te-bg);
-  color: var(--te-text);
+  background: var(--zwf-bg);
+  color: var(--zwf-text);
   font: inherit;
 }
-.typst-quick-input__field:focus { outline: 2px solid var(--te-jump); border-color: var(--te-accent); }
-.typst-quick-input__prompt { color: var(--te-muted); font-size: 12px; }
-.typst-quick-input__message { color: var(--te-danger); font-size: 12px; }
-.typst-quick-input__message:empty { display: none; }
-.typst-quick-pick .typst-quick-input__ok { align-self: flex-end; }
-.typst-quick-pick__list { display: flex; flex-direction: column; max-height: 240px; overflow: auto; }
-.typst-quick-pick__item {
+.zwf-quick-input__field:focus { outline: 2px solid var(--zwf-jump); border-color: var(--zwf-accent); }
+.zwf-quick-input__prompt { color: var(--zwf-muted); font-size: 12px; }
+.zwf-quick-input__message { color: var(--zwf-danger); font-size: 12px; }
+.zwf-quick-input__message:empty { display: none; }
+.zwf-quick-pick .zwf-quick-input__ok { align-self: flex-end; }
+.zwf-quick-pick__list { display: flex; flex-direction: column; max-height: 240px; overflow: auto; }
+.zwf-quick-pick__item {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -133,38 +133,38 @@
   border-radius: 6px;
   cursor: pointer;
 }
-.typst-quick-pick__item[hidden] { display: none; }
-.typst-quick-pick__item:hover { background: var(--te-hover); }
-.typst-quick-pick__item[aria-selected='true'] { background: var(--te-selected); color: var(--te-text); }
-.typst-quick-pick__description { color: var(--te-muted); font-size: 12px; }
-.typst-quick-pick__detail { flex-basis: 100%; color: var(--te-muted); font-size: 12px; }
+.zwf-quick-pick__item[hidden] { display: none; }
+.zwf-quick-pick__item:hover { background: var(--zwf-hover); }
+.zwf-quick-pick__item[aria-selected='true'] { background: var(--zwf-selected); color: var(--zwf-text); }
+.zwf-quick-pick__description { color: var(--zwf-muted); font-size: 12px; }
+.zwf-quick-pick__detail { flex-basis: 100%; color: var(--zwf-muted); font-size: 12px; }
 /* A command's key at the row's end (search everywhere's commands, menus). */
-.typst-quick-pick__keybinding,
-.typst-context-menu__keybinding { margin-left: auto; padding-left: 16px; color: var(--te-muted); font: inherit; font-size: 12px; white-space: nowrap; }
+.zwf-quick-pick__keybinding,
+.zwf-context-menu__keybinding { margin-left: auto; padding-left: 16px; color: var(--zwf-muted); font: inherit; font-size: 12px; white-space: nowrap; }
 /* withProgress, ProgressLocation.Window: a spinner and the text in the status bar. */
-.typst-editor__progress {
+.zwf-editor__progress {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.typst-editor__progress-spinner {
+.zwf-editor__progress-spinner {
   flex: none;
   width: 10px;
   height: 10px;
-  border: 2px solid var(--te-border);
-  border-top-color: var(--te-accent);
+  border: 2px solid var(--zwf-border);
+  border-top-color: var(--zwf-accent);
   border-radius: 50%;
-  animation: typst-editor-spin 0.8s linear infinite;
+  animation: zwf-editor-spin 0.8s linear infinite;
 }
-@keyframes typst-editor-spin { to { transform: rotate(360deg); } }
+@keyframes zwf-editor-spin { to { transform: rotate(360deg); } }
 /* withProgress, ProgressLocation.EditingArea: a note over the editing area, in its grid cell (the frame's column 2,
    editor.css), while the area is inert. */
-.typst-editor__editing-progress {
+.zwf-editor__editing-progress {
   grid-column: 2;
   grid-row: 1;
   z-index: 5;
@@ -174,51 +174,51 @@
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  background: var(--te-bg);
-  color: var(--te-muted);
+  background: var(--zwf-bg);
+  color: var(--zwf-muted);
   font: 13px/1.4 system-ui, sans-serif;
   text-align: center;
 }
-.typst-editor__editing-progress-title { color: var(--te-text-2); }
-.typst-editor__editing-progress-bar {
+.zwf-editor__editing-progress-title { color: var(--zwf-text-2); }
+.zwf-editor__editing-progress-bar {
   position: relative;
   overflow: hidden;
   width: min(220px, 70%);
   height: 4px;
   border-radius: 2px;
-  background: var(--te-border);
+  background: var(--zwf-border);
 }
-.typst-editor__editing-progress-bar::after {
+.zwf-editor__editing-progress-bar::after {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: var(--te-progress, 35%);
-  background: var(--te-accent);
+  width: var(--zwf-progress, 35%);
+  background: var(--zwf-accent);
 }
-.typst-editor__editing-progress-bar:not([aria-valuenow])::after { animation: typst-editor-indeterminate 1.2s ease-in-out infinite; }
-@keyframes typst-editor-indeterminate {
+.zwf-editor__editing-progress-bar:not([aria-valuenow])::after { animation: zwf-editor-indeterminate 1.2s ease-in-out infinite; }
+@keyframes zwf-editor-indeterminate {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
 }
-.typst-editor__editing-progress-message:empty { display: none; }
+.zwf-editor__editing-progress-message:empty { display: none; }
 @media (prefers-reduced-motion: reduce) {
-  .typst-editor__progress-spinner { animation: none; border-color: var(--te-accent); }
-  .typst-editor__editing-progress-bar:not([aria-valuenow])::after { animation: none; width: 100%; opacity: 0.5; }
+  .zwf-editor__progress-spinner { animation: none; border-color: var(--zwf-accent); }
+  .zwf-editor__editing-progress-bar:not([aria-valuenow])::after { animation: none; width: 100%; opacity: 0.5; }
 }
 /* Search everywhere (createQuickPick): wider, at the top in the middle; groups under headings, matches marked. */
-.typst-quick-pick--wide { width: min(560px, calc(100% - 16px)); }
-.typst-quick-pick--wide .typst-quick-pick__list { max-height: min(420px, 60vh); }
-.typst-quick-pick__group { display: flex; flex-direction: column; }
-.typst-quick-pick__group + .typst-quick-pick__group { margin-top: 4px; border-top: 1px solid var(--te-border); padding-top: 4px; }
-.typst-quick-pick__heading { padding: 2px 8px; color: var(--te-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.typst-quick-pick__heading-description { font-weight: normal; text-transform: none; letter-spacing: 0; }
-.typst-quick-pick__description,
-.typst-quick-pick__detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.typst-quick-pick__match { background: none; color: var(--te-accent); font-weight: 600; }
-.typst-quick-pick__empty { padding: 4px 8px; color: var(--te-muted); }
-.typst-quick-pick__empty[hidden],
-.typst-quick-pick__progress[hidden] { display: none; }
-.typst-quick-pick__progress { height: 2px; border-radius: 1px; background: linear-gradient(90deg, transparent, var(--te-accent), transparent) 0 0 / 50% 100% no-repeat; animation: typst-quick-pick-progress 1s linear infinite; }
-@keyframes typst-quick-pick-progress { from { background-position: -50% 0; } to { background-position: 150% 0; } }
-@media (prefers-reduced-motion: reduce) { .typst-quick-pick__progress { animation: none; background: var(--te-accent); opacity: 0.4; } }
-.typst-quick-pick__hint { padding: 2px 2px 0; border-top: 1px solid var(--te-border); color: var(--te-muted); font-size: 11px; }
+.zwf-quick-pick--wide { width: min(560px, calc(100% - 16px)); }
+.zwf-quick-pick--wide .zwf-quick-pick__list { max-height: min(420px, 60vh); }
+.zwf-quick-pick__group { display: flex; flex-direction: column; }
+.zwf-quick-pick__group + .zwf-quick-pick__group { margin-top: 4px; border-top: 1px solid var(--zwf-border); padding-top: 4px; }
+.zwf-quick-pick__heading { padding: 2px 8px; color: var(--zwf-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.zwf-quick-pick__heading-description { font-weight: normal; text-transform: none; letter-spacing: 0; }
+.zwf-quick-pick__description,
+.zwf-quick-pick__detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-quick-pick__match { background: none; color: var(--zwf-accent); font-weight: 600; }
+.zwf-quick-pick__empty { padding: 4px 8px; color: var(--zwf-muted); }
+.zwf-quick-pick__empty[hidden],
+.zwf-quick-pick__progress[hidden] { display: none; }
+.zwf-quick-pick__progress { height: 2px; border-radius: 1px; background: linear-gradient(90deg, transparent, var(--zwf-accent), transparent) 0 0 / 50% 100% no-repeat; animation: zwf-quick-pick-progress 1s linear infinite; }
+@keyframes zwf-quick-pick-progress { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+@media (prefers-reduced-motion: reduce) { .zwf-quick-pick__progress { animation: none; background: var(--zwf-accent); opacity: 0.4; } }
+.zwf-quick-pick__hint { padding: 2px 2px 0; border-top: 1px solid var(--zwf-border); color: var(--zwf-muted); font-size: 11px; }

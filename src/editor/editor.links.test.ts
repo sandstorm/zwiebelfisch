@@ -49,7 +49,7 @@ const MOD = { ctrlKey: true, metaKey: true };
 function setup(viewType?: string, files: Record<string, string> = { '/main.typ': MAIN, '/ch2.typ': CH2 }) {
   const host = document.body.appendChild(document.createElement('div'));
   const editor = createEditor(host, { files, viewType });
-  const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
+  const pane = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((p) => !p.hidden)!;
   const visual = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.view;
   const source = () => EditorView.findFromDOM(pane().querySelector<HTMLElement>('.cm-editor')!)!;
   return { host, editor, visual, source };
@@ -61,7 +61,7 @@ function hintAfterHover(element: Element, init: MouseEventInit = {}): HTMLElemen
   element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, ...init }));
   vi.advanceTimersByTime(300);
   vi.useRealTimers();
-  return document.querySelector<HTMLElement>('.typst-link-hint[role=tooltip]');
+  return document.querySelector<HTMLElement>('.zwf-link-hint[role=tooltip]');
 }
 
 /** The pointer left the editor of `element`. */
@@ -101,12 +101,12 @@ describe('links in the Source editor', () => {
 
   it('hovering a reference shows the same hint as a reference chip in the Visual editor', () => {
     const { host } = setup(SOURCE_EDITOR);
-    const mark = [...host.querySelectorAll('.typst-source__path')].find((m) => m.textContent === '@fig:setup')!;
+    const mark = [...host.querySelectorAll('.zwf-source__path')].find((m) => m.textContent === '@fig:setup')!;
     const hint = hintAfterHover(mark)!;
     expect(hint.textContent).toMatch(/^Go to Figure · The measurement setup in ch2\.typ\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     expect(mark.hasAttribute('title')).toBe(false);
     leave(mark);
-    expect(document.querySelector('.typst-link-hint')).toBeNull();
+    expect(document.querySelector('.zwf-link-hint')).toBeNull();
   });
 });
 
@@ -130,9 +130,9 @@ describe('links in the Visual editor', () => {
     expect(hint.textContent).toMatch(/^Go to Figure · The measurement setup in ch2\.typ\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     expect(chip.getAttribute('aria-describedby')).toBe(hint.id);
     expect([view.dom.hasAttribute('title'), chip.hasAttribute('title')]).toEqual([false, false]);
-    expect(chip.classList.contains('typst-link--mod')).toBe(false);
+    expect(chip.classList.contains('zwf-link--mod')).toBe(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ...MOD }));
-    expect(chip.classList.contains('typst-link--mod')).toBe(true);
+    expect(chip.classList.contains('zwf-link--mod')).toBe(true);
     chip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
     expect(editor.activeFile).toBe('/main.typ'); // a plain click edits
     chip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
@@ -165,13 +165,13 @@ describe('links in the Visual editor', () => {
       if (node.isText && node.text?.includes('Typst')) pos = at + node.text.indexOf('Typst') + 2;
     });
     view.posAtCoords = () => ({ pos, inside: -1 });
-    const anchor = host.querySelector<HTMLElement>('.typst-markup__link')!;
+    const anchor = host.querySelector<HTMLElement>('.zwf-markup__link')!;
     const hint = hintAfterHover(anchor)!;
-    expect(hint.className).toBe('typst-link-hint');
+    expect(hint.className).toBe('zwf-link-hint');
     expect(hint.textContent).toMatch(/^Open https:\/\/typst\.app\/\(/);
     expect(anchor.hasAttribute('title')).toBe(false);
     leave(anchor);
-    expect(document.querySelector('.typst-link-hint')).toBeNull();
+    expect(document.querySelector('.zwf-link-hint')).toBeNull();
     anchor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
     expect(open).toHaveBeenCalledWith('https://typst.app/', '_blank', 'noopener');
   });

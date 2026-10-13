@@ -54,7 +54,7 @@ export class SourceControlStatus {
     private readonly onCommit: (control: SourceControl) => void,
   ) {
     this.element = doc.createElement('div');
-    this.element.className = 'typst-source-control__status';
+    this.element.className = 'zwf-source-control__status';
   }
 
   /** Shows the entries of `controls`, reusing the buttons there are (so a focused one stays focused). */
@@ -66,7 +66,7 @@ export class SourceControlStatus {
       const button = buttons[index] ?? this.element.appendChild(this.#button());
       button.textContent = command.title;
       button.title = command.tooltip ?? '';
-      button.classList.toggle('typst-source-control__entry--warning', command.backgroundColor === 'warning');
+      button.classList.toggle('zwf-source-control__entry--warning', command.backgroundColor === 'warning');
       button.onclick = () => this.onCommit(control);
     });
   }
@@ -74,7 +74,7 @@ export class SourceControlStatus {
   #button(): HTMLButtonElement {
     const button = this.doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-source-control__entry';
+    button.className = 'zwf-source-control__entry';
     return button;
   }
 }

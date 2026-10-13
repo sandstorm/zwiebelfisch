@@ -39,10 +39,10 @@ function setup(options: EditorOptions) {
   const items = () => [...host.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const item = (title: string) => items().find((t) => t.title === title);
   const source = () => {
-    const visible = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
+    const visible = [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
   };
-  const filesOpen = () => !host.querySelector<HTMLElement>('[data-testid=typst-files]')!.closest<HTMLElement>('.typst-editor__panel')!.hidden;
+  const filesOpen = () => !host.querySelector<HTMLElement>('[data-testid=zwf-files]')!.closest<HTMLElement>('.zwf-editor__panel')!.hidden;
   return { host, editor, items, item, source, filesOpen };
 }
 
@@ -133,7 +133,7 @@ describe('the file panel in the widget', () => {
   it('is collapsed to its rail button for a single file and open with more files (auto)', () => {
     const single = setup({ source: '= Hello' });
     expect(single.filesOpen()).toBe(false);
-    expect(single.host.querySelector('[data-testid=typst-panel-toggle-files]')).not.toBeNull();
+    expect(single.host.querySelector('[data-testid=zwf-panel-toggle-files]')).not.toBeNull();
     const several = setup({ source: '= Hello', files: { '/chapters/intro.typ': 'Intro' } });
     expect(several.filesOpen()).toBe(true);
     expect(several.items().map((t) => t.title)).toEqual(['main.typ', 'chapters']);
@@ -141,7 +141,7 @@ describe('the file panel in the widget', () => {
 
   it('`hide` shows no panel and no rail button; `show` opens it for one file', () => {
     const hidden = setup({ source: '= Hello', files: { '/a.typ': 'A' }, settings: { 'files.panel': 'hide' } });
-    expect(hidden.host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!.hidden).toBe(true);
+    expect(hidden.host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!.hidden).toBe(true);
     expect(hidden.filesOpen()).toBe(false);
     expect(setup({ source: '= Hello', settings: { 'files.panel': 'show' } }).filesOpen()).toBe(true);
   });

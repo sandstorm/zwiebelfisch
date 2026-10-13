@@ -1,91 +1,91 @@
 /* The files extension's styles: the file panel (header with "New", the file tree), the editor of other files.
    See files in files.ts, which registers it. */
-.typst-files {
+.zwf-files {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
   font-size: 13px;
 }
-.typst-files__header {
+.zwf-files__header {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 6px 6px 6px 10px;
-  border-bottom: 1px solid var(--te-border);
+  border-bottom: 1px solid var(--zwf-border);
 }
-.typst-files__title {
+.zwf-files__title {
   flex: 1;
   min-width: 0;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.typst-files__action {
+.zwf-files__action {
   display: inline-flex;
   align-items: center;
   border: 0;
   border-radius: 6px;
   padding: 4px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   cursor: pointer;
 }
-.typst-files__action[hidden] { display: none; }
-.typst-files__action:hover { background: var(--te-hover); color: var(--te-text); }
-.typst-files__tree {
+.zwf-files__action[hidden] { display: none; }
+.zwf-files__action:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-files__tree {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 4px 0 24px;
   scrollbar-width: thin;
 }
-.typst-files__row {
+.zwf-files__row {
   display: flex;
   align-items: center;
   gap: 5px;
   min-height: 26px;
-  padding: 0 8px 0 calc(8px + var(--typst-files-depth, 0) * 14px);
-  color: var(--te-text-2);
+  padding: 0 8px 0 calc(8px + var(--zwf-files-depth, 0) * 14px);
+  color: var(--zwf-text-2);
   cursor: pointer;
   user-select: none;
 }
-.typst-files__row--file { padding-left: calc(25px + var(--typst-files-depth, 0) * 14px); }
-.typst-files__row:hover { background: var(--te-hover); }
-.typst-files__row:focus { outline: none; }
-.typst-files__row:focus-visible { box-shadow: inset 0 0 0 2px var(--te-accent); }
-.typst-files__row[aria-selected='true'] { background: var(--te-selected); color: var(--te-text); font-weight: 500; }
-.typst-files__row--drop { background: var(--te-selected-strong); box-shadow: inset 0 0 0 1px var(--te-accent); }
-.typst-files__chevron { width: 12px; height: 12px; transition: transform 0.1s; color: var(--te-faint); }
-.typst-files__row[aria-expanded='true'] .typst-files__chevron { transform: rotate(90deg); }
-.typst-files__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.typst-files__decorations { display: inline-flex; flex: none; margin-left: 2px; }
-.typst-files__decoration {
+.zwf-files__row--file { padding-left: calc(25px + var(--zwf-files-depth, 0) * 14px); }
+.zwf-files__row:hover { background: var(--zwf-hover); }
+.zwf-files__row:focus { outline: none; }
+.zwf-files__row:focus-visible { box-shadow: inset 0 0 0 2px var(--zwf-accent); }
+.zwf-files__row[aria-selected='true'] { background: var(--zwf-selected); color: var(--zwf-text); font-weight: 500; }
+.zwf-files__row--drop { background: var(--zwf-selected-strong); box-shadow: inset 0 0 0 1px var(--zwf-accent); }
+.zwf-files__chevron { width: 12px; height: 12px; transition: transform 0.1s; color: var(--zwf-faint); }
+.zwf-files__row[aria-expanded='true'] .zwf-files__chevron { transform: rotate(90deg); }
+.zwf-files__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-files__decorations { display: inline-flex; flex: none; margin-left: 2px; }
+.zwf-files__decoration {
   min-width: 1.6em;
   height: 1.6em;
   margin-left: -3px;
   padding: 0 2px;
   box-sizing: border-box;
   border-radius: 0.8em;
-  background: var(--typst-files-decoration-color, var(--te-accent));
-  color: var(--typst-files-decoration-text, var(--te-bg));
-  box-shadow: 0 0 0 1.5px var(--te-bg);
+  background: var(--zwf-files-decoration-color, var(--zwf-accent));
+  color: var(--zwf-files-decoration-text, var(--zwf-bg));
+  box-shadow: 0 0 0 1.5px var(--zwf-bg);
   font: 600 9px/1.6em system-ui, sans-serif;
   text-align: center;
 }
-.typst-files__decoration:first-child { margin-left: 0; }
-.typst-files__badge {
+.zwf-files__decoration:first-child { margin-left: 0; }
+.zwf-files__badge {
   flex: none;
   border-radius: 999px;
   padding: 0 6px;
-  background: var(--te-selected);
-  color: var(--te-accent);
+  background: var(--zwf-selected);
+  color: var(--zwf-accent);
   font-size: 11px;
   font-weight: 600;
 }
-.typst-files__icon {
+.zwf-files__icon {
   flex: none;
   width: 14px;
   height: 14px;
@@ -96,7 +96,7 @@
   stroke-linejoin: round;
 }
 /* A file no other editor opens (files.file): name, size, type */
-.typst-files__info {
+.zwf-files__info {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -106,8 +106,8 @@
   gap: 16px;
   padding: 24px;
 }
-.typst-files__info-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
-.typst-files__info-facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
-.typst-files__info-facts dt { color: var(--te-muted); }
-.typst-files__info-facts dd { margin: 0; color: var(--te-text); }
-.typst-files__info-note { margin: 0; color: var(--te-muted); }
+.zwf-files__info-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--zwf-text); }
+.zwf-files__info-facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
+.zwf-files__info-facts dt { color: var(--zwf-muted); }
+.zwf-files__info-facts dd { margin: 0; color: var(--zwf-text); }
+.zwf-files__info-note { margin: 0; color: var(--zwf-muted); }

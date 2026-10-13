@@ -6,13 +6,13 @@ import { caretAtEnd } from './visual-helpers';
 
 const METHOD = '/chapters/method.typ';
 
-const visual = (page: Page) => page.locator('[data-testid=typst-visual]:visible');
+const visual = (page: Page) => page.locator('[data-testid=zwf-visual]:visible');
 const method = (page: Page) => () =>
   page.evaluate((path) => (window as unknown as { editor: { files: Record<string, string> } }).editor.files[path], METHOD);
 
 test.beforeEach(async ({ page }) => {
   await page.goto(`/?example=advanced#${METHOD}`);
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('a copied figure with its label and a reference to it pastes as <…-1> and @…-1; one undo takes it back', async ({ page }) => {

@@ -24,32 +24,32 @@ const SITE = [
 ].join('\n');
 
 const setSource = (page: Page, text: string) => page.evaluate((t) => ((window as unknown as { editor: { source: string } }).editor.source = t), text);
-const html = (page: Page): FrameLocator => page.frameLocator('[data-testid="typst-preview-html"]');
+const html = (page: Page): FrameLocator => page.frameLocator('[data-testid="zwf-preview-html"]');
 /**
  * The frame's top-level heading `name` (a `=` heading is an `h2` there). By name: until the test's source is
  * compiled, the frame shows the demo's document, whose HTML has two `h2`s.
  */
 const heading = (page: Page, name: string) => html(page).getByRole('heading', { level: 2, name, exact: true });
-const switchTo = (page: Page, name: 'Pages' | 'HTML') => page.getByTestId('typst-preview-renderers').getByRole('button', { name }).click();
+const switchTo = (page: Page, name: 'Pages' | 'HTML') => page.getByTestId('zwf-preview-renderers').getByRole('button', { name }).click();
 /** How far the frame's page is scrolled. */
 const scrollY = (page: Page) => html(page).locator('html').evaluate((element) => element.ownerDocument.defaultView!.scrollY);
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
 });
 
 test('switches to HTML and back: zoom and page number only with the pages, the choice remembered', async ({ page }) => {
-  const switcher = page.getByTestId('typst-preview-renderers');
+  const switcher = page.getByTestId('zwf-preview-renderers');
   await expect(switcher.getByRole('button', { name: 'Pages' })).toHaveAttribute('aria-pressed', 'true');
   await setSource(page, PLAIN);
   await switchTo(page, 'HTML');
   await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
   await expect(heading(page, 'Hello')).toBeVisible();
-  await expect(page.getByTestId('typst-preview')).toBeHidden();
-  await expect(page.getByTestId('typst-preview-zoom')).toBeHidden();
-  await expect(page.getByTestId('typst-preview-page-number')).toBeHidden();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-preview')).toBeHidden();
+  await expect(page.getByTestId('zwf-preview-zoom')).toBeHidden();
+  await expect(page.getByTestId('zwf-preview-page-number')).toBeHidden();
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 
   // the demo's document again (Local mode keeps no edits), shown as HTML
   await page.reload();
@@ -57,8 +57,8 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
   await setSource(page, PLAIN);
   await expect(heading(page, 'Hello')).toBeVisible();
   await switchTo(page, 'Pages');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
-  await expect(page.getByTestId('typst-preview-zoom')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-preview-zoom')).toBeVisible();
 });
 
 test('shows a bundle page by page: links switch pages, URLs open a new tab', async ({ page, context }) => {
@@ -72,7 +72,7 @@ test('shows a bundle page by page: links switch pages, URLs open a new tab', asy
   await expect(html(page).getByText('Last words.')).toBeInViewport();
   // back to index.html through the cursor (the end of the line `= Home`), then out to the web
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.getByTestId('typst-source').locator('.cm-content').click();
+  await page.getByTestId('zwf-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('End');
@@ -90,7 +90,7 @@ test('follows the cursor to the page and element its text made; a compile keeps 
   await expect(heading(page, 'Home')).toBeVisible();
   // the end of `  Last words.`, the line before the closing `]` (the long source is not all in the DOM)
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.getByTestId('typst-source').locator('.cm-content').click();
+  await page.getByTestId('zwf-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('End');

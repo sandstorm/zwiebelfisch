@@ -1,18 +1,18 @@
 /* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
    editors' panels, the editor/title menu) and the status bar. See WorkbenchHost in workbench.ts, which puts it in
    first, after the tokens and the frame of editor.css. */
-.typst-editor__side {
+.zwf-editor__side {
   grid-row: 1;
   position: relative;
   display: flex;
   min-width: 0;
   min-height: 0;
-  background: var(--te-subtle);
+  background: var(--zwf-subtle);
 }
-.typst-editor__side--left { grid-column: 1; border-right: 1px solid var(--te-border); }
-.typst-editor__side--right { grid-column: 3; border-left: 1px solid var(--te-border); }
-.typst-editor__side[hidden] { display: none; }
-.typst-editor__rail {
+.zwf-editor__side--left { grid-column: 1; border-right: 1px solid var(--zwf-border); }
+.zwf-editor__side--right { grid-column: 3; border-left: 1px solid var(--zwf-border); }
+.zwf-editor__side[hidden] { display: none; }
+.zwf-editor__rail {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,8 +20,8 @@
   padding: 6px 4px;
 }
 /* the rail's bottom group (side panels with alignment: 'bottom') at its far end */
-.typst-editor__rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; }
-.typst-editor__rail-button {
+.zwf-editor__rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; }
+.zwf-editor__rail-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -31,29 +31,29 @@
   border-radius: 6px;
   padding: 0;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   cursor: pointer;
 }
-.typst-editor__rail-button[hidden] { display: none; }
-.typst-editor__rail-button:hover { background: var(--te-hover); color: var(--te-text); }
-.typst-editor__rail-button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
-.typst-editor__rail-button svg { width: 16px; height: 16px; }
-.typst-editor__panel {
+.zwf-editor__rail-button[hidden] { display: none; }
+.zwf-editor__rail-button:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-editor__rail-button[aria-pressed='true'] { background: var(--zwf-selected); color: var(--zwf-accent); }
+.zwf-editor__rail-button svg { width: 16px; height: 16px; }
+.zwf-editor__panel {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: var(--te-subtle);
+  background: var(--zwf-subtle);
 }
-/* left: as wide as its separator says; right: fills the column (a share of the widget, --te-right-side) */
-.typst-editor__side--left .typst-editor__panel { max-width: 50vw; border-left: 1px solid var(--te-border); }
-.typst-editor__side--right .typst-editor__panel { flex: 1; border-right: 1px solid var(--te-border); }
-.typst-editor__panel[hidden],
-.typst-editor__panel-body[hidden] { display: none; }
-.typst-editor__panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* left: as wide as its separator says; right: fills the column (a share of the widget, --zwf-right-side) */
+.zwf-editor__side--left .zwf-editor__panel { max-width: 50vw; border-left: 1px solid var(--zwf-border); }
+.zwf-editor__side--right .zwf-editor__panel { flex: 1; border-right: 1px solid var(--zwf-border); }
+.zwf-editor__panel[hidden],
+.zwf-editor__panel-body[hidden] { display: none; }
+.zwf-editor__panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 /* the separator on the panel's inner edge */
-.typst-editor__resizer {
+.zwf-editor__resizer {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -61,14 +61,14 @@
   z-index: 5;
   cursor: col-resize;
 }
-.typst-editor__side--left .typst-editor__resizer { right: -3px; }
-.typst-editor__side--right .typst-editor__resizer { left: -3px; }
-.typst-editor__resizer:hover,
-.typst-editor__resizer:focus-visible,
-.typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
-.typst-editor--resizing { cursor: col-resize; user-select: none; }
+.zwf-editor__side--left .zwf-editor__resizer { right: -3px; }
+.zwf-editor__side--right .zwf-editor__resizer { left: -3px; }
+.zwf-editor__resizer:hover,
+.zwf-editor__resizer:focus-visible,
+.zwf-editor--resizing .zwf-editor__resizer { background: var(--zwf-jump); outline: none; }
+.zwf-editor--resizing { cursor: col-resize; user-select: none; }
 /* Narrow widget: the left side's open panel lies over the editing area. */
-.typst-editor--narrow .typst-editor__side--left .typst-editor__panel {
+.zwf-editor--narrow .zwf-editor__side--left .zwf-editor__panel {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -79,31 +79,31 @@
 }
 /* Below everything: the status bar items (e.g. the compile status), the left ones from the start, the right ones at
    the end (StatusBar orders them; hidden while there is none). */
-.typst-editor__status-bar {
+.zwf-editor__status-bar {
   grid-column: 1 / -1;
   grid-row: 2;
   display: flex;
   min-width: 0;
-  border-top: 1px solid var(--te-border);
+  border-top: 1px solid var(--zwf-border);
 }
-.typst-editor__status-bar[hidden] { display: none; }
-.typst-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
-.typst-editor__status-bar-right { display: flex; }
+.zwf-editor__status-bar[hidden] { display: none; }
+.zwf-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
+.zwf-editor__status-bar-right { display: flex; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
-.typst-editor { position: relative; }
+.zwf-editor { position: relative; }
 /* The editing area: the tab bar (the shown file's editors), the Visual / Source editors' panels, a dragged file over the widget. */
-.typst-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
-.typst-editor__editor-area .cm-scroller { overflow: auto; }
-.typst-editor__tabs {
+.zwf-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
+.zwf-editor__editor-area .cm-scroller { overflow: auto; }
+.zwf-editor__tabs {
   display: flex;
   gap: 4px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--te-border);
-  background: var(--te-subtle);
+  border-bottom: 1px solid var(--zwf-border);
+  background: var(--zwf-subtle);
 }
-.typst-editor__tab-list { display: flex; gap: 4px; }
-.typst-editor__tab-list[hidden] { display: none; }
-.typst-editor__tab {
+.zwf-editor__tab-list { display: flex; gap: 4px; }
+.zwf-editor__tab-list[hidden] { display: none; }
+.zwf-editor__tab {
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 4px 12px;
@@ -112,28 +112,28 @@
   font-size: 13px;
   cursor: pointer;
 }
-.typst-editor__tab[aria-selected='true'] { background: var(--te-surface); border-color: var(--te-border); }
-.typst-editor__pane { overflow: auto; }
-.typst-editor__tabs[hidden] { display: none; }
-.typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
+.zwf-editor__tab[aria-selected='true'] { background: var(--zwf-surface); border-color: var(--zwf-border); }
+.zwf-editor__pane { overflow: auto; }
+.zwf-editor__tabs[hidden] { display: none; }
+.zwf-editor.zwf-editor--dropping { outline: 2px dashed var(--zwf-accent); outline-offset: -4px; }
 /* The editor/title menu and "View": at the end of the tab bar (e.g. Comment, Save to GitLab…, View ▾). */
-.typst-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
-.typst-editor__tab-actions:empty { display: none; }
-.typst-editor__tab-action {
+.zwf-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
+.zwf-editor__tab-actions:empty { display: none; }
+.zwf-editor__tab-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
   padding: 3px 10px;
-  background: var(--te-surface);
-  color: var(--te-text-2);
+  background: var(--zwf-surface);
+  color: var(--zwf-text-2);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
-.typst-editor__tab-action:hover { background: var(--te-hover); }
-.typst-editor__tab-action:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
-.typst-editor__tab-action-icon { display: inline-flex; }
-.typst-editor__tab-action-icon svg { width: 16px; height: 16px; }
-.typst-editor__view-menu { gap: 2px; padding-right: 6px; }
+.zwf-editor__tab-action:hover { background: var(--zwf-hover); }
+.zwf-editor__tab-action:focus-visible { outline: 2px solid var(--zwf-accent); outline-offset: 1px; }
+.zwf-editor__tab-action-icon { display: inline-flex; }
+.zwf-editor__tab-action-icon svg { width: 16px; height: 16px; }
+.zwf-editor__view-menu { gap: 2px; padding-right: 6px; }

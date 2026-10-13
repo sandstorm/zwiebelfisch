@@ -14,7 +14,7 @@ import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typ
 export const HEADING: TypstNodeSpec = {
   name: 'heading',
   // Tiptap's heading (StarterKit's), typed as in Typst, with the source anchors
-  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'typst-headings__heading' } } })
+  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'zwf-headings__heading' } } })
     .extend({
       addExtensions() {
         return (this.parent?.() ?? []).map((heading: AnyExtension) =>

@@ -50,7 +50,7 @@ function setup() {
     },
   };
   workbench.activate([fileNavigation(), probe]);
-  const history = () => host.querySelector<HTMLElement>('nav.typst-file-navigation--history')!;
+  const history = () => host.querySelector<HTMLElement>('nav.zwf-file-navigation--history')!;
   const links = () => (history().hidden ? [] : [...history().querySelectorAll('button')].map((button) => button.textContent));
   const click = (text: string) => [...history().querySelectorAll('button')].find((button) => button.textContent === text)!.click();
   return { host, project, workbench, context, history, links, click };
@@ -69,7 +69,7 @@ describe('file navigation: back and forward', () => {
     workbench.open(path('/flow.mmd'));
     expect(links()).toEqual(['← Back to chapter.typ']);
     // above the test editor's panel, in the editing area
-    expect(history().closest('.typst-file-navigation__top')!.nextElementSibling?.querySelector('.probe-text')).not.toBeNull();
+    expect(history().closest('.zwf-file-navigation__top')!.nextElementSibling?.querySelector('.probe-text')).not.toBeNull();
     click('← Back to chapter.typ');
     expect(context.window.activeFile).toBe('/chapter.typ');
     expect(context.window.activeTextEditor!.selection).toEqual({ from: 3, to: 10 });
@@ -122,7 +122,7 @@ describe('file navigation: reading order', () => {
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/appendix.typ'), content: '= Appendix\n' });
     workbench.open(path('/chapter.typ'));
-    const links = () => [...host.querySelectorAll<HTMLElement>('nav.typst-file-navigation--bottom button')].map((button) => button.textContent);
+    const links = () => [...host.querySelectorAll<HTMLElement>('nav.zwf-file-navigation--bottom button')].map((button) => button.textContent);
     expect(links()).toEqual(['← main.typ']);
     project.document(path('/main.typ'))!.setText('= Main\n#include "chapter.typ"\n#include "appendix.typ"\n', 'typing');
     vi.advanceTimersByTime(200);
@@ -135,7 +135,7 @@ describe('file navigation: reading order', () => {
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/book.typ'), content: '= Book\n#include "chapter.typ"\n' });
     workbench.open(path('/chapter.typ'));
-    const links = () => [...host.querySelectorAll<HTMLElement>('nav.typst-file-navigation--bottom button')].map((button) => button.textContent);
+    const links = () => [...host.querySelectorAll<HTMLElement>('nav.zwf-file-navigation--bottom button')].map((button) => button.textContent);
     expect(links()).toEqual(['← main.typ']);
     expect(project.setMain(path('/book.typ'))).toBeNull();
     expect(links()).toEqual(['← book.typ']);

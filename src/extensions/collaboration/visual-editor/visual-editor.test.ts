@@ -45,11 +45,11 @@ describe('VisualEditor presence', () => {
     const source = 'Some bold text\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('bold')) }]);
-    const caret = parent.querySelector<HTMLElement>('.typst-collaboration__caret')!;
+    const caret = parent.querySelector<HTMLElement>('.zwf-collaboration__caret')!;
     expect(caret.dataset.user).toBe('Ann');
     // the name flag is drawn from data-user (CSS): the text around stays the document's
     expect(caret.closest('p')!.textContent).toBe('Some bold text');
-    expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
+    expect(caret.style.getPropertyValue('--zwf-remote-color')).toBe('#b58900');
     expect(textBefore(caret)).toBe('Some ');
   });
 
@@ -58,7 +58,7 @@ describe('VisualEditor presence', () => {
     const { view, parent } = setup(source);
     const caretAt = (offset: number) => {
       view.setPresence([{ ...ann, ...at(offset) }]);
-      const caret = parent.querySelector('.typst-collaboration__caret')!;
+      const caret = parent.querySelector('.zwf-collaboration__caret')!;
       return { block: caret.closest('p, h1')!.textContent, before: textBefore(caret) };
     };
     expect(caretAt(source.indexOf('\n'))).toEqual({ block: 'Title', before: 'Title' });
@@ -73,7 +73,7 @@ describe('VisualEditor presence', () => {
     const source = '#table(columns: 2, [a], [])\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('[]') + 1) }]);
-    const caret = parent.querySelector('.typst-collaboration__caret');
+    const caret = parent.querySelector('.zwf-collaboration__caret');
     expect(caret).not.toBeNull();
     expect(caret!.closest('p')?.textContent).toBe('');
     expect(caret!.closest('td')).toBe(parent.querySelectorAll('td')[1]);
@@ -85,18 +85,18 @@ describe('VisualEditor presence', () => {
     parent.querySelector('[contenteditable]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(doc.text).toBe('One\n\n\n\nTwo\n');
     view.setPresence([{ ...ann, ...at(4) }]);
-    expect([...parent.querySelectorAll('p')].map((p) => p.querySelector('.typst-collaboration__caret')?.getAttribute('data-user') ?? p.textContent)).toEqual(['One', 'Ann', 'Two']);
+    expect([...parent.querySelectorAll('p')].map((p) => p.querySelector('.zwf-collaboration__caret')?.getAttribute('data-user') ?? p.textContent)).toEqual(['One', 'Ann', 'Two']);
   });
 
   it('tints the selection; carets follow edits from elsewhere and go when cleared', () => {
     const source = 'Some bold text\n';
     const { doc, view, parent } = setup(source);
     view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
-    expect(parent.querySelector('.typst-collaboration__selection[data-user="Ann"]')?.textContent).toBe('bold');
+    expect(parent.querySelector('.zwf-collaboration__selection[data-user="Ann"]')?.textContent).toBe('bold');
     doc.setText(`Really. ${source}`, 'source');
-    expect(textBefore(parent.querySelector('.typst-collaboration__caret')!)).toBe('Really. Some bold');
+    expect(textBefore(parent.querySelector('.zwf-collaboration__caret')!)).toBe('Really. Some bold');
     view.setPresence([]);
-    expect(parent.querySelector('.typst-collaboration__caret, .typst-collaboration__selection')).toBeNull();
+    expect(parent.querySelector('.zwf-collaboration__caret, .zwf-collaboration__selection')).toBeNull();
   });
 
   it('outlines a raw box with a caret inside, naming everyone there, and draws the carets in its code', () => {
@@ -104,12 +104,12 @@ describe('VisualEditor presence', () => {
     const { view, parent } = setup(source);
     const box = source.indexOf('#set');
     view.setPresence([{ ...ann, ...at(box + 4) }, { ...bob, ...at(box + 1) }]);
-    const outlined = parent.querySelector<HTMLElement>('.typst-visual__raw-block.typst-collaboration__box')!;
+    const outlined = parent.querySelector<HTMLElement>('.zwf-visual__raw-block.zwf-collaboration__box')!;
     expect(outlined.dataset.user).toBe('Ann, Bob');
-    expect(outlined.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
-    expect(outlined.style.getPropertyValue('--typst-remote-text')).toBe('#000000');
-    expect(parent.querySelector('p .typst-collaboration__caret')).toBeNull();
-    const inCode = [...outlined.querySelectorAll<HTMLElement>('.cm-line .typst-collaboration__caret')];
+    expect(outlined.style.getPropertyValue('--zwf-remote-color')).toBe('#b58900');
+    expect(outlined.style.getPropertyValue('--zwf-remote-text')).toBe('#000000');
+    expect(parent.querySelector('p .zwf-collaboration__caret')).toBeNull();
+    const inCode = [...outlined.querySelectorAll<HTMLElement>('.cm-line .zwf-collaboration__caret')];
     expect(inCode.map((caret) => caret.dataset.user).sort()).toEqual(['Ann', 'Bob']);
   });
 
@@ -117,15 +117,15 @@ describe('VisualEditor presence', () => {
     const source = 'Text #box[x] more\n\n#image("a.png")\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('image') + 3) }, { ...bob, ...at(source.indexOf('#box')) }]);
-    expect(parent.querySelector('.typst-images__box.typst-collaboration__box')?.getAttribute('data-user')).toBe('Ann');
-    expect(parent.querySelector('.typst-visual__raw-inline.typst-collaboration__box')).toBeNull();
-    expect(parent.querySelector('p .typst-collaboration__caret[data-user="Bob"]')).not.toBeNull();
+    expect(parent.querySelector('.zwf-images__box.zwf-collaboration__box')?.getAttribute('data-user')).toBe('Ann');
+    expect(parent.querySelector('.zwf-visual__raw-inline.zwf-collaboration__box')).toBeNull();
+    expect(parent.querySelector('p .zwf-collaboration__caret[data-user="Bob"]')).not.toBeNull();
   });
 
   it('outlines an inline raw box with a caret strictly inside', () => {
     const source = 'Text #box[x] more\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...bob, ...at(source.indexOf('box')) }]);
-    expect(parent.querySelector('.typst-visual__raw-inline.typst-collaboration__box')?.getAttribute('data-user')).toBe('Bob');
+    expect(parent.querySelector('.zwf-visual__raw-inline.zwf-collaboration__box')?.getAttribute('data-user')).toBe('Bob');
   });
 });

@@ -6,7 +6,7 @@ import { Mark, Node } from '@tiptap/core';
  * Blocks in a block style: `#note[..]` (or `#callout(kind: ..)[..]`)
  * around them. Their content is edited as usual; the call around it is kept
  * as written (`layout`, owned by the serializer), a new one is `#name[..]`.
- * Drawn as a frame with the style's name and the class `typst-styles--<name>`.
+ * Drawn as a frame with the style's name and the class `zwf-styles--<name>`.
  */
 export const StyledBlock = Node.create({
   name: 'styledBlock',
@@ -26,7 +26,7 @@ export const StyledBlock = Node.create({
     return [{ tag: 'div[data-typst-style]', getAttrs: (element) => ({ name: element.getAttribute('data-typst-style') }) }];
   },
   renderHTML({ node }) {
-    return ['div', { class: `typst-styles__block typst-styles--${node.attrs.name}`, 'data-typst-style': node.attrs.name, 'data-style-title': node.attrs.title || node.attrs.name }, 0];
+    return ['div', { class: `zwf-styles__block zwf-styles--${node.attrs.name}`, 'data-typst-style': node.attrs.name, 'data-style-title': node.attrs.title || node.attrs.name }, 0];
   },
   addCommands() {
     return {
@@ -53,7 +53,7 @@ export interface AppliedStyle {
 /**
  * Text in an inline style: `#key[..]` around it (`head` keeps a call written
  * with arguments, `#key(..)[`). Drawn with a dotted underline, the style's
- * name as tooltip and the class `typst-styles--<name>`. One inline style at a time.
+ * name as tooltip and the class `zwf-styles--<name>`. One inline style at a time.
  */
 export const TypstStyleMark = Mark.create({
   name: 'style',
@@ -72,7 +72,7 @@ export const TypstStyleMark = Mark.create({
   },
   renderHTML({ mark }) {
     const title = mark.attrs.title || mark.attrs.name;
-    return ['span', { class: `typst-styles__inline typst-styles--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
+    return ['span', { class: `zwf-styles__inline zwf-styles--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
   },
   addCommands() {
     return {

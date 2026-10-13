@@ -44,7 +44,7 @@ const TOGGLE = 'invisibles.toggle';
 function setup(options: { viewType?: string; settings?: Record<string, unknown> } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const editor = createEditor(host, { files: { '/main.typ': MAIN, '/notes.txt': 'a b\tc\n' }, ...options });
-  const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
+  const pane = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((p) => !p.hidden)!;
   const visual = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.view;
   const count = (selector: string) => pane().querySelectorAll(selector).length;
   return { host, editor, pane, visual, count };
@@ -59,14 +59,14 @@ afterEach(() => {
 describe('invisible characters in the Visual editor', () => {
   it('are hidden by default and shown by invisibles.toggle: spaces, a non-breaking space, a line break, paragraph ends', async () => {
     const { editor, count } = setup();
-    expect(count('[class^="typst-invisibles"]')).toBe(0);
+    expect(count('[class^="zwf-invisibles"]')).toBe(0);
     await editor.executeCommand(TOGGLE);
-    expect(count('.typst-invisibles__space')).toBe(4);
-    expect(count('.typst-invisibles__nbsp')).toBe(1);
-    expect(count('.typst-invisibles__break')).toBe(1);
-    expect(count('.typst-invisibles__paragraph')).toBe(2);
+    expect(count('.zwf-invisibles__space')).toBe(4);
+    expect(count('.zwf-invisibles__nbsp')).toBe(1);
+    expect(count('.zwf-invisibles__break')).toBe(1);
+    expect(count('.zwf-invisibles__paragraph')).toBe(2);
     await editor.executeCommand(TOGGLE);
-    expect(count('[class^="typst-invisibles"]')).toBe(0);
+    expect(count('[class^="zwf-invisibles"]')).toBe(0);
   });
 
   it('leave the document, the text and what is copied as they are', async () => {
@@ -85,11 +85,11 @@ describe('invisible characters in the Visual editor', () => {
     const view = visual();
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)).insertText(' four '));
     expect(editor.source.startsWith('One four  two  three')).toBe(true);
-    expect(count('.typst-invisibles__space')).toBe(6);
+    expect(count('.zwf-invisibles__space')).toBe(6);
     view.dispatch(view.state.tr.split(view.state.doc.child(0).nodeSize - 1));
-    expect(count('.typst-invisibles__paragraph')).toBe(3);
+    expect(count('.zwf-invisibles__paragraph')).toBe(3);
     // the same as marking the whole document anew
-    const marks = () => [...view.dom.querySelectorAll('[class^="typst-invisibles"]')].map((mark) => mark.className).join();
+    const marks = () => [...view.dom.querySelectorAll('[class^="zwf-invisibles"]')].map((mark) => mark.className).join();
     const followed = marks();
     await editor.executeCommand(TOGGLE);
     await editor.executeCommand(TOGGLE);
@@ -107,13 +107,13 @@ describe('invisible characters in CodeMirror', () => {
     document.body.replaceChildren();
 
     const visual = setup({ settings: { 'invisibles.show': true } });
-    expect(visual.count('.typst-visual__raw-block .cm-highlightSpace')).toBeGreaterThan(0);
+    expect(visual.count('.zwf-visual__raw-block .cm-highlightSpace')).toBeGreaterThan(0);
   });
 
   it("show in the text files' editor", async () => {
     const { host, editor } = setup();
     editor.open('/notes.txt');
-    const count = (selector: string) => host.querySelectorAll(`[data-testid="typst-text-file"] ${selector}`).length;
+    const count = (selector: string) => host.querySelectorAll(`[data-testid="zwf-text-file"] ${selector}`).length;
     expect(count('.cm-highlightSpace')).toBe(0);
     await editor.executeCommand(TOGGLE);
     expect(count('.cm-highlightSpace')).toBe(1);
@@ -126,22 +126,22 @@ describe('the choice', () => {
     const first = setup();
     await first.editor.executeCommand(TOGGLE);
     first.editor.dispose();
-    expect(setup().count('.typst-invisibles__space')).toBe(4);
+    expect(setup().count('.zwf-invisibles__space')).toBe(4);
     document.body.replaceChildren();
-    expect(setup({ settings: { 'invisibles.show': false } }).count('.typst-invisibles__space')).toBe(0);
+    expect(setup({ settings: { 'invisibles.show': false } }).count('.zwf-invisibles__space')).toBe(0);
   });
 
   it('is "Invisible characters" in the View menu, checked while they are shown', async () => {
     const { host, editor, count } = setup();
     const entry = () => {
-      host.querySelector<HTMLButtonElement>('.typst-editor__view-menu')!.click();
+      host.querySelector<HTMLButtonElement>('.zwf-editor__view-menu')!.click();
       const menu = host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
       return [...menu.querySelectorAll<HTMLElement>('[role=menuitemcheckbox]')].find((item) => item.textContent!.endsWith('Invisible characters'))!;
     };
     expect(entry().getAttribute('aria-checked')).toBe('false');
     entry().click();
     await Promise.resolve();
-    expect(count('.typst-invisibles__space')).toBe(4);
+    expect(count('.zwf-invisibles__space')).toBe(4);
     expect(entry().getAttribute('aria-checked')).toBe('true');
     expect(editor.settings).toEqual({});
   });

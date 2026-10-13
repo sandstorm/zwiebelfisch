@@ -13,7 +13,7 @@ import { rendersInPlace, snippetSize, type RenderedSnippet } from '../model/mode
  */
 export function snippetRenderer(source: SnippetSource): RawBoxRenderer {
   return {
-    className: 'typst-rendered-boxes__snippet',
+    className: 'zwf-rendered-boxes__snippet',
     renders: () => true,
     render: async (node, from) => {
       const src: string = node.attrs.src;

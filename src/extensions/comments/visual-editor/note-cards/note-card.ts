@@ -26,14 +26,14 @@ export class NoteCard {
 
   constructor(doc: Document, private readonly key: string, private readonly me: () => string, private readonly actions: CardActions) {
     this.dom = doc.createElement('div');
-    this.dom.className = 'typst-comments__card';
-    this.dom.dataset.testid = 'typst-note-card';
+    this.dom.className = 'zwf-comments__card';
+    this.dom.dataset.testid = 'zwf-note-card';
     this.dom.dataset.noteKey = key;
     this.dom.setAttribute('role', 'dialog');
     this.dom.innerHTML = CARD_HTML;
-    this.quote = this.dom.querySelector('.typst-comments__card-quote')!;
-    this.thread = this.dom.querySelector('.typst-comments__card-thread')!;
-    this.field = this.dom.querySelector('.typst-comments__card-reply')!;
+    this.quote = this.dom.querySelector('.zwf-comments__card-quote')!;
+    this.thread = this.dom.querySelector('.zwf-comments__card-thread')!;
+    this.field = this.dom.querySelector('.zwf-comments__card-reply')!;
     // buttons must not take the focus from a field (resolving must not send a draft first)
     this.dom.addEventListener('mousedown', (event) => this.handleMouseDown(event));
     this.dom.addEventListener('click', (event) => this.handleClick(event));
@@ -47,7 +47,7 @@ export class NoteCard {
 
   /** Shows `note`; the reply box and a message being edited keep what the user typed. */
   show(note: KeyedNote): void {
-    this.dom.classList.toggle('typst-comments__card--range', note.kind === 'range');
+    this.dom.classList.toggle('zwf-comments__card--range', note.kind === 'range');
     this.quote.textContent = note.kind === 'range' ? note.text : 'Comment';
     this.quote.title = note.kind === 'range' ? note.text : '';
     this.dom.setAttribute('aria-label', note.kind === 'range' ? `Comment on “${note.text}”` : 'Comment');
@@ -80,7 +80,7 @@ export class NoteCard {
     const items = shown.map(({ message, index }) => this.messageItem(doc, message, index));
     if (collapsed) {
       const more = doc.createElement('li');
-      more.innerHTML = `<button type="button" class="typst-comments__card-more" data-action="more">${count - 1 - SHOWN_AT_END} more</button>`;
+      more.innerHTML = `<button type="button" class="zwf-comments__card-more" data-action="more">${count - 1 - SHOWN_AT_END} more</button>`;
       items.splice(1, 0, more);
     }
     this.thread.replaceChildren(...items);
@@ -89,17 +89,17 @@ export class NoteCard {
 
   private messageItem(doc: Document, message: NoteMessage, index: number): HTMLElement {
     const item = doc.createElement('li');
-    item.className = 'typst-comments__card-message';
-    item.dataset.testid = 'typst-note-message';
+    item.className = 'zwf-comments__card-message';
+    item.dataset.testid = 'zwf-note-message';
     item.dataset.index = String(index);
     const meta = item.appendChild(doc.createElement('div'));
-    meta.className = 'typst-comments__card-meta';
-    if (message.author !== null) meta.append(span(doc, 'typst-comments__card-author', message.author));
-    if (message.date !== null) meta.append(span(doc, 'typst-comments__card-date', message.date));
+    meta.className = 'zwf-comments__card-meta';
+    if (message.author !== null) meta.append(span(doc, 'zwf-comments__card-author', message.author));
+    if (message.date !== null) meta.append(span(doc, 'zwf-comments__card-date', message.date));
     const own = message.author === this.me();
     if (own || message.author === null) meta.insertAdjacentHTML('beforeend', EDIT_BUTTON);
     if (own && index === this.messages.length - 1) meta.insertAdjacentHTML('beforeend', DELETE_BUTTON);
-    item.append(span(doc, 'typst-comments__card-text', message.text));
+    item.append(span(doc, 'zwf-comments__card-text', message.text));
     return item;
   }
 
@@ -107,7 +107,7 @@ export class NoteCard {
     const target = event.target as Element;
     if (target.closest('button')) {
       event.preventDefault();
-    } else if (!target.closest('textarea, .typst-comments__card-thread')) {
+    } else if (!target.closest('textarea, .zwf-comments__card-thread')) {
       // a click on the card's head or margins goes to the reply box
       event.preventDefault();
       this.focus();
@@ -161,10 +161,10 @@ export class NoteCard {
   /** Replaces message `index`'s text with a text area holding it. */
   private startEdit(index: number): void {
     const item = this.thread.querySelector<HTMLElement>(`[data-index="${index}"]`);
-    const text = item?.querySelector('.typst-comments__card-text');
+    const text = item?.querySelector('.zwf-comments__card-text');
     if (!item || !text || this.editing) return;
     const field = this.dom.ownerDocument.createElement('textarea');
-    field.className = 'typst-comments__card-field';
+    field.className = 'zwf-comments__card-field';
     field.rows = 2;
     field.setAttribute('aria-label', 'Edit message');
     field.value = this.messages[index].text;
@@ -209,7 +209,7 @@ export interface CardActions {
 }
 
 const ICON =
-  '<svg class="typst-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
+  '<svg class="zwf-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 const CHECK =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
 const CROSS =
@@ -219,12 +219,12 @@ const SEND =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8l11-5-4 11-2-4.5z"/></svg>';
 
 const CARD_HTML =
-  `<div class="typst-comments__card-head">${ICON}<span class="typst-comments__card-quote"></span>`
-  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button>`
-  + `<button type="button" class="typst-comments__card-close" data-action="close" aria-label="Close" title="Close (Escape)">${CROSS}</button></div>`
-  + '<ol class="typst-comments__card-thread" hidden></ol>'
-  + '<div class="typst-comments__card-compose"><textarea class="typst-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
-  + `<button type="button" class="typst-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;
+  `<div class="zwf-comments__card-head">${ICON}<span class="zwf-comments__card-quote"></span>`
+  + `<button type="button" class="zwf-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button>`
+  + `<button type="button" class="zwf-comments__card-close" data-action="close" aria-label="Close" title="Close (Escape)">${CROSS}</button></div>`
+  + '<ol class="zwf-comments__card-thread" hidden></ol>'
+  + '<div class="zwf-comments__card-compose"><textarea class="zwf-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
+  + `<button type="button" class="zwf-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;
 
 /** Threads longer than this show the first message, "n more" and the last two. */
 const COLLAPSE_ABOVE = 4;
@@ -240,9 +240,9 @@ function span(doc: Document, className: string, text: string): HTMLElement {
 const PENCIL =
   '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l.6-2.6L10.5 3.5l2 2-6.9 6.9z"/></svg>';
 
-const EDIT_BUTTON = `<button type="button" class="typst-comments__card-edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
+const EDIT_BUTTON = `<button type="button" class="zwf-comments__card-edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
 
 const TRASH =
   '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
 
-const DELETE_BUTTON = `<button type="button" class="typst-comments__card-delete" data-action="delete" aria-label="Delete message" title="Delete">${TRASH}</button>`;
+const DELETE_BUTTON = `<button type="button" class="zwf-comments__card-delete" data-action="delete" aria-label="Delete message" title="Delete">${TRASH}</button>`;

@@ -11,7 +11,7 @@ import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
 
 const TaskLists = Extension.create({
   name: 'typstTaskLists',
-  addExtensions: () => [TypstTaskList.configure({ HTMLAttributes: { class: 'typst-lists__tasks' } }), TypstTaskItem, ChecklistPreamble],
+  addExtensions: () => [TypstTaskList.configure({ HTMLAttributes: { class: 'zwf-lists__tasks' } }), TypstTaskItem, ChecklistPreamble],
 });
 
 /**

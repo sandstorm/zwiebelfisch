@@ -15,9 +15,9 @@ async function setup(text: string, prompts?: TestPrompts) {
   const doc = new TypstDocument(text);
   const view = createVisualEditor(parent, doc, { files, prompts });
   await settle();
-  const box = () => parent.querySelector<HTMLElement>('.typst-images__box')!;
+  const box = () => parent.querySelector<HTMLElement>('.zwf-images__box')!;
   const bar = () => parent.querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;
-  const picture = () => box().querySelector<HTMLImageElement>('img.typst-visual__rendering')!;
+  const picture = () => box().querySelector<HTMLImageElement>('img.zwf-visual__rendering')!;
   /** The image bar's button `name`, the image selected first. */
   const button = (name: string) => {
     mousedown(picture());
@@ -37,13 +37,13 @@ describe('image tools', () => {
     mousedown(picture());
     expect(box().classList).toContain('ProseMirror-selectednode');
     expect(bar().hidden).toBe(false);
-    expect(box().querySelector<HTMLElement>('.typst-visual__code')!.hidden).toBe(true);
+    expect(box().querySelector<HTMLElement>('.zwf-visual__code')!.hidden).toBe(true);
   });
 
   it('double-clicking the picture shows the code', async () => {
     const { box, picture } = await setup('#image("cat.png")\n');
     picture().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    expect(box().querySelector<HTMLElement>('.typst-visual__code')!.hidden).toBe(false);
+    expect(box().querySelector<HTMLElement>('.zwf-visual__code')!.hidden).toBe(false);
   });
 
   it('asks for the caption, sets it, and removes it with an empty one', async () => {
@@ -75,7 +75,7 @@ describe('image tools', () => {
 
   it('dragging a handle shows the width live and writes it as percent on release', async () => {
     const { doc, box } = await setup('#image("cat.png")\n');
-    const frame = box().querySelector<HTMLElement>('.typst-images__frame')!;
+    const frame = box().querySelector<HTMLElement>('.zwf-images__frame')!;
     Object.defineProperty(box(), 'clientWidth', { value: 400 });
     frame.getBoundingClientRect = () => new DOMRect(0, 0, 100, 50);
     const handle = frame.querySelector('[data-handle="se"]')!;

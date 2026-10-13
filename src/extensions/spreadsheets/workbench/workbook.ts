@@ -95,7 +95,7 @@ function injectStyles(container: HTMLElement): void {
   target.append(style);
 }
 
-const STYLE_ID = 'typst-ironcalc-styles';
+const STYLE_ID = 'zwf-ironcalc-styles';
 
 /**
  * Makes IronCalc's grid take up changed theme variables. The grid canvas reads them only when it is built, and the

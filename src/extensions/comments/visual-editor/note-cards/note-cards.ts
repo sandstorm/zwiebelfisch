@@ -262,7 +262,7 @@ function hasFocus(element: HTMLElement | undefined): boolean {
 }
 
 /** The class of a note's marker (a point note's node view, or the widget after a range note's text). */
-const MARKER = 'typst-comments__note';
+const MARKER = 'zwf-comments__note';
 
 /** The card's left edge is this far left of its marker, so its speech-bubble icon sits below the marker. */
 const CARD_INDENT_PX = 8;
@@ -282,7 +282,7 @@ interface CardsMeta {
   open: string | null;
 }
 
-const cardsKey = new PluginKey<CardsState>('typst-comments__cards');
+const cardsKey = new PluginKey<CardsState>('zwf-comments__cards');
 
 function cardsPlugin(createPopover: (view: EditorView) => NoteCardPopover): Plugin<CardsState> {
   let next = 0;
@@ -385,7 +385,7 @@ function withDecorations(state: EditorState, notes: KeyedNote[], open: string | 
   const decorations = notes.flatMap((found) => {
     const { key, kind, from, to } = found;
     const title = summary(found.note);
-    const attrs = { 'data-note-key': key, class: `typst-comments__anchor${key === open ? ' typst-comments__anchor--active' : ''}`, title };
+    const attrs = { 'data-note-key': key, class: `zwf-comments__anchor${key === open ? ' zwf-comments__anchor--active' : ''}`, title };
     if (kind === 'point') return [Decoration.node(from, to, attrs)];
     const marker = Decoration.widget(to, (view) => rangeMarker(view.dom.ownerDocument, found, title, key === open), {
       key: `${key}|${key === open}|${title}`,
@@ -411,10 +411,10 @@ const SUMMARY_LENGTH = 60;
 function rangeMarker(doc: Document, { key, note }: KeyedNote, title: string, open: boolean): HTMLElement {
   const marker = doc.createElement('span');
   const empty = note.trim() === '';
-  marker.className = `${MARKER} typst-comments__anchor${open ? ' typst-comments__anchor--active' : ''}${empty ? ' typst-comments__note--empty' : ''}`;
+  marker.className = `${MARKER} zwf-comments__anchor${open ? ' zwf-comments__anchor--active' : ''}${empty ? ' zwf-comments__note--empty' : ''}`;
   marker.contentEditable = 'false';
   marker.dataset.noteKey = key;
-  marker.dataset.testid = 'typst-note-marker';
+  marker.dataset.testid = 'zwf-note-marker';
   marker.title = title;
   marker.setAttribute('role', 'button');
   marker.setAttribute('aria-haspopup', 'dialog');

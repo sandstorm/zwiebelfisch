@@ -28,17 +28,17 @@ export class ReplaceControls {
     doc: Document,
     private readonly options: ReplaceControlsOptions,
   ) {
-    this.field = element(doc, 'div', 'typst-search__field typst-search__replace');
-    this.#input = this.field.appendChild(element(doc, 'input', 'typst-search__input'));
+    this.field = element(doc, 'div', 'zwf-search__field zwf-search__replace');
+    this.#input = this.field.appendChild(element(doc, 'input', 'zwf-search__input'));
     this.#input.type = 'text';
     this.#input.placeholder = 'Replace';
     this.#input.setAttribute('aria-label', 'Replace');
     this.#input.spellcheck = false;
-    this.notice = element(doc, 'p', 'typst-search__notice');
+    this.notice = element(doc, 'p', 'zwf-search__notice');
     this.notice.setAttribute('role', 'status');
     this.notice.hidden = true;
-    this.#outcome = this.notice.appendChild(element(doc, 'span', 'typst-search__outcome'));
-    this.#undo = this.notice.appendChild(element(doc, 'button', 'typst-search__button', 'Undo'));
+    this.#outcome = this.notice.appendChild(element(doc, 'span', 'zwf-search__outcome'));
+    this.#undo = this.notice.appendChild(element(doc, 'button', 'zwf-search__button', 'Undo'));
     this.#undo.type = 'button';
     this.#input.addEventListener('input', () => this.#changed.fire());
     this.#undo.addEventListener('click', () => void this.#undoLast());

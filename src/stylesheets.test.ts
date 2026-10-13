@@ -36,15 +36,15 @@ function nestedRules(path: string): string[] {
 }
 
 /**
- * Hex colors outside the color tokens (`--te-*: light-dark(..)`), which would stay light in dark mode. Allowed:
- * the fallback of a collaborator's color (`var(--typst-remote-*, #..)`), and ProseMirror's own stylesheet.
+ * Hex colors outside the color tokens (`--zwf-*: light-dark(..)`), which would stay light in dark mode. Allowed:
+ * the fallback of a collaborator's color (`var(--zwf-remote-*, #..)`), and ProseMirror's own stylesheet.
  */
 function untokenizedColors(css: string): string[] {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .split('\n')
-    .filter((line) => !/^\s*--te-[\w-]+:/.test(line))
-    .map((line) => line.replace(/var\(--typst-remote-[\w-]+, #[0-9a-f]+\)/gi, ''))
+    .filter((line) => !/^\s*--zwf-[\w-]+:/.test(line))
+    .map((line) => line.replace(/var\(--zwf-remote-[\w-]+, #[0-9a-f]+\)/gi, ''))
     .flatMap((line) => line.match(/#[0-9a-f]{3,8}\b/gi) ?? []);
 }
 

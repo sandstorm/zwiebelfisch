@@ -19,10 +19,10 @@ export const Reference = Node.create({
   },
   renderHTML({ node }) {
     const supplement: string | null = node.attrs.supplement;
-    const name = ['span', { class: 'typst-labels__ref-name' }, node.attrs.target];
-    const attrs = { class: 'typst-labels__ref', 'data-testid': 'typst-ref', 'data-target': node.attrs.target };
+    const name = ['span', { class: 'zwf-labels__ref-name' }, node.attrs.target];
+    const attrs = { class: 'zwf-labels__ref', 'data-testid': 'zwf-ref', 'data-target': node.attrs.target };
     if (supplement === null) return ['span', attrs, name];
-    return ['span', attrs, name, ['span', { class: 'typst-labels__ref-supplement' }, supplement.slice(1, -1)]];
+    return ['span', attrs, name, ['span', { class: 'zwf-labels__ref-supplement' }, supplement.slice(1, -1)]];
   },
   renderText({ node }) {
     return `@${node.attrs.target}`;

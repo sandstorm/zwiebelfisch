@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for color-scheme.ts. jsdom resolves no var(): getComputedStyle answers a token `--te-x` as `rgb(<x>)`.
+// Tests for color-scheme.ts. jsdom resolves no var(): getComputedStyle answers a token `--zwf-x` as `rgb(<x>)`.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { followColorScheme } from './color-scheme';
 
@@ -9,7 +9,7 @@ let container: HTMLElement;
 beforeEach(() => {
   const computed = window.getComputedStyle;
   vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => {
-    const token = /^var\(--te-(.+)\)$/.exec((element as HTMLElement).style.color)?.[1];
+    const token = /^var\(--zwf-(.+)\)$/.exec((element as HTMLElement).style.color)?.[1];
     return token ? ({ color: `rgb(<${token}>)` } as CSSStyleDeclaration) : computed(element);
   });
   host = document.body.appendChild(document.createElement('div'));

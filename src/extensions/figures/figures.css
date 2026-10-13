@@ -1,11 +1,11 @@
 /* The figures extension's styles: figures and their captions in the Visual editor.
-   See figures in figures.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-figures__figure { margin: 0 0 0.7em; }
-.typst-figures__caption { position: relative; text-align: center; font-size: 0.95em; }
-.typst-figures__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+   See figures in figures.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-figures__figure { margin: 0 0 0.7em; }
+.zwf-figures__caption { position: relative; text-align: center; font-size: 0.95em; }
+.zwf-figures__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
   content: 'Caption';
   position: absolute;
   inset: 0;
-  color: var(--te-faint);
+  color: var(--zwf-faint);
   pointer-events: none;
 }

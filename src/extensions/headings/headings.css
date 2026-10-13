@@ -1,11 +1,11 @@
 /* The headings extension's styles: headings in the Visual editor, and their numbers in a gutter right of the text.
-   See headings in headings.ts, which registers it; colors from the widget's --te-* tokens. */
-h1.typst-headings__heading { font-size: 1.6em; margin: 0.6em 0 0.3em; }
-h2.typst-headings__heading { font-size: 1.3em; margin: 0.6em 0 0.3em; }
+   See headings in headings.ts, which registers it; colors from the widget's --zwf-* tokens. */
+h1.zwf-headings__heading { font-size: 1.6em; margin: 0.6em 0 0.3em; }
+h2.zwf-headings__heading { font-size: 1.3em; margin: 0.6em 0 0.3em; }
 /* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
-.typst-headings--numbered { padding-right: 6em; }
-.typst-headings__numbered { position: relative; }
-.typst-headings__numbered::after {
+.zwf-headings--numbered { padding-right: 6em; }
+.zwf-headings__numbered { position: relative; }
+.zwf-headings__numbered::after {
   content: attr(data-heading-number);
   position: absolute;
   top: 0;
@@ -14,7 +14,7 @@ h2.typst-headings__heading { font-size: 1.3em; margin: 0.6em 0 0.3em; }
   font-size: 0.8em;
   font-weight: normal;
   line-height: 1.9;
-  color: var(--te-faint);
+  color: var(--zwf-faint);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;

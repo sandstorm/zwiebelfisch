@@ -192,7 +192,7 @@ class Panel implements CustomEditorPanel {
     public path: ProjectPath,
   ) {
     this.element = parent.ownerDocument.createElement('div');
-    this.element.className = 'typst-editor__custom-editor';
+    this.element.className = 'zwf-editor__custom-editor';
     this.element.dataset.viewType = registration.viewType;
     parent.append(this.element);
   }

@@ -10,7 +10,7 @@ export class HistoryLinks {
 
   constructor(doc: Document, private readonly go: (direction: 'back' | 'forward') => void) {
     this.element = doc.createElement('nav');
-    this.element.className = 'typst-file-navigation typst-file-navigation--history';
+    this.element.className = 'zwf-file-navigation zwf-file-navigation--history';
     this.element.setAttribute('aria-label', 'Navigation history');
     this.element.hidden = true;
   }
@@ -25,7 +25,7 @@ export class HistoryLinks {
     const name = ProjectPath.displayName(path);
     const button = this.element.ownerDocument.createElement('button');
     button.type = 'button';
-    button.className = `typst-file-navigation__history typst-file-navigation__history--${direction}`;
+    button.className = `zwf-file-navigation__history zwf-file-navigation__history--${direction}`;
     button.textContent = direction === 'back' ? `← Back to ${name}` : `Forward to ${name} →`;
     button.title = direction === 'back' ? `Go back to ${name} (${KEYS.back})` : `Go forward to ${name} (${KEYS.forward})`;
     button.addEventListener('click', () => this.go(direction));

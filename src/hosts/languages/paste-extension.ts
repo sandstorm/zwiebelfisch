@@ -222,7 +222,7 @@ function chipTooltip(pasted: Pasted, pick: (view: EditorView) => void): Tooltip 
     create: (view) => {
       const dom = view.dom.ownerDocument.createElement('button');
       dom.type = 'button';
-      dom.className = 'typst-paste-chip';
+      dom.className = 'zwf-paste-chip';
       dom.textContent = `Paste as: ${pasted.paste.title} ▾`;
       dom.setAttribute('aria-label', `Pasted as ${pasted.paste.title}: paste as…`);
       dom.title = `Pasted as ${pasted.paste.title}: paste as… (Mod+.)`;

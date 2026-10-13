@@ -13,8 +13,8 @@ export class Notifications {
 
   constructor(host: HTMLElement) {
     this.#area = host.ownerDocument.createElement('div');
-    this.#area.className = 'typst-editor__notifications';
-    this.#area.dataset.testid = 'typst-notifications';
+    this.#area.className = 'zwf-editor__notifications';
+    this.#area.dataset.testid = 'zwf-notifications';
     host.append(this.#area);
   }
 
@@ -23,13 +23,13 @@ export class Notifications {
     return new Promise((resolve) => {
       const doc = this.#area.ownerDocument;
       const element = doc.createElement('div');
-      element.className = `typst-notification typst-notification--${severity}`;
+      element.className = `zwf-notification zwf-notification--${severity}`;
       element.setAttribute('role', severity === 'info' ? 'status' : 'alert');
       const text = doc.createElement('span');
-      text.className = 'typst-notification__message';
+      text.className = 'zwf-notification__message';
       text.textContent = message;
       const actions = doc.createElement('span');
-      actions.className = 'typst-notification__actions';
+      actions.className = 'zwf-notification__actions';
       let timer: ReturnType<typeof setTimeout> | undefined;
       const shown: Shown = { element, close: () => finish(undefined) };
       const finish = (item: T | undefined) => {
@@ -40,8 +40,8 @@ export class Notifications {
         element.remove();
         resolve(item);
       };
-      for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'typst-notification__item', () => finish(item)));
-      const close = button(doc, '×', 'typst-notification__close', () => finish(undefined));
+      for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'zwf-notification__item', () => finish(item)));
+      const close = button(doc, '×', 'zwf-notification__close', () => finish(undefined));
       close.setAttribute('aria-label', 'Close');
       close.title = 'Close';
       element.append(text, actions, close);

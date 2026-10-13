@@ -80,10 +80,10 @@ export class PageList {
 
   private add(index: number): Entry {
     const element = this.parent.ownerDocument.createElement('div');
-    element.className = 'typst-preview__page';
+    element.className = 'zwf-preview__page';
     element.dataset.number = String(index + 1);
     const content = this.parent.ownerDocument.createElement('div');
-    content.className = 'typst-preview__content';
+    content.className = 'zwf-preview__content';
     element.append(content);
     this.parent.append(element);
     const entry: Entry = { element, content, page: undefined!, near: !this.observer, shown: null };

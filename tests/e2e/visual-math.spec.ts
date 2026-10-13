@@ -20,14 +20,14 @@ test('typing $a^1$ makes inline math, shown as its compiled picture', async ({ p
   await page.keyboard.type('With $a^1$ and more');
   await expect.poll(sourceText(page)).toContain('\nWith $a^1$ and more\n');
   // the example has inline boxes of its own: this one is the picture of $a^1$ (its alt, once drawn)
-  await expect(visual(page).locator('p .typst-visual__raw-inline > img.typst-visual__rendering[alt="$a^1$"]')).toBeVisible();
+  await expect(visual(page).locator('p .zwf-visual__raw-inline > img.zwf-visual__rendering[alt="$a^1$"]')).toBeVisible();
 });
 
 test('$ x $ alone on a line makes display math, a block', async ({ page }) => {
   await newLine(page);
   await page.keyboard.type('$ x^2 $');
   await expect.poll(sourceText(page)).toContain('\n$ x^2 $\n');
-  await expect(visual(page).locator('.typst-visual__raw-block img.typst-visual__rendering[alt="$ x^2 $"]')).toBeVisible();
+  await expect(visual(page).locator('.zwf-visual__raw-block img.zwf-visual__rendering[alt="$ x^2 $"]')).toBeVisible();
 });
 
 test('a dollar after a backslash stays a dollar sign', async ({ page }) => {
@@ -41,7 +41,7 @@ test('Insert → Inline math puts the caret between the dollars', async ({ page 
   await page.keyboard.type('Area ');
   await chooseFrom(toolbar(page), 'Insert', 'Inline math');
   const line = visual(page).locator('p').filter({ hasText: /^Area\b/ });
-  await expect(line.locator('.typst-visual__raw-inline .cm-editor')).toHaveClass(/cm-focused/);
+  await expect(line.locator('.zwf-visual__raw-inline .cm-editor')).toHaveClass(/cm-focused/);
   await page.keyboard.type('pi r^2');
   await expect.poll(sourceText(page)).toContain('\nArea $pi r^2$\n');
 });

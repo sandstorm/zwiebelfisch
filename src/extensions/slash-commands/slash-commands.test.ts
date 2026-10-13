@@ -13,8 +13,8 @@ function setup(text: string, cursorAfter: string, prompts = new TestPrompts()) {
   createVisualEditor(parent, doc, { contributions: [slashCommands()], prompts });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   editor.commands.setTextSelection(after(editor.state.doc, cursorAfter));
-  const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"][data-trigger="/"]')!;
-  const options = () => (list.hidden ? [] : [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-visual__suggest-label')!.textContent));
+  const list = parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"][data-trigger="/"]')!;
+  const options = () => (list.hidden ? [] : [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.zwf-visual__suggest-label')!.textContent));
   return { doc, editor, list, options, prompts };
 }
 
@@ -48,8 +48,8 @@ describe('slash commands', () => {
       'Heading 2',
       'Heading 3',
     ]);
-    expect(list.querySelector('.typst-visual__suggest-detail')?.textContent).toBe('Insert');
-    expect(list.querySelector('.typst-visual__suggest-icon svg')).not.toBeNull();
+    expect(list.querySelector('.zwf-visual__suggest-detail')?.textContent).toBe('Insert');
+    expect(list.querySelector('.zwf-visual__suggest-icon svg')).not.toBeNull();
   });
 
   it('find the lists by what people call them', () => {
@@ -125,7 +125,7 @@ describe('the hint "Type / for commands"', () => {
   function focused(text: string, cursorAfter: string) {
     const view = setup(text, cursorAfter);
     view.editor.view.dom.focus();
-    const hints = () => [...view.editor.view.dom.querySelectorAll<HTMLElement>('.typst-slash-commands__hint')];
+    const hints = () => [...view.editor.view.dom.querySelectorAll<HTMLElement>('.zwf-slash-commands__hint')];
     return { ...view, hints };
   }
 

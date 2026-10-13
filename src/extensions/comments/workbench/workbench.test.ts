@@ -82,7 +82,7 @@ describe('comments.addComment', () => {
     // the Visual editor's toolbar button
     root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.click();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
-    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] .typst-comments__card-reply')!;
+    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="zwf-note-card"] .zwf-comments__card-reply')!;
     expect(document.activeElement).toBe(field);
     field.value = 'Check this';
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));

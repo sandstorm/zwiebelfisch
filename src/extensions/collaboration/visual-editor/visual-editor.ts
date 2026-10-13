@@ -40,9 +40,9 @@ function selections(presences: PresenceSource, documents: () => readonly TypstDo
 
 function selection({ user, anchor, head }: PlacedPresence): SourceHighlight[] {
   if (anchor === head) return [];
-  const attributes = { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` };
+  const attributes = { 'data-user': user.name, style: `--zwf-remote-color: ${user.color}` };
   const [from, to] = anchor < head ? [anchor, head] : [head, anchor];
-  return [{ from, to, className: 'typst-collaboration__selection', attributes }];
+  return [{ from, to, className: 'zwf-collaboration__selection', attributes }];
 }
 
 /**
@@ -127,11 +127,11 @@ function caret(pos: number, id: string, user: PresenceUser): Decoration {
 function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
   const { color } = carets[0].user;
   const attrs = {
-    class: 'typst-collaboration__box',
+    class: 'zwf-collaboration__box',
     'data-user': carets.map((c) => c.user.name).join(', '),
-    style: `--typst-remote-color: ${color}; --typst-remote-text: ${textColorOn(color)}`,
+    style: `--zwf-remote-color: ${color}; --zwf-remote-text: ${textColorOn(color)}`,
   };
   return Decoration.node(pos, pos + node.nodeSize, attrs, boxCaretsSpec(carets));
 }
 
-const key = new PluginKey<DecorationSet>('typst-presence');
+const key = new PluginKey<DecorationSet>('zwf-presence');

@@ -38,7 +38,7 @@ export function linkExtension(actions: LinkActions, languageId: string, path: ()
     return Boolean(resolved?.target);
   };
   const hover = (event: MouseEvent, view: EditorView) => {
-    const mark = event.buttons === 0 && event.target instanceof Element ? event.target.closest('.typst-source__path') : null;
+    const mark = event.buttons === 0 && event.target instanceof Element ? event.target.closest('.zwf-source__path') : null;
     const link = mark && view.contentDOM.contains(mark) ? linkAt(view, view.posAtDOM(mark)) : null;
     if (!link || !mark) return hoverLink(event, null);
     const resolved = actions.resolveDocumentLink(link);
@@ -77,12 +77,12 @@ export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkAc
   const { target, selection, tooltip, command } = link;
   if (!target && !tooltip && !command) return null;
   const info = doc.createElement('span');
-  info.className = 'typst-file-link';
+  info.className = 'zwf-file-link';
   if (target) info.append(button(doc, followLabel(link, target), () => actions.open(target, selection)), note(doc, FOLLOW_HINT));
   else if (tooltip) info.append(note(doc, tooltip));
   if (command) {
     const error = note(doc, '');
-    error.classList.add('typst-file-link__error');
+    error.classList.add('zwf-file-link__error');
     error.setAttribute('role', 'alert');
     const run = () => {
       error.textContent = '';
@@ -141,12 +141,12 @@ function decorate(links: readonly DocumentLink[]): DecorationSet {
   return Decoration.set(ranges, true);
 }
 
-const linkMark = Decoration.mark({ class: 'typst-source__path' });
+const linkMark = Decoration.mark({ class: 'zwf-source__path' });
 
 function button(doc: Document, label: string, onClick: () => void): HTMLButtonElement {
   const element = doc.createElement('button');
   element.type = 'button';
-  element.className = 'typst-file-link__button';
+  element.className = 'zwf-file-link__button';
   element.textContent = label;
   // Keep the editor's focus and selection; act on click.
   element.addEventListener('mousedown', (event) => event.preventDefault());
@@ -159,7 +159,7 @@ function button(doc: Document, label: string, onClick: () => void): HTMLButtonEl
 
 function note(doc: Document, text: string): HTMLElement {
   const element = doc.createElement('span');
-  element.className = 'typst-file-link__note';
+  element.className = 'zwf-file-link__note';
   element.textContent = text;
   return element;
 }

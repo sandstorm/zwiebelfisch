@@ -28,9 +28,9 @@ describe('markup in a Visual editor', () => {
   it('leaves inline code, code blocks and raw boxes out of spell checking', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     createVisualEditor(parent, new TypstDocument('Some `kode` and $x$\n\n```js\nlet wrod\n```\n'));
-    expect(parent.querySelector('.typst-markup__code-inline')?.getAttribute('spellcheck')).toBe('false');
-    expect(parent.querySelector('.typst-markup__code-block')?.getAttribute('spellcheck')).toBe('false');
-    expect(parent.querySelector('.typst-visual__raw-inline .cm-content')?.getAttribute('spellcheck')).toBe('false');
+    expect(parent.querySelector('.zwf-markup__code-inline')?.getAttribute('spellcheck')).toBe('false');
+    expect(parent.querySelector('.zwf-markup__code-block')?.getAttribute('spellcheck')).toBe('false');
+    expect(parent.querySelector('.zwf-visual__raw-inline .cm-content')?.getAttribute('spellcheck')).toBe('false');
   });
 
   it('Mod-u underlines the selection', () => {

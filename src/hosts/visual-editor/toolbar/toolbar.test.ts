@@ -70,7 +70,7 @@ describe('Visual editor toolbar', () => {
     const { toolbar } = setup('Hello\n');
     expect(toolbar.getAttribute('aria-label')).toBe('Formatting');
     // the text column follows
-    expect(toolbar.nextElementSibling?.firstElementChild?.classList.contains('typst-visual')).toBe(true);
+    expect(toolbar.nextElementSibling?.firstElementChild?.classList.contains('zwf-visual')).toBe(true);
   });
 
   it("shows a contributed item's state and runs its command", () => {
@@ -128,7 +128,7 @@ describe('a menu in a floating bar', () => {
     const trigger = bar.querySelector<HTMLButtonElement>('button[aria-label="Words"]')!;
     const labels = [...bar.children].map((child) => (child.matches('button') ? child : child.querySelector('button'))!.getAttribute('aria-label'));
     expect(labels).toEqual(['First', 'Words', 'Last']);
-    expect(parent.querySelector('.typst-toolbar [aria-label="Words"]')).toBeNull(); // not in the row
+    expect(parent.querySelector('.zwf-toolbar [aria-label="Words"]')).toBeNull(); // not in the row
     view.reveal(SourceRange.of({ from: 0, to: 5 }));
     expect(trigger.parentElement!.hidden).toBe(true);
     words = ['Hi'];

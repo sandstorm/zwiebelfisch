@@ -8,13 +8,13 @@ import { fileRow, test } from './fixtures';
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
 const editor = (page: Page) => page.locator('zwiebelfisch-editor');
-const panel = (page: Page) => editor(page).getByTestId('typst-search');
+const panel = (page: Page) => editor(page).getByTestId('zwf-search');
 const findField = (page: Page) => panel(page).getByRole('textbox', { name: 'Find' });
-const message = (page: Page) => panel(page).locator('.typst-search__message');
+const message = (page: Page) => panel(page).locator('.zwf-search__message');
 
 async function setup(page: Page): Promise<void> {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.files = { '/chapters/method.typ': '= Method\n\nWe measured compile times twice.\n', '/data.csv': 'pages,seconds\n10,0.3\n' };
     el.value = '= Report\n\nCold compile times grow linearly.\n\n#include "chapters/method.typ"\n';
@@ -36,7 +36,7 @@ function selected(page: Page): Promise<string | undefined> {
 
 test('⌘⇧F in the Visual editor shows the panel; typing lists the matches by file; a click selects the match in the Visual editor', async ({ page }) => {
   await setup(page);
-  await editor(page).getByTestId('typst-visual').locator('p').first().click();
+  await editor(page).getByTestId('zwf-visual').locator('p').first().click();
   await page.keyboard.press('ControlOrMeta+Shift+KeyF');
   await expect(findField(page)).toBeFocused();
   await page.keyboard.type('compile');
@@ -44,24 +44,24 @@ test('⌘⇧F in the Visual editor shows the panel; typing lists the matches by 
   const match = panel(page).getByRole('treeitem').filter({ hasText: 'We measured' });
   await expect(match.locator('mark')).toHaveText('compile');
   await match.click();
-  await expect(editor(page).getByTestId('typst-visual').locator('h1:visible')).toHaveText('Method');
+  await expect(editor(page).getByTestId('zwf-visual').locator('h1:visible')).toHaveText('Method');
   await expect.poll(() => selected(page)).toBe('compile');
 });
 
 test('⌘⇧H shows Replace mode; Replace all asks first, replaces in both files, and Undo takes it back', async ({ page }) => {
   await setup(page);
-  await editor(page).getByTestId('typst-visual').locator('p').first().click();
+  await editor(page).getByTestId('zwf-visual').locator('p').first().click();
   await page.keyboard.press('ControlOrMeta+Shift+KeyH');
   await expect(findField(page)).toBeFocused();
   await page.keyboard.type('compile');
   await panel(page).getByRole('textbox', { name: 'Replace' }).fill('build');
-  await expect(panel(page).locator('.typst-search__new').first()).toHaveText('build');
-  await panel(page).locator('.typst-search__replace-all').click();
+  await expect(panel(page).locator('.zwf-search__new').first()).toHaveText('build');
+  await panel(page).locator('.zwf-search__replace-all').click();
   // two files: confirmed first, in a notification
-  const confirm = editor(page).getByTestId('typst-notifications');
+  const confirm = editor(page).getByTestId('zwf-notifications');
   await expect(confirm).toContainText('Replace 2 occurrences in 2 files?');
   await confirm.getByRole('button', { name: 'Replace' }).click();
-  await expect(panel(page).locator('.typst-search__outcome')).toHaveText('Replaced 2 occurrences in 2 files');
+  await expect(panel(page).locator('.zwf-search__outcome')).toHaveText('Replaced 2 occurrences in 2 files');
   await expect.poll(() => editor(page).evaluate((el: Editor) => el.value)).toContain('Cold build times');
   await expect.poll(() => file(page, 'chapters/method.typ')).toContain('We measured build times');
   await expect(message(page)).toHaveText('No results');
@@ -73,15 +73,15 @@ test('⌘⇧H shows Replace mode; Replace all asks first, replaces in both files
 
 test('search everywhere\'s "Find in files: …" row and the file panel\'s "Find in folder…" lead to the panel', async ({ page }) => {
   await setup(page);
-  await editor(page).getByTestId('typst-search-everywhere').click();
+  await editor(page).getByTestId('zwf-search-everywhere').click();
   await page.keyboard.type('%measured');
   await editor(page).getByRole('option').filter({ hasText: 'Find in files: measured' }).click();
   await expect(findField(page)).toHaveValue('measured');
   await expect(message(page)).toHaveText('1 result in 1 file');
-  await editor(page).getByTestId('typst-panel-toggle-files').click();
+  await editor(page).getByTestId('zwf-panel-toggle-files').click();
   await fileRow(editor(page), 'chapters').click({ button: 'right' });
   await editor(page).getByRole('menuitem', { name: 'Find in folder…' }).click();
-  await expect(panel(page).locator('.typst-search__scope-name')).toHaveText('chapters/');
+  await expect(panel(page).locator('.zwf-search__scope-name')).toHaveText('chapters/');
   await expect(findField(page)).toHaveValue('measured');
   await expect(message(page)).toHaveText('1 result in 1 file');
 });
@@ -97,13 +97,13 @@ test('the browser does not get the keys the editor binds (print, bookmarks, tab 
   const quickPick = editor(page).getByRole('combobox', { name: 'Search everywhere' });
   const keys = ['ControlOrMeta+KeyP', 'ControlOrMeta+Shift+KeyO', 'ControlOrMeta+Shift+KeyA'];
   for (const key of keys) {
-    await editor(page).getByTestId('typst-visual').locator('p').first().click();
+    await editor(page).getByTestId('zwf-visual').locator('p').first().click();
     await page.keyboard.press(key);
     await expect(quickPick).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(quickPick).toHaveCount(0);
   }
-  await editor(page).getByTestId('typst-visual').locator('p').first().click();
+  await editor(page).getByTestId('zwf-visual').locator('p').first().click();
   await page.keyboard.press('ControlOrMeta+Shift+KeyF');
   await expect(findField(page)).toBeFocused();
   const prevented = await page.evaluate(() =>
@@ -117,10 +117,10 @@ test('the panel key shows and focuses the panel, and hides it again while it has
   const platform = await page.evaluate(() => navigator.platform);
   const key = /Mac/.test(platform) ? 'Control+Digit3' : /Win/.test(platform) ? 'Alt+Digit3' : null;
   test.skip(key === null, 'no panel keys on Linux: its browsers switch tabs with Alt+1 … 8');
-  await editor(page).getByTestId('typst-visual').locator('p').first().click();
+  await editor(page).getByTestId('zwf-visual').locator('p').first().click();
   await page.keyboard.press(key!);
   await expect(findField(page)).toBeFocused();
-  const toggle = editor(page).getByTestId('typst-panel-toggle-search');
+  const toggle = editor(page).getByTestId('zwf-panel-toggle-search');
   await toggle.hover();
   await expect(toggle).toHaveAttribute('title', /^Find in files \(.+\)$/);
   await page.keyboard.press(key!);

@@ -102,15 +102,15 @@ export class Preview implements PreviewContributions {
     private readonly options: PreviewOptions = {},
   ) {
     const doc = container.ownerDocument;
-    this.pane = div(doc, 'typst-preview-pane');
-    this.toolbar = div(doc, 'typst-preview__toolbar');
-    this.toolbar.dataset.testid = 'typst-preview-toolbar';
-    this.scroller = div(doc, 'typst-preview__scroller');
-    this.pages = div(doc, 'typst-preview');
-    this.pages.dataset.testid = 'typst-preview';
+    this.pane = div(doc, 'zwf-preview-pane');
+    this.toolbar = div(doc, 'zwf-preview__toolbar');
+    this.toolbar.dataset.testid = 'zwf-preview-toolbar';
+    this.scroller = div(doc, 'zwf-preview__scroller');
+    this.pages = div(doc, 'zwf-preview');
+    this.pages.dataset.testid = 'zwf-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
-    this.clickHighlight = new OverlayLayer(this.list, 'typst-preview__highlight');
-    this.selectionHighlight = new OverlayLayer(this.list, 'typst-preview__selection');
+    this.clickHighlight = new OverlayLayer(this.list, 'zwf-preview__highlight');
+    this.selectionHighlight = new OverlayLayer(this.list, 'zwf-preview__selection');
     this.context = this.itemContext(doc);
     this.loader = new Loader(doc);
     this.scroller.append(this.pages, this.loader.element);
@@ -329,7 +329,7 @@ export class Preview implements PreviewContributions {
     }
     this.active = null;
     if (renderer) {
-      const container = div(this.pane.ownerDocument, 'typst-preview__renderer');
+      const container = div(this.pane.ownerDocument, 'zwf-preview__renderer');
       this.scroller.insertBefore(container, this.loader.element);
       this.active = { renderer, container, view: renderer.create(container), shown: false };
     }
@@ -380,7 +380,7 @@ export class Preview implements PreviewContributions {
       if (this.selection) this.highlights.push(this.selection);
       if (!quiet) this.rendered.fire();
     }
-    this.pages.classList.toggle('typst-preview--stale', failed);
+    this.pages.classList.toggle('zwf-preview--stale', failed);
     this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
     if (!quiet && !superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
@@ -400,7 +400,7 @@ export class Preview implements PreviewContributions {
       active.shown = true;
       this.rendered.fire();
     }
-    active.container.classList.toggle('typst-preview--stale', failed);
+    active.container.classList.toggle('zwf-preview--stale', failed);
     this.progressChanged();
     if (!superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
   }
@@ -525,7 +525,7 @@ export class Preview implements PreviewContributions {
     const hit = this.list.at(page);
     if (!hit) return;
     // an invisible point at the spot, only to measure and scroll to
-    const spot = overlay(hit.element, 'typst-preview__follow-spot', {
+    const spot = overlay(hit.element, 'zwf-preview__follow-spot', {
       left: (x / hit.page.width) * 100,
       top: (y / hit.page.height) * 100,
     });
@@ -828,7 +828,7 @@ type Reveal = { path: ProjectPath; from: SourceOffset };
 type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
 
 /** The file the preview compiles while a view option is on: their prelude, then the main file included. */
-const VIEW_ENTRY = '/.typst-preview-view.typ';
+const VIEW_ENTRY = '/.zwf-preview-view.typ';
 
 /** `diagnostics` with what goes wrong in the view options' Typst, which is in no project file, without a path. */
 function inProjectFiles(diagnostics: readonly TypstDiagnostic[]): TypstDiagnostic[] {

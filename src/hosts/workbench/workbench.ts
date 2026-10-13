@@ -151,7 +151,7 @@ export interface Workbench {
   /**
    * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<zwiebelfisch-editor>`), after the
    * widget's own stylesheet, until disposed. An extension styles what it adds this way, under class names of its own,
-   * with the colors of the `--te-*` tokens (light and dark). Widgets in one root share each stylesheet.
+   * with the colors of the `--zwf-*` tokens (light and dark). Widgets in one root share each stylesheet.
    */
   registerStyleSheet(css: string): Disposable;
   /**
@@ -288,7 +288,7 @@ export interface Memento {
  * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
  * data is its path. Any editor may take such a drop (the Typst editors insert what the drop edit providers make of it).
  */
-export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
+export const PROJECT_PATH_TYPE = 'application/x-zwf-project-path';
 
 export interface WorkbenchOptions {
   /**
@@ -307,7 +307,7 @@ export interface WorkbenchOptions {
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
   /**
    * The widget's color tokens and frame (CSS), put where it renders before the frame is built (the color scheme reads
-   * the resolved colors), as `<style id="typst-editor-styles">` together with the workbench's own CSS. The other
+   * the resolved colors), as `<style id="zwf-editor-styles">` together with the workbench's own CSS. The other
    * hosts' stylesheets follow it, then the extensions'.
    */
   styleSheet?: string;
@@ -402,15 +402,15 @@ export class WorkbenchHost implements Workbench {
   ) {
     this.#active = project.main;
     this.#styleSheets = new StyleSheets(host);
-    const frameStyles = this.#styleSheets.add((options.styleSheet ?? '') + css, 'typst-editor-styles');
-    host.classList.add('typst-editor');
+    const frameStyles = this.#styleSheets.add((options.styleSheet ?? '') + css, 'zwf-editor-styles');
+    host.classList.add('zwf-editor');
     this.#workspace = new WorkspaceHost(project, { settings: options.settings, allowFileChange: options.allowFileChange });
     this.#workspace.declare(WORKBENCH_SETTINGS);
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
     const doc = host.ownerDocument;
     this.commands = new CommandsHost(host);
-    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`), this.commands);
+    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `zwf:${project.main}:workbench:`), this.commands);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#tabs = new EditorTabs(this.#layout.editor, this.#menus, {
@@ -453,8 +453,8 @@ export class WorkbenchHost implements Workbench {
         preview: this.#preview,
       },
       (id) => ({
-        globalState: StorageMemento.of(doc, 'localStorage', `typst-editor:global:${id}:`),
-        workspaceState: StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:${id}:`),
+        globalState: StorageMemento.of(doc, 'localStorage', `zwf:global:${id}:`),
+        workspaceState: StorageMemento.of(doc, 'sessionStorage', `zwf:${project.main}:${id}:`),
       }),
     );
   }
@@ -560,7 +560,7 @@ export class WorkbenchHost implements Workbench {
     this.#workspace.dispose();
     this.#drops.dispose();
     for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
-    this.host.classList.remove('typst-editor');
+    this.host.classList.remove('zwf-editor');
     delete this.host.dataset.theme;
     this.#scheme.dispose();
     this.#layout.dispose();
@@ -638,7 +638,7 @@ export class WorkbenchHost implements Workbench {
     button.type = 'button';
     button.title = 'Search everywhere (Shift Shift)';
     button.setAttribute('aria-label', 'Search everywhere');
-    button.dataset.testid = 'typst-search-everywhere';
+    button.dataset.testid = 'zwf-search-everywhere';
     button.innerHTML = SEARCH_ICON;
     button.addEventListener('click', () => void this.commands.executeCommand(command));
     this.#layout.addRailAction('left', button, SEARCH_EVERYWHERE_ORDER);

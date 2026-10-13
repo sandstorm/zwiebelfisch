@@ -53,7 +53,7 @@ function setup(text: string) {
   const press = (key: string) => !editable.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   /** The caret at source offset `offset`. */
   const caret = (offset: number) => view.reveal(SourceRange.of({ from: offset, to: offset }));
-  const gaps = () => parent.querySelectorAll('.typst-visual__block-gap').length;
+  const gaps = () => parent.querySelectorAll('.zwf-visual__block-gap').length;
   return { doc, view, tiptap, editable, press, caret, gaps };
 }
 
@@ -234,7 +234,7 @@ describe('the caret between two code blocks in a block style', () => {
       return top === undefined ? measure.call(this) : new DOMRect(0, top, 100, 20);
     });
     vi.spyOn(tiptap.view, 'posAtCoords').mockReturnValue({ pos: 1, inside: 0 });
-    const target = editable.querySelector('.typst-styles__block')!;
+    const target = editable.querySelector('.zwf-styles__block')!;
     try {
       for (const type of ['mousedown', 'mouseup']) target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: 50, clientY: 25 }));
     } finally {

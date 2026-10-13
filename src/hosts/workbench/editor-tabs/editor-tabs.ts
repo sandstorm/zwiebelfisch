@@ -17,9 +17,9 @@ export class EditorTabs {
   constructor(container: HTMLElement, menus: Menus, options: EditorTabsOptions) {
     const doc = container.ownerDocument;
     this.#element = doc.createElement('div');
-    this.#element.className = 'typst-editor__tabs';
+    this.#element.className = 'zwf-editor__tabs';
     this.#tabs = doc.createElement('div');
-    this.#tabs.className = 'typst-editor__tab-list';
+    this.#tabs.className = 'zwf-editor__tab-list';
     this.#tabs.setAttribute('role', 'tablist');
     this.#actions = new EditorTitleMenu(doc, menus, { ...options, onDidUpdate: () => this.#fit() });
     this.#element.append(this.#tabs, this.#actions.element);
@@ -38,7 +38,7 @@ export class EditorTabs {
       ...editors.map(({ viewType, displayName }) => {
         const tab = doc.createElement('button');
         tab.type = 'button';
-        tab.className = 'typst-editor__tab';
+        tab.className = 'zwf-editor__tab';
         tab.setAttribute('role', 'tab');
         tab.setAttribute('aria-selected', String(viewType === shown));
         tab.dataset.viewType = viewType;

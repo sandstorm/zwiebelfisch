@@ -308,8 +308,8 @@ export interface FollowableLink {
   follow(): void;
   /**
    * The pointer moved (`event`) over it at `element` (a reference chip, a link's text, a picture): it shows as links in
-   * text do, the same hint after the same delay ("Edit diagram (⌘+click or Alt+Enter)", `.typst-link-hint`) and,
-   * while the modifier is held, the link look (`typst-link--mod` on `element`).
+   * text do, the same hint after the same delay ("Edit diagram (⌘+click or Alt+Enter)", `.zwf-link-hint`) and,
+   * while the modifier is held, the link look (`zwf-link--mod` on `element`).
    */
   hover(event: MouseEvent, element: Element): void;
   /** The pointer (`event`) left it: its hint goes (unless the pointer moves into it), and its link look. */
@@ -332,7 +332,7 @@ export class LanguagesHost implements Languages {
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
-  /** The CSS of links (their hint `.typst-link-hint`, their look `typst-link--mod`), for the workbench to put where the widget renders. */
+  /** The CSS of links (their hint `.zwf-link-hint`, their look `zwf-link--mod`), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
   constructor(private readonly targets: LinkTargets) {}

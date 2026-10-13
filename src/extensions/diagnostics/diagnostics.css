@@ -1,6 +1,6 @@
 /* The diagnostics extension's styles: the status bar's diagnostics summary and messages, and diagnostics underlined in the Visual editor.
-   See diagnostics in diagnostics.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-diagnostics__status {
+   See diagnostics in diagnostics.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-diagnostics__status {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
@@ -9,21 +9,21 @@
   padding: 4px 8px;
   font-size: 12px;
 }
-.typst-diagnostics__status-summary {
+.zwf-diagnostics__status-summary {
   font: inherit;
   border: 0;
   padding: 2px 6px;
   border-radius: 3px;
   background: none;
-  color: var(--te-success);
+  color: var(--zwf-success);
   cursor: pointer;
 }
-.typst-diagnostics__status-summary:disabled { cursor: default; }
-.typst-diagnostics__status[data-severity='warning'] .typst-diagnostics__status-summary { color: var(--te-warning); }
-.typst-diagnostics__status[data-severity='error'] .typst-diagnostics__status-summary { color: var(--te-danger); font-weight: 600; }
+.zwf-diagnostics__status-summary:disabled { cursor: default; }
+.zwf-diagnostics__status[data-severity='warning'] .zwf-diagnostics__status-summary { color: var(--zwf-warning); }
+.zwf-diagnostics__status[data-severity='error'] .zwf-diagnostics__status-summary { color: var(--zwf-danger); font-weight: 600; }
 /* Messages of the shown file, opened by hovering or focusing the count. */
-.typst-diagnostics__status-hover { position: relative; }
-.typst-diagnostics__status-details {
+.zwf-diagnostics__status-hover { position: relative; }
+.zwf-diagnostics__status-details {
   display: none;
   position: absolute;
   bottom: 100%;
@@ -36,18 +36,18 @@
   margin: 0 0 4px;
   padding: 4px;
   list-style: none;
-  background: var(--te-surface);
-  border: 1px solid var(--te-border);
+  background: var(--zwf-surface);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-.typst-diagnostics__status-hover:is(:hover, :focus-within) > .typst-diagnostics__status-details:not([hidden]) { display: block; }
-.typst-diagnostics__status-detail {
+.zwf-diagnostics__status-hover:is(:hover, :focus-within) > .zwf-diagnostics__status-details:not([hidden]) { display: block; }
+.zwf-diagnostics__status-detail {
   display: block;
   width: 100%;
   padding: 4px 6px;
   border: 0;
-  border-left: 3px solid var(--te-warning);
+  border-left: 3px solid var(--zwf-warning);
   background: none;
   color: inherit;
   font: inherit;
@@ -55,12 +55,12 @@
   white-space: pre-wrap;
   cursor: pointer;
 }
-.typst-diagnostics__status-details > li[data-severity='error'] > .typst-diagnostics__status-detail { border-left-color: var(--te-danger); }
-.typst-diagnostics__status-detail:hover, .typst-diagnostics__status-detail:focus-visible { background: var(--te-preview-bg); }
-.typst-diagnostics__status-elsewhere { display: contents; list-style: none; }
-.typst-diagnostics__status-elsewhere > li { color: var(--te-muted); }
-.typst-diagnostics__status-elsewhere > li[data-severity='error'] { color: var(--te-danger); }
-.typst-diagnostics__status-open {
+.zwf-diagnostics__status-details > li[data-severity='error'] > .zwf-diagnostics__status-detail { border-left-color: var(--zwf-danger); }
+.zwf-diagnostics__status-detail:hover, .zwf-diagnostics__status-detail:focus-visible { background: var(--zwf-preview-bg); }
+.zwf-diagnostics__status-elsewhere { display: contents; list-style: none; }
+.zwf-diagnostics__status-elsewhere > li { color: var(--zwf-muted); }
+.zwf-diagnostics__status-elsewhere > li[data-severity='error'] { color: var(--zwf-danger); }
+.zwf-diagnostics__status-open {
   border: 0;
   padding: 0;
   background: none;
@@ -70,13 +70,13 @@
   cursor: pointer;
 }
 /* ---- diagnostics in the Visual editor (tooltip: message + hints) ---- */
-.typst-diagnostics__highlight {
-  text-decoration: underline wavy var(--te-warning);
+.zwf-diagnostics__highlight {
+  text-decoration: underline wavy var(--zwf-warning);
   text-decoration-skip-ink: none;
   text-underline-offset: 3px;
 }
-.typst-diagnostics__highlight[data-severity='error'] { text-decoration-color: var(--te-danger); }
+.zwf-diagnostics__highlight[data-severity='error'] { text-decoration-color: var(--zwf-danger); }
 /* Boxes (ProseMirror's non-editable node views: raw code, …): an underline would not reach the code inside, so
    outline the box. */
-.typst-diagnostics__highlight[contenteditable='false'] { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
-.typst-diagnostics__highlight[contenteditable='false'][data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }
+.zwf-diagnostics__highlight[contenteditable='false'] { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
+.zwf-diagnostics__highlight[contenteditable='false'][data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }

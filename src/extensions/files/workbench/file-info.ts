@@ -9,13 +9,13 @@ export const fileInfoEditor: CustomEditorProvider = {
   resolveCustomEditor({ path, content }, panel) {
     const doc = panel.element.ownerDocument;
     const root = doc.createElement('div');
-    root.className = 'typst-files__info';
-    root.dataset.testid = 'typst-file-info';
+    root.className = 'zwf-files__info';
+    root.dataset.testid = 'zwf-file-info';
     const title = doc.createElement('h2');
-    title.className = 'typst-files__info-title';
+    title.className = 'zwf-files__info-title';
     title.textContent = ProjectPath.displayName(path);
     const facts = doc.createElement('dl');
-    facts.className = 'typst-files__info-facts';
+    facts.className = 'zwf-files__info-facts';
     for (const [term, value] of [['Size', formatSize(content)], ['Type', fileType(path)]]) {
       const dt = doc.createElement('dt');
       dt.textContent = term;
@@ -24,7 +24,7 @@ export const fileInfoEditor: CustomEditorProvider = {
       facts.append(dt, dd);
     }
     const note = doc.createElement('p');
-    note.className = 'typst-files__info-note';
+    note.className = 'zwf-files__info-note';
     note.textContent = 'This file is used by the document but cannot be shown here.';
     root.append(title, facts, note);
     panel.element.append(root);

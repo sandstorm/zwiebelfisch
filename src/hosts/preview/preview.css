@@ -1,27 +1,27 @@
 /* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, the outline of a click, the
    shading of highlighted source ranges, the dimming of a failed compile and the loader. See Preview in preview.ts,
    whose styleSheet the workbench adds. */
-.typst-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--te-preview-bg); }
-.typst-preview__toolbar {
+.zwf-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--zwf-preview-bg); }
+.zwf-preview__toolbar {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--te-border);
-  background: var(--te-subtle);
+  border-bottom: 1px solid var(--zwf-border);
+  background: var(--zwf-subtle);
   font-size: 12px;
 }
-.typst-preview__toolbar > button {
+.zwf-preview__toolbar > button {
   min-width: 28px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 2px 6px;
-  background: var(--te-surface);
+  background: var(--zwf-surface);
   font: inherit;
   cursor: pointer;
 }
-.typst-preview__scroller { position: relative; flex: 1; min-height: 0; overflow: auto; }
-.typst-preview {
+.zwf-preview__scroller { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.zwf-preview {
   display: flex;
   flex-direction: column;
   align-items: safe center;
@@ -29,17 +29,17 @@
   padding: 16px 16px 32px;
   box-sizing: border-box;
 }
-.typst-preview[hidden] { display: none; }
+.zwf-preview[hidden] { display: none; }
 /* A registered renderer's container (registerRenderer), in place of the pages: it fills the pane and scrolls itself. */
-.typst-preview__renderer { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.typst-preview__page {
+.zwf-preview__renderer { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.zwf-preview__page {
   position: relative;
   flex: none;
   background: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: text;
 }
-.typst-preview__page::after {
+.zwf-preview__page::after {
   content: attr(data-number);
   position: absolute;
   top: 100%;
@@ -48,36 +48,36 @@
   padding-top: 6px;
   text-align: center;
   font-size: 11px;
-  color: var(--te-faint);
+  color: var(--zwf-faint);
 }
-.typst-preview__content svg { display: block; width: 100%; height: auto; }
+.zwf-preview__content svg { display: block; width: 100%; height: auto; }
 /* Dark mode: the pages inverted, as dark-mode PDF readers do (white text on black, hues kept, pictures
    turned back); the overlays (highlights) are outside the content and keep their colors. */
-.typst-editor[data-scheme='dark'] .typst-preview__page { background: black; }
-.typst-editor[data-scheme='dark'] .typst-preview__content,
-.typst-editor[data-scheme='dark'] .typst-preview__content image { filter: invert(1) hue-rotate(180deg); }
-.typst-preview__highlight {
+.zwf-editor[data-scheme='dark'] .zwf-preview__page { background: black; }
+.zwf-editor[data-scheme='dark'] .zwf-preview__content,
+.zwf-editor[data-scheme='dark'] .zwf-preview__content image { filter: invert(1) hue-rotate(180deg); }
+.zwf-preview__highlight {
   position: absolute;
   margin: -2px;
   padding: 2px;
   border-radius: 3px;
-  background: var(--te-jump);
-  outline: 1px solid var(--te-accent);
+  background: var(--zwf-jump);
+  outline: 1px solid var(--zwf-accent);
   pointer-events: none;
 }
 /* setSelectionHighlight: a plain translucent fill, as a text selection (no outline: that marks a click) */
-.typst-preview__selection {
+.zwf-preview__selection {
   position: absolute;
   margin: -1px;
   padding: 1px;
   border-radius: 2px;
-  background: var(--te-selection-highlight);
+  background: var(--zwf-selection-highlight);
   pointer-events: none;
 }
-.typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
-.typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
+.zwf-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
+.zwf-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 /* The loader (progress/loader.ts): over the empty pages until the first ones come, so nothing moves then. */
-.typst-preview__loader {
+.zwf-preview__loader {
   position: absolute;
   inset: 0;
   display: flex;
@@ -86,34 +86,34 @@
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: 13px/1.4 system-ui, sans-serif;
   text-align: center;
   pointer-events: none;
 }
-.typst-preview__loader[hidden] { display: none; }
-.typst-preview__loader-title { color: var(--te-text-2); }
-.typst-preview__loader--failed .typst-preview__loader-title { color: var(--te-danger); font-weight: 600; }
-.typst-preview__loader-bar {
+.zwf-preview__loader[hidden] { display: none; }
+.zwf-preview__loader-title { color: var(--zwf-text-2); }
+.zwf-preview__loader--failed .zwf-preview__loader-title { color: var(--zwf-danger); font-weight: 600; }
+.zwf-preview__loader-bar {
   position: relative;
   overflow: hidden;
   width: min(220px, 70%);
   height: 4px;
   border-radius: 2px;
-  background: var(--te-border);
+  background: var(--zwf-border);
 }
-.typst-preview__loader-bar[hidden] { display: none; }
-.typst-preview__loader-fill { height: 100%; width: 0; background: var(--te-accent); transition: width 0.2s linear; }
-.typst-preview__loader-bar--indeterminate > .typst-preview__loader-fill {
+.zwf-preview__loader-bar[hidden] { display: none; }
+.zwf-preview__loader-fill { height: 100%; width: 0; background: var(--zwf-accent); transition: width 0.2s linear; }
+.zwf-preview__loader-bar--indeterminate > .zwf-preview__loader-fill {
   width: 35%;
-  animation: typst-preview-indeterminate 1.2s ease-in-out infinite;
+  animation: zwf-preview-indeterminate 1.2s ease-in-out infinite;
 }
-@keyframes typst-preview-indeterminate {
+@keyframes zwf-preview-indeterminate {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .typst-preview__loader-fill { transition: none; }
-  .typst-preview__loader-bar--indeterminate > .typst-preview__loader-fill { animation: none; width: 100%; opacity: 0.5; }
+  .zwf-preview__loader-fill { transition: none; }
+  .zwf-preview__loader-bar--indeterminate > .zwf-preview__loader-fill { animation: none; width: 100%; opacity: 0.5; }
 }
-.typst-preview__loader-detail { min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.zwf-preview__loader-detail { min-height: 1.4em; font-variant-numeric: tabular-nums; }

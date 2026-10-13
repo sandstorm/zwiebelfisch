@@ -58,7 +58,7 @@ function setup(files: ProjectFiles = FILES, state: Record<string, unknown> = {})
     confirm: async (message) => (confirmed.push(message), confirm),
     state: { get: ((key: string, fallback?: unknown) => stored.get(key) ?? fallback) as never, update: async (key, value) => void stored.set(key, value) },
   });
-  const root = document.querySelector<HTMLElement>('[data-testid=typst-search]')!;
+  const root = document.querySelector<HTMLElement>('[data-testid=zwf-search]')!;
   const input = root.querySelector('input')!;
   const rows = () => [...root.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const toggle = (label: string) => root.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
@@ -73,7 +73,7 @@ function setup(files: ProjectFiles = FILES, state: Record<string, unknown> = {})
     button: (label: string) => [...root.querySelectorAll('button')].find((button) => button.title.startsWith(label) || button.textContent!.startsWith(label))!,
     replaceInput: () => root.querySelector<HTMLInputElement>('input[aria-label=Replace]')!,
     notice: () => {
-      const notice = root.querySelector<HTMLElement>('.typst-search__notice')!;
+      const notice = root.querySelector<HTMLElement>('.zwf-search__notice')!;
       return notice.hidden ? '' : notice.firstElementChild!.textContent;
     },
     searches,
@@ -90,7 +90,7 @@ function setup(files: ProjectFiles = FILES, state: Record<string, unknown> = {})
     scope: () => root.querySelector<HTMLSelectElement>('select')!,
     /** What the scope line says beside the choice: the current file, or the folder chip. */
     scopeTarget: () => {
-      const target = root.querySelector<HTMLElement>('.typst-search__scope-target')!;
+      const target = root.querySelector<HTMLElement>('.zwf-search__scope-target')!;
       return target.hidden ? '' : target.firstElementChild!.textContent;
     },
     clearScope: () => root.querySelector<HTMLButtonElement>('button[aria-label="Search the whole project"]')!,
@@ -321,7 +321,7 @@ describe('SearchPanel', () => {
 
 describe('SearchPanel in Replace mode', () => {
   it('switches mode in its header, keeping the query; remembers the mode', async () => {
-    const { panel, button, replaceInput, stored, message, root } = { ...setup(), root: () => document.querySelector('[data-testid=typst-search]')! };
+    const { panel, button, replaceInput, stored, message, root } = { ...setup(), root: () => document.querySelector('[data-testid=zwf-search]')! };
     expect(replaceInput().closest<HTMLElement>('[hidden]')).not.toBeNull();
     panel.find({ query: 'hello' });
     await vi.runAllTimersAsync();
@@ -330,7 +330,7 @@ describe('SearchPanel in Replace mode', () => {
     expect(replaceInput().closest('[hidden]')).toBeNull();
     expect(stored.get('mode')).toBe('replace');
     expect(message()).toBe('4 results in 3 files');
-    expect(root().querySelector<HTMLElement>('.typst-search__replace-all')!.hidden).toBe(false);
+    expect(root().querySelector<HTMLElement>('.zwf-search__replace-all')!.hidden).toBe(false);
     button('Find in files').click();
     expect(stored.get('mode')).toBe('find');
     document.body.replaceChildren();

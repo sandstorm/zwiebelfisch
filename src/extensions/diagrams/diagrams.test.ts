@@ -31,7 +31,7 @@ function setup(settings = {}) {
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/img/flow.drawio.png': emptyDiagram() });
   const workbench = new WorkbenchHost(host, project, { settings });
   workbench.activate([diagrams()]);
-  const frame = () => host.querySelector<HTMLIFrameElement>('[data-testid=typst-diagram] iframe');
+  const frame = () => host.querySelector<HTMLIFrameElement>('[data-testid=zwf-diagram] iframe');
   const send = (message: object) => window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(message), source: frame()!.contentWindow }));
   return { host, project, workbench, frame, send };
 }

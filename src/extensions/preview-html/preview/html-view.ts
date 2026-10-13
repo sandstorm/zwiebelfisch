@@ -35,8 +35,8 @@ export class HtmlView implements PreviewRendererView {
   ) {
     const doc = container.ownerDocument;
     this.frame = doc.createElement('iframe');
-    this.frame.className = 'typst-preview-html__frame';
-    this.frame.dataset.testid = 'typst-preview-html';
+    this.frame.className = 'zwf-preview-html__frame';
+    this.frame.dataset.testid = 'zwf-preview-html';
     this.frame.title = 'HTML preview';
     // its DOM is ours to change (same origin); its scripts and forms stay off
     this.frame.setAttribute('sandbox', 'allow-same-origin');

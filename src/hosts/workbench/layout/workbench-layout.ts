@@ -33,8 +33,8 @@ export class WorkbenchLayout {
       left: new SideBar(host, 'left', restoreSideBarState(saved, 'left'), { save, commands }),
       right: new SideBar(host, 'right', restoreSideBarState(saved, 'right'), { save, commands }),
     };
-    this.editor = div(doc, 'typst-editor__editor-area');
-    this.statusBar = div(doc, 'typst-editor__status-bar');
+    this.editor = div(doc, 'zwf-editor__editor-area');
+    this.statusBar = div(doc, 'zwf-editor__status-bar');
     host.append(this.#sides.left.element, this.editor, this.#sides.right.element, this.statusBar);
     this.#watchWidth();
   }
@@ -68,7 +68,7 @@ export class WorkbenchLayout {
     this.#sides.right.dispose();
     this.editor.remove();
     this.statusBar.remove();
-    this.host.classList.remove('typst-editor--narrow');
+    this.host.classList.remove('zwf-editor--narrow');
   }
 
   /** Narrow or not, from the widget's width (ResizeObserver; without it the widget counts as wide). */
@@ -80,7 +80,7 @@ export class WorkbenchLayout {
       const now = this.host.clientWidth > 0 && this.host.clientWidth < NARROW;
       if (now === narrow) return;
       narrow = now;
-      this.host.classList.toggle('typst-editor--narrow', narrow);
+      this.host.classList.toggle('zwf-editor--narrow', narrow);
       this.#sides.left.setOverlay(narrow);
     });
     observer.observe(this.host);

@@ -49,7 +49,7 @@ const scenarios: Scenario[] = [
   { name: 'docs, list item', folder: DOCS, path: SEARCH, after: 'a prefix shows only its groups', inside: 'listItem' },
   { name: 'docs, table cell', folder: DOCS, path: SEARCH, after: 'jumps to the heading', inside: 'tableCell' },
 ];
-const only = process.env.TYPST_PERF_SCENARIO;
+const only = process.env.ZWF_PERF_SCENARIO;
 const layoutReads = new LayoutReads(root);
 
 /**
@@ -179,7 +179,7 @@ async function settled(): Promise<void> {
 
 /** The Tiptap editor of the shown Visual editor. */
 function visualEditor(host: HTMLElement): Editor {
-  const shown = [...host.querySelectorAll<HTMLElement>('.typst-visual')].find((element) => element.closest('[hidden]') === null);
+  const shown = [...host.querySelectorAll<HTMLElement>('.zwf-visual')].find((element) => element.closest('[hidden]') === null);
   const editor = (shown as (HTMLElement & { editor?: Editor }) | undefined)?.editor;
   if (!editor) throw new Error('no Visual editor shown');
   return editor;

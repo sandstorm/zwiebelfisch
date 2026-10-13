@@ -22,8 +22,8 @@ function setup(text = SOURCE) {
   const editable = parent.querySelector<HTMLElement>('.ProseMirror')!;
   const tiptap = (editable as HTMLElement & { editor: Editor }).editor;
   const press = (key: string) => !editable.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-  const gap = () => parent.querySelector<HTMLElement>('.typst-visual__block-gap');
-  const box = (index: number) => CodeView.findFromDOM(parent.querySelectorAll<HTMLElement>('.typst-visual__raw-block .cm-content')[index])!;
+  const gap = () => parent.querySelector<HTMLElement>('.zwf-visual__block-gap');
+  const box = (index: number) => CodeView.findFromDOM(parent.querySelectorAll<HTMLElement>('.zwf-visual__raw-block .cm-content')[index])!;
   /** The caret in the gap after the first raw block, as leaving its code downwards puts it. */
   const leaveFirstBox = () => {
     const code = box(0);

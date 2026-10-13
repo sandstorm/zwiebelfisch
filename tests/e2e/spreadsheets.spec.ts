@@ -16,18 +16,18 @@ const fileText = (page: Page, path: string) => () =>
 
 test('a new spreadsheet opens in IronCalc; its Typst file (tables and values) is written, and Typst shows it', async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.files = { '/budget.ic': '' };
     el.value = '#import "budget.ic.gen.typ": sheets, values\n\n#sheets.Sheet1\nRent: #values.Sheet1.at(0).at(1)\n';
   });
   await fileRow(editor(page), 'budget.ic').click();
 
-  const sheet = editor(page).getByTestId('typst-spreadsheet');
+  const sheet = editor(page).getByTestId('zwf-spreadsheet');
   await expect(sheet.locator('.ic-root')).toBeVisible();
   // a new workbook is saved at once: the Typst file exists before any edit (the sheet is empty: an error)
   await expect.poll(fileText(page, '/budget.ic.gen.typ')).toContain('"Sheet1": ()');
-  await expect(editor(page).getByTestId('typst-status')).not.toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).not.toHaveText(/✓/);
 
   // A1 is selected: type into it, Tab to B1, a formula, Enter
   const grid = sheet.locator('canvas').first();
@@ -41,7 +41,7 @@ test('a new spreadsheet opens in IronCalc; its Typst file (tables and values) is
   expect(await fileText(page, '/budget.ic.gen.typ')()).toContain('table.cell(align: right + bottom, "1200")');
 
   // `values.Sheet1.at(0)` fails on the empty new sheet; with the values in place the document compiles
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
 });
 
 test("a spreadsheet's named cells and ranges reach Typst as `names` and `name-values`, updated on every edit", async ({ page }) => {
@@ -57,13 +57,13 @@ test("a spreadsheet's named cells and ranges reach Typst as `names` and `name-va
   model.free();
 
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor, bytes) => {
     el.files = { '/budget.ic': new Uint8Array(bytes) };
     el.value = '#import "budget.ic.gen.typ": names, name-values\n\n#figure(names.Costs)\nTotal: #names.Total, #name-values.Costs.at(0).at(0)\n';
   }, bytes);
   await fileRow(editor(page), 'budget.ic').click();
-  const sheet = editor(page).getByTestId('typst-spreadsheet');
+  const sheet = editor(page).getByTestId('zwf-spreadsheet');
   await expect(sheet.locator('.ic-root')).toBeVisible();
 
   // A1 is selected: a new cost; the Typst file follows (it is written on the first edit)
@@ -73,13 +73,13 @@ test("a spreadsheet's named cells and ranges reach Typst as `names` and `name-va
   await page.keyboard.press('Enter');
   await expect.poll(fileText(page, '/budget.ic.gen.typ')).toContain('#let names = (\n  "Total": "42",\n  "Costs": table(');
   expect(await fileText(page, '/budget.ic.gen.typ')()).toContain('#let name-values = (\n  "Total": "42",\n  "Costs": (\n    ("21", "42"),\n  ),\n)');
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
 });
 
 /** How light IronCalc's grid is in its middle (0 black … 255 white): its cell background there. */
 const gridLightness = (page: Page) => () =>
   editor(page)
-    .getByTestId('typst-spreadsheet')
+    .getByTestId('zwf-spreadsheet')
     .locator('canvas')
     .first()
     .evaluate((canvas: HTMLCanvasElement) => {
@@ -89,19 +89,19 @@ const gridLightness = (page: Page) => () =>
 
 test('the workbook follows the widget into dark mode and back, its grid included', async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.files = { '/budget.ic': '' };
   });
   await fileRow(editor(page), 'budget.ic').click();
-  const workbook = editor(page).getByTestId('typst-spreadsheet').locator('.ic-root');
+  const workbook = editor(page).getByTestId('zwf-spreadsheet').locator('.ic-root');
   await expect(workbook).toBeVisible();
   await expect.poll(gridLightness(page)).toBeGreaterThan(200);
 
   // the example's "Dark" checkbox sets the setting `workbench.theme` (the example fixes it to light otherwise)
   const switchTo = (scheme: 'dark' | 'light') => page.getByTestId('dark').setChecked(scheme === 'dark');
   await switchTo('dark');
-  await expect(editor(page).locator('.typst-editor')).toHaveAttribute('data-scheme', 'dark');
+  await expect(editor(page).locator('.zwf-editor')).toHaveAttribute('data-scheme', 'dark');
   await expect
     .poll(() => workbook.evaluate((root) => root.style.getPropertyValue('--palette-common-white')))
     .toBe('rgb(13, 17, 23)');
@@ -114,13 +114,13 @@ test('the workbook follows the widget into dark mode and back, its grid included
 
 test('⌘/Ctrl+click on the path of a spreadsheet\'s Typst file ("Edit spreadsheet") opens the spreadsheet, not the generated file', async ({ page }) => {
   await page.goto('/?example=advanced');
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
   await openFile(page, 'chapters/results.typ');
   // the import line's raw box in the Visual editor
-  const path = page.locator('[data-testid=typst-visual]:visible .typst-visual__raw-block .typst-source__path', { hasText: 'compile-times.ic.gen.typ' });
+  const path = page.locator('[data-testid=zwf-visual]:visible .zwf-visual__raw-block .zwf-source__path', { hasText: 'compile-times.ic.gen.typ' });
   await path.hover();
-  await expect(page.locator('.typst-link-hint')).toContainText('Edit spreadsheet');
+  await expect(page.locator('.zwf-link-hint')).toContainText('Edit spreadsheet');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'data/compile-times.ic')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('typst-spreadsheet').locator('.ic-root')).toBeVisible();
+  await expect(page.getByTestId('zwf-spreadsheet').locator('.ic-root')).toBeVisible();
 });

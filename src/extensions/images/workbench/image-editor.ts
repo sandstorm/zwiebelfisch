@@ -24,8 +24,8 @@ class ImageEditor {
 
   constructor(parent: HTMLElement) {
     this.root = parent.ownerDocument.createElement('div');
-    this.root.className = 'typst-images__file';
-    this.root.dataset.testid = 'typst-asset';
+    this.root.className = 'zwf-images__file';
+    this.root.dataset.testid = 'zwf-asset';
     parent.append(this.root);
   }
 
@@ -34,14 +34,14 @@ class ImageEditor {
     this.release();
     const doc = this.root.ownerDocument;
     const title = doc.createElement('h2');
-    title.className = 'typst-images__file-title';
+    title.className = 'zwf-images__file-title';
     title.textContent = ProjectPath.displayName(path);
     const size = doc.createElement('span');
-    size.className = 'typst-images__file-size';
+    size.className = 'zwf-images__file-size';
     size.textContent = formatSize(FileContent.bytes(content).length);
     title.append(size);
     const image = doc.createElement('img');
-    image.className = 'typst-images__file-image';
+    image.className = 'zwf-images__file-image';
     image.alt = ProjectPath.displayName(path);
     this.objectUrl = URL.createObjectURL(imageBlob(path, content));
     image.src = this.objectUrl;

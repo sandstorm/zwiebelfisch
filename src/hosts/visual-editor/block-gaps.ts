@@ -284,7 +284,7 @@ function drawGap(state: EditorState): DecorationSet | null {
   if (!(state.selection instanceof BlockGap)) return null;
   const line = (view: EditorView) => {
     const dom = view.dom.ownerDocument.createElement('div');
-    dom.className = 'typst-visual__block-gap';
+    dom.className = 'zwf-visual__block-gap';
     return dom;
   };
   return DecorationSet.create(state.doc, [Decoration.widget(state.selection.head, line, { key: 'block-gap' })]);

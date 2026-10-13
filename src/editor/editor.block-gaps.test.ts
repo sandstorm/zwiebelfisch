@@ -20,7 +20,7 @@ function setup(text: string) {
   const press = (key: string) => !editable.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   /** The caret at source offset `offset`. */
   const caret = (offset: number) => view.reveal(SourceRange.of({ from: offset, to: offset }));
-  const gaps = () => parent.querySelectorAll('.typst-visual__block-gap').length;
+  const gaps = () => parent.querySelectorAll('.zwf-visual__block-gap').length;
   return { doc, view, tiptap, press, caret, gaps };
 }
 

@@ -1,33 +1,33 @@
 /* The invisibles extension's styles: the marks of invisible characters in the Visual editor, drawn as generated
    content (never selected nor copied) in the faint text color, light and dark. See invisibles.ts, which registers it. */
 /* a mark over its character, which keeps its own width */
-.typst-invisibles__space,
-.typst-invisibles__nbsp,
-.typst-invisibles__tab {
+.zwf-invisibles__space,
+.zwf-invisibles__nbsp,
+.zwf-invisibles__tab {
   position: relative;
 }
-.typst-invisibles__space::after,
-.typst-invisibles__nbsp::after,
-.typst-invisibles__tab::after {
+.zwf-invisibles__space::after,
+.zwf-invisibles__nbsp::after,
+.zwf-invisibles__tab::after {
   position: absolute;
   inset: 0;
   text-align: center;
-  color: var(--te-faint);
+  color: var(--zwf-faint);
   font-style: normal;
   font-weight: normal;
   pointer-events: none;
   user-select: none;
 }
-.typst-invisibles__space::after { content: '·'; }
-.typst-invisibles__nbsp::after { content: '°'; }
-.typst-invisibles__tab::after { content: '→'; }
+.zwf-invisibles__space::after { content: '·'; }
+.zwf-invisibles__nbsp::after { content: '°'; }
+.zwf-invisibles__tab::after { content: '→'; }
 /* a mark of its own after a line break or at a paragraph's end */
-.typst-invisibles__break::after,
-.typst-invisibles__paragraph::after {
-  color: var(--te-faint);
+.zwf-invisibles__break::after,
+.zwf-invisibles__paragraph::after {
+  color: var(--zwf-faint);
   font-style: normal;
   font-weight: normal;
   user-select: none;
 }
-.typst-invisibles__break::after { content: '↵'; }
-.typst-invisibles__paragraph::after { content: '¶'; }
+.zwf-invisibles__break::after { content: '↵'; }
+.zwf-invisibles__paragraph::after { content: '¶'; }

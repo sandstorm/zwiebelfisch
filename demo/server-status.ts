@@ -84,7 +84,7 @@ const MISSING_GITLAB: ServerStatus = {
 
 const NO_PLAIN_ROOMS: ServerStatus = {
   level: 'warn',
-  text: `${SERVER.ws} opens only GitLab rooms (plain rooms are off: TYPST_PLAIN_ROOMS). Use GitLab mode, or start the playground server:`,
+  text: `${SERVER.ws} opens only GitLab rooms (plain rooms are off: ZWF_PLAIN_ROOMS). Use GitLab mode, or start the playground server:`,
   hint: START,
 };
 

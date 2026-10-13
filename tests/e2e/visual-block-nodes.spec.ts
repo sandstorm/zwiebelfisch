@@ -6,7 +6,7 @@ import { caretAtEnd, chooseFrom, tableBar } from './visual-helpers';
 /** Block nodes modelled on Tiptap's: quote, page break, rule, table header, task list, heading numbers. */
 
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
-const visual = (page: Page) => page.getByTestId('typst-visual');
+const visual = (page: Page) => page.getByTestId('zwf-visual');
 type Demo = { editor: { source: string } };
 const sourceText = (page: Page) => () => page.evaluate(() => (window as unknown as Demo).editor.source);
 const setSource = (page: Page, text: string) =>
@@ -45,7 +45,7 @@ test('"- " starts a bulleted list, "+ " a numbered one', async ({ page }) => {
 test('"---" on an empty line becomes a rule, in text it stays text', async ({ page }) => {
   await newParagraph(page);
   await page.keyboard.type('---');
-  await expect(visual(page).locator('.typst-page-layout__rule hr')).toHaveCount(1);
+  await expect(visual(page).locator('.zwf-page-layout__rule hr')).toHaveCount(1);
   await expect.poll(sourceText(page)).toContain('\n\n#line(length: 100%)\n');
   await page.keyboard.type('a---b');
   await expect.poll(sourceText(page)).toContain('a\\-\\--b');
@@ -54,7 +54,7 @@ test('"---" on an empty line becomes a rule, in text it stays text', async ({ pa
 test('Insert page break shows a labelled divider and writes #pagebreak()', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p', { hasText: 'First paragraph' }));
   await chooseFrom(toolbar(page), 'Insert', 'Insert page break');
-  await expect(visual(page).locator('.typst-page-layout__page-break')).toHaveText('Page break');
+  await expect(visual(page).locator('.zwf-page-layout__page-break')).toHaveText('Page break');
   await expect.poll(sourceText(page)).toContain('First paragraph\n\n#pagebreak()');
 });
 

@@ -11,7 +11,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
 });
 
 async function load(page: Page, value: string, files: Record<string, string> = {}) {
@@ -24,14 +24,14 @@ async function load(page: Page, value: string, files: Record<string, string> = {
   );
 }
 
-const visual = (page: Page) => page.getByTestId('typst-visual');
-const picture = (box: Locator) => box.locator('img.typst-visual__rendering');
-const code = (box: Locator) => box.locator('.typst-visual__code');
+const visual = (page: Page) => page.getByTestId('zwf-visual');
+const picture = (box: Locator) => box.locator('img.zwf-visual__rendering');
+const code = (box: Locator) => box.locator('.zwf-visual__code');
 const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
 test('display math shows as compiled; clicking it shows the code, Escape the rendering again', async ({ page }) => {
   await load(page, 'Intro\n\n$ x^2 + 1/2 $\n\nOutro\n');
-  const box = visual(page).locator('.typst-visual__raw-block');
+  const box = visual(page).locator('.zwf-visual__raw-block');
   await expect(picture(box)).toBeVisible();
   await expect(code(box)).toBeHidden();
   expect(await picture(box).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
@@ -46,7 +46,7 @@ test('display math shows as compiled; clicking it shows the code, Escape the ren
 
 test('editing math in its box updates the rendering after the next compile', async ({ page }) => {
   await load(page, 'Intro\n\n$ x $\n\nOutro\n');
-  const box = visual(page).locator('.typst-visual__raw-block');
+  const box = visual(page).locator('.zwf-visual__raw-block');
   const before = await picture(box).getAttribute('src');
   await picture(box).click();
   await page.keyboard.press('End');
@@ -60,14 +60,14 @@ test('editing math in its box updates the rendering after the next compile', asy
 
 test('a set rule keeps showing its code', async ({ page }) => {
   await load(page, '#set text(size: 12pt)\n\nHello\n');
-  const box = visual(page).locator('.typst-visual__raw-block');
+  const box = visual(page).locator('.zwf-visual__raw-block');
   await expect(code(box)).toBeVisible();
   await expect(picture(box)).toBeHidden();
 });
 
 test('an image block shows the image file from the project; a click selects it, a double-click shows its code', async ({ page }) => {
   await load(page, '#image("logo.svg")\n\nText\n', { '/logo.svg': SVG });
-  const box = visual(page).locator('.typst-images__box');
+  const box = visual(page).locator('.zwf-images__box');
   await expect(picture(box)).toBeVisible();
   await expect(picture(box)).toHaveAttribute('src', /^blob:/);
   expect(await picture(box).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
@@ -84,7 +84,7 @@ test('Insert image offers the project images', async ({ page }) => {
   await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
-  await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
+  await expect(picture(visual(page).locator('.zwf-images__box'))).toBeVisible();
 });
 
 test('Insert image uploads a file into the project and inserts it', async ({ page }) => {
@@ -96,5 +96,5 @@ test('Insert image uploads a file into the project and inserts it', async ({ pag
   await (await chooser).setFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
   await expect.poll(value(page)).toContain('#image("images/cat.png")');
   expect(await page.locator('zwiebelfisch-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/images/cat.png');
-  await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
+  await expect(picture(visual(page).locator('.zwf-images__box'))).toBeVisible();
 });

@@ -94,7 +94,7 @@ describe('<zwiebelfisch-editor>', () => {
     const el = element(`<zwiebelfisch-editor settings='{"workbench.theme": "dark"}'></zwiebelfisch-editor>`);
     el.options = { settings: { 'workbench.theme': 'light', 'files.panel': 'show' } };
     document.body.append(el);
-    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!;
+    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.zwf-editor')!;
     expect(widget().dataset.theme).toBe('dark');
     expect(el.settings).toEqual({ 'workbench.theme': 'dark', 'files.panel': 'show' });
     el.setAttribute('settings', '{"workbench.theme": "auto"}');
@@ -107,7 +107,7 @@ describe('<zwiebelfisch-editor>', () => {
     el.options = { settings: { 'workbench.theme': 'light' } };
     el.updateSettings({ 'files.panel': 'show' });
     document.body.append(el);
-    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!;
+    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.zwf-editor')!;
     expect(el.settings).toEqual({ 'workbench.theme': 'dark', 'pdfExport.download': false, 'files.panel': 'show' });
     el.updateSettings({ 'workbench.theme': undefined });
     expect(widget().dataset.theme).toBeUndefined();

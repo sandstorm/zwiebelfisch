@@ -23,7 +23,7 @@ export class EditorTitleMenu {
     private readonly options: EditorTitleMenuOptions,
   ) {
     this.element = doc.createElement('div');
-    this.element.className = 'typst-editor__tab-actions';
+    this.element.className = 'zwf-editor__tab-actions';
     this.element.setAttribute('role', 'toolbar');
     this.element.setAttribute('aria-label', 'Editor actions');
     this.element.addEventListener('mousedown', (event) => {
@@ -59,10 +59,10 @@ export class EditorTitleMenu {
 
   #viewButton(): HTMLButtonElement {
     const button = this.#makeButton('View');
-    button.classList.add('typst-editor__view-menu');
+    button.classList.add('zwf-editor__view-menu');
     button.setAttribute('aria-haspopup', 'menu');
     const chevron = this.element.ownerDocument.createElement('span');
-    chevron.className = 'typst-editor__tab-action-icon';
+    chevron.className = 'zwf-editor__tab-action-icon';
     chevron.setAttribute('aria-hidden', 'true');
     chevron.innerHTML = CHEVRON_ICON;
     button.append(chevron);
@@ -74,11 +74,11 @@ export class EditorTitleMenu {
     const doc = this.element.ownerDocument;
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-editor__tab-action';
+    button.className = 'zwf-editor__tab-action';
     button.title = title;
     if (icon) {
       const iconElement = doc.createElement('span');
-      iconElement.className = 'typst-editor__tab-action-icon';
+      iconElement.className = 'zwf-editor__tab-action-icon';
       iconElement.setAttribute('aria-hidden', 'true');
       iconElement.innerHTML = icon;
       button.append(iconElement);

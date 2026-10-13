@@ -1,94 +1,94 @@
 /* The comments extension's styles: margin notes in the text, their floating cards, and the Comment button.
-   See comments in comments.ts, which registers it; colors from the widget's --te-* tokens. */
+   See comments in comments.ts, which registers it; colors from the widget's --zwf-* tokens. */
 /* drafting margin notes in the text: highlighted text of a range note, a marker (speech bubble) per note */
-.typst-comments__range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
-.typst-comments__anchor--active .typst-comments__range,
-.typst-comments__range .typst-comments__anchor--active { background: var(--te-note-strong); }
-.typst-comments__note {
+.zwf-comments__range { background: var(--zwf-note); border-bottom: 2px solid var(--zwf-note-line); color: inherit; }
+.zwf-comments__anchor--active .zwf-comments__range,
+.zwf-comments__range .zwf-comments__anchor--active { background: var(--zwf-note-strong); }
+.zwf-comments__note {
   display: inline-flex;
   align-items: center;
   margin: 0 2px;
   padding: 1px 3px;
-  border: 1px solid var(--te-note-line);
+  border: 1px solid var(--zwf-note-line);
   border-radius: 6px 6px 6px 1px;
-  background: var(--te-note-bg);
-  color: var(--te-note-text);
+  background: var(--zwf-note-bg);
+  color: var(--zwf-note-text);
   vertical-align: baseline;
   cursor: pointer;
 }
-.typst-comments__note--empty { border-style: dashed; }
-.typst-comments__note:hover,
-.typst-comments__note.typst-comments__anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
-.typst-comments__note-icon { flex: none; }
+.zwf-comments__note--empty { border-style: dashed; }
+.zwf-comments__note:hover,
+.zwf-comments__note.zwf-comments__anchor--active { background: var(--zwf-note-strong); box-shadow: 0 0 0 2px var(--zwf-note-line); }
+.zwf-comments__note-icon { flex: none; }
 /* a note's card: floats below its marker in the text column (placed by NoteCardPopover) */
-.typst-comments__card {
+.zwf-comments__card {
   position: absolute;
   z-index: 2;
   box-sizing: border-box;
   width: min(300px, calc(100% - 16px));
   padding: 6px 8px;
-  border: 1px solid var(--te-note-line);
+  border: 1px solid var(--zwf-note-line);
   border-radius: 8px;
-  background: var(--te-surface);
+  background: var(--zwf-surface);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   font: 13px/1.4 system-ui, sans-serif;
-  color: var(--te-text);
+  color: var(--zwf-text);
   cursor: text;
 }
-.typst-comments__card:focus-within { border-color: var(--te-accent); }
-.typst-comments__card-head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
-.typst-comments__card-icon { flex: none; }
-.typst-comments__card-quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
-.typst-comments__card--range .typst-comments__card-quote { font-style: italic; }
-.typst-comments__card--range .typst-comments__card-quote::before { content: "\201C"; }
-.typst-comments__card--range .typst-comments__card-quote::after { content: "\201D"; }
-.typst-comments__card-resolve,
-.typst-comments__card-close {
+.zwf-comments__card:focus-within { border-color: var(--zwf-accent); }
+.zwf-comments__card-head { display: flex; align-items: center; gap: 5px; color: var(--zwf-note-text); }
+.zwf-comments__card-icon { flex: none; }
+.zwf-comments__card-quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.zwf-comments__card--range .zwf-comments__card-quote { font-style: italic; }
+.zwf-comments__card--range .zwf-comments__card-quote::before { content: "\201C"; }
+.zwf-comments__card--range .zwf-comments__card-quote::after { content: "\201D"; }
+.zwf-comments__card-resolve,
+.zwf-comments__card-close {
   flex: none;
   display: inline-flex;
   padding: 2px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   cursor: pointer;
 }
-.typst-comments__card-resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
-.typst-comments__card-close:hover { border-color: var(--te-border); background: var(--te-subtle); }
+.zwf-comments__card-resolve:hover { border-color: var(--zwf-border); color: var(--zwf-success); background: var(--zwf-success-soft); }
+.zwf-comments__card-close:hover { border-color: var(--zwf-border); background: var(--zwf-subtle); }
 /* the thread: one message per list item (name, date, text), oldest first */
-.typst-comments__card-thread { margin: 4px 0 0; padding: 0; list-style: none; }
-.typst-comments__card-thread[hidden] { display: none; }
-.typst-comments__card-message { padding: 4px 0; }
-.typst-comments__card-message + .typst-comments__card-message { border-top: 1px solid var(--te-divider); }
-.typst-comments__card-meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
-.typst-comments__card-author { font-weight: 600; }
-.typst-comments__card-date { color: var(--te-muted-2); font-size: 12px; }
-.typst-comments__card-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-.typst-comments__card-edit,
-.typst-comments__card-delete,
-.typst-comments__card-send,
-.typst-comments__card-more {
+.zwf-comments__card-thread { margin: 4px 0 0; padding: 0; list-style: none; }
+.zwf-comments__card-thread[hidden] { display: none; }
+.zwf-comments__card-message { padding: 4px 0; }
+.zwf-comments__card-message + .zwf-comments__card-message { border-top: 1px solid var(--zwf-divider); }
+.zwf-comments__card-meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.zwf-comments__card-author { font-weight: 600; }
+.zwf-comments__card-date { color: var(--zwf-muted-2); font-size: 12px; }
+.zwf-comments__card-text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.zwf-comments__card-edit,
+.zwf-comments__card-delete,
+.zwf-comments__card-send,
+.zwf-comments__card-more {
   display: inline-flex;
   padding: 2px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
-.typst-comments__card-edit { margin-left: auto; }
-.typst-comments__card-delete:hover { color: var(--te-danger); }
-.typst-comments__card-edit:hover,
-.typst-comments__card-send:hover,
-.typst-comments__card-more:hover { border-color: var(--te-border); background: var(--te-subtle); }
-.typst-comments__card-more { padding: 0 4px; color: var(--te-accent); }
+.zwf-comments__card-edit { margin-left: auto; }
+.zwf-comments__card-delete:hover { color: var(--zwf-danger); }
+.zwf-comments__card-edit:hover,
+.zwf-comments__card-send:hover,
+.zwf-comments__card-more:hover { border-color: var(--zwf-border); background: var(--zwf-subtle); }
+.zwf-comments__card-more { padding: 0 4px; color: var(--zwf-accent); }
 /* the reply box (and a message being edited) */
-.typst-comments__card-compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
-.typst-comments__card-thread[hidden] + .typst-comments__card-compose { border-top: none; }
-.typst-comments__card-field,
-.typst-comments__card-reply {
+.zwf-comments__card-compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--zwf-divider); padding-top: 4px; }
+.zwf-comments__card-thread[hidden] + .zwf-comments__card-compose { border-top: none; }
+.zwf-comments__card-field,
+.zwf-comments__card-reply {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -102,5 +102,5 @@
   resize: none;
   field-sizing: content;
 }
-.typst-comments__card-field { min-height: 2.8em; }
-.typst-comments__card-send { flex: none; }
+.zwf-comments__card-field { min-height: 2.8em; }
+.zwf-comments__card-send { flex: none; }

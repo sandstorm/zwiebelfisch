@@ -18,12 +18,12 @@ export class ContributionsTab implements Tab {
     private readonly doc: Document,
     private readonly contributions: ContributionLog,
   ) {
-    this.element = element(doc, 'div', 'typst-devtools__contributions');
-    const bar = this.element.appendChild(element(doc, 'div', 'typst-devtools__bar'));
+    this.element = element(doc, 'div', 'zwf-devtools__contributions');
+    const bar = this.element.appendChild(element(doc, 'div', 'zwf-devtools__bar'));
     bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', 'Group contributions');
     this.#buttons = GROUPINGS.map(({ id, label, title }) => {
-      const button = bar.appendChild(element(doc, 'button', 'typst-devtools__button', label));
+      const button = bar.appendChild(element(doc, 'button', 'zwf-devtools__button', label));
       button.title = title;
       button.addEventListener('click', () => {
         this.#grouping = id;
@@ -31,8 +31,8 @@ export class ContributionsTab implements Tab {
       });
       return button;
     });
-    const legend = bar.appendChild(element(doc, 'span', 'typst-devtools__legend'));
-    legend.append(element(doc, 'span', 'typst-devtools__badge', 'late'), ' after activation · ', element(doc, 'del', '', 'disposed'));
+    const legend = bar.appendChild(element(doc, 'span', 'zwf-devtools__legend'));
+    legend.append(element(doc, 'span', 'zwf-devtools__badge', 'late'), ' after activation · ', element(doc, 'del', '', 'disposed'));
     this.#groups = this.element.appendChild(element(doc, 'div', ''));
   }
 
@@ -44,24 +44,24 @@ export class ContributionsTab implements Tab {
 
   #group(name: string, entries: readonly Contribution[]): HTMLElement {
     const key = `${this.#grouping}:${name}`;
-    const details = element(this.doc, 'details', 'typst-devtools__group');
+    const details = element(this.doc, 'details', 'zwf-devtools__group');
     details.open = !this.#closed.has(key);
     details.addEventListener('toggle', () => (details.open ? this.#closed.delete(key) : this.#closed.add(key)));
     const summary = details.appendChild(element(this.doc, 'summary', '', name));
-    summary.append(element(this.doc, 'span', 'typst-devtools__count', ` ${entries.length}`));
-    const list = details.appendChild(element(this.doc, 'ol', 'typst-devtools__list'));
+    summary.append(element(this.doc, 'span', 'zwf-devtools__count', ` ${entries.length}`));
+    const list = details.appendChild(element(this.doc, 'ol', 'zwf-devtools__list'));
     list.append(...entries.map((entry) => this.#row(entry)));
     return details;
   }
 
   /** A contribution: its point (or, by point, its extension), what it is, its facts; the tooltip has the rest. */
   #row(entry: Contribution): HTMLElement {
-    const item = element(this.doc, 'li', 'typst-devtools__contribution');
-    if (entry.disposed) item.classList.add('typst-devtools__contribution--disposed');
+    const item = element(this.doc, 'li', 'zwf-devtools__contribution');
+    if (entry.disposed) item.classList.add('zwf-devtools__contribution--disposed');
     const by = this.#grouping === 'extension' ? entry.point : entry.extension;
-    item.append(element(this.doc, 'span', 'typst-devtools__point', by), element(this.doc, 'span', 'typst-devtools__title', entry.title));
-    for (const detail of entry.details) item.append(element(this.doc, 'span', 'typst-devtools__fact', detail));
-    if (entry.late) item.append(element(this.doc, 'span', 'typst-devtools__badge', 'late'));
+    item.append(element(this.doc, 'span', 'zwf-devtools__point', by), element(this.doc, 'span', 'zwf-devtools__title', entry.title));
+    for (const detail of entry.details) item.append(element(this.doc, 'span', 'zwf-devtools__fact', detail));
+    if (entry.late) item.append(element(this.doc, 'span', 'zwf-devtools__badge', 'late'));
     item.title = [
       `${entry.point}: ${entry.title}`,
       `by ${entry.extension}${entry.location ? `, registered at ${entry.location}` : ''}`,

@@ -94,19 +94,19 @@ function paragraphMarks(node: Node, pos: number): Decoration[] {
     } else if (child.type.name === 'softBreak' && node.maybeChild(index - 1)?.type.name !== 'hardBreak') {
       decorations.push(Decoration.node(at, at + child.nodeSize, { class: CHARACTER_MARKS[' '] }));
     } else if (child.type.name === 'hardBreak') {
-      decorations.push(Decoration.widget(at, widget('typst-invisibles__break'), { side: -1, key: 'typst-invisibles__break', ignoreSelection: true }));
+      decorations.push(Decoration.widget(at, widget('zwf-invisibles__break'), { side: -1, key: 'zwf-invisibles__break', ignoreSelection: true }));
     }
   });
   const end = pos + node.nodeSize - 1;
-  decorations.push(Decoration.widget(end, widget('typst-invisibles__paragraph'), { side: 1, key: 'typst-invisibles__paragraph', ignoreSelection: true, marks: [] }));
+  decorations.push(Decoration.widget(end, widget('zwf-invisibles__paragraph'), { side: 1, key: 'zwf-invisibles__paragraph', ignoreSelection: true, marks: [] }));
   return decorations;
 }
 
 /** The class of each invisible character within a line: CSS draws its mark. */
 const CHARACTER_MARKS: Readonly<Record<string, string>> = {
-  ' ': 'typst-invisibles__space',
-  '\u00a0': 'typst-invisibles__nbsp',
-  '\t': 'typst-invisibles__tab',
+  ' ': 'zwf-invisibles__space',
+  '\u00a0': 'zwf-invisibles__nbsp',
+  '\t': 'zwf-invisibles__tab',
 };
 
 /** A widget's element: empty, its mark drawn by CSS (so never in the text), hidden from screen readers. */

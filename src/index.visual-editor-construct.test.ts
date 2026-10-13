@@ -101,7 +101,7 @@ const INSERT_CALLOUT: ToolbarItem = {
   action: { label: 'Callout', icon: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor"/></svg>', run: (c) => c.wrapIn('callout') },
 };
 
-const CSS = '.callout { border-left: 3px solid var(--te-accent); padding: 4px 12px; } .callout input { font-weight: 600; border: none; }';
+const CSS = '.callout { border-left: 3px solid var(--zwf-accent); padding: 4px 12px; } .callout input { font-weight: 600; border: none; }';
 
 export function callout(): Extension {
   return {

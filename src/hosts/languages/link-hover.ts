@@ -7,7 +7,7 @@ export interface HoveredLink {
   /** The element under the pointer that shows the link: the hint goes above it (below, without room above). */
   readonly element: Element;
   /**
-   * The element that takes the link look (`typst-link--mod`) while the modifier is held and is described by the hint
+   * The element that takes the link look (`zwf-link--mod`) while the modifier is held and is described by the hint
    * (`aria-describedby`); default `element`. A CodeMirror editor owns its text's DOM: its link marks are not touched.
    */
   readonly marked?: Element;
@@ -19,7 +19,7 @@ export interface HoveredLink {
 
 /**
  * The pointer moved (`event`): over `hovered`, or over no link (null; also when it left one). Every editor shows a
- * hovered link the same: after the hover delay its hint (`.typst-link-hint`, role=tooltip), and while the modifier is
+ * hovered link the same: after the hover delay its hint (`.zwf-link-hint`, role=tooltip), and while the modifier is
  * held (⌘ on Mac, else Ctrl) the link look. The hint stays while the pointer moves into it (it may offer buttons); a
  * click, a key other than a modifier, the wheel, a scroll that takes the link from under the pointer, or the link's
  * element leaving the page ends it (a scroll that leaves it there, e.g. a pane scrolling it into view as the pointer
@@ -103,7 +103,7 @@ class LinkHover {
     const hovered = this.#hovered;
     if (!hovered) return;
     const marked = hovered.marked ?? hovered.element;
-    marked.classList.remove('typst-link--mod');
+    marked.classList.remove('zwf-link--mod');
     if (this.#hint) removeToken(marked, 'aria-describedby', this.#hint.id);
     this.#hint?.remove();
     this.#hint = null;
@@ -129,8 +129,8 @@ class LinkHover {
     const content = hovered.element.isConnected ? hovered.hint() : null;
     if (!content) return;
     const hint = this.doc.createElement('div');
-    hint.className = 'typst-link-hint';
-    hint.id = `typst-link-hint-${++hints}`;
+    hint.className = 'zwf-link-hint';
+    hint.id = `zwf-link-hint-${++hints}`;
     hint.setAttribute('role', 'tooltip');
     hint.append(content);
     hint.addEventListener('mouseenter', () => clearTimeout(this.#leaving));
@@ -143,7 +143,7 @@ class LinkHover {
 
   #showMod(event: MouseEvent | KeyboardEvent): void {
     const hovered = this.#hovered;
-    if (hovered) (hovered.marked ?? hovered.element).classList.toggle('typst-link--mod', hovered.followable && isMod(event));
+    if (hovered) (hovered.marked ?? hovered.element).classList.toggle('zwf-link--mod', hovered.followable && isMod(event));
   }
 
   /** While a link is hovered: the modifier pressed or let go (the keys go to the document), and what ends the hover. */

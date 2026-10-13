@@ -13,8 +13,8 @@ test.beforeEach(async ({ page }) => {
 
 test('includes other files and shows images given as bytes', async ({ page }) => {
   const editor = page.locator('zwiebelfisch-editor');
-  const preview = editor.getByTestId('typst-preview');
-  await expect(preview.locator('.typst-preview__page svg')).toBeVisible();
+  const preview = editor.getByTestId('zwf-preview');
+  await expect(preview.locator('.zwf-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>';
     el.files = {
@@ -23,9 +23,9 @@ test('includes other files and shows images given as bytes', async ({ page }) =>
     };
     el.value = '#image("logo.svg", width: 1cm)\n#include "chapter.typ"';
   });
-  await expect(preview.locator('.typst-preview__page')).toHaveCount(2);
-  await expect(preview.locator('.typst-preview__page').first().locator('image')).toHaveCount(1);
-  await expect(editor.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(preview.locator('.zwf-preview__page')).toHaveCount(2);
+  await expect(preview.locator('.zwf-preview__page').first().locator('image')).toHaveCount(1);
+  await expect(editor.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('downloads an imported @preview package', async ({ page, context }) => {
@@ -33,23 +33,23 @@ test('downloads an imported @preview package', async ({ page, context }) => {
     route.fulfill({ body: greet, contentType: 'application/gzip' }),
   );
   const editor = page.locator('zwiebelfisch-editor');
-  await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(editor.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
     el.value = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
   });
-  await expect(editor.getByTestId('typst-status')).toHaveText(/✓ compiled/);
-  await expect(editor.getByTestId('typst-preview')).not.toHaveClass(/typst-preview--stale/);
+  await expect(editor.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
+  await expect(editor.getByTestId('zwf-preview')).not.toHaveClass(/zwf-preview--stale/);
 });
 
 test('reports a package that cannot be downloaded', async ({ page, context }) => {
   await context.route('https://packages.typst.org/**', (route) => route.fulfill({ status: 404 }));
   const editor = page.locator('zwiebelfisch-editor');
-  await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(editor.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor.evaluate((el: Editor) => {
     el.value = '#import "@preview/nope:1.0.0": x';
   });
-  await expect(editor.getByTestId('typst-status')).toHaveText(/error/);
+  await expect(editor.getByTestId('zwf-status')).toHaveText(/error/);
   // the Visual editor is shown first; the Source editor is made when its tab is
   await editor.getByRole('tab', { name: 'Source' }).click();
-  await expect(editor.getByTestId('typst-source').locator('.cm-lintRange-error')).toHaveCount(1);
+  await expect(editor.getByTestId('zwf-source').locator('.cm-lintRange-error')).toHaveCount(1);
 });

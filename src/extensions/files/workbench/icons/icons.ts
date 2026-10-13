@@ -8,7 +8,7 @@ export function icon(doc: Document, name: IconName): SVGSVGElement {
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');
   svg.setAttribute('aria-hidden', 'true');
-  svg.classList.add('typst-files__icon');
+  svg.classList.add('zwf-files__icon');
   svg.innerHTML = ICONS[name];
   return svg;
 }
@@ -25,7 +25,7 @@ export function markupIcon(doc: Document, markup: string): Element {
   const svg = holder.content.firstElementChild;
   if (svg?.localName !== 'svg') return icon(doc, 'data');
   svg.setAttribute('aria-hidden', 'true');
-  svg.classList.add('typst-files__icon');
+  svg.classList.add('zwf-files__icon');
   return svg;
 }
 

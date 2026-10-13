@@ -20,26 +20,26 @@ export class DocumentTab implements Tab {
 
   update(): void {
     const shown = this.document();
-    const header = element(this.doc, 'p', 'typst-devtools__note', shown.path);
-    if (shown.kind === 'none') return this.element.replaceChildren(header, element(this.doc, 'p', 'typst-devtools__note', shown.reason));
-    const list = element(this.doc, 'ol', 'typst-devtools__tree');
+    const header = element(this.doc, 'p', 'zwf-devtools__note', shown.path);
+    if (shown.kind === 'none') return this.element.replaceChildren(header, element(this.doc, 'p', 'zwf-devtools__note', shown.reason));
+    const list = element(this.doc, 'ol', 'zwf-devtools__tree');
     for (const row of shown.rows) list.append(this.#row(row, shown));
     header.append(` · selection ${shown.selection.from}–${shown.selection.to} · ${shown.rows.length} nodes`);
     this.element.replaceChildren(header, list);
   }
 
   #row(row: DocumentRow, shown: Extract<ShownDocument, { kind: 'rows' }>): HTMLElement {
-    const item = element(this.doc, 'li', 'typst-devtools__row');
+    const item = element(this.doc, 'li', 'zwf-devtools__row');
     const { from, to } = shown.selection;
-    if (row.pos <= from && to <= row.end) item.classList.add('typst-devtools__row--selected');
-    const button = item.appendChild(element(this.doc, 'button', 'typst-devtools__node'));
+    if (row.pos <= from && to <= row.end) item.classList.add('zwf-devtools__row--selected');
+    const button = item.appendChild(element(this.doc, 'button', 'zwf-devtools__node'));
     button.style.paddingInlineStart = `${4 + row.depth * 12}px`;
     button.append(
-      element(this.doc, 'span', 'typst-devtools__name', row.name),
-      element(this.doc, 'span', 'typst-devtools__range', `${row.range.from}–${row.range.to}`),
-      ...(row.box ? [element(this.doc, 'span', 'typst-devtools__badge', 'box')] : []),
-      ...row.marks.map((mark) => element(this.doc, 'span', 'typst-devtools__mark', mark)),
-      element(this.doc, 'span', 'typst-devtools__detail', row.detail),
+      element(this.doc, 'span', 'zwf-devtools__name', row.name),
+      element(this.doc, 'span', 'zwf-devtools__range', `${row.range.from}–${row.range.to}`),
+      ...(row.box ? [element(this.doc, 'span', 'zwf-devtools__badge', 'box')] : []),
+      ...row.marks.map((mark) => element(this.doc, 'span', 'zwf-devtools__mark', mark)),
+      element(this.doc, 'span', 'zwf-devtools__detail', row.detail),
     );
     button.title = [`${row.name}: pos ${row.pos}–${row.end}, source ${row.range.from}–${row.range.to}`, row.attributes, `source: ${shown.source(row.range)}`].filter(Boolean).join('\n');
     button.addEventListener('click', () => this.reveal(row.range));

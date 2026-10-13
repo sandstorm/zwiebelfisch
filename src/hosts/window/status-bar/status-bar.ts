@@ -16,7 +16,7 @@ export class StatusBar {
     this.#bar = bar;
     const side = (alignment: string) => {
       const element = bar.ownerDocument.createElement('div');
-      element.className = `typst-editor__status-bar-${alignment}`;
+      element.className = `zwf-editor__status-bar-${alignment}`;
       return { element, entries: [] as Entry[] };
     };
     this.#sides = { left: side('left'), right: side('right') };

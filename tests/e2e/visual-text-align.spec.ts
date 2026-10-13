@@ -9,18 +9,18 @@ test.beforeEach(async ({ page }) => {
 
 /** Adds a new paragraph "Fresh line" after the first paragraph, cursor in it. */
 async function freshLine(page: Page) {
-  await caretAtEnd(page.getByTestId('typst-visual').locator('p').first());
+  await caretAtEnd(page.getByTestId('zwf-visual').locator('p').first());
   await page.keyboard.press('Enter');
   await page.keyboard.type('Fresh line');
 }
 
 async function source(page: Page) {
   await page.getByRole('tab', { name: 'Source' }).click();
-  return page.getByTestId('typst-source');
+  return page.getByTestId('zwf-source');
 }
 
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
-const freshParagraph = (page: Page) => page.getByTestId('typst-visual').locator('p', { hasText: 'Fresh line' });
+const freshParagraph = (page: Page) => page.getByTestId('zwf-visual').locator('p', { hasText: 'Fresh line' });
 
 test('Center wraps the paragraph in #align(center) and shows it centered', async ({ page }) => {
   await freshLine(page);

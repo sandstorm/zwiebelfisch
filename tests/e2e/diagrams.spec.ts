@@ -43,14 +43,14 @@ const diagramBytes = (page: Page) => () =>
     const file = el.files['/flow.drawio.png'];
     return file instanceof Uint8Array ? file.length : -1;
   });
-const previewImage = (page: Page) => editor(page).getByTestId('typst-preview').locator('.typst-preview__page image');
+const previewImage = (page: Page) => editor(page).getByTestId('zwf-preview').locator('.zwf-preview__page image');
 /** The picture the preview shows (its data URL is in `href` or `xlink:href`). */
 const previewPicture = (page: Page) => () => previewImage(page).evaluate((image) => image.outerHTML);
 
 test.beforeEach(async ({ page }) => {
   await page.route('https://embed.diagrams.net/**', (route) => route.fulfill({ contentType: 'text/html', body: STUB }));
   await page.goto('/examples/plain-html/');
-  await expect(editor(page).getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(editor(page).getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
 });
 
 /** A document showing `flow.drawio.png` (and a second file, so the file panel is open), the diagram made with "New diagram…". */
@@ -59,7 +59,7 @@ async function newDiagram(page: Page): Promise<void> {
     el.files = { '/notes.typ': 'Notes\n' };
     el.value = '#image("flow.drawio.png", width: 4cm)\n';
   });
-  await editor(page).getByTestId('typst-files').getByRole('button', { name: 'New' }).click();
+  await editor(page).getByTestId('zwf-files').getByRole('button', { name: 'New' }).click();
   await editor(page).getByRole('menuitem', { name: 'New diagram…' }).click();
   const name = editor(page).getByRole('form', { name: 'New diagram' }).getByRole('textbox');
   await name.fill('flow');
@@ -72,9 +72,9 @@ test('"New diagram…" opens the embedded editor; drawing saves the .drawio.png 
   await expect(fileRow(editor(page), 'flow.drawio.png')).toBeVisible();
   const empty = await diagramBytes(page)();
   expect(empty).toBeGreaterThan(0);
-  const stub = editor(page).getByTestId('typst-diagram').frameLocator('iframe');
+  const stub = editor(page).getByTestId('zwf-diagram').frameLocator('iframe');
   await expect(stub.locator('#status')).toHaveText('loaded xmlpng autosave=1');
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
   await expect(previewImage(page)).toHaveCount(1);
   const before = await previewPicture(page)();
 
@@ -86,7 +86,7 @@ test('"New diagram…" opens the embedded editor; drawing saves the .drawio.png 
 
 test('⌘/Ctrl+click on the image box\'s picture ("Edit diagram") opens the diagram; a change is saved when the file is closed right away', async ({ page }) => {
   await newDiagram(page);
-  const stub = editor(page).getByTestId('typst-diagram').frameLocator('iframe');
+  const stub = editor(page).getByTestId('zwf-diagram').frameLocator('iframe');
   await expect(stub.locator('#status')).toHaveText(/^loaded/);
   const empty = await diagramBytes(page)();
 
@@ -95,13 +95,13 @@ test('⌘/Ctrl+click on the image box\'s picture ("Edit diagram") opens the diag
   await fileRow(editor(page), 'main.typ').click();
   await expect.poll(diagramBytes(page)).not.toBe(empty);
 
-  const picture = editor(page).getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering');
+  const picture = editor(page).getByTestId('zwf-visual').locator('.zwf-images__box img.zwf-visual__rendering');
   await picture.hover();
-  await expect(page.getByRole('tooltip')).toHaveClass('typst-link-hint');
+  await expect(page.getByRole('tooltip')).toHaveClass('zwf-link-hint');
   await expect(page.getByRole('tooltip')).toHaveText(/^Edit diagram\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
   await expect(picture).not.toHaveAttribute('title');
   await picture.click({ modifiers: ['ControlOrMeta'] });
-  await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
+  await expect(editor(page).getByTestId('zwf-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
 });
 
 test('a diagram has two editors: the tabs switch to its image preview and back, and the choice is remembered', async ({ page }) => {
@@ -110,15 +110,15 @@ test('a diagram has two editors: the tabs switch to its image preview and back, 
   await expect(tabs.getByRole('tab')).toHaveText(['Diagram', 'Image']);
   await expect(tabs.getByRole('tab', { name: 'Diagram' })).toHaveAttribute('aria-selected', 'true');
   await tabs.getByRole('tab', { name: 'Image' }).click();
-  await expect(editor(page).getByTestId('typst-asset')).toBeVisible();
-  await expect(editor(page).getByTestId('typst-diagram')).toHaveCount(0);
+  await expect(editor(page).getByTestId('zwf-asset')).toBeVisible();
+  await expect(editor(page).getByTestId('zwf-diagram')).toHaveCount(0);
 
   // a Typst file keeps its own choice (Visual); the diagram opens in the image preview again
   await fileRow(editor(page), 'main.typ').click();
   await expect(tabs.getByRole('tab')).toHaveText(['Visual', 'Source']);
   await expect(tabs.getByRole('tab', { name: 'Visual' })).toHaveAttribute('aria-selected', 'true');
   await fileRow(editor(page), 'flow.drawio.png').click();
-  await expect(editor(page).getByTestId('typst-asset')).toBeVisible();
+  await expect(editor(page).getByTestId('zwf-asset')).toBeVisible();
   await tabs.getByRole('tab', { name: 'Diagram' }).click();
-  await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
+  await expect(editor(page).getByTestId('zwf-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
 });

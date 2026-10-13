@@ -23,7 +23,7 @@ function setup() {
     hoverLink(event, over);
     return event;
   };
-  const shown = () => widget.querySelector<HTMLElement>('.typst-link-hint');
+  const shown = () => widget.querySelector<HTMLElement>('.zwf-link-hint');
   return { widget, element, hint, hovered, move, shown };
 }
 
@@ -85,22 +85,22 @@ describe('hoverLink', () => {
   it('shows the link look while the modifier is held, only for a link that leads somewhere', () => {
     const { element, hovered, move } = setup();
     move(hovered, MOD);
-    expect(element.classList.contains('typst-link--mod')).toBe(true);
+    expect(element.classList.contains('zwf-link--mod')).toBe(true);
     document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control' }));
-    expect(element.classList.contains('typst-link--mod')).toBe(false);
+    expect(element.classList.contains('zwf-link--mod')).toBe(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ...MOD }));
-    expect(element.classList.contains('typst-link--mod')).toBe(true);
+    expect(element.classList.contains('zwf-link--mod')).toBe(true);
     move({ ...hovered, link: {}, followable: false }, MOD);
-    expect(element.classList.contains('typst-link--mod')).toBe(false);
+    expect(element.classList.contains('zwf-link--mod')).toBe(false);
   });
 
   it('puts the look and the description on `marked` (a CodeMirror editor) instead of the element', () => {
     const { widget, element, hovered, move, shown } = setup();
     move({ ...hovered, marked: widget }, MOD);
     vi.advanceTimersByTime(300);
-    expect(widget.classList.contains('typst-link--mod')).toBe(true);
+    expect(widget.classList.contains('zwf-link--mod')).toBe(true);
     expect(widget.getAttribute('aria-describedby')).toBe(shown()!.id);
-    expect(element.classList.contains('typst-link--mod')).toBe(false);
+    expect(element.classList.contains('zwf-link--mod')).toBe(false);
   });
 
   it('ends at a click, a key that is no modifier, or when the element is gone', () => {

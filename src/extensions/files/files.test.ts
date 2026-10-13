@@ -79,12 +79,12 @@ describe('files', () => {
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/fonts/Serif.otf'), content: new Uint8Array(2048) });
     workbench.open(path('/fonts/Serif.otf'));
-    const info = host.querySelector<HTMLElement>('[data-view-type="files.file"] [data-testid=typst-file-info]')!;
+    const info = host.querySelector<HTMLElement>('[data-view-type="files.file"] [data-testid=zwf-file-info]')!;
     expect(info.querySelector('h2')?.textContent).toBe('fonts/Serif.otf');
     expect([...info.querySelectorAll('dt, dd')].map((cell) => cell.textContent)).toEqual(['Size', '2.0 KB', 'Type', 'OTF file']);
     project.apply({ kind: 'create', path: path('/LICENSE'), content: 'MIT' });
     workbench.open(path('/LICENSE'));
-    expect([...host.querySelectorAll('[data-testid=typst-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
+    expect([...host.querySelectorAll('[data-testid=zwf-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
   });
 
   it('"Set as main file" on a .typ row makes it the main file: first in its folder, marked; the old one can be renamed', () => {
@@ -96,8 +96,8 @@ describe('files', () => {
     expect(project.main).toBe('/chapters/a.typ');
     const rows = [...host.querySelectorAll<HTMLElement>('[role=treeitem]')].map((item) => item.title);
     expect(rows.slice(0, 2)).toEqual(['chapters', 'chapters/a.typ']);
-    expect(row(host, 'chapters/a.typ').querySelector('.typst-files__badge')?.textContent).toBe('Main');
-    expect(row(host, 'main.typ').querySelector('.typst-files__badge')).toBeNull();
+    expect(row(host, 'chapters/a.typ').querySelector('.zwf-files__badge')?.textContent).toBe('Main');
+    expect(row(host, 'main.typ').querySelector('.zwf-files__badge')).toBeNull();
     expect(titles(contextMenu('chapters/a.typ'))).not.toContain('Set as main file');
     expect(titles(contextMenu('main.typ'))).toEqual(['New file…', 'New folder…', 'Upload files…', 'Set as main file', 'Rename…', 'Delete']);
   });
@@ -108,17 +108,17 @@ describe('files', () => {
     expect(contextMenu('chapters/a.typ').map((entry) => entry.textContent)).not.toContain('Set as main file');
     await workbench.commands.executeCommand('files.setMainFile', path('/chapters/a.typ'));
     expect(project.main).toBe('/main.typ');
-    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-notifications] [role=alert]')?.textContent).toContain('The main file cannot be changed here.'));
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications] [role=alert]')?.textContent).toContain('The main file cannot be changed here.'));
   });
 
   it('a refused change is an error message', async () => {
     const { host, row } = setup();
     row('main.typ').focus();
     // drag the main file onto the folder: refused by the panel itself
-    const transfer = { types: ['application/x-typst-project-path'], getData: () => '/main.typ', setData: () => {}, files: [] };
+    const transfer = { types: ['application/x-zwf-project-path'], getData: () => '/main.typ', setData: () => {}, files: [] };
     const drop = new Event('drop', { bubbles: true, cancelable: true });
     Object.defineProperty(drop, 'dataTransfer', { value: transfer });
     row('chapters').dispatchEvent(drop);
-    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-notifications] [role=alert]')?.textContent).toContain('The main file stays where it is.'));
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications] [role=alert]')?.textContent).toContain('The main file stays where it is.'));
   });
 });

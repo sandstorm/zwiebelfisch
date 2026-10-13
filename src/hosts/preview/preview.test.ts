@@ -124,11 +124,11 @@ describe('Preview click outline', () => {
     preview = new Preview(container);
     const clicks: PageClick[] = [];
     preview.onDidClickPage((click) => clicks.push(click));
-    const outlines = () => container.querySelectorAll('.typst-preview__highlight').length;
+    const outlines = () => container.querySelectorAll('.zwf-preview__highlight').length;
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
 
-    container.querySelector('.typst-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container.querySelector('.zwf-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await vi.waitFor(() => expect(outlines()).toBe(1));
     expect(clicks).toEqual([{ path: '/main.typ', from: 0, to: 2 }]);
     preview.clearClickHighlight();
@@ -158,8 +158,8 @@ describe('Preview.setSelectionHighlight', () => {
     };
     const container = document.createElement('div');
     preview = new Preview(container);
-    const shaded = () => [...container.querySelectorAll<HTMLElement>('.typst-preview__selection')].map((box) => [box.style.left, box.style.width]);
-    const outlined = () => container.querySelectorAll('.typst-preview__highlight').length;
+    const shaded = () => [...container.querySelectorAll<HTMLElement>('.zwf-preview__selection')].map((box) => [box.style.left, box.style.width]);
+    const outlined = () => container.querySelectorAll('.zwf-preview__highlight').length;
     return { container, asked, shaded, outlined };
   }
   const path = ProjectPath.of('/main.typ');
@@ -194,7 +194,7 @@ describe('Preview.setSelectionHighlight', () => {
     preview.update({ '/main.typ': 'Hello world' }, '/main.typ');
     preview.setSelectionHighlight(path, [range(6, 11)], 'Hello world');
     await vi.waitFor(() => expect(shaded()).toHaveLength(1));
-    container.querySelector('.typst-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container.querySelector('.zwf-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await vi.waitFor(() => expect(outlined()).toBe(1));
     expect(shaded()).toHaveLength(1);
     preview.clearClickHighlight();
@@ -325,9 +325,9 @@ describe('Preview view options', () => {
     preview.onDidClickPage((click) => clicks.push(click));
     preview.registerViewOption(view('a.outlines', '#set block(stroke: red)', true));
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     expect(last().main).not.toBe('/main.typ');
-    container.querySelector('.typst-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container.querySelector('.zwf-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(clicks).toEqual([]);
   });
@@ -344,7 +344,7 @@ describe('Preview loader', () => {
     const container = document.createElement('div');
     const reported: (PreviewProgress | null)[] = [];
     preview = new Preview(container, { onDidChangeProgress: (progress) => reported.push(progress) });
-    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
     const status = loader.querySelector('[role="status"]')!;
     const bar = loader.querySelector('[role="progressbar"]')!;
     expect(loader.hidden).toBe(false);
@@ -362,7 +362,7 @@ describe('Preview loader', () => {
     const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
     engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     expect(loader.hidden).toBe(true);
     expect(reported.map((progress) => progress?.kind ?? null)).toEqual(['engine', 'engine', 'compiling', null]);
   });
@@ -371,7 +371,7 @@ describe('Preview loader', () => {
     const container = document.createElement('div');
     preview = new Preview(container);
     engine.tell({ kind: 'failed', message: 'HTTP 404' } satisfies LoadEvent);
-    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
     expect(loader.textContent).toContain('The Typst compiler could not be loaded.');
     expect(loader.textContent).toContain('HTTP 404');
     expect(loader.querySelector<HTMLElement>('[role="progressbar"]')!.hidden).toBe(true);
@@ -380,7 +380,7 @@ describe('Preview loader', () => {
   it('shows a package download over the empty pane, but not once there are pages', async () => {
     const container = document.createElement('div');
     preview = new Preview(container);
-    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
     engine.tell({ kind: 'ready' } satisfies LoadEvent);
     engine.tell({ kind: 'packages', specs: ['@preview/merman:0.4.0'] } satisfies LoadEvent);
     expect(loader.textContent).toContain('Downloading @preview/merman 0.4.0…');
@@ -421,7 +421,7 @@ describe('Preview after the engine crashed', () => {
     const compiled: unknown[] = [];
     const { container, failures } = setup((text, worker) => (compiled.push(text), worker === 1 ? crash : pages));
     preview.update({ '/main.typ': 'Hi', '/logo.png': new Uint8Array([1]) }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     expect(engine.workers.map((worker) => worker.terminated)).toEqual([true, false]);
     expect(compiled).toEqual(['Hi', 'Hi']);
     expect(failures()).toEqual(['The Typst compiler crashed and was restarted. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)']);
@@ -448,7 +448,7 @@ describe('Preview after the engine crashed', () => {
   it('answers the requests waiting for the crashed engine', async () => {
     const { container } = setup(() => pages);
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     // the engine never answers these
     const snippet = preview.snippet(ProjectPath.of('/main.typ'), SourceRange.of({ from: 0, to: 2 }), 'Hi');
     const pdf = preview.exportPdf({ main: '/main.typ', sources: {} });
@@ -466,10 +466,10 @@ describe('Preview after the engine crashed', () => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(engine.workers).toHaveLength(2);
     expect(failures()[1]).toBe('The Typst compiler crashed again; it starts again with the next edit. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)');
-    expect(container.querySelector('[data-testid="typst-preview-loader"]')!.textContent).toContain('crashed again');
+    expect(container.querySelector('[data-testid="zwf-preview-loader"]')!.textContent).toContain('crashed again');
 
     preview.update({ '/main.typ': 'fine' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     expect(engine.workers).toHaveLength(3);
   });
 });
@@ -566,8 +566,8 @@ describe('Preview renderers', () => {
     preview.registerRenderer(renderer);
     expect(preview.activeRenderer).toBe('html');
     expect(changes).toEqual(['html']);
-    expect(container.querySelector('.typst-preview__renderer')?.textContent).toBe('html view');
-    expect(container.querySelector<HTMLElement>('[data-testid="typst-preview"]')!.hidden).toBe(true);
+    expect(container.querySelector('.zwf-preview__renderer')?.textContent).toBe('html view');
+    expect(container.querySelector<HTMLElement>('[data-testid="zwf-preview"]')!.hidden).toBe(true);
     await vi.waitFor(() => expect(log).toEqual(['create', 'update index.html']));
     expect(requests).toEqual(['compile', 'html']);
     expect(diagnostics).toContain('ignored in HTML');
@@ -592,7 +592,7 @@ describe('Preview renderers', () => {
     await vi.waitFor(() => expect(log).toContain('reveal index.html#1a'));
     preview.setActiveRenderer('pages');
     expect(log.at(-1)).toBe('dispose');
-    expect(container.querySelector('.typst-preview__renderer')).toBeNull();
+    expect(container.querySelector('.zwf-preview__renderer')).toBeNull();
     await vi.waitFor(() => expect(requests.at(-1)).toBe('compile'));
   });
 
@@ -601,7 +601,7 @@ describe('Preview renderers', () => {
     const item = (text: string) => () => ({ elements: [Object.assign(document.createElement('span'), { textContent: text })] });
     preview.registerToolbarItem(item('zoom'), { group: '2_view', renderer: 'pages' });
     preview.registerToolbarItem(item('follow'), { group: '1_sync' });
-    const shown = () => [...container.querySelectorAll<HTMLElement>('[data-testid="typst-preview-toolbar"] > *')].filter((e) => !e.hidden).map((e) => e.textContent);
+    const shown = () => [...container.querySelectorAll<HTMLElement>('[data-testid="zwf-preview-toolbar"] > *')].filter((e) => !e.hidden).map((e) => e.textContent);
     expect(shown()).toEqual(['follow', 'zoom']);
     preview.registerRenderer(renderer);
     preview.setActiveRenderer('html');
@@ -614,7 +614,7 @@ describe('Preview renderers', () => {
     const { log, renderer } = setup();
     const html: { main: string; files: Record<string, unknown> }[] = [];
     const answer = engine.answer;
-    const error = { severity: 'error', message: 'in the prelude', hints: [], from: 0, to: 1, path: '/.typst-preview-view.typ' };
+    const error = { severity: 'error', message: 'in the prelude', hints: [], from: 0, to: 1, path: '/.zwf-preview-view.typ' };
     engine.answer = (body) => {
       const request = body as EngineRequest;
       if (request.type !== 'html') return answer(request);

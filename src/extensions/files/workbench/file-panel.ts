@@ -33,17 +33,17 @@ export class FilePanel {
     private state: FilePanelState,
   ) {
     const doc = parent.ownerDocument;
-    this.element = element(doc, 'div', 'typst-files');
-    this.element.dataset.testid = 'typst-files';
-    const header = element(doc, 'div', 'typst-files__header');
-    const title = element(doc, 'span', 'typst-files__title');
+    this.element = element(doc, 'div', 'zwf-files');
+    this.element.dataset.testid = 'zwf-files';
+    const header = element(doc, 'div', 'zwf-files__header');
+    const title = element(doc, 'span', 'zwf-files__title');
     title.textContent = 'Files';
     this.picker = doc.createElement('input');
     this.picker.type = 'file';
     this.picker.multiple = true;
     this.picker.hidden = true;
     this.picker.addEventListener('change', () => void this.uploadInto([...(this.picker.files ?? [])], this.uploadFolder));
-    this.newButton = element(doc, 'button', 'typst-files__action');
+    this.newButton = element(doc, 'button', 'zwf-files__action');
     this.newButton.type = 'button';
     this.newButton.title = 'New';
     this.newButton.setAttribute('aria-label', 'New');

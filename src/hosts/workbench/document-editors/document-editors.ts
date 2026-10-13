@@ -66,7 +66,7 @@ export class DocumentEditors {
     if (!documentEditor) this.#editors.set(document, (documentEditor = new DocumentEditor(document)));
     const owner = documentEditor;
     const element = panel.element;
-    element.classList.add('typst-editor__pane');
+    element.classList.add('zwf-editor__pane');
     const selected = () => this.options.onSelection?.(owner);
     const editor =
       viewType === VISUAL_EDITOR

@@ -25,7 +25,7 @@ export class TextStyleMenu implements ToolbarControl {
     private readonly providers: readonly TextStyleProvider[],
   ) {
     this.element = doc.createElement('select');
-    this.element.className = 'typst-toolbar__style';
+    this.element.className = 'zwf-toolbar__style';
     this.element.setAttribute('aria-label', 'Text style');
     this.element.title = 'Text style';
     this.element.addEventListener('change', () => this.choose(this.element.value));

@@ -296,7 +296,7 @@ describe('Visual editor toolbar', () => {
 
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
-    expect(button('Add row').closest<HTMLElement>('.typst-floating-bar')!.hidden).toBe(true);
+    expect(button('Add row').closest<HTMLElement>('.zwf-floating-bar')!.hidden).toBe(true);
     view.reveal(SourceRange.of({ from: 4, to: 4 }));
     button('Insert table').click();
     expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
@@ -351,6 +351,6 @@ describe('Visual editor toolbar', () => {
     view.reveal(SourceRange.of({ from: 15, to: 15 }));
     button('Table of contents').click();
     expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
-    expect(parent.querySelector('.typst-outline__box .typst-visual__box-label')?.textContent).toBe('Table of contents');
+    expect(parent.querySelector('.zwf-outline__box .zwf-visual__box-label')?.textContent).toBe('Table of contents');
   });
 });

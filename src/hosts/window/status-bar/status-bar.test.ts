@@ -7,7 +7,7 @@ function setup() {
   const bar = document.createElement('div');
   const statusBar = new StatusBar(bar);
   const item = (text: string) => Object.assign(document.createElement('span'), { textContent: text });
-  const side = (alignment: string) => [...bar.querySelector(`.typst-editor__status-bar-${alignment}`)!.children].map((child) => child.textContent);
+  const side = (alignment: string) => [...bar.querySelector(`.zwf-editor__status-bar-${alignment}`)!.children].map((child) => child.textContent);
   return { bar, statusBar, item, side };
 }
 
@@ -22,7 +22,7 @@ describe('StatusBar', () => {
     statusBar.add(item('cursor'), { alignment: 'right' });
     expect(side('left')).toEqual(['room', 'diagnostics', 'mode']);
     expect(side('right')).toEqual(['zoom', 'words', 'cursor']);
-    expect([...bar.children].map((child) => child.className)).toEqual(['typst-editor__status-bar-left', 'typst-editor__status-bar-right']);
+    expect([...bar.children].map((child) => child.className)).toEqual(['zwf-editor__status-bar-left', 'zwf-editor__status-bar-right']);
   });
 
   it('takes a disposed item out and keeps the others in order', () => {

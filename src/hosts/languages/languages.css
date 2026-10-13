@@ -1,47 +1,47 @@
 /* Links in every editor: their hint and their look. See LanguagesHost in languages.ts, whose styleSheet the workbench
-   adds, and link-hover.ts. Colors come from the --te-* tokens. */
+   adds, and link-hover.ts. Colors come from the --zwf-* tokens. */
 /* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered; a CodeMirror
    editor owns its text's DOM, so it carries the class and the hovered mark shows it */
-.typst-link--mod:not(.cm-editor),
-.cm-editor.typst-link--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
+.zwf-link--mod:not(.cm-editor),
+.cm-editor.zwf-link--mod .zwf-source__path:hover { text-decoration: underline; text-decoration-color: var(--zwf-accent); color: var(--zwf-accent); cursor: pointer; }
 /* the hover hint of a link, the same everywhere: fixed above (or below) the link, no layout shift */
-.typst-link-hint {
+.zwf-link-hint {
   position: fixed;
   z-index: 1000;
   max-width: min(480px, calc(100vw - 8px));
   box-sizing: border-box;
   padding: 3px 6px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
-  background: var(--te-surface);
-  color: var(--te-text);
+  background: var(--zwf-surface);
+  color: var(--zwf-text);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
-.typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
-.typst-file-link + .typst-file-link { margin-left: 12px; }
-.typst-file-link__button {
+.zwf-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
+.zwf-file-link + .zwf-file-link { margin-left: 12px; }
+.zwf-file-link__button {
   border: 0;
   padding: 0;
   background: none;
-  color: var(--te-accent);
+  color: var(--zwf-accent);
   font: inherit;
   cursor: pointer;
 }
-.typst-file-link__button:hover { text-decoration: underline; }
-.typst-file-link__note { color: var(--te-muted); }
-.typst-file-link__error { color: var(--te-danger); }
-.typst-file-link__error:empty { display: none; }
+.zwf-file-link__button:hover { text-decoration: underline; }
+.zwf-file-link__note { color: var(--zwf-muted); }
+.zwf-file-link__error { color: var(--zwf-danger); }
+.zwf-file-link__error:empty { display: none; }
 /* The "Paste as" chip above a paste in a CodeMirror editor (paste-extension.ts), as the Visual editor's floating bar */
-.cm-tooltip:has(> .typst-paste-chip) { border: 0; background: none; }
-.typst-paste-chip {
+.cm-tooltip:has(> .zwf-paste-chip) { border: 0; background: none; }
+.zwf-paste-chip {
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
-  background: var(--te-surface);
-  color: var(--te-text-2);
+  background: var(--zwf-surface);
+  color: var(--zwf-text-2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font: 12px system-ui, sans-serif;
   cursor: pointer;
 }
-.typst-paste-chip:hover { background: var(--te-hover); }
+.zwf-paste-chip:hover { background: var(--zwf-hover); }

@@ -101,13 +101,13 @@ describe('FilePanel', () => {
 
   it('marks files by kind', () => {
     const { item } = setup(undefined, nested);
-    expect(item('data.csv').classList.contains('typst-files__row--file')).toBe(true);
-    expect(item('chapters').classList.contains('typst-files__row--folder')).toBe(true);
+    expect(item('data.csv').classList.contains('zwf-files__row--file')).toBe(true);
+    expect(item('chapters').classList.contains('zwf-files__row--folder')).toBe(true);
   });
 
   it('shows a Typst icon for Typst files, the icon a custom editor gives other files, else the icon for any file', () => {
     const { item } = setup(undefined, { ...state, paths: [path('/main.typ'), path('/logo.png'), path('/data.csv')] });
-    const iconOf = (name: string) => item(name).querySelector('svg.typst-files__icon')!;
+    const iconOf = (name: string) => item(name).querySelector('svg.zwf-files__icon')!;
     expect(iconOf('logo.png').querySelector('circle')).not.toBeNull();
     expect(iconOf('main.typ').innerHTML).not.toBe(iconOf('data.csv').innerHTML);
     expect(iconOf('data.csv').querySelector('circle')).toBeNull();
@@ -119,16 +119,16 @@ describe('FilePanel', () => {
     const decorations: Record<string, FileDecoration[]> = { '/chapter.typ': [ann, bob], '/parts/a.typ': [bob, { badge: 'x', tooltip: 'local' }] };
     const files = { ...state, paths: [...state.paths, path('/parts/a.typ')] };
     const { parent, panel, item } = setup(undefined, files, decorations);
-    const badges = [...item('chapter.typ').querySelectorAll<HTMLElement>('.typst-files__decoration')];
+    const badges = [...item('chapter.typ').querySelectorAll<HTMLElement>('.zwf-files__decoration')];
     expect(badges.map((badge) => [badge.textContent, badge.title])).toEqual([['AL', 'Ann Lee'], ['B', 'Bob']]);
-    expect(badges[0].style.getPropertyValue('--typst-files-decoration-color')).toBe('#b58900');
-    expect(badges[1].style.getPropertyValue('--typst-files-decoration-text')).toBe('#ffffff');
-    expect(item('chapter.typ').querySelector('.typst-files__decorations')!.getAttribute('aria-label')).toBe('Ann Lee, Bob');
-    expect(item('parts').querySelector('.typst-files__decorations')!.getAttribute('aria-label')).toBe('Bob');
-    expect(item('main.typ').querySelector('.typst-files__decorations')).toBeNull();
+    expect(badges[0].style.getPropertyValue('--zwf-files-decoration-color')).toBe('#b58900');
+    expect(badges[1].style.getPropertyValue('--zwf-files-decoration-text')).toBe('#ffffff');
+    expect(item('chapter.typ').querySelector('.zwf-files__decorations')!.getAttribute('aria-label')).toBe('Ann Lee, Bob');
+    expect(item('parts').querySelector('.zwf-files__decorations')!.getAttribute('aria-label')).toBe('Bob');
+    expect(item('main.typ').querySelector('.zwf-files__decorations')).toBeNull();
     for (const file of Object.keys(decorations)) delete decorations[file];
     panel.render(files);
-    expect(parent.querySelector('.typst-files__decorations')).toBeNull();
+    expect(parent.querySelector('.zwf-files__decorations')).toBeNull();
   });
 
   describe('menus', () => {
@@ -318,7 +318,7 @@ describe('FilePanel', () => {
       const transfer = dataTransfer();
       dragEvent('dragstart', item('data.csv'), transfer);
       expect(dragEvent('dragover', item('img'), transfer).defaultPrevented).toBe(true);
-      expect(item('img').classList.contains('typst-files__row--drop')).toBe(true);
+      expect(item('img').classList.contains('zwf-files__row--drop')).toBe(true);
       dragEvent('drop', item('img'), transfer);
       await vi.waitFor(() => expect(change).toHaveBeenCalledWith({ kind: 'rename', from: path('/data.csv'), path: path('/img/data.csv') }));
     });

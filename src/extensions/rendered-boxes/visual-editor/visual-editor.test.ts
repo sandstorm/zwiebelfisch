@@ -39,14 +39,14 @@ async function setup(text: string, preview: Preview) {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function parts(box: Element) {
-  return { picture: box.querySelector<HTMLImageElement>('img.typst-visual__rendering'), code: box.querySelector<HTMLElement>('.typst-visual__code')! };
+  return { picture: box.querySelector<HTMLImageElement>('img.zwf-visual__rendering'), code: box.querySelector<HTMLElement>('.zwf-visual__code')! };
 }
 
 describe('rendered raw boxes', () => {
   it('show the compiled snippet of their source instead of the code', async () => {
     const { renderer } = fakeRenderer();
     const { parent } = await setup(MATH_DOC, renderer);
-    const box = parent.querySelector('.typst-visual__raw-block')!;
+    const box = parent.querySelector('.zwf-visual__raw-block')!;
     const { picture, code } = parts(box);
     expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', { from: MATH_DOC.indexOf('$'), to: MATH_DOC.indexOf('$') + 7 }, '$ x^2 $');
     expect(picture?.hidden).toBe(false);
@@ -58,7 +58,7 @@ describe('rendered raw boxes', () => {
   it('switch to the code while focused and back afterwards', async () => {
     const { renderer } = fakeRenderer();
     const { parent } = await setup(MATH_DOC, renderer);
-    const box = parent.querySelector('.typst-visual__raw-block')!;
+    const box = parent.querySelector('.zwf-visual__raw-block')!;
     const { picture, code } = parts(box);
     picture!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     expect(code.hidden).toBe(false);
@@ -71,8 +71,8 @@ describe('rendered raw boxes', () => {
   // With the Visual editor's CSS: what shows, not only the [hidden] state (a display rule for the picture must not beat
   // [hidden], or an edited box shows the picture beside its code)
   it.each([
-    ['block', MATH_DOC, '.typst-visual__raw-block'],
-    ['inline', 'Like $a^2 + b^2 = c^2$ here.\n', '.typst-visual__raw-inline'],
+    ['block', MATH_DOC, '.zwf-visual__raw-block'],
+    ['inline', 'Like $a^2 + b^2 = c^2$ here.\n', '.zwf-visual__raw-inline'],
   ])('%s: show only the code while it is edited, only the picture otherwise', async (_kind, text, selector) => {
     const style = document.head.appendChild(document.createElement('style'));
     style.textContent = readFileSync('src/hosts/visual-editor/visual-editor.css', 'utf8');
@@ -85,7 +85,7 @@ describe('rendered raw boxes', () => {
       expect(shown()).toEqual({ picture: true, code: false });
       picture!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
       expect(shown()).toEqual({ picture: false, code: true });
-      expect(box.classList.contains('typst-visual__raw--rendered')).toBe(false);
+      expect(box.classList.contains('zwf-visual__raw--rendered')).toBe(false);
       box.querySelector('.cm-content')!.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
       expect(shown()).toEqual({ picture: true, code: false });
       expect(box.contains(picture)).toBe(true);
@@ -97,7 +97,7 @@ describe('rendered raw boxes', () => {
   it('keep showing code when the source draws nothing', async () => {
     const { renderer } = fakeRenderer();
     const { parent } = await setup('#text(red)[x]\n\nHello\n', renderer);
-    const { picture, code } = parts(parent.querySelector('.typst-visual__raw-block')!);
+    const { picture, code } = parts(parent.querySelector('.zwf-visual__raw-block')!);
     expect(picture?.hidden ?? true).toBe(true);
     expect(code.hidden).toBe(false);
   });
@@ -118,7 +118,7 @@ describe('rendered raw boxes', () => {
     const snippet = renderer.snippet;
     try {
       const { parent } = await setup(MATH_DOC, { ...renderer, snippet: async (...args) => (await firstCompile, snippet(...args)) });
-      const { picture, code } = parts(parent.querySelector('.typst-visual__raw-block')!);
+      const { picture, code } = parts(parent.querySelector('.zwf-visual__raw-block')!);
       expect(code.hidden).toBe(false);
       expect(code.textContent).toContain('$ x^2 $');
       compiled();
@@ -140,14 +140,14 @@ describe('rendered raw boxes', () => {
     svg = '<svg viewBox="0 0 1 1"></svg>';
     changed();
     await settle();
-    expect(decodeURIComponent(parts(parent.querySelector('.typst-visual__raw-block')!).picture!.src)).toContain(svg);
+    expect(decodeURIComponent(parts(parent.querySelector('.zwf-visual__raw-block')!).picture!.src)).toContain(svg);
   });
 
   it('inline: scale the snippet so its text is as big as the text around it, on one line', async () => {
     const snippet = async () => ({ svg: SVG, width: Pt.of(30), height: Pt.of(16.5), textHeight: Pt.of(12.5), padding: Pt.of(2) });
     const { renderer } = fakeRenderer({ snippet });
     const { parent } = await setup('Took #ms(6) here.\n', renderer);
-    const box = parent.querySelector('.typst-visual__raw-inline')!;
+    const box = parent.querySelector('.zwf-visual__raw-inline')!;
     const { picture, code } = parts(box);
     expect(picture?.hidden).toBe(false);
     expect(code.hidden).toBe(true);
@@ -161,7 +161,7 @@ describe('rendered raw boxes', () => {
   it('show the image file of an image block, following path edits', async () => {
     const { renderer } = fakeRenderer();
     const { parent, doc } = await setup('#image("logo.png")\n\nHello\n', renderer);
-    const box = parent.querySelector('.typst-images__box')!;
+    const box = parent.querySelector('.zwf-images__box')!;
     expect(parts(box).picture?.src).toMatch(/^blob:/);
     expect(parts(box).code.hidden).toBe(true);
     doc.setText('#image("missing.png")\n\nHello\n', 'source');

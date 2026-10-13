@@ -29,7 +29,7 @@ function grip(view: EditorView, pos: number): HTMLElement {
   });
   view.dom.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: pos * 10 }));
   rects.mockRestore();
-  return view.dom.parentElement!.querySelector<HTMLElement>('.typst-visual__block-handle')!;
+  return view.dom.parentElement!.querySelector<HTMLElement>('.zwf-visual__block-handle')!;
 }
 
 /** The browser starting a drag of `source` (jsdom has no drag events: a plain event, a stand-in `dataTransfer`). */
@@ -113,14 +113,14 @@ describe('the block handle', () => {
   it('dropped on a raw box\'s code, a block lands beside the box, not in its code', () => {
     const { doc, view } = setup('#let a = 1\n\n#let b = 2\n\nHello\n');
     dragStart(grip(view, view.state.doc.content.size - 7));
-    const second = view.dom.querySelectorAll('.typst-visual__raw-block')[1];
+    const second = view.dom.querySelectorAll('.zwf-visual__raw-block')[1];
     drop(view, second.querySelector('.cm-content')!, view.state.doc.child(0).nodeSize);
     expect(doc.text).toBe('#let a = 1\n\nHello\n\n#let b = 2\n');
   });
 
   it('a drag in a raw box\'s code stays in the code (text, not a block)', () => {
     const { view } = setup('#let a = 1\n\nHello\n');
-    dragStart(view.dom.querySelector('.typst-visual__raw-block .cm-content')!);
+    dragStart(view.dom.querySelector('.zwf-visual__raw-block .cm-content')!);
     expect(view.dragging).toBeNull();
   });
 

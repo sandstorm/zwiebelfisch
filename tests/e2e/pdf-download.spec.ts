@@ -11,12 +11,12 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://packages.typst.org/preview/drafting-0.2.2.tar.gz', (route) =>
     route.fulfill({ body: DRAFTING, contentType: 'application/gzip' }));
   await page.goto('/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
 });
 
-const pdfControls = (page: Page) => page.getByTestId('typst-pdf');
+const pdfControls = (page: Page) => page.getByTestId('zwf-pdf');
 /** The error messages shown ("No PDF: …"). */
-const errors = (page: Page) => page.getByTestId('typst-notifications').getByRole('alert');
+const errors = (page: Page) => page.getByTestId('zwf-notifications').getByRole('alert');
 type Editor = { source: string; exportPdf(options?: Record<string, boolean>): Promise<Blob> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);

@@ -8,11 +8,11 @@ export function followCursor({ on, onChange }: FollowCursorOptions): PreviewTool
     let following = on;
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-preview-sync__follow';
+    button.className = 'zwf-preview-sync__follow';
     button.setAttribute('role', 'switch');
     button.title = 'Scroll the preview to the text you edit or select';
     const track = doc.createElement('span');
-    track.className = 'typst-preview-sync__switch';
+    track.className = 'zwf-preview-sync__switch';
     track.setAttribute('aria-hidden', 'true');
     button.append(track, 'Follow cursor');
     const show = () => button.setAttribute('aria-checked', String(following));

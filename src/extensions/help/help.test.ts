@@ -59,7 +59,7 @@ function setup(viewType?: string) {
   const workbench = new WorkbenchHost(host, project, { viewType });
   let window!: WindowApi;
   workbench.activate([help(), sheets, { id: 'probe', activate: (context) => void (window = context.window) }]);
-  const panel = host.querySelector<HTMLElement>('[data-testid=typst-help]')!;
+  const panel = host.querySelector<HTMLElement>('[data-testid=zwf-help]')!;
   const row = (snippet: string) => [...panel.querySelectorAll<HTMLElement>('[role=option]')].find((option) => option.querySelector('code')?.textContent === snippet)!;
   const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
   return { host, project, workbench, window, panel, row, press, text: () => project.document(path('/main.typ'))!.text };
@@ -68,7 +68,7 @@ function setup(viewType?: string) {
 describe('help', () => {
   it('is a left side panel "Help" next to Files, with the sheet of the shown file: a list per section, its links', () => {
     const { host, panel } = setup();
-    expect(host.querySelector('[data-testid=typst-panel-toggle-help]')?.getAttribute('aria-label')).toBe('Help');
+    expect(host.querySelector('[data-testid=zwf-panel-toggle-help]')?.getAttribute('aria-label')).toBe('Help');
     expect(panel.querySelector('h2')?.textContent).toBe('Typst basics');
     const lists = [...panel.querySelectorAll('[role=listbox]')];
     expect(lists.map((list) => panel.querySelector(`#${list.getAttribute('aria-labelledby')}`)?.textContent)).toEqual(['Emphasis', 'Headings']);
@@ -150,6 +150,6 @@ describe('help', () => {
     workbench.open(path('/flow.mmd'));
     press(row('A --> B'), 'Enter');
     expect(writeText).toHaveBeenCalledWith('A --> B');
-    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-notifications]')?.textContent).toContain('Copied'));
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications]')?.textContent).toContain('Copied'));
   });
 });

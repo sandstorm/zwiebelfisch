@@ -8,10 +8,10 @@ import type { PreviewContributions, PreviewToolbarItem } from '../../../hosts/pr
 export function rendererSwitch(preview: Pick<PreviewContributions, 'renderers' | 'activeRenderer' | 'setActiveRenderer' | 'onDidChangeRenderers'>, onChoose: (id: string) => void): PreviewToolbarItem {
   return ({ ownerDocument: doc }) => {
     const group = doc.createElement('span');
-    group.className = 'typst-preview-controls__renderers';
+    group.className = 'zwf-preview-controls__renderers';
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', 'Preview as');
-    group.dataset.testid = 'typst-preview-renderers';
+    group.dataset.testid = 'zwf-preview-renderers';
     const show = () => {
       const renderers = preview.renderers();
       group.hidden = renderers.length < 2;

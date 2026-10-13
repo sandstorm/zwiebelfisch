@@ -30,10 +30,10 @@ describe('FileDrops', () => {
     const dropped = vi.fn();
     drops.onDidDrop(dropped);
     enter(target);
-    expect(target.classList.contains('typst-editor--dropping')).toBe(true);
+    expect(target.classList.contains('zwf-editor--dropping')).toBe(true);
     expect(drop(target, [png]).defaultPrevented).toBe(true);
     expect(dropped).toHaveBeenCalledWith([png]);
-    expect(target.classList.contains('typst-editor--dropping')).toBe(false);
+    expect(target.classList.contains('zwf-editor--dropping')).toBe(false);
   });
 
   it('leaves drops to an editor inside that takes them (e.g. images dropped into the text); the hint goes away', () => {
@@ -45,7 +45,7 @@ describe('FileDrops', () => {
     enter(view);
     drop(view, [png]);
     expect(dropped).not.toHaveBeenCalled();
-    expect(target.classList.contains('typst-editor--dropping')).toBe(false);
+    expect(target.classList.contains('zwf-editor--dropping')).toBe(false);
   });
 
   it('never makes the browser leave the page, also while nobody listens (and then shows no hint)', () => {
@@ -57,7 +57,7 @@ describe('FileDrops', () => {
     target.dispatchEvent(over);
     expect(over.defaultPrevented).toBe(true);
     enter(target);
-    expect(target.classList.contains('typst-editor--dropping')).toBe(false);
+    expect(target.classList.contains('zwf-editor--dropping')).toBe(false);
     expect(drop(target, [png]).defaultPrevented).toBe(true);
   });
 

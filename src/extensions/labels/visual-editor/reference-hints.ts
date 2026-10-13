@@ -55,5 +55,5 @@ function known(label: LabelInfo): Record<string, string> {
 }
 
 function unknown(target: string): Record<string, string> {
-  return { class: 'typst-labels__ref--unknown', title: `The project has no label <${target}>: Typst reports this reference as an error.` };
+  return { class: 'zwf-labels__ref--unknown', title: `The project has no label <${target}>: Typst reports this reference as an error.` };
 }

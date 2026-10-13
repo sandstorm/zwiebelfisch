@@ -1,16 +1,16 @@
 /* The file-navigation extension's styles: "← Back to …" / "Forward to … →" above a supplementary file (muted: there,
    not in the way), "← previous file" / "next file →" at the start and end of an included file (reading order of the
    main file). See fileNavigation in file-navigation.ts, which registers it. */
-.typst-file-navigation__top { flex: none; }
-.typst-file-navigation { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
-.typst-file-navigation[hidden] { display: none; }
-.typst-file-navigation__link--next,
-.typst-file-navigation__history--forward { margin-left: auto; }
-.typst-file-navigation__link,
-.typst-file-navigation__history { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; }
-.typst-file-navigation__link { color: var(--te-accent); }
-.typst-file-navigation__history { color: var(--te-muted); }
-.typst-file-navigation__link:hover,
-.typst-file-navigation__history:hover { color: var(--te-accent); text-decoration: underline; }
+.zwf-file-navigation__top { flex: none; }
+.zwf-file-navigation { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
+.zwf-file-navigation[hidden] { display: none; }
+.zwf-file-navigation__link--next,
+.zwf-file-navigation__history--forward { margin-left: auto; }
+.zwf-file-navigation__link,
+.zwf-file-navigation__history { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; }
+.zwf-file-navigation__link { color: var(--zwf-accent); }
+.zwf-file-navigation__history { color: var(--zwf-muted); }
+.zwf-file-navigation__link:hover,
+.zwf-file-navigation__history:hover { color: var(--zwf-accent); text-decoration: underline; }
 /* right above the reading-order links: one group */
-.typst-file-navigation--history:has(+ .typst-file-navigation:not([hidden])) { padding-bottom: 0; }
+.zwf-file-navigation--history:has(+ .zwf-file-navigation:not([hidden])) { padding-bottom: 0; }

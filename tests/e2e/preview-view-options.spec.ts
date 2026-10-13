@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await expect(firstPage(page).locator('svg')).toBeVisible();
 });
 
-const firstPage = (page: Page) => page.getByTestId('typst-preview').locator('.typst-preview__page').first();
+const firstPage = (page: Page) => page.getByTestId('zwf-preview').locator('.zwf-preview__page').first();
 type Editor = { source: string; exportPdf(options?: Record<string, boolean>): Promise<Blob> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
@@ -42,14 +42,14 @@ test('the View menu lists the editors\' options, then the preview\'s', async ({ 
 test('"Page guides" draws the text area\'s borders in the preview, remembered, not in the PDF', async ({ page }) => {
   await setSource(page, '#set page(width: 12cm, height: 8cm, header: [Head])\n= Guides\nSome text.');
   await expect(firstPage(page).locator('svg')).toBeVisible();
-  const pages = await page.getByTestId('typst-preview').locator('.typst-preview__page').count();
+  const pages = await page.getByTestId('zwf-preview').locator('.zwf-preview__page').count();
   expect(await firstPage(page).innerHTML()).not.toContain(GUIDES);
 
   let guides = await viewEntry(page, 'Page guides');
   await expect(guides).not.toBeChecked();
   await guides.click();
   await expect.poll(() => firstPage(page).innerHTML()).toContain(GUIDES);
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page')).toHaveCount(pages);
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page')).toHaveCount(pages);
   // the PDF is still made (the export compiles the main file itself)
   const pdf = await page.evaluate(async () => {
     const blob = await (window as unknown as { editor: Editor }).editor.exportPdf();
@@ -89,7 +89,7 @@ test('"Comments" off hides the margin notes in the preview only, remembered', as
   await comments.click();
   await expect.poll(marginGlyphs(page)).toBe(0);
   // the Visual editor keeps its notes (their markers; a card shows only when one is opened)
-  await expect(page.getByTestId('typst-visual').getByTestId('typst-note-marker')).not.toHaveCount(0);
+  await expect(page.getByTestId('zwf-visual').getByTestId('zwf-note-marker')).not.toHaveCount(0);
 
   await page.reload();
   await expect(firstPage(page).locator('svg')).toBeVisible();

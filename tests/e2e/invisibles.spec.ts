@@ -25,13 +25,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('shows the invisible characters in both editors, remembered, the text unchanged', async ({ page }) => {
-  await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(0);
+  await expect(visual(page).locator('.zwf-invisibles__space')).toHaveCount(0);
   await toggle(page, false);
-  await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(3);
-  await expect(visual(page).locator('.typst-invisibles__nbsp')).toHaveCount(1);
-  await expect(visual(page).locator('.typst-invisibles__paragraph')).toHaveCount(2);
+  await expect(visual(page).locator('.zwf-invisibles__space')).toHaveCount(3);
+  await expect(visual(page).locator('.zwf-invisibles__nbsp')).toHaveCount(1);
+  await expect(visual(page).locator('.zwf-invisibles__paragraph')).toHaveCount(2);
   // drawn as CSS content: a muted dot over the space, not part of the text
-  const dot = await visual(page).locator('.typst-invisibles__space').first().evaluate((el) => getComputedStyle(el, '::after').content);
+  const dot = await visual(page).locator('.zwf-invisibles__space').first().evaluate((el) => getComputedStyle(el, '::after').content);
   expect(dot).toBe('"·"');
   await expect.poll(sourceText(page)).toBe(TEXT);
 
@@ -41,22 +41,22 @@ test('shows the invisible characters in both editors, remembered, the text uncha
   expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).not.toMatch(/[·¶°]/);
 
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source').locator('.cm-highlightSpace').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-source').locator('.cm-highlightSpace').first()).toBeVisible();
 
   await page.reload();
   await compiled(page);
   await setSource(page, TEXT);
   await page.getByRole('tab', { name: 'Visual' }).click();
-  await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(3);
+  await expect(visual(page).locator('.zwf-invisibles__space')).toHaveCount(3);
   await toggle(page, true);
-  await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(0);
+  await expect(visual(page).locator('.zwf-invisibles__space')).toHaveCount(0);
 });
 
 test('typing keeps the marks in step with the text', async ({ page }) => {
   await toggle(page, false);
   await caretAtEnd(visual(page).locator('p', { hasText: 'three' }));
   await page.keyboard.type(' four five');
-  await expect(visual(page).locator('.typst-invisibles__space')).toHaveCount(5);
+  await expect(visual(page).locator('.zwf-invisibles__space')).toHaveCount(5);
   await page.keyboard.press('Enter');
-  await expect(visual(page).locator('.typst-invisibles__paragraph')).toHaveCount(3);
+  await expect(visual(page).locator('.zwf-invisibles__paragraph')).toHaveCount(3);
 });

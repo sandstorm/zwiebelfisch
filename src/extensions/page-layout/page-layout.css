@@ -1,16 +1,16 @@
 /* The page-layout extension's styles: page breaks and horizontal rules in the Visual editor.
-   See page-layout.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-page-layout__page-break {
+   See page-layout.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-page-layout__page-break {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0.4em 0 1.1em;
-  color: var(--te-muted-2);
+  color: var(--zwf-muted-2);
   font: 600 11px system-ui, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.typst-page-layout__page-break::before,
-.typst-page-layout__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
-.typst-page-layout__rule { padding: 0.4em 0 1.1em; }
-.typst-page-layout__rule hr { margin: 0; border: none; border-top: 1px solid var(--te-text); }
+.zwf-page-layout__page-break::before,
+.zwf-page-layout__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
+.zwf-page-layout__rule { padding: 0.4em 0 1.1em; }
+.zwf-page-layout__rule hr { margin: 0; border: none; border-top: 1px solid var(--zwf-text); }

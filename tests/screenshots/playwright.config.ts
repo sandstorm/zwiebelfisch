@@ -9,7 +9,7 @@ export default defineConfig({
   expect: { timeout: 30_000 },
   use: {
     ...devices['Desktop Chrome'],
-    baseURL: 'http://typst-editor.test',
+    baseURL: 'http://zwiebelfisch.test',
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium' }],

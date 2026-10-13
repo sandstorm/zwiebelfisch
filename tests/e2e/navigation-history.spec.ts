@@ -5,20 +5,20 @@ import { test, fileRow, openFile } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?example=advanced');
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('following the link to an .mmd offers the way back; back restores the Source editor at the link, forward returns', async ({ page }) => {
-  const history = page.locator('nav.typst-file-navigation--history:visible');
+  const history = page.locator('nav.zwf-file-navigation--history:visible');
   await expect(history).toHaveCount(0);
   await openFile(page, 'chapters/method.typ');
   await page.getByRole('tab', { name: 'Source' }).click();
-  const source = page.locator('[data-testid=typst-source]:visible');
-  const path = source.locator('.typst-source__path', { hasText: 'measurement.mmd' });
+  const source = page.locator('[data-testid=zwf-source]:visible');
+  const path = source.locator('.zwf-source__path', { hasText: 'measurement.mmd' });
   await path.click(); // the caret on the link's line
   await path.click({ modifiers: ['ControlOrMeta'] });
 
-  const text = page.getByTestId('typst-text-file');
+  const text = page.getByTestId('zwf-text-file');
   await expect(fileRow(page, 'diagrams/measurement.mmd')).toHaveAttribute('aria-selected', 'true');
   await expect(text.locator('.cm-content')).toBeVisible();
   await expect(history.getByRole('button')).toHaveText(['← Back to chapters/method.typ']);

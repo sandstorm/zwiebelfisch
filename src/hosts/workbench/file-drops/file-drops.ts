@@ -3,7 +3,7 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 
 /**
  * Files dragged from the computer onto `target`: the browser never opens them in place of the page (also while
- * nobody listens); while someone does, `typst-editor--dropping` on `target` shows the drop hint, and the files go
+ * nobody listens); while someone does, `zwf-editor--dropping` on `target` shows the drop hint, and the files go
  * to the listeners. An editor inside that takes a drop itself (stops it) keeps it; the hint still goes away.
  */
 export class FileDrops {
@@ -40,7 +40,7 @@ export class FileDrops {
 
   #setDepth(next: number): void {
     this.#depth = Math.max(0, next);
-    this.target.classList.toggle('typst-editor--dropping', this.#depth > 0);
+    this.target.classList.toggle('zwf-editor--dropping', this.#depth > 0);
   }
 
   readonly #endHint = () => this.#setDepth(0);

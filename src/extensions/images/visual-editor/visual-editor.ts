@@ -105,7 +105,7 @@ const Image = Node.create({
     return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
   },
   renderHTML({ node }) {
-    return ['pre', { class: 'typst-images__box' }, node.attrs.src];
+    return ['pre', { class: 'zwf-images__box' }, node.attrs.src];
   },
 });
 
@@ -165,7 +165,7 @@ function imageRenderer(urls: ImageUrls): RawBoxRenderer {
       return url === null ? null : { url };
     },
     followsEdits: true,
-    className: 'typst-images__picture',
+    className: 'zwf-images__picture',
     onDidChange: urls.onDidChange,
   };
 }
@@ -191,7 +191,7 @@ function imagePicker(doc: Document, choose: (files: File[]) => void): HTMLInputE
   picker.accept = IMAGE_ACCEPT;
   picker.multiple = true;
   picker.hidden = true;
-  picker.dataset.testid = 'typst-image-picker';
+  picker.dataset.testid = 'zwf-image-picker';
   picker.addEventListener('change', () => {
     const files = [...(picker.files ?? [])];
     picker.value = '';

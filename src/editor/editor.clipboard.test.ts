@@ -52,9 +52,9 @@ function setup(b = 'Intro\n', viewType?: string) {
     viewType,
   });
   editors.push(editor);
-  const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden && p.querySelector('[contenteditable]'))!;
+  const pane = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((p) => !p.hidden && p.querySelector('[contenteditable]'))!;
   /** The shown Visual editor's Tiptap editor (Tiptap keeps it on its element). */
-  const visual = () => (pane().querySelector('.typst-visual') as HTMLElement & { editor: TiptapEditor }).editor;
+  const visual = () => (pane().querySelector('.zwf-visual') as HTMLElement & { editor: TiptapEditor }).editor;
   const source = () => EditorView.findFromDOM(pane().querySelector<HTMLElement>('.cm-editor')!)!;
   return { editor, visual, source, text: (path: string) => editor.files[path] as string };
 }
@@ -197,7 +197,7 @@ describe('paste as', () => {
     b.dispatch({ selection: { anchor: 'Intro'.length } });
     clipboard(b.contentDOM, 'paste', { 'text/plain': ' *x* = $y$' });
     expect(text('/book/two/b.typ')).toBe('Intro *x* = $y$\n');
-    expect(b.dom.querySelector('.typst-paste-chip')?.textContent).toBe('Paste as: Typst ▾');
+    expect(b.dom.querySelector('.zwf-paste-chip')?.textContent).toBe('Paste as: Typst ▾');
     await editor.executeCommand('editor.action.pasteAs', { kind: 'text.plain' });
     expect(text('/book/two/b.typ')).toBe('Intro \\*x\\* = \\$y\\$\n');
     undo(b.contentDOM);

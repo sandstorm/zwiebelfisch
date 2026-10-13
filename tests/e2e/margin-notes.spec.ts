@@ -15,15 +15,15 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-const visual = (page: Page) => page.getByTestId('typst-visual');
+const visual = (page: Page) => page.getByTestId('zwf-visual');
 /** The open card (one at a time). */
-const card = (page: Page) => page.getByTestId('typst-note-card');
+const card = (page: Page) => page.getByTestId('zwf-note-card');
 /** The open card's reply box ("Comment" while the note is empty). */
 const noteField = (page: Page) => card(page).getByRole('textbox', { name: /^(Comment|Reply)$/ });
-const messageTexts = (page: Page) => card(page).locator('.typst-comments__card-text');
-const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range', { hasText: 'stars' });
+const messageTexts = (page: Page) => card(page).locator('.zwf-comments__card-text');
+const highlight = (page: Page) => visual(page).locator('mark.zwf-comments__range', { hasText: 'stars' });
 /** The markers (speech bubbles) of the notes the demo user started. */
-const ownMarkers = (page: Page) => visual(page).locator('[data-testid="typst-note-marker"][title^="Demo user:"]');
+const ownMarkers = (page: Page) => visual(page).locator('[data-testid="zwf-note-marker"][title^="Demo user:"]');
 /** "Comment" in the Visual editor's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
 /** "Comment" in the tab bar (its menu `editor/title`), shown with the Source editor. */
@@ -44,7 +44,7 @@ const sourceText = (page: Page) => () => page.evaluate(() => (window as unknown 
  * has a note of its own (drawn there, after every note the tests add).
  */
 const marginGlyphs = (page: Page) => () =>
-  page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
+  page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first().evaluate((svg) => {
     const page = svg.getBoundingClientRect();
     const margin = page.left + page.width * (1 - 4 / 16);
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
@@ -71,8 +71,8 @@ test('a comment on selected text becomes a range note: highlighted, a marker, a 
   await expect(card(page)).toHaveCount(1);
   await expect(card(page)).toHaveAttribute('role', 'dialog');
   await expect(messageTexts(page)).toHaveText(['Check this']);
-  await expect(card(page).locator('.typst-comments__card-author')).toHaveText('Demo user');
-  await expect(card(page).locator('.typst-comments__card-quote')).toHaveText('stars');
+  await expect(card(page).locator('.zwf-comments__card-author')).toHaveText('Demo user');
+  await expect(card(page).locator('.zwf-comments__card-quote')).toHaveText('stars');
   await expect(ownMarkers(page)).toHaveAttribute('title', 'Demo user: Check this');
   // the card floats below its marker, over the text
   const [box, marker] = await Promise.all([card(page).boundingBox(), ownMarkers(page).boundingBox()]);
@@ -87,7 +87,7 @@ test('a comment on selected text becomes a range note: highlighted, a marker, a 
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(demoNote);
 
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[*stars*][${signed('Check this')}]`);
+  await expect(page.getByTestId('zwf-source').locator('.cm-content')).toContainText(`#margin-note[*stars*][${signed('Check this')}]`);
 });
 
 test('a comment at the cursor becomes a point note; a second note does not repeat the import', async ({ page }) => {
@@ -125,7 +125,7 @@ test('a marker tells its note on hover and opens its card on a click; Escape and
   await expect(card(page)).toBeVisible();
   await expect(noteField(page)).toBeFocused();
   // the open note's text and marker are marked active
-  await expect(visual(page).locator('.typst-comments__anchor--active').first()).toBeVisible();
+  await expect(visual(page).locator('.zwf-comments__anchor--active').first()).toBeVisible();
 
   await visual(page).locator('h1').click();
   await expect(card(page)).toHaveCount(0);
@@ -216,7 +216,7 @@ test('on a narrow pane, the card fits beside its marker', async ({ page }) => {
 test('in the Source editor, Comment (in the tab bar) wraps the selection and puts the cursor into the note', async ({ page }) => {
   await expect(sourceCommentButton(page)).toBeHidden();
   await page.getByRole('tab', { name: 'Source' }).click();
-  const source = page.getByTestId('typst-source');
+  const source = page.getByTestId('zwf-source');
   await source.locator('.cm-line', { hasText: 'Typst is a markup' }).click();
   // CodeMirror's Home / End stop at the wrap points of a wrapped line first: repeat to reach its ends
   for (let i = 0; i < 3; i++) await page.keyboard.press('Home');

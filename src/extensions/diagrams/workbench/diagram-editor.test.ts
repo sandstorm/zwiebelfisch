@@ -28,7 +28,7 @@ function setup(options: Partial<DiagramEditorOptions> = {}, scheme = 'light') {
   const send = (message: object, source: Window | null = frame()!.contentWindow) =>
     window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(message), source }));
   const sent = () => posted.mock.calls.map(([message, origin]) => ({ ...JSON.parse(message as string), origin }));
-  const status = () => parent.querySelector<HTMLElement>('.typst-diagrams__status')!;
+  const status = () => parent.querySelector<HTMLElement>('.zwf-diagrams__status')!;
   return { host, parent, editor, saved, failed, frame, send, sent, status };
 }
 

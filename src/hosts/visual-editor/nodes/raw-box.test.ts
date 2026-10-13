@@ -53,19 +53,19 @@ function cascadedDisplay(element: HTMLElement): string | null {
 describe('raw boxes', () => {
   it('show their Typst source in a nested code editor', () => {
     const { box } = setup(RAW);
-    expect(box('.typst-visual__raw-block').state.doc.toString()).toBe('#set text(size: 12pt)');
+    expect(box('.zwf-visual__raw-block').state.doc.toString()).toBe('#set text(size: 12pt)');
   });
 
   it('editing a raw block changes exactly that source', () => {
     const { doc, box } = setup(RAW);
-    const cm = box('.typst-visual__raw-block');
+    const cm = box('.zwf-visual__raw-block');
     cm.dispatch({ changes: { from: 16, to: 20, insert: '14pt' } });
     expect(doc.text).toBe('#set text(size: 14pt)\n\nHello\n');
   });
 
   it('editing a raw inline box changes exactly that source', () => {
     const { doc, box } = setup('See #highlight[here] now.\n');
-    const cm = box('.typst-visual__raw-inline');
+    const cm = box('.zwf-visual__raw-inline');
     expect(cm.state.doc.toString()).toBe('#highlight[here]');
     cm.dispatch({ changes: { from: 11, to: 15, insert: 'there' } });
     expect(doc.text).toBe('See #highlight[there] now.\n');
@@ -73,7 +73,7 @@ describe('raw boxes', () => {
 
   it('follows changes made to the source elsewhere', () => {
     const { doc, box } = setup(RAW);
-    const cm = box('.typst-visual__raw-block');
+    const cm = box('.zwf-visual__raw-block');
     doc.setText('#set text(size: 9pt)\n\nHello\n', 'source');
     expect(cm.state.doc.toString()).toBe('#set text(size: 9pt)');
     expect(doc.text).toBe('#set text(size: 9pt)\n\nHello\n');
@@ -81,7 +81,7 @@ describe('raw boxes', () => {
 
   it('undo in a raw box undoes through the Visual editor history', () => {
     const { doc, box } = setup(RAW);
-    const cm = box('.typst-visual__raw-block');
+    const cm = box('.zwf-visual__raw-block');
     cm.dispatch({ changes: { from: 0, insert: '// x\n' } });
     expect(doc.text).toBe('// x\n#set text(size: 12pt)\n\nHello\n');
     expect(key(cm, 'z', true).defaultPrevented).toBe(true);
@@ -91,18 +91,18 @@ describe('raw boxes', () => {
 
   it('arrow keys at the edges leave the box, onto the caret between blocks beside it', () => {
     const { parent, box } = setup(RAW);
-    const cm = box('.typst-visual__raw-block');
+    const cm = box('.zwf-visual__raw-block');
     cm.dispatch({ selection: { anchor: cm.state.doc.length } });
     expect(key(cm, 'ArrowDown').defaultPrevented).toBe(true);
-    expect(parent.querySelector('.typst-visual__block-gap')).not.toBeNull();
+    expect(parent.querySelector('.zwf-visual__block-gap')).not.toBeNull();
   });
 
   it('Tab indents a raw block\'s code and stays in an inline box; Escape, then Tab goes to the browser', () => {
     const { doc, box } = setup('#set text(size: 12pt)\n\nSee #highlight[here] now.\n');
-    const block = box('.typst-visual__raw-block');
+    const block = box('.zwf-visual__raw-block');
     expect(key(block, 'Tab').defaultPrevented).toBe(true);
     expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
-    const inline = box('.typst-visual__raw-inline');
+    const inline = box('.zwf-visual__raw-inline');
     expect(key(inline, 'Tab').defaultPrevented).toBe(true);
     expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
     key(block, 'Escape');
@@ -113,7 +113,7 @@ describe('raw boxes', () => {
   it("Tab indents every selected line of a raw block's code, Shift+Tab outdents them", () => {
     const source = '#let f(x) = {\nx\n}\n';
     const { doc, box } = setup(source);
-    const block = box('.typst-visual__raw-block');
+    const block = box('.zwf-visual__raw-block');
     const tab = (shiftKey: boolean) => block.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }));
     block.dispatch({ selection: { anchor: 0, head: source.indexOf('}') + 1 } });
     tab(false);
@@ -129,13 +129,13 @@ describe('raw boxes', () => {
     const parent = document.createElement('div');
     shadow.append(parent);
     new VisualEditor(parent, new TypstDocument(RAW), VisualEditorHost.from([]));
-    const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!)!;
+    const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.zwf-visual__raw-block .cm-content')!)!;
     expect(cm.root).toBe(shadow);
   });
 
   it('inline boxes hold only inline-level boxes, so they sit on one text line', () => {
     const { parent } = setup('See #highlight[here] now.\n');
-    const box = parent.querySelector<HTMLElement>('.typst-visual__raw-inline')!;
+    const box = parent.querySelector<HTMLElement>('.zwf-visual__raw-inline')!;
     // A block inside the inline <span> would split it into three lines (before, block, after).
     const editor = box.querySelector<HTMLElement>('.cm-editor')!;
     expect(cascadedDisplay(editor)).toBe('inline-flex');
@@ -145,10 +145,10 @@ describe('raw boxes', () => {
 
   it('backspace in an emptied box removes it', () => {
     const { doc, parent, box } = setup(RAW);
-    const cm = box('.typst-visual__raw-block');
+    const cm = box('.zwf-visual__raw-block');
     cm.dispatch({ changes: { from: 0, to: cm.state.doc.length } });
     key(cm, 'Backspace');
-    expect(parent.querySelector('.typst-visual__raw-block')).toBeNull();
+    expect(parent.querySelector('.zwf-visual__raw-block')).toBeNull();
     expect(doc.text).toBe('Hello\n');
   });
 
@@ -180,7 +180,7 @@ describe('raw boxes', () => {
     tiptap.commands.setNodeSelection(0);
     tiptap.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
     expect(follow).toHaveBeenCalledTimes(1);
-    expect(parent.querySelector('.typst-visual__code')).not.toBeNull();
+    expect(parent.querySelector('.zwf-visual__code')).not.toBeNull();
   });
 
   it('pictures of boxes without a link only say nothing and edit the code', async () => {
@@ -244,7 +244,7 @@ function setupLinked(text: string, link: (fake: Pick<FollowableLink, 'follow' | 
 
 /** The first box's picture, once it shows. */
 async function shownPicture(parent: HTMLElement): Promise<HTMLImageElement> {
-  const picture = parent.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
+  const picture = parent.querySelector<HTMLImageElement>('.zwf-visual__rendering')!;
   await vi.waitFor(() => expect(picture.hidden).toBe(false));
   return picture;
 }

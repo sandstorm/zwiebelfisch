@@ -119,10 +119,10 @@ class RawBox implements NodeView {
     const renderer = renderers.find((candidate) => candidate.renders(node));
     this.spec = spec;
     this.dom = tiptap.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
-    this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
+    this.dom.className = inline ? 'zwf-visual__raw-inline' : 'zwf-visual__raw-block';
     this.label = this.createLabel(node);
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
-    wrapper.className = 'typst-visual__code';
+    wrapper.className = 'zwf-visual__code';
     this.code = this.createCode(wrapper, inline, codeExtensions);
     boxes.set(this.dom, this);
     this.showDecorations(decorations);
@@ -254,7 +254,7 @@ class RawBox implements NodeView {
     if (!label) return null;
     this.dom.classList.add(label.className);
     const element = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
-    element.className = `typst-visual__box-label ${label.className}-label`;
+    element.className = `zwf-visual__box-label ${label.className}-label`;
     element.textContent = label.text(node.attrs.src);
     return element;
   }

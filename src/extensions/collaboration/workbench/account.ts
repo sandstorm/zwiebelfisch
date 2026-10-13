@@ -16,7 +16,7 @@ export class AccountStatus {
   ) {
     this.element = doc.createElement('button');
     this.element.type = 'button';
-    this.element.className = 'typst-collaboration__account';
+    this.element.className = 'zwf-collaboration__account';
     this.element.onclick = () => (this.account.identity ? actions.showMenu(this.element) : actions.signIn());
     this.show();
   }

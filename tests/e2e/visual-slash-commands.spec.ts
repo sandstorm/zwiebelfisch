@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 /** The slash commands' list of the shown editor. */
-const list = (page: Page) => page.locator('[data-testid="typst-suggest"][data-trigger="/"]:visible');
+const list = (page: Page) => page.locator('[data-testid="zwf-suggest"][data-trigger="/"]:visible');
 
 /** A new empty line after the first paragraph, with the caret in it. */
 async function newLine(page: Page): Promise<void> {
@@ -23,7 +23,7 @@ test('/ lists the Insert menu and the text styles at the caret; typing filters, 
   await expect(list(page)).toBeVisible();
   await expect(list(page).getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
   await expect(list(page).getByRole('option', { name: /Heading 2/ })).toBeVisible();
-  const [box, caret] = await Promise.all([list(page).boundingBox(), visual(page).locator('.typst-visual__suggestion').boundingBox()]);
+  const [box, caret] = await Promise.all([list(page).boundingBox(), visual(page).locator('.zwf-visual__suggestion').boundingBox()]);
   // below the typed /, or above it where the view has no room below (flipped): never over it
   const below = box!.y >= caret!.y + caret!.height - 1;
   const above = box!.y + box!.height <= caret!.y + 1;
@@ -63,7 +63,7 @@ test('a click on an entry runs it', async ({ page }) => {
 });
 
 test('an empty line holding the caret hints "Type / for commands" without taking room; typing removes it', async ({ page }) => {
-  const hint = visual(page).locator('.typst-slash-commands__hint');
+  const hint = visual(page).locator('.zwf-slash-commands__hint');
   await expect(hint).toHaveCount(0);
   const line = visual(page).locator('p').first();
   const { height } = (await line.boundingBox())!;

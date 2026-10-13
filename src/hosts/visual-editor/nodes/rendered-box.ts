@@ -41,7 +41,7 @@ export class RenderedBox {
   ) {
     const { dom, code } = host;
     this.picture = dom.ownerDocument.createElement('img');
-    this.picture.className = 'typst-visual__rendering';
+    this.picture.className = 'zwf-visual__rendering';
     if (renderer.className) this.picture.classList.add(renderer.className);
     this.picture.alt = '';
     this.picture.hidden = true;
@@ -139,7 +139,7 @@ export class RenderedBox {
     const rendered = this.url !== null && !this.editing;
     this.picture.hidden = !rendered;
     this.host.code.hidden = rendered;
-    this.host.dom.classList.toggle('typst-visual__raw--rendered', rendered);
+    this.host.dom.classList.toggle('zwf-visual__raw--rendered', rendered);
   }
 }
 

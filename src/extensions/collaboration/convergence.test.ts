@@ -157,10 +157,10 @@ describe('collaboration', () => {
     a.collaboration.setCursor(MAIN, SourceRange.of({ from: from, to: from + 9 }));
     await settle();
     for (const parent of [b.visualParent, b.sourceParent]) {
-      const selection = [...parent.querySelectorAll('.typst-collaboration__selection')].map((e) => e.textContent).join('');
+      const selection = [...parent.querySelectorAll('.zwf-collaboration__selection')].map((e) => e.textContent).join('');
       expect(selection).toBe('paragraph');
-      expect(parent.querySelector('.typst-collaboration__selection')?.getAttribute('data-user')).toBe('Ann');
+      expect(parent.querySelector('.zwf-collaboration__selection')?.getAttribute('data-user')).toBe('Ann');
     }
-    expect(a.visualParent.querySelector('.typst-collaboration__selection')).toBeNull();
+    expect(a.visualParent.querySelector('.zwf-collaboration__selection')).toBeNull();
   });
 });

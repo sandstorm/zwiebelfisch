@@ -41,7 +41,7 @@ class Grip implements PluginView {
   constructor(private readonly view: EditorView) {
     const doc = view.dom.ownerDocument;
     this.dom = doc.createElement('div');
-    this.dom.className = 'typst-visual__block-handle';
+    this.dom.className = 'zwf-visual__block-handle';
     this.dom.draggable = true;
     this.dom.hidden = true;
     this.dom.title = 'Drag to move, click to select';

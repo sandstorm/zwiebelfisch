@@ -18,16 +18,16 @@ function setup(source: string, options: NoteCardsOptions = {}) {
   const view = Object.assign(createVisualEditor(parent, doc, { contributions: [marginNotes({ comment: () => {} }), notes] }), {
     editNote: (offset: number) => notes.editNote(doc, SourceOffset.of(offset)),
   });
-  const text = parent.querySelector<HTMLElement>('[data-testid="typst-visual"]')!;
+  const text = parent.querySelector<HTMLElement>('[data-testid="zwf-visual"]')!;
   const tiptap = () => (text as HTMLElement & { editor: Editor }).editor;
-  const markers = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-marker"]')];
+  const markers = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="zwf-note-marker"]')];
   /** Opens the card of the note of marker `i` (a press on it). */
   const open = (i: number) => markers()[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
   /** The open card (one at a time). */
-  const card = () => parent.querySelector<HTMLElement>('[data-testid="typst-note-card"]');
-  const field = () => card()!.querySelector<HTMLTextAreaElement>('.typst-comments__card-reply')!;
-  const messages = () => [...card()!.querySelectorAll<HTMLElement>('[data-testid="typst-note-message"]')];
-  const texts = () => messages().map((m) => m.querySelector('.typst-comments__card-text')?.textContent);
+  const card = () => parent.querySelector<HTMLElement>('[data-testid="zwf-note-card"]');
+  const field = () => card()!.querySelector<HTMLTextAreaElement>('.zwf-comments__card-reply')!;
+  const messages = () => [...card()!.querySelectorAll<HTMLElement>('[data-testid="zwf-note-message"]')];
+  const texts = () => messages().map((m) => m.querySelector('.zwf-comments__card-text')?.textContent);
   const button = (label: string) => card()!.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   /** Opens message `m` for editing; returns its text area. */
   const edit = (m: number) => {
@@ -65,7 +65,7 @@ describe('markers in the text', () => {
   it('shows a marker per note: a point note, and one after a range note\'s highlighted text', () => {
     const { parent, markers, card } = setup('Text#margin-note[first] and #margin-note[key][second].\n');
     expect(markers()).toHaveLength(2);
-    expect(parent.querySelector('mark.typst-comments__range')?.textContent).toBe('key');
+    expect(parent.querySelector('mark.zwf-comments__range')?.textContent).toBe('key');
     // the range note's marker sits at the end of its text
     expect(markers()[1].previousSibling?.textContent).toBe('key');
     expect(card()).toBeNull();
@@ -96,21 +96,21 @@ describe('the floating card', () => {
     open(1);
     expect(card()!.getAttribute('role')).toBe('dialog');
     expect(card()!.getAttribute('aria-label')).toBe('Comment on “key”');
-    expect(card()!.querySelector('.typst-comments__card-quote')?.textContent).toBe('key');
+    expect(card()!.querySelector('.zwf-comments__card-quote')?.textContent).toBe('key');
     expect(texts()).toEqual(['second']);
     expect(document.activeElement).toBe(field());
-    expect(card()!.parentElement).toBe(parent.querySelector('.typst-visual__body'));
-    expect([...text.querySelectorAll('.typst-comments__anchor--active')].map((anchor) => anchor.textContent)).toContain('key');
+    expect(card()!.parentElement).toBe(parent.querySelector('.zwf-visual__body'));
+    expect([...text.querySelectorAll('.zwf-comments__anchor--active')].map((anchor) => anchor.textContent)).toContain('key');
     // one card at a time
     open(0);
-    expect(parent.querySelectorAll('[data-testid="typst-note-card"]')).toHaveLength(1);
+    expect(parent.querySelectorAll('[data-testid="zwf-note-card"]')).toHaveLength(1);
     expect(texts()).toEqual(['first']);
   });
 
   it('sits below its marker', () => {
     const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      if (this.matches('.typst-visual__body')) return new DOMRect(10, 100, 500, 1000);
-      if (this.matches('.typst-comments__note')) return new DOMRect(110, 140, 16, 20);
+      if (this.matches('.zwf-visual__body')) return new DOMRect(10, 100, 500, 1000);
+      if (this.matches('.zwf-comments__note')) return new DOMRect(110, 140, 16, 20);
       return new DOMRect(0, 0, 0, 0);
     });
     const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
@@ -147,7 +147,7 @@ describe('the floating card', () => {
   it('a press outside closes it; a press inside does not', () => {
     const { open, card, field } = setup('A b#margin-note[p] c.\n');
     open(0);
-    card()!.querySelector('.typst-comments__card-thread')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    card()!.querySelector('.zwf-comments__card-thread')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     expect(card()).not.toBeNull();
     expect(document.activeElement).toBe(field());
     document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
@@ -221,7 +221,7 @@ describe('threads', () => {
   it('shows each message with name, date and text, oldest first', () => {
     const { open, messages, texts } = setup(`A #margin-note[key][${THREAD}] b.\n`);
     open(0);
-    expect(messages().map((m) => [m.querySelector('.typst-comments__card-author')?.textContent, m.querySelector('.typst-comments__card-date')?.textContent]))
+    expect(messages().map((m) => [m.querySelector('.zwf-comments__card-author')?.textContent, m.querySelector('.zwf-comments__card-date')?.textContent]))
       .toEqual([['Anna', '2026-10-10'], ['Bob', '2026-10-11']]);
     expect(texts()).toEqual(['Is this *right*?', 'Yes, #1.']);
   });
@@ -334,7 +334,7 @@ describe('threads', () => {
     const { open, card, texts } = setup(`A #margin-note[${note}] b.\n`);
     open(0);
     expect(texts()).toEqual(['m1', 'm5', 'm6']);
-    const more = card()!.querySelector<HTMLButtonElement>('.typst-comments__card-more')!;
+    const more = card()!.querySelector<HTMLButtonElement>('.zwf-comments__card-more')!;
     expect(more.textContent).toBe('3 more');
     more.click();
     expect(texts()).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
@@ -506,7 +506,7 @@ describe('an open card and changes from elsewhere', () => {
 
 describe('editNote', () => {
   /** The messages of the card whose reply box has the focus. */
-  const focusedThread = () => [...(document.activeElement?.closest('[data-testid="typst-note-card"]')?.querySelectorAll('.typst-comments__card-text') ?? [])]
+  const focusedThread = () => [...(document.activeElement?.closest('[data-testid="zwf-note-card"]')?.querySelectorAll('.zwf-comments__card-text') ?? [])]
     .map((t) => t.textContent);
 
   it('opens the card of the note whose source holds the offset, focused', () => {

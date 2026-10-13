@@ -4,7 +4,7 @@ import { test, fileRow, openFile } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?example=advanced');
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('expanding a folder and clicking a file opens it', async ({ page }) => {
@@ -14,7 +14,7 @@ test('expanding a folder and clicking a file opens it', async ({ page }) => {
   await expect(fileRow(page, 'chapters')).toHaveAttribute('aria-expanded', 'true');
   await fileRow(page, 'chapters/method.typ').click();
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('typst-visual').locator('h1:visible')).toContainText('Method');
+  await expect(page.getByTestId('zwf-visual').locator('h1:visible')).toContainText('Method');
 });
 
 test('the tree works with the keyboard', async ({ page }) => {
@@ -38,20 +38,20 @@ test('the tree works with the keyboard', async ({ page }) => {
 
 test('Mod+click on the #import path in the Source editor opens the file', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
-  const path = page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'template.typ' });
+  const path = page.locator('[data-testid=zwf-source]:visible .zwf-source__path', { hasText: 'template.typ' });
   await path.hover();
-  await expect(page.locator('.typst-link-hint')).toContainText('Open template.typ');
+  await expect(page.locator('.zwf-link-hint')).toContainText('Open template.typ');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
+  await expect(page.locator('[data-testid=zwf-source]:visible')).toContainText('#let accent');
 });
 
 test('a raw box in the Visual editor has no "Open …" row; its path shows the link tooltip and opens the file', async ({ page }) => {
-  const visual = page.locator('[data-testid=typst-visual]:visible');
+  const visual = page.locator('[data-testid=zwf-visual]:visible');
   await expect(visual.getByRole('button', { name: 'Open template.typ' })).toHaveCount(0);
-  const path = visual.locator('.typst-visual__raw-block .typst-source__path', { hasText: 'template.typ' });
+  const path = visual.locator('.zwf-visual__raw-block .zwf-source__path', { hasText: 'template.typ' });
   await path.hover();
-  await expect(page.locator('.typst-link-hint')).toContainText('Open template.typ');
+  await expect(page.locator('.zwf-link-hint')).toContainText('Open template.typ');
   await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
@@ -59,12 +59,12 @@ test('a raw box in the Visual editor has no "Open …" row; its path shows the l
 test("an image box's picture opens the image with ⌘/Ctrl+click", async ({ page }) => {
   await openFile(page, 'chapters/results.typ');
   // the box's picture follows its path's link, as every box's picture does
-  const picture = page.locator('[data-testid=typst-visual]:visible .typst-images__box img.typst-visual__rendering');
+  const picture = page.locator('[data-testid=zwf-visual]:visible .zwf-images__box img.zwf-visual__rendering');
   await picture.hover();
   await expect(page.getByRole('tooltip')).toContainText('Open assets/compile-times.svg');
   await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'assets/compile-times.svg')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('typst-asset')).toBeVisible();
+  await expect(page.getByTestId('zwf-asset')).toBeVisible();
 });
 
 test('a file dragged onto a folder moves into it', async ({ page }) => {
@@ -76,43 +76,43 @@ test('a file dragged onto a folder moves into it', async ({ page }) => {
 });
 
 test('the panel can be collapsed and resized', async ({ page }) => {
-  const files = page.getByTestId('typst-files');
+  const files = page.getByTestId('zwf-files');
   const separator = page.getByRole('separator', { name: 'Left panel width' });
   const before = (await files.boundingBox())!.width;
   await separator.focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   expect((await files.boundingBox())!.width).toBeGreaterThan(before + 20);
-  await page.getByTestId('typst-panel-toggle-files').click();
+  await page.getByTestId('zwf-panel-toggle-files').click();
   await expect(files).toBeHidden();
   await page.reload();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   await expect(files).toBeHidden(); // remembered for the session
 });
 
 test('narrow: the panel is an overlay that closes after choosing a file', async ({ page }) => {
   await page.setViewportSize({ width: 600, height: 800 });
-  const files = page.getByTestId('typst-files');
+  const files = page.getByTestId('zwf-files');
   await expect(files).toBeHidden();
-  await page.getByTestId('typst-panel-toggle-files').click();
+  await page.getByTestId('zwf-panel-toggle-files').click();
   await expect(files).toBeVisible();
   await fileRow(page, 'template.typ').click();
   await expect(files).toBeHidden();
-  await page.getByTestId('typst-panel-toggle-files').click();
+  await page.getByTestId('zwf-panel-toggle-files').click();
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('an included file links the files before and after it, at its start and its end', async ({ page }) => {
-  const bars = page.locator('nav.typst-file-navigation:visible');
-  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.typst-file-navigation--${where}:visible`).getByRole('button', { name });
+  const bars = page.locator('nav.zwf-file-navigation:visible');
+  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.zwf-file-navigation--${where}:visible`).getByRole('button', { name });
   await expect(bars).toHaveCount(0); // the main file has none
   await openFile(page, 'chapters/method.typ');
   for (const where of ['top', 'bottom'] as const) {
-    await expect(page.locator(`nav.typst-file-navigation--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
+    await expect(page.locator(`nav.zwf-file-navigation--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
   }
   await link('bottom', 'chapters/results.typ →').click();
   await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('nav.typst-file-navigation--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
+  await expect(page.locator('nav.zwf-file-navigation--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
   await link('top', '← chapters/method.typ').click();
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
 });
@@ -120,7 +120,7 @@ test('an included file links the files before and after it, at its start and its
 test('"Create …" in the link tooltip of a missing file creates and opens it', async ({ page }) => {
   await page.evaluate(() => ((window as unknown as { editor: { source: string } }).editor.source = '#include "appendix.typ"\n'));
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'appendix.typ' }).hover();
-  await page.locator('.typst-link-hint').getByRole('button', { name: 'Create appendix.typ' }).click();
+  await page.locator('[data-testid=zwf-source]:visible .zwf-source__path', { hasText: 'appendix.typ' }).hover();
+  await page.locator('.zwf-link-hint').getByRole('button', { name: 'Create appendix.typ' }).click();
   await expect(fileRow(page, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 });

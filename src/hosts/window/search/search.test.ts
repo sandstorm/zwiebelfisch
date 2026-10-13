@@ -12,14 +12,14 @@ function setup(...providers: SearchProvider[]) {
   const host = document.body.appendChild(document.createElement('div'));
   const search = new SearchEverywhere(new QuickInput(host));
   for (const provider of providers) search.register(provider);
-  const field = () => host.querySelector<HTMLInputElement>('.typst-quick-pick input')!;
+  const field = () => host.querySelector<HTMLInputElement>('.zwf-quick-pick input')!;
   const type = (value: string) => {
     field().value = value;
     field().dispatchEvent(new Event('input'));
   };
   /** The rows shown: `# Heading` for a group's heading, else the item's text. */
   const rows = () =>
-    [...host.querySelectorAll<HTMLElement>('.typst-quick-pick__heading, [role=option]')].map((row) =>
+    [...host.querySelectorAll<HTMLElement>('.zwf-quick-pick__heading, [role=option]')].map((row) =>
       row.getAttribute('role') === 'option' ? row.textContent : `# ${row.textContent}`,
     );
   const marked = () => [...host.querySelectorAll('mark')].map((mark) => mark.textContent);
@@ -49,7 +49,7 @@ describe('SearchEverywhere', () => {
     expect(marked()).toEqual(['intr', 'Intr']);
     type('nothing like it');
     expect(rows()).toEqual([]);
-    expect(document.querySelector<HTMLElement>('.typst-quick-pick__empty')!.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('.zwf-quick-pick__empty')!.hidden).toBe(false);
   });
 
   it('matches the description when the label does not match, ranked below label matches', () => {
@@ -70,7 +70,7 @@ describe('SearchEverywhere', () => {
     const labels = Array.from({ length: 8 }, (_, i) => `Heading ${i + 1}`);
     const { host, search, type, rows } = setup(provider('Headings', labels, { prefix: '#', order: 10 }), provider('Files', ['heading.typ']));
     search.show();
-    expect(host.querySelector('.typst-quick-pick__hint')!.textContent).toBe('Narrow with # Headings');
+    expect(host.querySelector('.zwf-quick-pick__hint')!.textContent).toBe('Narrow with # Headings');
     expect(rows()[0]).toBe('# Headings 3 more · type #');
     expect(rows()).toHaveLength(5 + 1 + 2);
     type('#head');
@@ -82,7 +82,7 @@ describe('SearchEverywhere', () => {
   it('narrows a prefix to every provider sharing it, and names it once in the hint', () => {
     const { host, search, type, rows } = setup(provider('Text', ['a quick fox'], { prefix: '%', order: 90 }), provider('More', ['quick, everywhere'], { prefix: '%', order: 91 }));
     search.show();
-    expect(host.querySelector('.typst-quick-pick__hint')!.textContent).toBe('Narrow with % Text');
+    expect(host.querySelector('.zwf-quick-pick__hint')!.textContent).toBe('Narrow with % Text');
     type('%quick');
     expect(rows()).toEqual(['# Text', 'a quick fox', '# More', 'quick, everywhere']);
   });
@@ -108,7 +108,7 @@ describe('SearchEverywhere', () => {
     const { host, search, type, rows, marked } = setup(text, provider('Files', ['a.typ']));
     search.show();
     type('needle');
-    const progress = host.querySelector<HTMLElement>('.typst-quick-pick__progress')!;
+    const progress = host.querySelector<HTMLElement>('.zwf-quick-pick__progress')!;
     expect(progress.hidden).toBe(false);
     expect(tokens.map((token) => token.isCancellationRequested)).toEqual([true, false]);
     await tick();
@@ -123,7 +123,7 @@ describe('SearchEverywhere', () => {
     const { host, search, field, rows } = setup(provider('Files', ['a.typ', 'b.typ']));
     const button = host.appendChild(document.createElement('button'));
     button.focus();
-    const picked = vi.fn(() => expect([document.activeElement, host.querySelector('.typst-quick-pick')]).toEqual([button, null]));
+    const picked = vi.fn(() => expect([document.activeElement, host.querySelector('.zwf-quick-pick')]).toEqual([button, null]));
     search.register({ id: 'more', label: 'More', provideItems: () => [{ label: 'b.typ again', accept: picked }] });
     search.show();
     expect(rows()).toContain('b.typ again');

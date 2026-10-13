@@ -11,7 +11,7 @@ afterEach(() => {
 function setup() {
   const host = document.body.appendChild(document.createElement('div'));
   const notifications = new Notifications(host);
-  const shown = () => [...host.querySelectorAll<HTMLElement>('.typst-notification')];
+  const shown = () => [...host.querySelectorAll<HTMLElement>('.zwf-notification')];
   return { notifications, shown };
 }
 
@@ -34,7 +34,7 @@ describe('Notifications', () => {
     const warning = notifications.show('warning', 'Delete a.typ?', [{ title: 'Delete' }]);
     vi.advanceTimersByTime(60_000);
     expect(shown().map((element) => element.getAttribute('role'))).toEqual(['alert', 'alert']);
-    shown()[1].querySelector<HTMLButtonElement>('.typst-notification__item')!.click();
+    shown()[1].querySelector<HTMLButtonElement>('.zwf-notification__item')!.click();
     expect(await warning).toEqual({ title: 'Delete' });
     shown()[0].querySelector<HTMLButtonElement>('[aria-label=Close]')!.click();
     expect(await error).toBeUndefined();
@@ -46,6 +46,6 @@ describe('Notifications', () => {
     const first = notifications.show('error', 'one', []);
     for (const text of ['two', 'three', 'four']) void notifications.show('error', text, []);
     expect(await first).toBeUndefined();
-    expect(shown().map((element) => element.querySelector('.typst-notification__message')!.textContent)).toEqual(['two', 'three', 'four']);
+    expect(shown().map((element) => element.querySelector('.zwf-notification__message')!.textContent)).toEqual(['two', 'three', 'four']);
   });
 });

@@ -65,14 +65,14 @@ export class SearchPanel {
     private readonly options: SearchPanelOptions,
   ) {
     const doc = parent.ownerDocument;
-    this.#root = element(doc, 'div', 'typst-search');
-    this.#root.dataset.testid = 'typst-search';
-    const modes = element(doc, 'div', 'typst-search__modes');
+    this.#root = element(doc, 'div', 'zwf-search');
+    this.#root.dataset.testid = 'zwf-search';
+    const modes = element(doc, 'div', 'zwf-search__modes');
     modes.setAttribute('role', 'group');
     modes.setAttribute('aria-label', 'Mode');
     this.#modes = { find: modes.appendChild(modeButton(doc, 'Find')), replace: modes.appendChild(modeButton(doc, 'Replace')) };
-    const field = element(doc, 'div', 'typst-search__field');
-    this.#input = field.appendChild(element(doc, 'input', 'typst-search__input'));
+    const field = element(doc, 'div', 'zwf-search__field');
+    this.#input = field.appendChild(element(doc, 'input', 'zwf-search__input'));
     this.#input.type = 'text';
     this.#input.placeholder = 'Find';
     this.#input.setAttribute('aria-label', 'Find');
@@ -84,15 +84,15 @@ export class SearchPanel {
     };
     this.#replace = new ReplaceControls(doc, options);
     this.#scope = new ScopePicker(doc, options.window);
-    const status = element(doc, 'div', 'typst-search__status');
-    this.#message = status.appendChild(element(doc, 'p', 'typst-search__message'));
+    const status = element(doc, 'div', 'zwf-search__status');
+    this.#message = status.appendChild(element(doc, 'p', 'zwf-search__message'));
     this.#message.setAttribute('role', 'status');
-    this.#replaceAll = status.appendChild(element(doc, 'button', 'typst-search__button typst-search__replace-all', 'Replace all'));
+    this.#replaceAll = status.appendChild(element(doc, 'button', 'zwf-search__button zwf-search__replace-all', 'Replace all'));
     this.#replaceAll.type = 'button';
     this.#replaceAll.title = `Replace all (${keyLabel(REPLACE_ALL_KEY)})`;
-    this.#empty = element(doc, 'dl', 'typst-search__empty');
-    for (const { label, key } of options.keys) this.#empty.append(element(doc, 'dt', 'typst-search__empty-label', label), element(doc, 'dd', 'typst-search__empty-key', key));
-    this.#tree = element(doc, 'ul', 'typst-search__tree');
+    this.#empty = element(doc, 'dl', 'zwf-search__empty');
+    for (const { label, key } of options.keys) this.#empty.append(element(doc, 'dt', 'zwf-search__empty-label', label), element(doc, 'dd', 'zwf-search__empty-key', key));
+    this.#tree = element(doc, 'ul', 'zwf-search__tree');
     this.#tree.setAttribute('role', 'tree');
     this.#tree.setAttribute('aria-label', 'Results');
     this.#root.append(modes, field, this.#replace.field, this.#scope.element, status, this.#replace.notice, this.#empty, this.#tree);
@@ -145,7 +145,7 @@ export class SearchPanel {
 
   #setMode(mode: Mode): void {
     this.#mode = mode;
-    this.#root.classList.toggle('typst-search--replace', mode === 'replace');
+    this.#root.classList.toggle('zwf-search--replace', mode === 'replace');
     for (const each of MODES) this.#modes[each].setAttribute('aria-pressed', String(each === mode));
     this.#replace.field.hidden = mode !== 'replace';
     if (mode !== this.options.state.get('mode', 'find')) void this.options.state.update('mode', mode);
@@ -241,7 +241,7 @@ export class SearchPanel {
     const files = results?.files() ?? [];
     this.#empty.hidden = this.#input.value !== '';
     this.#message.textContent = this.#summary(files.length);
-    this.#message.classList.toggle('typst-search__message--error', !!this.#error);
+    this.#message.classList.toggle('zwf-search__message--error', !!this.#error);
     this.#replaceAll.hidden = this.#mode !== 'replace';
     this.#replaceAll.disabled = !files.length;
     this.#rows = files.flatMap((file) => this.#fileRows(file));
@@ -276,14 +276,14 @@ export class SearchPanel {
     const doc = this.#root.ownerDocument;
     const replacing = this.#mode === 'replace';
     const expanded = this.#expanded.get(path) ?? matches.length <= AUTO_COLLAPSE;
-    const item = treeItem(doc, 1, 'typst-search__file');
+    const item = treeItem(doc, 1, 'zwf-search__file');
     item.setAttribute('aria-expanded', String(expanded));
     const slash = path.lastIndexOf('/');
     item.append(
-      element(doc, 'span', 'typst-search__chevron'),
-      element(doc, 'span', 'typst-search__name', ProjectPath.name(path)),
-      element(doc, 'span', 'typst-search__folder', slash > 0 ? ProjectPath.displayName(path.slice(0, slash) as ProjectPath) : ''),
-      element(doc, 'span', 'typst-search__count', String(matches.length)),
+      element(doc, 'span', 'zwf-search__chevron'),
+      element(doc, 'span', 'zwf-search__name', ProjectPath.name(path)),
+      element(doc, 'span', 'zwf-search__folder', slash > 0 ? ProjectPath.displayName(path.slice(0, slash) as ProjectPath) : ''),
+      element(doc, 'span', 'zwf-search__count', String(matches.length)),
     );
     if (replacing) item.append(rowAction(doc, 'Replace', `Replace all in ${ProjectPath.name(path)} (${keyLabel(REPLACE_ROW_KEY)})`));
     const rows: Row[] = [{ key: `file:${path}`, element: item, path }];
@@ -319,7 +319,7 @@ export class SearchPanel {
     if (index < 0) return;
     this.#focus(index);
     const row = this.#rows[index];
-    if (event.target instanceof Element && event.target.closest('.typst-search__row-action')) this.#replaceMatches(row.path, row.match);
+    if (event.target instanceof Element && event.target.closest('.zwf-search__row-action')) this.#replaceMatches(row.path, row.match);
     else this.#activate(row);
   }
 
@@ -429,7 +429,7 @@ function plural(count: number, noun: string): string {
 }
 
 function toggle(doc: Document, text: string, label: string): HTMLButtonElement {
-  const button = element(doc, 'button', 'typst-search__toggle', text);
+  const button = element(doc, 'button', 'zwf-search__toggle', text);
   button.type = 'button';
   button.title = label;
   button.setAttribute('aria-label', label);
@@ -445,7 +445,7 @@ function replaceKey(event: KeyboardEvent): 'all' | 'row' | null {
 }
 
 function modeButton(doc: Document, label: string): HTMLButtonElement {
-  const button = element(doc, 'button', 'typst-search__mode', label);
+  const button = element(doc, 'button', 'zwf-search__mode', label);
   button.type = 'button';
   button.title = `${label} in files`;
   return button;
@@ -453,7 +453,7 @@ function modeButton(doc: Document, label: string): HTMLButtonElement {
 
 /** A row's replace button: not a tab stop of its own (the tree is one; ⇧⌘1 does the same on the row). */
 function rowAction(doc: Document, text: string, label: string): HTMLButtonElement {
-  const button = element(doc, 'button', 'typst-search__row-action', text);
+  const button = element(doc, 'button', 'zwf-search__row-action', text);
   button.type = 'button';
   button.tabIndex = -1;
   button.title = label;
@@ -475,13 +475,13 @@ function treeItem(doc: Document, level: number, className: string): HTMLElement 
  * nothing to show for it), and its replace button.
  */
 function matchItem(doc: Document, { line, text, match }: MatchPreview, replacement?: string | null): HTMLElement {
-  const item = treeItem(doc, 2, 'typst-search__match');
+  const item = treeItem(doc, 2, 'zwf-search__match');
   const [from, to] = match;
-  const preview = element(doc, 'span', 'typst-search__preview');
+  const preview = element(doc, 'span', 'zwf-search__preview');
   const hit = text.slice(from, to);
-  const marked = typeof replacement === 'string' ? [element(doc, 'del', 'typst-search__old', hit), element(doc, 'ins', 'typst-search__new', replacement.replace(/\n/g, '↵'))] : [element(doc, 'mark', 'typst-search__hit', hit)];
+  const marked = typeof replacement === 'string' ? [element(doc, 'del', 'zwf-search__old', hit), element(doc, 'ins', 'zwf-search__new', replacement.replace(/\n/g, '↵'))] : [element(doc, 'mark', 'zwf-search__hit', hit)];
   preview.append(text.slice(0, from), ...marked, text.slice(to));
-  item.append(element(doc, 'span', 'typst-search__line', String(line)), preview);
+  item.append(element(doc, 'span', 'zwf-search__line', String(line)), preview);
   if (replacement !== undefined) item.append(rowAction(doc, '⇄', `Replace (${keyLabel(REPLACE_ROW_KEY)})`));
   return item;
 }

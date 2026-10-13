@@ -2,7 +2,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 /** The Visual editor's editing area. */
-export const visual = (page: Page) => page.getByTestId('typst-visual');
+export const visual = (page: Page) => page.getByTestId('zwf-visual');
 
 /** The Visual editor's formatting toolbar. */
 export const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
@@ -28,7 +28,7 @@ export const selectedText = (page: Page) => () => page.evaluate(() => window.get
 
 /** Waits until the preview shows the first compiled page, i.e. the widget has finished starting up. */
 export async function compiled(page: Page): Promise<void> {
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
 }
 
 /**
@@ -128,7 +128,7 @@ export async function freshSelectedLine(page: Page): Promise<void> {
  * in the SVG instead: 3 pt right of it and 4 pt above the baseline.
  */
 export async function clickFirstGlyph(page: Page): Promise<void> {
-  const glyph = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().locator('use').first();
+  const glyph = page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first().locator('use').first();
   const point = await glyph.evaluate((use: SVGUseElement) => {
     // Typst draws text runs flipped (`matrix(1 0 0 -1 …)`), so "above the baseline" is +y here.
     const local = new DOMPoint(use.x.baseVal.value + 3, use.y.baseVal.value + 4);

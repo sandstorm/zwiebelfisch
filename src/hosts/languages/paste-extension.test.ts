@@ -76,7 +76,7 @@ describe('paste as (CodeMirror)', () => {
     const { view, state, parent, paste, key } = setup('Text\n');
     view.dispatch({ selection: { anchor: 4 } });
     paste(' x');
-    const chip = parent.querySelector<HTMLButtonElement>('.typst-paste-chip')!;
+    const chip = parent.querySelector<HTMLButtonElement>('.zwf-paste-chip')!;
     expect(chip.textContent).toBe('Paste as: Typst ▾');
     chip.click();
     key({ key: '.', ctrlKey: true });

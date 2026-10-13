@@ -78,7 +78,7 @@ describe('paste', () => {
     select(5);
     paste({ 'text/plain': FIGURE });
     expect(doc.text).toBe(`Intro\n\n${FIGURE}\n`);
-    expect(parent.querySelector('.typst-visual__raw-block')).not.toBeNull();
+    expect(parent.querySelector('.zwf-visual__raw-block')).not.toBeNull();
   });
 
   it('puts inline content into the text, in place of the selection', () => {
@@ -94,7 +94,7 @@ describe('paste', () => {
     select(5);
     paste({ 'text/plain': '$x^2$ ' });
     expect(doc.text).toBe('With $x^2$ more\n');
-    expect(parent.querySelector('p .typst-visual__raw-inline')).not.toBeNull();
+    expect(parent.querySelector('p .zwf-visual__raw-inline')).not.toBeNull();
   });
 
   it('is undone in one step', () => {

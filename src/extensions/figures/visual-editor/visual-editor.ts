@@ -26,7 +26,7 @@ const Figure = Node.create({
     return { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
   },
   renderHTML() {
-    return ['figure', { class: 'typst-figures__figure' }, 0];
+    return ['figure', { class: 'zwf-figures__figure' }, 0];
   },
   addCommands() {
     return {
@@ -72,7 +72,7 @@ const FigureCaption = Node.create({
     return { src: { default: null, rendered: false } };
   },
   renderHTML() {
-    return ['figcaption', { class: 'typst-figures__caption' }, 0];
+    return ['figcaption', { class: 'zwf-figures__caption' }, 0];
   },
   addKeyboardShortcuts() {
     return {

@@ -12,7 +12,7 @@ export function diagnosticHighlight(diagnostic: SourceDiagnostic): SourceHighlig
   return {
     from: diagnostic.from,
     to: SourceOffset.of(Math.max(diagnostic.to, diagnostic.from + 1)),
-    className: 'typst-diagnostics__highlight',
+    className: 'zwf-diagnostics__highlight',
     attributes: { 'data-severity': diagnostic.severity, title: describeDiagnostic(diagnostic) },
   };
 }

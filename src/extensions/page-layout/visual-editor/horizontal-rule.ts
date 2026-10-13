@@ -25,7 +25,7 @@ const HorizontalRule = Node.create({
     return [{ tag: 'hr' }];
   },
   renderHTML() {
-    return ['div', { 'data-type': 'horizontal-rule', class: 'typst-page-layout__rule' }, ['hr']];
+    return ['div', { 'data-type': 'horizontal-rule', class: 'zwf-page-layout__rule' }, ['hr']];
   },
   addCommands() {
     return { setHorizontalRule: () => ({ commands }) => commands.insertContent({ type: this.name }) };

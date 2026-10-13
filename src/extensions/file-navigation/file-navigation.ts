@@ -50,7 +50,7 @@ export function fileNavigation(): Extension {
         }
       };
       const links = new HistoryLinks(doc, go);
-      const top = Object.assign(doc.createElement('div'), { className: 'typst-file-navigation__top' });
+      const top = Object.assign(doc.createElement('div'), { className: 'zwf-file-navigation__top' });
       top.append(links.element, readingOrder.top);
       // recomputed on every open, every change and every new main file: an #include may have been added, moved or removed
       let typing: ReturnType<typeof setTimeout> | undefined;

@@ -25,23 +25,23 @@ export class QuickInput {
   showInputBox(options: InputBoxOptions = {}): Promise<string | undefined> {
     return new Promise((resolve) => {
       const doc = this.host.ownerDocument;
-      const form = element(doc, 'form', 'typst-quick-input');
+      const form = element(doc, 'form', 'zwf-quick-input');
       form.setAttribute('aria-label', options.title ?? options.prompt ?? 'Input');
-      const input = element(doc, 'input', 'typst-quick-input__field');
+      const input = element(doc, 'input', 'zwf-quick-input__field');
       input.type = 'text';
       input.value = options.value ?? '';
       input.placeholder = options.placeHolder ?? '';
       input.setAttribute('aria-label', options.prompt ?? options.title ?? 'Input');
-      const ok = element(doc, 'button', 'typst-quick-input__ok');
+      const ok = element(doc, 'button', 'zwf-quick-input__ok');
       ok.type = 'submit';
       ok.textContent = 'OK';
-      const row = element(doc, 'div', 'typst-quick-input__row');
+      const row = element(doc, 'div', 'zwf-quick-input__row');
       row.append(input, ok);
-      const message = element(doc, 'div', 'typst-quick-input__message');
+      const message = element(doc, 'div', 'zwf-quick-input__message');
       message.setAttribute('role', 'alert');
       form.append(...title(doc, options.title), row);
       if (options.prompt) {
-        const prompt = element(doc, 'div', 'typst-quick-input__prompt');
+        const prompt = element(doc, 'div', 'zwf-quick-input__prompt');
         prompt.textContent = options.prompt;
         prompt.setAttribute('aria-hidden', 'true'); // the field's name already
         form.append(prompt);
@@ -81,18 +81,18 @@ export class QuickInput {
    */
   createQuickPick<T extends string | QuickPickItem>(options: DynamicQuickPickOptions<T>): DynamicQuickPick<T> {
     const doc = this.host.ownerDocument;
-    const box = element(doc, 'div', 'typst-quick-input typst-quick-pick typst-quick-pick--wide');
+    const box = element(doc, 'div', 'zwf-quick-input zwf-quick-pick zwf-quick-pick--wide');
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-label', options.title);
-    const filter = element(doc, 'input', 'typst-quick-input__field');
+    const filter = element(doc, 'input', 'zwf-quick-input__field');
     filter.type = 'text';
     filter.value = options.value ?? '';
     filter.placeholder = options.placeHolder ?? '';
     filter.setAttribute('aria-label', options.title);
-    const progress = element(doc, 'div', 'typst-quick-pick__progress');
+    const progress = element(doc, 'div', 'zwf-quick-pick__progress');
     progress.hidden = true;
-    const listbox = element(doc, 'div', 'typst-quick-pick__list');
-    const empty = element(doc, 'div', 'typst-quick-pick__empty');
+    const listbox = element(doc, 'div', 'zwf-quick-pick__list');
+    const empty = element(doc, 'div', 'zwf-quick-pick__empty');
     empty.textContent = 'No results';
     empty.hidden = true;
     box.append(filter, progress, listbox, empty, ...hint(doc, filter, options.hint));
@@ -128,19 +128,19 @@ export class QuickInput {
   #pick<T extends string | QuickPickItem>(list: readonly T[], options: QuickPickOptions): Promise<T | T[] | undefined> {
     return new Promise((resolve) => {
       const doc = this.host.ownerDocument;
-      const box = element(doc, 'div', 'typst-quick-input typst-quick-pick');
+      const box = element(doc, 'div', 'zwf-quick-input zwf-quick-pick');
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-label', options.title ?? options.placeHolder ?? 'Pick');
-      const filter = element(doc, 'input', 'typst-quick-input__field');
+      const filter = element(doc, 'input', 'zwf-quick-input__field');
       filter.type = 'text';
       filter.placeholder = options.placeHolder ?? '';
       filter.setAttribute('aria-label', options.placeHolder ?? options.title ?? 'Filter');
-      const listbox = element(doc, 'div', 'typst-quick-pick__list');
+      const listbox = element(doc, 'div', 'zwf-quick-pick__list');
       box.append(...title(doc, options.title), filter, listbox);
       let picker: { filter(text: string): void; key(event: KeyboardEvent): void };
       if (options.canPickMany) {
         const many = new ManyPicker(doc, list, listbox, () => close(many.picked()));
-        const ok = element(doc, 'button', 'typst-quick-input__ok');
+        const ok = element(doc, 'button', 'zwf-quick-input__ok');
         ok.type = 'button';
         ok.textContent = 'OK';
         ok.addEventListener('click', () => close(many.picked()));
@@ -308,7 +308,7 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
 
 function title(doc: Document, text: string | undefined): HTMLElement[] {
   if (!text) return [];
-  const heading = element(doc, 'div', 'typst-quick-input__title');
+  const heading = element(doc, 'div', 'zwf-quick-input__title');
   heading.textContent = text;
   heading.setAttribute('aria-hidden', 'true'); // the box's name already
   return [heading];
@@ -321,8 +321,8 @@ function isArray<T>(items: readonly T[] | Promise<readonly T[]>): items is reado
 /** The line below the list, describing `field`. */
 function hint(doc: Document, field: HTMLElement, text: string | undefined): HTMLElement[] {
   if (!text) return [];
-  const line = element(doc, 'div', 'typst-quick-pick__hint');
-  line.id = `typst-quick-pick-hint-${++ids}`;
+  const line = element(doc, 'div', 'zwf-quick-pick__hint');
+  line.id = `zwf-quick-pick-hint-${++ids}`;
   line.textContent = text;
   field.setAttribute('aria-describedby', line.id);
   return [line];
@@ -343,7 +343,7 @@ class OnePicker<T extends string | QuickPickItem> {
   ) {
     const { listbox, input } = parts;
     listbox.setAttribute('role', 'listbox');
-    listbox.id = `typst-quick-pick-${++ids}`;
+    listbox.id = `zwf-quick-pick-${++ids}`;
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-expanded', 'true');
@@ -383,14 +383,14 @@ class OnePicker<T extends string | QuickPickItem> {
 
   /** A group under a heading, which names it. */
   #group(separator: QuickPickSeparator): HTMLElement {
-    const group = element(this.doc, 'div', 'typst-quick-pick__group');
+    const group = element(this.doc, 'div', 'zwf-quick-pick__group');
     group.setAttribute('role', 'group');
-    const heading = element(this.doc, 'div', 'typst-quick-pick__heading');
+    const heading = element(this.doc, 'div', 'zwf-quick-pick__heading');
     heading.id = `${this.parts.listbox.id}-${++this.#rows}`;
     heading.setAttribute('role', 'presentation');
     heading.textContent = separator.label;
     if (separator.description) {
-      const description = element(this.doc, 'span', 'typst-quick-pick__heading-description');
+      const description = element(this.doc, 'span', 'zwf-quick-pick__heading-description');
       description.textContent = separator.description;
       heading.append(' ', description);
     }
@@ -424,17 +424,17 @@ class OnePicker<T extends string | QuickPickItem> {
 
 /** An item's label, description, key (search everywhere's) and detail, the `highlights` marked. */
 function itemElement(doc: Document, item: string | (QuickPickItem & { keybinding?: string }), highlights: QuickPickHighlights = {}): HTMLElement {
-  const option = element(doc, 'div', 'typst-quick-pick__item');
-  option.append(highlighted(doc, 'typst-quick-pick__label', labelOf(item), highlights.label));
+  const option = element(doc, 'div', 'zwf-quick-pick__item');
+  option.append(highlighted(doc, 'zwf-quick-pick__label', labelOf(item), highlights.label));
   if (typeof item === 'string') return option;
   // a space before each further part: the option's accessible name reads as words
-  if (item.description) option.append(' ', highlighted(doc, 'typst-quick-pick__description', item.description, highlights.description));
+  if (item.description) option.append(' ', highlighted(doc, 'zwf-quick-pick__description', item.description, highlights.description));
   if (item.keybinding) {
-    const key = element(doc, 'kbd', 'typst-quick-pick__keybinding');
+    const key = element(doc, 'kbd', 'zwf-quick-pick__keybinding');
     key.textContent = item.keybinding;
     option.append(' ', key);
   }
-  if (item.detail) option.append(' ', highlighted(doc, 'typst-quick-pick__detail', item.detail, highlights.detail));
+  if (item.detail) option.append(' ', highlighted(doc, 'zwf-quick-pick__detail', item.detail, highlights.detail));
   return option;
 }
 
@@ -444,7 +444,7 @@ function highlighted(doc: Document, className: string, text: string, ranges: Qui
   let last = 0;
   for (const [start, end] of ranges) {
     if (start < last || end > text.length) continue;
-    const mark = element(doc, 'mark', 'typst-quick-pick__match');
+    const mark = element(doc, 'mark', 'zwf-quick-pick__match');
     mark.textContent = text.slice(start, end);
     span.append(text.slice(last, start), mark);
     last = end;
@@ -469,8 +469,8 @@ class ManyPicker<T extends string | QuickPickItem> {
   ) {
     listbox.setAttribute('role', 'group');
     this.#options = items.map((item) => {
-      const option = element(doc, 'label', 'typst-quick-pick__item');
-      const checkbox = element(doc, 'input', 'typst-quick-pick__check');
+      const option = element(doc, 'label', 'zwf-quick-pick__item');
+      const checkbox = element(doc, 'input', 'zwf-quick-pick__check');
       checkbox.type = 'checkbox';
       checkbox.checked = typeof item !== 'string' && !!item.picked;
       option.append(checkbox, ...itemElement(doc, item).childNodes);

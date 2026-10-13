@@ -53,7 +53,7 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
     },
   };
   workbench.activate([search(), probe]);
-  const panel = host.querySelector<HTMLElement>('[data-testid=typst-search]')!;
+  const panel = host.querySelector<HTMLElement>('[data-testid=zwf-search]')!;
   const input = panel.querySelector('input')!;
   const row = (text: string) => [...panel.querySelectorAll<HTMLElement>('[role=treeitem]')].find((item) => item.textContent?.includes(text))!;
   return { host, project, workbench, window, panel, input, row, revealed };
@@ -62,16 +62,16 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
 describe('search', () => {
   it('is a left side panel "Find in files", its rail button before search everywhere', () => {
     const { host } = setup();
-    const button = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-search]')!;
+    const button = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-search]')!;
     expect(button.getAttribute('aria-label')).toBe('Find in files');
-    expect(button.compareDocumentPosition(host.querySelector('[data-testid=typst-search-everywhere]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(host.querySelector('[data-testid=zwf-search-everywhere]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('Ctrl+Shift+F shows the panel and searches for the selection of the shown editor', async () => {
     const { host, window, input, row } = setup(SOURCE_EDITOR);
     window.activeTextEditor!.revealRange(SourceRange.of({ from: 6, to: 11 }));
     host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', key: 'F', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
-    expect(host.querySelector('[data-testid=typst-panel-toggle-search]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(host.querySelector('[data-testid=zwf-panel-toggle-search]')!.getAttribute('aria-pressed')).toBe('true');
     expect(document.activeElement).toBe(input);
     expect(input.value).toBe('world');
     await vi.runAllTimersAsync();
@@ -110,14 +110,14 @@ describe('search', () => {
   it('the shown editor highlights every match in its file, the one the list is on emphasised, while the panel is shown', async () => {
     for (const viewType of [VISUAL_EDITOR, SOURCE_EDITOR]) {
       const { host, workbench, project, row } = setup(viewType);
-      const marked = (selector = '.typst-search__highlight') => [...host.querySelectorAll('.typst-editor__editor-area ' + selector)].map((element) => element.textContent);
+      const marked = (selector = '.zwf-search__highlight') => [...host.querySelectorAll('.zwf-editor__editor-area ' + selector)].map((element) => element.textContent);
       await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
       await vi.runAllTimersAsync();
       expect(marked()).toEqual(['world', 'world']);
       row('Hello world').focus();
       row('Hello world').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
       await vi.runAllTimersAsync();
-      expect(marked('.typst-search__highlight--current')).toEqual(['world']);
+      expect(marked('.zwf-search__highlight--current')).toEqual(['world']);
       project.document(path('/main.typ'))!.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'A world. ' }], 'test');
       await vi.runAllTimersAsync();
       expect(marked()).toEqual(['world', 'world', 'world']);
@@ -133,7 +133,7 @@ describe('search', () => {
     await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
     await vi.runAllTimersAsync();
     row('#set text').click();
-    const code = CodeView.findFromDOM(host.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!)!;
+    const code = CodeView.findFromDOM(host.querySelector<HTMLElement>('.zwf-visual__raw-block .cm-content')!)!;
     const { from, to } = code.state.selection.main;
     expect([code.hasFocus, code.state.sliceDoc(from, to)]).toEqual([true, 'world']);
   });
@@ -188,20 +188,20 @@ describe('search', () => {
     const { host, workbench, project, panel } = setup(VISUAL_EDITOR, undefined, () => allowed);
     await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'world', replace: 'globe' });
     await vi.runAllTimersAsync();
-    panel.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    panel.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.runAllTimersAsync();
-    const notification = host.querySelector('.typst-notification')!;
+    const notification = host.querySelector('.zwf-notification')!;
     expect(notification.textContent).toContain('Replace 3 occurrences in 2 files?');
     [...notification.querySelectorAll('button')].find((button) => button.textContent === 'Replace')!.click();
     await vi.runAllTimersAsync();
     expect([project.content(path('/main.typ')), project.content(path('/notes.txt'))]).toEqual(['Hello globe\n\nThe globe is round.\n', 'globe notes']);
-    expect(panel.querySelector('.typst-search__notice')?.textContent).toBe('Replaced 3 occurrences in 2 filesUndo');
+    expect(panel.querySelector('.zwf-search__notice')?.textContent).toBe('Replaced 3 occurrences in 2 filesUndo');
     allowed = false;
     await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'notes', replace: 'list' });
     await vi.runAllTimersAsync();
-    panel.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    panel.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.runAllTimersAsync();
     expect(project.content(path('/notes.txt'))).toBe('globe notes');
-    expect(panel.querySelector('.typst-search__notice')?.textContent).toMatch(/^Nothing replaced · notes.txt: This change is not allowed here./);
+    expect(panel.querySelector('.zwf-search__notice')?.textContent).toMatch(/^Nothing replaced · notes.txt: This change is not allowed here./);
   });
 });

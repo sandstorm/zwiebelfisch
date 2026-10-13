@@ -9,7 +9,7 @@ const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rec
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
 });
 
 async function load(page: Page, value: string) {
@@ -23,10 +23,10 @@ async function load(page: Page, value: string) {
   );
 }
 
-const visual = (page: Page) => page.getByTestId('typst-visual');
+const visual = (page: Page) => page.getByTestId('zwf-visual');
 const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
-const imageBox = (page: Page) => visual(page).locator('.typst-images__box');
-const picture = (page: Page) => imageBox(page).locator('img.typst-visual__rendering');
+const imageBox = (page: Page) => visual(page).locator('.zwf-images__box');
+const picture = (page: Page) => imageBox(page).locator('img.zwf-visual__rendering');
 const imageBar = (page: Page) => page.getByRole('toolbar', { name: 'Image' });
 
 test('a figure shows its image and its caption as editable rich text; label and arguments stay', async ({ page }) => {
@@ -63,7 +63,7 @@ test('insert an image, add a caption, type it, drag a handle: the source gets th
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 120, box.y + box.height / 2, { steps: 5 });
-  await expect(imageBox(page).locator('.typst-images__size')).toHaveText(/^\d+%$/);
+  await expect(imageBox(page).locator('.zwf-images__size')).toHaveText(/^\d+%$/);
   await page.mouse.up();
   await expect.poll(value(page)).toMatch(/#figure\(image\("logo\.svg", width: \d+%\), caption: \[A teal box\]\) <fig:teal-box>/);
 
@@ -95,7 +95,7 @@ test('a preset width and an empty Caption in the image bar; deleting the image d
 
 test('a removed figure label can be added again, typed right where its tag shows', async ({ page }) => {
   await load(page, '#figure(image("logo.svg", width: 50%), caption: [A logo]) <fig:logo>\n');
-  await visual(page).getByTestId('typst-label-tag').click();
+  await visual(page).getByTestId('zwf-label-tag').click();
   await page.getByRole('dialog', { name: 'Label <fig:logo>' }).getByRole('option', { name: 'Remove label' }).click();
   await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 50%), caption: [A logo])\n');
 
@@ -107,5 +107,5 @@ test('a removed figure label can be added again, typed right where its tag shows
   await page.keyboard.type('logo');
   await page.keyboard.press('Enter');
   await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 50%), caption: [A logo]) <fig:logo>\n');
-  await expect(visual(page).getByTestId('typst-label-tag')).toHaveText('fig:logo');
+  await expect(visual(page).getByTestId('zwf-label-tag')).toHaveText('fig:logo');
 });

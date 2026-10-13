@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 60_000,
   expect: { timeout: 30_000 },
-  use: { baseURL: 'http://typst-editor.test', trace: 'retain-on-failure' },
+  use: { baseURL: 'http://zwiebelfisch.test', trace: 'retain-on-failure' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

@@ -12,7 +12,7 @@ export class SuggestWidget {
   readonly element: HTMLElement;
   private items: readonly CompletionItem[] = [];
   private chosen = 0;
-  private readonly id = `typst-suggest-${++widgets}`;
+  private readonly id = `zwf-suggest-${++widgets}`;
 
   constructor(
     container: HTMLElement,
@@ -21,9 +21,9 @@ export class SuggestWidget {
     private readonly accept: (item: CompletionItem) => void,
   ) {
     this.element = container.appendChild(container.ownerDocument.createElement('div'));
-    this.element.className = 'typst-visual__suggest';
+    this.element.className = 'zwf-visual__suggest';
     this.element.id = this.id;
-    this.element.dataset.testid = 'typst-suggest';
+    this.element.dataset.testid = 'zwf-suggest';
     this.element.dataset.trigger = trigger;
     this.element.setAttribute('role', 'listbox');
     this.element.setAttribute('aria-label', 'Suggestions');
@@ -97,16 +97,16 @@ let widgets = 0;
 
 function option(doc: Document, item: CompletionItem, id: string, index: number): HTMLElement {
   const element = doc.createElement('div');
-  element.className = 'typst-visual__suggest-option';
+  element.className = 'zwf-visual__suggest-option';
   element.id = id;
   element.setAttribute('role', 'option');
   element.dataset.index = String(index);
   if (item.icon) {
     const icon = element.appendChild(doc.createElement('span'));
-    icon.className = 'typst-visual__suggest-icon';
+    icon.className = 'zwf-visual__suggest-icon';
     icon.innerHTML = item.icon;
   }
-  element.append(Object.assign(doc.createElement('span'), { className: 'typst-visual__suggest-label', textContent: item.label }));
-  if (item.detail) element.append(Object.assign(doc.createElement('span'), { className: 'typst-visual__suggest-detail', textContent: item.detail }));
+  element.append(Object.assign(doc.createElement('span'), { className: 'zwf-visual__suggest-label', textContent: item.label }));
+  if (item.detail) element.append(Object.assign(doc.createElement('span'), { className: 'zwf-visual__suggest-detail', textContent: item.detail }));
   return element;
 }

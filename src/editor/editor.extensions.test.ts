@@ -120,7 +120,7 @@ function setup(options: EditorOptions) {
   document.body.append(host);
   const editor = createEditor(host, { viewType: SOURCE_EDITOR, ...options });
   const source = () => {
-    const visible = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
+    const visible = [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
   };
   return { host, editor, source, preview: previews.at(-1)! };
@@ -162,10 +162,10 @@ describe('custom editors', () => {
     URL.createObjectURL = vi.fn(() => 'blob:1');
     URL.revokeObjectURL = vi.fn();
     editor.open('/logo.png');
-    const asset = host.querySelector<HTMLElement>('[data-testid=typst-asset]')!;
+    const asset = host.querySelector<HTMLElement>('[data-testid=zwf-asset]')!;
     expect(asset.hidden).toBe(false);
     // one editor: no tabs; the bar stays for the View menu
-    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(false);
     expect(host.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
     editor.open('/main.typ');
     expect(asset.isConnected).toBe(false);
@@ -175,17 +175,17 @@ describe('custom editors', () => {
   it('shows a spreadsheet in the spreadsheet editor, a text file in the text editor, any other file read-only', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/data.ic': new Uint8Array() } });
     editor.open('/data.ic');
-    expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
-    expect(host.querySelector('[data-testid=typst-asset]')).toBeNull();
+    expect(host.querySelector<HTMLElement>('[data-testid=zwf-spreadsheet]')!.hidden).toBe(false);
+    expect(host.querySelector('[data-testid=zwf-asset]')).toBeNull();
     editor.open('/main.typ');
     editor.files = { ...editor.files, '/font.otf': new Uint8Array(3) };
     editor.open('/font.otf');
-    expect(host.querySelector('[data-testid=typst-spreadsheet]')).toBeNull();
-    expect(host.querySelector('[data-testid=typst-file-info]')?.textContent).toContain('OTF file');
+    expect(host.querySelector('[data-testid=zwf-spreadsheet]')).toBeNull();
+    expect(host.querySelector('[data-testid=zwf-file-info]')?.textContent).toContain('OTF file');
     editor.files = { ...editor.files, '/data.csv': 'a,b' };
     editor.open('/data.csv');
-    expect(host.querySelector('[data-testid=typst-file-info]')).toBeNull();
-    expect(host.querySelector('[data-testid=typst-text-file] .cm-content')?.textContent).toBe('a,b');
+    expect(host.querySelector('[data-testid=zwf-file-info]')).toBeNull();
+    expect(host.querySelector('[data-testid=zwf-text-file] .cm-content')?.textContent).toBe('a,b');
   });
 });
 
@@ -197,19 +197,19 @@ describe('diagrams', () => {
     URL.revokeObjectURL = vi.fn();
     const { host, editor } = setup({ source: '= Hi', files: { '/a.drawio.png': diagram(), '/a.png': new Uint8Array([1]) } });
     editor.open('/a.drawio.png');
-    expect(host.querySelector('[data-testid=typst-diagram] iframe')).not.toBeNull();
-    expect(host.querySelector('[data-testid=typst-asset]')).toBeNull();
+    expect(host.querySelector('[data-testid=zwf-diagram] iframe')).not.toBeNull();
+    expect(host.querySelector('[data-testid=zwf-asset]')).toBeNull();
     editor.open('/a.png');
-    expect(host.querySelector('[data-testid=typst-diagram]')).toBeNull();
-    expect(host.querySelector('[data-testid=typst-asset] img')).not.toBeNull();
+    expect(host.querySelector('[data-testid=zwf-diagram]')).toBeNull();
+    expect(host.querySelector('[data-testid=zwf-asset] img')).not.toBeNull();
   });
 
   it('puts "New spreadsheet…" and "New diagram…" into the file panel\'s "New"', () => {
     const { host } = setup({ source: '= Hi', settings: { 'files.panel': 'show' } });
-    const panel = host.querySelector<HTMLElement>('[data-testid=typst-files]')!;
+    const panel = host.querySelector<HTMLElement>('[data-testid=zwf-files]')!;
     panel.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
     // the Visual editor's toolbar menus are role=menu too
-    const entries = [...host.querySelectorAll('[role=menu] [role=menuitem]')].filter((entry) => !entry.closest('.typst-toolbar'));
+    const entries = [...host.querySelectorAll('[role=menu] [role=menuitem]')].filter((entry) => !entry.closest('.zwf-toolbar'));
     expect(entries.map((entry) => entry.textContent)).toEqual([
       'New file…',
       'New spreadsheet…',
@@ -227,14 +227,14 @@ describe('diagrams', () => {
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
-    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')].map(hovered);
+    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.zwf-images__box')].map(hovered);
     expect(flow.hint).toMatch(/^Edit diagram\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     expect(logo.hint).toMatch(/^Open img\/logo\.png\(/);
     expect(flow.picture.hasAttribute('title')).toBe(false);
-    expect(host.querySelector('.typst-visual__box-actions, button[aria-label="Edit diagram"]')).toBeNull();
+    expect(host.querySelector('.zwf-visual__box-actions, button[aria-label="Edit diagram"]')).toBeNull();
     modClick(flow.picture);
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
-    expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
+    expect(host.querySelector('[data-testid=zwf-diagram]')).not.toBeNull();
   });
 
   it('makes the picture of a figure showing a diagram a link "Edit diagram" too', () => {
@@ -245,11 +245,11 @@ describe('diagrams', () => {
       source: '= Hi\n\n#figure(\n  image("diagrams/flow.drawio.png", width: 100%),\n  caption: [The flow],\n) <fig:flow>\n',
       files: { '/diagrams/flow.drawio.png': diagram() },
     });
-    const flow = hovered(host.querySelector<HTMLElement>('.typst-images__box')!);
+    const flow = hovered(host.querySelector<HTMLElement>('.zwf-images__box')!);
     expect(flow.hint).toMatch(/^Edit diagram\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     modClick(flow.picture);
     expect(editor.activeFile).toBe('/diagrams/flow.drawio.png');
-    expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
+    expect(host.querySelector('[data-testid=zwf-diagram]')).not.toBeNull();
   });
 });
 
@@ -285,7 +285,7 @@ describe('spreadsheets', () => {
     view.dispatch({ selection: { anchor: SOURCE.indexOf('budget') } });
     view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
     expect(editor.activeFile).toBe('/data/budget.ic');
-    expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>('[data-testid=zwf-spreadsheet]')!.hidden).toBe(false);
   });
 
   it('Alt+Enter on the Visual editor\'s raw box of the import line opens the spreadsheet', () => {
@@ -305,7 +305,7 @@ describe('mermaid', () => {
       source: '#figure(mermaid(read("loop.mmd")), caption: [Loop])\n',
       files: { '/loop.mmd': 'flowchart LR\n  A --> B\n' },
     });
-    const { picture, hint } = hovered(host.querySelector<HTMLElement>('.typst-visual__raw-block')!);
+    const { picture, hint } = hovered(host.querySelector<HTMLElement>('.zwf-visual__raw-block')!);
     expect(hint).toMatch(/^Edit diagram\(/);
     modClick(picture);
     expect(editor.activeFile).toBe('/loop.mmd');
@@ -314,13 +314,13 @@ describe('mermaid', () => {
 
 /** The picture of `box`, and the hint it shows after the mouse entered it and rested (the hint of every link). */
 function hovered(box: HTMLElement): { picture: HTMLImageElement; hint: string } {
-  const picture = box.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
+  const picture = box.querySelector<HTMLImageElement>('.zwf-visual__rendering')!;
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   picture.dispatchEvent(new MouseEvent('mouseenter'));
   picture.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
   vi.advanceTimersByTime(300);
   vi.useRealTimers();
-  const hint = document.querySelector('.typst-link-hint[role=tooltip]');
+  const hint = document.querySelector('.zwf-link-hint[role=tooltip]');
   expect(picture.getAttribute('aria-describedby')).toBe(hint?.id);
   picture.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); // ends the hover
   return { picture, hint: hint?.textContent ?? '' };
@@ -349,7 +349,7 @@ describe('the built-in extensions', () => {
   it('gathers the View menu at the end of the tab bar: invisible characters, then the preview\'s view options; choosing one sets it', async () => {
     const { host, preview } = setup({ source: '= Hi' });
     const open = () => {
-      host.querySelector<HTMLButtonElement>('.typst-editor__view-menu')!.click();
+      host.querySelector<HTMLButtonElement>('.zwf-editor__view-menu')!.click();
       return host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
     };
     const entries = (menu: HTMLElement) => [...menu.children].map((child) => (child.getAttribute('role') === 'separator' ? '---' : `${child.textContent} ${child.getAttribute('aria-checked')}`));
@@ -373,8 +373,8 @@ describe('the built-in extensions', () => {
     const account: Extension = { id: 'test.account', activate: (context) => void (workbench = context.workbench) };
     const { host, editor } = setup({ viewType: VISUAL_EDITOR, source: 'A #margin-note[] b.\n', user: { name: 'Demo user' }, extensions: (builtins) => [...builtins, account] });
     workbench!.setUser({ name: 'Ann' });
-    host.querySelector('[data-testid="typst-note-marker"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    const field = host.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] .typst-comments__card-reply')!;
+    host.querySelector('[data-testid="zwf-note-marker"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    const field = host.querySelector<HTMLTextAreaElement>('[data-testid="zwf-note-card"] .zwf-comments__card-reply')!;
     field.value = 'Hi';
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
     expect(editor.source).toMatch(/^A #margin-note\[- \*Ann\* \(\d{4}-\d{2}-\d{2}\): Hi\] b\.\n$/);
@@ -383,7 +383,7 @@ describe('the built-in extensions', () => {
   it('counts the diagnostics in the status bar and underlines them in the Source editor', async () => {
     const { host, preview } = setup({ source: '= Hi' });
     preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) }]);
-    const status = host.querySelector('.typst-editor__status-bar [data-testid=typst-status]')!;
+    const status = host.querySelector('.zwf-editor__status-bar [data-testid=zwf-status]')!;
     expect(status.textContent).toContain('1 error');
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
   });
@@ -395,18 +395,18 @@ describe('the built-in extensions', () => {
       // in raw code (a block atom), of a file whose editors do not exist yet
       { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: SourceOffset.of(1), to: SourceOffset.of(4) },
     ]);
-    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostics__highlight')!;
+    const mark = host.querySelector<HTMLElement>('.ProseMirror .zwf-diagnostics__highlight')!;
     expect(mark.textContent).toBe('world');
     expect(mark.dataset.severity).toBe('error');
     expect(mark.title).toBe('unknown variable: foo\nhint: did you mean bar?');
     editor.open('/a.typ');
-    const shown = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden)!;
-    expect(shown.querySelector<HTMLElement>('.typst-diagnostics__highlight')?.dataset.severity).toBe('warning');
+    const shown = [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((pane) => !pane.hidden)!;
+    expect(shown.querySelector<HTMLElement>('.zwf-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
   it('fills the preview toolbar: "Follow cursor", the renderer switch, zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['typst-preview-sync__follow', 'typst-preview-renderers', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
+    const all = ['zwf-preview-sync__follow', 'zwf-preview-renderers', 'zwf-preview-zoom', 'zwf-preview-page-number', 'zwf-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
     expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 4));
     editor.updateSettings({ 'pdfExport.download': false });
@@ -430,7 +430,7 @@ describe('the built-in extensions', () => {
     const gitlab: SourceControl & { state: SourceControlState } = {
       id: 'gitlab',
       label: 'GitLab',
-      defaultCommitMessage: 'Edit via Typst editor',
+      defaultCommitMessage: 'Edit via Zwiebelfisch',
       state: { busy: false },
       onDidChange: changed.event,
       commit(message) {
@@ -446,14 +446,14 @@ describe('the built-in extensions', () => {
       activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
     const { host } = setup({ source: '= Hi', extensions: (builtinExtensions) => [...builtinExtensions, room] });
-    const action = () => host.querySelector<HTMLButtonElement>('.typst-editor__tab-action[data-command="sourceControl.commit"]');
-    const notifications = () => [...host.querySelectorAll('.typst-notification__message')].map((message) => message.textContent);
+    const action = () => host.querySelector<HTMLButtonElement>('.zwf-editor__tab-action[data-command="sourceControl.commit"]');
+    const notifications = () => [...host.querySelectorAll('.zwf-notification__message')].map((message) => message.textContent);
     expect(action()!.textContent).toBe('Save to GitLab…');
 
     action()!.click();
-    const form = await vi.waitFor(() => host.querySelector<HTMLFormElement>('form.typst-quick-input')!);
+    const form = await vi.waitFor(() => host.querySelector<HTMLFormElement>('form.zwf-quick-input')!);
     const field = form.querySelector<HTMLInputElement>('input')!;
-    expect(field.value).toBe('Edit via Typst editor');
+    expect(field.value).toBe('Edit via Zwiebelfisch');
     field.value = ' Fix the intro ';
     form.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(committed).toEqual(['Fix the intro']));
@@ -461,7 +461,7 @@ describe('the built-in extensions', () => {
 
     action()!.click();
     await vi.waitFor(() => expect(notifications()).toEqual(['Saving to GitLab is under way.']));
-    expect(host.querySelector('form.typst-quick-input')).toBeNull();
+    expect(host.querySelector('form.zwf-quick-input')).toBeNull();
 
     gitlab.state = { busy: false };
     changed.fire();
@@ -473,7 +473,7 @@ describe('the built-in extensions', () => {
 
   it('removes the file panel while files.panel is hide (the left side keeps Help)', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
-    const button = (id: string) => host.querySelector<HTMLElement>(`[data-testid=typst-panel-toggle-${id}]`)!;
+    const button = (id: string) => host.querySelector<HTMLElement>(`[data-testid=zwf-panel-toggle-${id}]`)!;
     expect(button('files').hidden).toBe(false);
     editor.updateSettings({ 'files.panel': 'hide' });
     expect(button('files').hidden).toBe(true);
@@ -484,7 +484,7 @@ describe('the built-in extensions', () => {
 
   it('updateSettings merges: ids left out keep their value, undefined resets one to its default', () => {
     const { host, editor } = setup({ source: '= Hi', settings: { 'files.panel': 'hide' } });
-    const files = () => host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!;
+    const files = () => host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!;
     editor.updateSettings({ 'pdfExport.download': false });
     expect(editor.settings).toEqual({ 'files.panel': 'hide', 'pdfExport.download': false });
     expect(files().hidden).toBe(true);
@@ -610,7 +610,7 @@ describe('the built-in extensions', () => {
     });
     expect(seen).toEqual(['Wörter']);
     await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-renderers', 'typst-preview-zoom', 'typst-preview-page-number']);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['zwf-preview-renderers', 'zwf-preview-zoom', 'zwf-preview-page-number']);
     // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
     setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'preview-sync') });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));
@@ -621,11 +621,11 @@ describe('the built-in extensions', () => {
     const source = '#import "styles.typ": note\n= Results <results>\n#figure(table(columns: 1)[a], caption: [Runs])\nCold #margin-note[- *Ada* (2026-10-10): Results?]\n';
     const { host, editor } = setup({ source, files: { '/styles.typ': '/// @style block Note\n#let note(body) = block(body)\n', '/data.csv': 'results,1\n' } });
     await editor.executeCommand('workbench.action.searchEverywhere', 'results');
-    await vi.waitFor(() => expect(host.querySelector('.typst-quick-pick__progress')!.hasAttribute('hidden')).toBe(true));
-    const headings = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
+    await vi.waitFor(() => expect(host.querySelector('.zwf-quick-pick__progress')!.hasAttribute('hidden')).toBe(true));
+    const headings = [...host.querySelectorAll('.zwf-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
     expect(headings).toEqual(['Headings', 'Labels', 'Comments', 'Text', 'Find in files']);
     await editor.executeCommand('workbench.action.searchEverywhere', '');
-    const all = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
+    const all = [...host.querySelectorAll('.zwf-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
     expect(all).toEqual(['Files', 'Headings', 'Labels', 'Figures', 'Commands', 'Styles', 'Comments', 'Settings']);
   });
 
@@ -633,7 +633,7 @@ describe('the built-in extensions', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
     editor.dispose();
     expect(host.children).toHaveLength(0);
-    expect(host.classList.contains('typst-editor')).toBe(false);
+    expect(host.classList.contains('zwf-editor')).toBe(false);
   });
 });
 
@@ -644,10 +644,10 @@ describe('collaboration', () => {
     room.getMap<Y.Text>(FILES_MAP).set('/main.typ', shared);
     shared.insert(0, 'Room text');
     const { host, source } = setup({ source: 'Local text', extensions: (builtins) => [...builtins, collaboration({ doc: room })] });
-    const area = host.querySelector('.typst-editor__editor-area')!;
-    expect(host.querySelector('[data-testid=typst-editing-progress] [role=status]')?.textContent).toBe('Connecting to the room…');
+    const area = host.querySelector('.zwf-editor__editor-area')!;
+    expect(host.querySelector('[data-testid=zwf-editing-progress] [role=status]')?.textContent).toBe('Connecting to the room…');
     expect(area.hasAttribute('inert')).toBe(true);
-    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-editing-progress]')).toBeNull());
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-editing-progress]')).toBeNull());
     expect(area.hasAttribute('inert')).toBe(false);
     expect(source().state.doc.toString()).toBe('Room text');
   });
@@ -683,14 +683,14 @@ describe('collaboration', () => {
     const widgets = [ann, bob].map((doc) => setup({ source: '', extensions: (builtins) => [...builtins, collaboration({ doc })] }));
     await vi.waitFor(() => expect(widgets.map((widget) => widget.editor.source)).toEqual(['A cat.\n\nAnother cat.\n', 'A cat.\n\nAnother cat.\n']));
     const [annWidget, bobWidget] = widgets;
-    const status = (widget: typeof annWidget) => widget.host.querySelector('[data-testid=typst-search] [role=status]')?.textContent;
+    const status = (widget: typeof annWidget) => widget.host.querySelector('[data-testid=zwf-search] [role=status]')?.textContent;
     await bobWidget.editor.executeCommand('workbench.action.findInFiles', { query: 'cat' });
     await vi.waitFor(() => expect(status(bobWidget)).toBe('2 results in 1 file'));
     paused = true;
     bobWidget.source().dispatch({ changes: { from: 21, insert: 'Bye.\n' }, userEvent: 'input.type' });
     await annWidget.editor.executeCommand('workbench.action.replaceInFiles', { query: 'cat', replace: 'dog' });
     await vi.waitFor(() => expect(status(annWidget)).toBe('2 results in 1 file'));
-    annWidget.host.querySelector<HTMLButtonElement>('.typst-search__replace-all')!.click();
+    annWidget.host.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.waitFor(() => expect(annWidget.editor.source).toBe('A dog.\n\nAnother dog.\n'));
     paused = false;
     for (const [to, update] of waiting.splice(0)) Y.applyUpdate(to, update, 'relay');

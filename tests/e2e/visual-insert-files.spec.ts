@@ -9,7 +9,7 @@ import { caretAtEnd } from './visual-helpers';
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
 const editor = (page: Page) => page.locator('zwiebelfisch-editor');
-const visual = (page: Page) => editor(page).getByTestId('typst-visual');
+const visual = (page: Page) => editor(page).getByTestId('zwf-visual');
 const value = (page: Page) => () => editor(page).evaluate((el: Editor) => el.value);
 const fileText = (page: Page, path: string) => () =>
   editor(page).evaluate((el: Editor, path) => {
@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ contentType: 'text/html', body: "<p id=status>stub</p><script>parent.postMessage(JSON.stringify({ event: 'init' }), '*')</script>" }),
   );
   await page.goto('/examples/plain-html/');
-  await expect(editor(page).getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(editor(page).getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.value = '= Results\n\nThe runs:\n';
   });
@@ -47,10 +47,10 @@ test('Insert → Insert spreadsheet: a new .ic with a starter table, its table a
   await editor(page).getByRole('menuitem', { name: 'Insert spreadsheet' }).click();
   await acceptName(page, 'Insert spreadsheet', 'data/table.ic');
 
-  await expect(editor(page).getByTestId('typst-spreadsheet').locator('.ic-root')).toBeVisible();
+  await expect(editor(page).getByTestId('zwf-spreadsheet').locator('.ic-root')).toBeVisible();
   await expect.poll(fileText(page, '/data/table.ic.gen.typ')).toContain('("Item", "Value")');
   await expect.poll(value(page)).toBe('#import "data/table.ic.gen.typ": sheets\n\n= Results\n\nThe runs:\n\n#figure(sheets.Sheet1, caption: [ ])\n');
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
 });
 
 test('/diagram: a new .drawio.png as a figure, opened in the diagram editor', async ({ page }) => {
@@ -60,9 +60,9 @@ test('/diagram: a new .drawio.png as a figure, opened in the diagram editor', as
   await page.keyboard.press('Enter');
   await acceptName(page, 'Insert diagram', 'diagrams/diagram.drawio.png');
 
-  await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText('stub');
+  await expect(editor(page).getByTestId('zwf-diagram').frameLocator('iframe').locator('#status')).toHaveText('stub');
   await expect.poll(value(page)).toBe('= Results\n\nThe runs:\n\n#figure(image("diagrams/diagram.drawio.png"), caption: [ ])\n');
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
 });
 
 test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman import, opened in the text editor; ⌘/Ctrl+click on its picture ("Edit diagram") opens it again', async ({ page }) => {
@@ -72,16 +72,16 @@ test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman 
   await page.keyboard.press('Enter');
   await acceptName(page, 'Insert Mermaid diagram', 'diagrams/diagram.mmd');
 
-  const text = editor(page).getByTestId('typst-text-file');
+  const text = editor(page).getByTestId('zwf-text-file');
   await expect(text.locator('.cm-content')).toContainText('flowchart LR');
   await expect.poll(value(page)).toBe(
     '#import "@preview/merman:0.4.0": mermaid\n\n= Results\n\nThe runs:\n\n#figure(mermaid(read("diagrams/diagram.mmd"), width: 100%), caption: [ ])\n',
   );
   // the merman package is downloaded from packages.typst.org
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/, { timeout: 30_000 });
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/, { timeout: 30_000 });
 
-  await editor(page).getByTestId('typst-files').locator('[role=treeitem][title="main.typ"]').click();
-  const picture = visual(page).locator('.typst-visual__raw-block', { hasText: 'diagram.mmd' }).locator('img.typst-visual__rendering');
+  await editor(page).getByTestId('zwf-files').locator('[role=treeitem][title="main.typ"]').click();
+  const picture = visual(page).locator('.zwf-visual__raw-block', { hasText: 'diagram.mmd' }).locator('img.zwf-visual__rendering');
   await picture.hover();
   await expect(page.getByRole('tooltip')).toHaveText(/^Edit diagram\s*\(/);
   await picture.click({ modifiers: ['ControlOrMeta'] });

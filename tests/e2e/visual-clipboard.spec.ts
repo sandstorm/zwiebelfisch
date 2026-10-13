@@ -33,7 +33,7 @@ test('pasted Typst text is read as Typst: a figure stays a figure, in one undo s
   const before = await sourceText(page)();
   await paste(page, { 'text/plain': FIGURE });
   await expect.poll(sourceText(page)).toContain(`\n${FIGURE}\n`);
-  await expect(visual(page).locator('figure, .typst-visual__raw-block', { hasText: 'A box' }).first()).toBeVisible();
+  await expect(visual(page).locator('figure, .zwf-visual__raw-block', { hasText: 'A box' }).first()).toBeVisible();
   await page.keyboard.press('ControlOrMeta+z');
   await expect.poll(sourceText(page)).toBe(before);
 });
@@ -83,7 +83,7 @@ test('pasted Typst gets the imports its names need, in the same undo step', asyn
 test('the Source editor adds the imports of a paste too', async ({ page }) => {
   await setSource(page, '= Imports\n\nSome text.\n', 'Some text.');
   await page.getByRole('tab', { name: 'Source' }).click();
-  const content = page.getByTestId('typst-source').locator('.cm-content');
+  const content = page.getByTestId('zwf-source').locator('.cm-content');
   await content.click();
   await page.keyboard.press('ControlOrMeta+End');
   await content.evaluate((element, text) => {

@@ -27,7 +27,7 @@ function setup() {
     executeCommand: async (command, ...args) => void ran.push([command, document.activeElement === trigger, ...args]),
   });
   const show = (resourceKind = 'folder') => menus.show('explorer/context', { anchor: { x: 10, y: 20 }, title: 'chapters', context: { resourceKind }, args: ['/chapters'] });
-  const items = () => [...host.querySelectorAll<HTMLElement>('.typst-context-menu__item')];
+  const items = () => [...host.querySelectorAll<HTMLElement>('.zwf-context-menu__item')];
   const key = (key: string) => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   const isOpen = () => host.querySelector('[role=menu]') !== null;
   return { host, trigger, menus, show, ran, asked, items, key, isOpen };
@@ -55,14 +55,14 @@ describe('ContextMenu', () => {
     ];
     const menus = new ContextMenu(host, { items: () => items, executeCommand: async () => {} });
     menus.show('view', { anchor: host, title: 'View', context: { wrap: true } });
-    const entries = [...host.querySelectorAll<HTMLElement>('.typst-context-menu__item')];
+    const entries = [...host.querySelectorAll<HTMLElement>('.zwf-context-menu__item')];
     expect(entries.map((entry) => [entry.getAttribute('role'), entry.getAttribute('aria-checked'), entry.textContent])).toEqual([
       ['menuitemcheckbox', 'true', '✓Wrap'],
       ['menuitemcheckbox', 'false', 'Guides'],
       ['menuitem', null, 'Reset'],
     ]);
     expect(shown).toEqual([{ wrap: true }]);
-    expect(host.querySelector('[role=menu]')!.classList.contains('typst-context-menu--checks')).toBe(true);
+    expect(host.querySelector('[role=menu]')!.classList.contains('zwf-context-menu--checks')).toBe(true);
   });
 
   it('moves with the arrow keys, Home and End', () => {

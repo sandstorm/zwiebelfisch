@@ -100,7 +100,7 @@ export const STRIKE: TypstMarkSpec = plainCallMark('strike', Strike);
 const Highlight = TiptapMark.create({
   name: 'highlight',
   parseHTML: () => [{ tag: 'mark' }],
-  renderHTML: ({ HTMLAttributes }) => ['mark', mergeAttributes({ class: 'typst-markup__highlight' }, HTMLAttributes), 0],
+  renderHTML: ({ HTMLAttributes }) => ['mark', mergeAttributes({ class: 'zwf-markup__highlight' }, HTMLAttributes), 0],
 });
 
 export const HIGHLIGHT: TypstMarkSpec = plainCallMark('highlight', Highlight);
@@ -120,7 +120,7 @@ function plainCallMark(name: string, tiptap: AnyExtension): TypstMarkSpec {
 // -------------------------------------------------------------------- links
 
 const Link = starterKitPart('typstLink', {
-  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-markup__link', target: null, rel: null } },
+  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'zwf-markup__link', target: null, rel: null } },
 }).extend({
   // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
   addExtensions() {
@@ -175,7 +175,7 @@ const TypstCode = Code.extend({
   addAttributes() {
     return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
   },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline', spellcheck: 'false' } });
+}).configure({ HTMLAttributes: { class: 'zwf-markup__code-inline', spellcheck: 'false' } });
 
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
 export const CODE: TypstMarkSpec = {
@@ -217,7 +217,7 @@ const TypstCodeBlock = CodeBlock.extend({
   addNodeView() {
     return codeBlockView;
   },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' } });
+}).configure({ HTMLAttributes: { class: 'zwf-markup__code-block' } });
 
 /**
  * Raw text Typst shows as a block (3+ backticks around a line break): a code
@@ -278,7 +278,7 @@ function codeLines(p: TypstParseContext, code: RawCode, indent: string): PlacedN
 
 // ------------------------------------------------------------------- quotes
 
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-markup__quote' } } }).extend({
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'zwf-markup__quote' } } }).extend({
   // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
   addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
 });

@@ -50,9 +50,9 @@ function setup(text = 'Text\n', items: readonly CompletionItem[] = ITEMS, trigge
     ]),
   );
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
-  const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!;
-  const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-visual__suggest-label')!.textContent);
-  const chosen = () => list.querySelector('[aria-selected="true"] .typst-visual__suggest-label')?.textContent;
+  const list = parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"]')!;
+  const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.zwf-visual__suggest-label')!.textContent);
+  const chosen = () => list.querySelector('[aria-selected="true"] .zwf-visual__suggest-label')?.textContent;
   editor.commands.setTextSelection(editor.state.doc.content.size - 1); // the end of the text
   return { doc, editor, list, options, chosen, asked };
 }
@@ -174,7 +174,7 @@ describe('completion lists', () => {
     const first = list.querySelector('[role="option"]')!;
     expect(input.getAttribute('aria-activedescendant')).toBe(first.id);
     expect(first.getAttribute('aria-selected')).toBe('true');
-    expect(list.querySelector('.typst-visual__suggest-detail')?.textContent).toBe('Fruit');
+    expect(list.querySelector('.zwf-visual__suggest-detail')?.textContent).toBe('Fruit');
     press(editor, 'ArrowDown');
     expect(input.getAttribute('aria-activedescendant')).toBe(list.querySelectorAll('[role="option"]')[1].id);
     press(editor, 'Escape');

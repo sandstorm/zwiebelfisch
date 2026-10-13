@@ -5,7 +5,7 @@ import { caretAtEnd, tableBar } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const visual = (page: Page) => page.locator('[data-testid=typst-visual]:visible');
+const visual = (page: Page) => page.locator('[data-testid=zwf-visual]:visible');
 
 /** The text of `path` in the demo's project (the demo page has no <zwiebelfisch-editor>: `window.editor`). */
 const fileText = (page: Page, path: string) => () =>
@@ -20,22 +20,22 @@ test.describe('a table with expression cells (plain page, boxes rendered)', () =
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/examples/plain-html/');
-    await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+    await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
     await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   });
 
   // `ms(18)` is drawn by the body of `ms`: its glyphs carry spans there, not in the cell, so the
   // preview has no picture for the cell's range and the box shows its code (followups-2026-10-10)
   test('is a Visual table: header cells, the expression an editable code box', async ({ page }) => {
-    const table = page.getByTestId('typst-visual').locator('table');
+    const table = page.getByTestId('zwf-visual').locator('table');
     await expect(table.locator('th')).toHaveText(['Pages', 'Cold']);
-    const box = table.locator('td .typst-visual__raw-inline');
+    const box = table.locator('td .zwf-visual__raw-inline');
     await expect(box.locator('.cm-content')).toHaveText('ms(18)');
-    await expect(box.locator('img.typst-visual__rendering')).toBeHidden();
+    await expect(box.locator('img.zwf-visual__rendering')).toBeHidden();
   });
 
   test("editing the expression's code changes only it", async ({ page }) => {
-    const box = page.getByTestId('typst-visual').locator('td .typst-visual__raw-inline');
+    const box = page.getByTestId('zwf-visual').locator('td .zwf-visual__raw-inline');
     await box.locator('.cm-content').click();
     await page.keyboard.press('End');
     await page.keyboard.press('ArrowLeft');
@@ -51,12 +51,12 @@ test.describe('a table with track-size columns (plain page)', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/examples/plain-html/');
-    await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+    await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
     await page.locator('zwiebelfisch-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   });
 
   test('is a Visual table; typing in a cell changes only it; columns change the array', async ({ page }) => {
-    const table = page.getByTestId('typst-visual').locator('table');
+    const table = page.getByTestId('zwf-visual').locator('table');
     await expect(table.locator('th')).toHaveText(['Extension', 'What it adds', 'Through']);
     await caretAtEnd(table.locator('td', { hasText: 'file panel' }).locator('p'));
     await page.keyboard.type('!');
@@ -74,7 +74,7 @@ test.describe('the advanced example', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto(`/?example=advanced#${RESULTS}`);
-    await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+    await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   });
 
   test('the timings table is a table figure with a caption, not a raw box', async ({ page }) => {

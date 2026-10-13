@@ -7,20 +7,20 @@ type Editor = HTMLElement & { value: string };
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
 });
 
 async function load(page: Page, value: string) {
   await page.locator('zwiebelfisch-editor').evaluate((el: Editor, text) => (el.value = text), value);
 }
 
-const visual = (page: Page) => page.getByTestId('typst-visual');
+const visual = (page: Page) => page.getByTestId('zwf-visual');
 const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
 const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
 test('a code block shows its language and text; typing edits the code in place', async ({ page }) => {
   await load(page, 'Intro\n\n```rust\nfn main() {}\n```\n');
-  const block = visual(page).locator('.typst-markup__code-block');
+  const block = visual(page).locator('.zwf-markup__code-block');
   await expect(block.getByLabel('Language')).toHaveValue('rust');
   await expect(block.locator('pre code')).toHaveText('fn main() {}');
   await caretAtEnd(block.locator('pre code'));
@@ -42,7 +42,7 @@ test('Code block turns the current paragraph into a fenced block', async ({ page
   await load(page, 'Intro\n\nlet a = 1\n');
   await visual(page).locator('p', { hasText: 'let a = 1' }).click();
   await chooseFrom(toolbar(page), 'Insert', 'Code block');
-  await expect(visual(page).locator('.typst-markup__code-block pre code')).toHaveText('let a = 1');
+  await expect(visual(page).locator('.zwf-markup__code-block pre code')).toHaveText('let a = 1');
   await expect.poll(value(page)).toBe('Intro\n\n```\nlet a = 1\n```\n');
 });
 
@@ -69,7 +69,7 @@ test('Table of contents inserts #outline(), shown compiled with its label', asyn
   await caretAtEnd(visual(page).locator('p', { hasText: 'Text' }));
   await chooseFrom(toolbar(page), 'Insert', 'Table of contents');
   await expect.poll(value(page)).toBe('= Intro\n\nText\n\n#outline()\n\n= Details\n');
-  const box = visual(page).locator('.typst-outline__box');
-  await expect(box.locator('.typst-visual__box-label')).toHaveText('Table of contents');
-  await expect(box.locator('img.typst-visual__rendering')).toBeVisible();
+  const box = visual(page).locator('.zwf-outline__box');
+  await expect(box.locator('.zwf-visual__box-label')).toHaveText('Table of contents');
+  await expect(box.locator('img.zwf-visual__rendering')).toBeVisible();
 });

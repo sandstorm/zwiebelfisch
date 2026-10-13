@@ -47,7 +47,7 @@ function cursorAfter(editor: Editor, text: string): void {
   editor.commands.setTextSelection(end);
 }
 
-const chip = (parent: HTMLElement, target: string) => parent.querySelector<HTMLElement>(`.typst-labels__ref[data-target="${target}"]`)!;
+const chip = (parent: HTMLElement, target: string) => parent.querySelector<HTMLElement>(`.zwf-labels__ref[data-target="${target}"]`)!;
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 describe('references in the Visual editor', () => {
@@ -57,36 +57,36 @@ describe('references in the Visual editor', () => {
     expect(chip(parent, 'method').dataset.hint).toBe('Section · Method');
     expect(chip(parent, 'fig:compile-times').dataset.hint).toBe('Figure · Cold (dark) and incremental (light)…');
     expect(chip(parent, 'results').hasAttribute('title')).toBe(false); // the hover is its document link's
-    expect(parent.querySelector('.typst-labels__ref--unknown')).toBeNull();
+    expect(parent.querySelector('.zwf-labels__ref--unknown')).toBeNull();
   });
 
   it('marks references to missing labels, and unmarks them once the label exists', async () => {
     const { parent, project } = setup(path('/chapters/introduction.typ'), (files) => {
       files['/chapters/method.typ'] = files['/chapters/method.typ'].replace('<method>', '<approach>');
     });
-    expect(chip(parent, 'method').classList.contains('typst-labels__ref--unknown')).toBe(true);
+    expect(chip(parent, 'method').classList.contains('zwf-labels__ref--unknown')).toBe(true);
     expect(chip(parent, 'method').title).toContain('no label <method>');
     const method = project.document(path('/chapters/method.typ'))!;
     method.setText(method.text.replace('<approach>', '<method>'), 'test');
     await tick();
-    expect(chip(parent, 'method').classList.contains('typst-labels__ref--unknown')).toBe(false);
+    expect(chip(parent, 'method').classList.contains('zwf-labels__ref--unknown')).toBe(false);
   });
 
   it('shows the heading label as a tag in the heading, not as a raw box', () => {
     const { parent } = setup();
-    const tag = parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]');
+    const tag = parent.querySelector<HTMLElement>('h1 [data-testid="zwf-label-tag"]');
     expect(tag?.textContent).toBe('intro');
     expect(parent.querySelector('h1')?.textContent).toBe('Introductionintro');
-    expect([...parent.querySelectorAll('.typst-visual__raw-block')].some((b) => b.textContent?.includes('<intro>'))).toBe(false);
+    expect([...parent.querySelectorAll('.zwf-visual__raw-block')].some((b) => b.textContent?.includes('<intro>'))).toBe(false);
   });
 
   it('typing @ lists the project\'s labels; Enter inserts the chosen one as a reference', () => {
     const { parent, editor, text } = setup();
     cursorAfter(editor, 'sums them up');
     type(editor, ' See @');
-    const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!;
+    const list = parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"]')!;
     expect(list.hidden).toBe(false);
-    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-visual__suggest-label')!.textContent);
+    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.zwf-visual__suggest-label')!.textContent);
     expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'fig:measurement', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
     type(editor, 'fig');
     expect(options()).toEqual(['fig:measurement', 'fig:compile-times']);
@@ -102,7 +102,7 @@ describe('references in the Visual editor', () => {
     cursorAfter(editor, 'sums them up');
     type(editor, ' @');
     press(editor, 'ArrowDown');
-    const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!;
+    const list = parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"]')!;
     expect(list.querySelector('[aria-selected="true"]')?.textContent).toContain('method');
     expect(press(editor, 'Escape')).toBe(true);
     expect(list.hidden).toBe(true);
@@ -128,7 +128,7 @@ describe('references in the Visual editor', () => {
   });
 
   const tagNamed = (parent: HTMLElement, name: string) =>
-    [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === name)!;
+    [...parent.querySelectorAll<HTMLElement>('[data-testid="zwf-label-tag"]')].find((t) => t.textContent === name)!;
 
   it('renaming a label from its tag updates every reference in the project (the first choice)', async () => {
     const prompts = new TestPrompts().answer('Rename…', 'fig:times');
@@ -159,7 +159,7 @@ describe('references in the Visual editor', () => {
   it('without references, Rename renames the label, and Remove removes it', async () => {
     const prompts = new TestPrompts().answer('Rename…', 'start here', 'Remove label');
     const { parent, text } = setup(undefined, undefined, prompts);
-    const tagOf = () => parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]');
+    const tagOf = () => parent.querySelector<HTMLElement>('h1 [data-testid="zwf-label-tag"]');
     tagOf()!.click();
     await tick();
     expect(prompts.asked[0].items).toMatchObject([{ label: 'Rename…', description: undefined }, { label: 'Remove label' }]); // nothing refers to <intro>
@@ -174,7 +174,7 @@ describe('references in the Visual editor', () => {
   it('a cancelled choice changes nothing', async () => {
     const { parent, text } = setup(undefined, undefined, new TestPrompts());
     const before = text(path('/chapters/introduction.typ'));
-    parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]')!.click();
+    parent.querySelector<HTMLElement>('h1 [data-testid="zwf-label-tag"]')!.click();
     await tick();
     expect(text(path('/chapters/introduction.typ'))).toBe(before);
   });
@@ -189,6 +189,6 @@ describe('references without the other constructs', () => {
     const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     cursorAfter(editor, 'Text');
     type(editor, ' @');
-    expect(parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!.hidden).toBe(false);
+    expect(parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"]')!.hidden).toBe(false);
   });
 });

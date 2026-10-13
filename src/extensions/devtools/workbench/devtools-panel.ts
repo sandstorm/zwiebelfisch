@@ -35,18 +35,18 @@ export class DevtoolsPanel {
       contributions: new ContributionsTab(doc, options.contributions),
       events: new EventsTab(doc, options.events),
     };
-    const root = element(doc, 'div', 'typst-devtools');
-    root.dataset.testid = 'typst-devtools';
+    const root = element(doc, 'div', 'zwf-devtools');
+    root.dataset.testid = 'zwf-devtools';
     this.#memory = new MemoryLine(doc, options.memory);
     root.append(this.#memory.element);
-    this.#tabStrip = root.appendChild(element(doc, 'div', 'typst-devtools__tabs'));
+    this.#tabStrip = root.appendChild(element(doc, 'div', 'zwf-devtools__tabs'));
     this.#tabStrip.setAttribute('role', 'tablist');
     for (const tab of TABS) {
-      const button = this.#tabStrip.appendChild(element(doc, 'button', 'typst-devtools__tab', tab.label));
+      const button = this.#tabStrip.appendChild(element(doc, 'button', 'zwf-devtools__tab', tab.label));
       button.setAttribute('role', 'tab');
       button.addEventListener('click', () => this.show(tab.id));
     }
-    this.#content = root.appendChild(element(doc, 'div', 'typst-devtools__content'));
+    this.#content = root.appendChild(element(doc, 'div', 'zwf-devtools__content'));
     this.#content.setAttribute('role', 'tabpanel');
     body.append(root);
     this.show('document');

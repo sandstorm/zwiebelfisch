@@ -67,15 +67,15 @@ describe('VisualEditor', () => {
     const reveal = (from: number, to: number) => view.reveal(SourceRange.of({ from, to }));
     const selected = (box: CodeView) => box.state.sliceDoc(box.state.selection.main.from, box.state.selection.main.to);
     reveal(source.indexOf('size'), source.indexOf('size') + 4);
-    expect(selected(code('.typst-visual__raw-block'))).toBe('size');
-    expect(code('.typst-visual__raw-block').hasFocus).toBe(true);
+    expect(selected(code('.zwf-visual__raw-block'))).toBe('size');
+    expect(code('.zwf-visual__raw-block').hasFocus).toBe(true);
     reveal(source.indexOf('(text)') + 1, source.indexOf('(text)') + 5);
-    expect(selected(code('.typst-visual__raw-inline'))).toBe('text');
+    expect(selected(code('.zwf-visual__raw-inline'))).toBe('text');
     const block = source.indexOf('#set');
     reveal(block, block);
-    expect(code('.typst-visual__raw-block').hasFocus).toBe(false);
+    expect(code('.zwf-visual__raw-block').hasFocus).toBe(false);
     reveal(block, source.length - 1);
-    expect(code('.typst-visual__raw-block').hasFocus).toBe(false);
+    expect(code('.zwf-visual__raw-block').hasFocus).toBe(false);
     expect(view.selection()).toEqual({ from: block, to: source.length - 1 });
   });
 
@@ -120,8 +120,8 @@ describe('VisualEditor', () => {
     };
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('#divider()\n\nText\n'), VisualEditorHost.from([{ id: 'divider', activate: ({ visualEditor }) => visualEditor.registerNode(divider) }]));
-    expect(parent.querySelector('hr')?.getAttribute('data-typst-pseudo')).toBe('own');
-    expect(parent.querySelector('p')?.hasAttribute('data-typst-pseudo')).toBe(false);
+    expect(parent.querySelector('hr')?.getAttribute('data-zwf-pseudo')).toBe('own');
+    expect(parent.querySelector('p')?.hasAttribute('data-zwf-pseudo')).toBe(false);
   });
 });
 

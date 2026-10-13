@@ -1,81 +1,81 @@
-/* The widget's color tokens (--te-*) and its frame (the grid of the two sides and the editing area), scoped under
-   .typst-editor and put in first by createEditor. Each host brings its own stylesheet (hosts/<name>/<name>.css,
+/* The widget's color tokens (--zwf-*) and its frame (the grid of the two sides and the editing area), scoped under
+   .zwf-editor and put in first by createEditor. Each host brings its own stylesheet (hosts/<name>/<name>.css,
    added by the workbench), each extension its own (registerStyleSheet). See editor.ts and docs/30_configuration/02_embedding.typ. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (hosts/workbench/color-scheme/). */
-.typst-editor[data-theme='light'] { color-scheme: light; }
-.typst-editor[data-theme='dark'] { color-scheme: dark; }
-.typst-editor[data-theme='auto'] { color-scheme: light dark; }
-.typst-editor {
-  --te-bg: light-dark(white, #0d1117);
+.zwf-editor[data-theme='light'] { color-scheme: light; }
+.zwf-editor[data-theme='dark'] { color-scheme: dark; }
+.zwf-editor[data-theme='auto'] { color-scheme: light dark; }
+.zwf-editor {
+  --zwf-bg: light-dark(white, #0d1117);
   /* raised: buttons, popovers, menus, cards, the selected tab */
-  --te-surface: light-dark(white, #1c2128);
+  --zwf-surface: light-dark(white, #1c2128);
   /* toolbars, side panels, code blocks */
-  --te-subtle: light-dark(#f6f8fa, #161b22);
-  --te-hover: light-dark(#eef2f7, #2a313c);
-  --te-chip: light-dark(#f1f3f6, #262c36);
-  --te-divider: light-dark(#eef0f3, #262c36);
-  --te-control: light-dark(#c4cad3, #484f58);
-  --te-border: light-dark(#d9dce1, #30363d);
-  --te-preview-bg: light-dark(#eef0f3, #22272e);
-  --te-text: light-dark(#1f2328, #e6edf3);
-  --te-text-2: light-dark(#3d4451, #c9d1d9);
-  --te-muted: light-dark(#57606a, #9198a1);
-  --te-muted-2: light-dark(#6e7781, #848d97);
-  --te-faint: light-dark(#8c959f, #6e7681);
-  --te-faint-2: light-dark(#b8bec8, #484f58);
-  --te-accent: light-dark(#2f6feb, #4493f8);
-  --te-accent-faint: light-dark(#f4f7fd, #131c2b);
-  --te-accent-line: light-dark(#8fb3ec, #3b6db3);
-  --te-selected: light-dark(#e7efff, #1c2d4a);
-  --te-selected-strong: light-dark(#dbe7ff, #22406e);
-  --te-jump: light-dark(rgba(47, 111, 235, 0.25), rgba(68, 147, 248, 0.3));
+  --zwf-subtle: light-dark(#f6f8fa, #161b22);
+  --zwf-hover: light-dark(#eef2f7, #2a313c);
+  --zwf-chip: light-dark(#f1f3f6, #262c36);
+  --zwf-divider: light-dark(#eef0f3, #262c36);
+  --zwf-control: light-dark(#c4cad3, #484f58);
+  --zwf-border: light-dark(#d9dce1, #30363d);
+  --zwf-preview-bg: light-dark(#eef0f3, #22272e);
+  --zwf-text: light-dark(#1f2328, #e6edf3);
+  --zwf-text-2: light-dark(#3d4451, #c9d1d9);
+  --zwf-muted: light-dark(#57606a, #9198a1);
+  --zwf-muted-2: light-dark(#6e7781, #848d97);
+  --zwf-faint: light-dark(#8c959f, #6e7681);
+  --zwf-faint-2: light-dark(#b8bec8, #484f58);
+  --zwf-accent: light-dark(#2f6feb, #4493f8);
+  --zwf-accent-faint: light-dark(#f4f7fd, #131c2b);
+  --zwf-accent-line: light-dark(#8fb3ec, #3b6db3);
+  --zwf-selected: light-dark(#e7efff, #1c2d4a);
+  --zwf-selected-strong: light-dark(#dbe7ff, #22406e);
+  --zwf-jump: light-dark(rgba(47, 111, 235, 0.25), rgba(68, 147, 248, 0.3));
   /* the editor's selection shown elsewhere (the preview): translucent, so the text stays readable */
-  --te-selection-highlight: light-dark(rgba(47, 111, 235, 0.2), rgba(68, 147, 248, 0.32));
-  --te-hint: light-dark(#4b6a9b, #8fb3ec);
-  --te-purple: light-dark(#8250df, #ab7df8);
-  --te-danger: light-dark(#cf222e, #f85149);
-  --te-danger-soft: light-dark(#fff1f0, #3d1a1d);
-  --te-success: light-dark(#1a7f37, #3fb950);
-  --te-success-soft: light-dark(#f1f8f3, #13291b);
-  --te-warning: light-dark(#9a6700, #d29922);
-  --te-note: light-dark(rgba(250, 190, 20, 0.28), rgba(210, 153, 34, 0.25));
-  --te-note-line: light-dark(#e0a800, #bb8009);
-  --te-note-strong: light-dark(rgba(250, 190, 20, 0.55), rgba(210, 153, 34, 0.5));
-  --te-note-bg: light-dark(#fff8e0, #3a2e0c);
-  --te-note-text: light-dark(#6b5200, #e3b341);
+  --zwf-selection-highlight: light-dark(rgba(47, 111, 235, 0.2), rgba(68, 147, 248, 0.32));
+  --zwf-hint: light-dark(#4b6a9b, #8fb3ec);
+  --zwf-purple: light-dark(#8250df, #ab7df8);
+  --zwf-danger: light-dark(#cf222e, #f85149);
+  --zwf-danger-soft: light-dark(#fff1f0, #3d1a1d);
+  --zwf-success: light-dark(#1a7f37, #3fb950);
+  --zwf-success-soft: light-dark(#f1f8f3, #13291b);
+  --zwf-warning: light-dark(#9a6700, #d29922);
+  --zwf-note: light-dark(rgba(250, 190, 20, 0.28), rgba(210, 153, 34, 0.25));
+  --zwf-note-line: light-dark(#e0a800, #bb8009);
+  --zwf-note-strong: light-dark(rgba(250, 190, 20, 0.55), rgba(210, 153, 34, 0.5));
+  --zwf-note-bg: light-dark(#fff8e0, #3a2e0c);
+  --zwf-note-text: light-dark(#6b5200, #e3b341);
   /* highlighted text (#highlight[..]): Typst's default fill in light, a dimmer yellow behind light text in dark */
-  --te-highlight: light-dark(rgba(255, 253, 17, 0.63), rgba(250, 230, 60, 0.3));
+  --zwf-highlight: light-dark(rgba(255, 253, 17, 0.63), rgba(250, 230, 60, 0.3));
   /* syntax highlighting (hosts/source-editor/code-colors.ts); light: CodeMirror's default colors */
-  --te-syn-meta: light-dark(#404740, #8b949e);
-  --te-syn-keyword: light-dark(#770088, #ff7b72);
-  --te-syn-atom: light-dark(#221199, #79c0ff);
-  --te-syn-literal: light-dark(#116644, #7ee787);
-  --te-syn-string: light-dark(#aa1111, #a5d6ff);
-  --te-syn-string-2: light-dark(#ee4400, #ffa657);
-  --te-syn-definition: light-dark(#0000ff, #d2a8ff);
-  --te-syn-local: light-dark(#3300aa, #ffa657);
-  --te-syn-type: light-dark(#008855, #ffa657);
-  --te-syn-class: light-dark(#116677, #ffa657);
-  --te-syn-macro: light-dark(#225566, #d2a8ff);
-  --te-syn-property: light-dark(#0000cc, #79c0ff);
-  --te-syn-comment: light-dark(#994400, #8b949e);
-  --te-syn-invalid: light-dark(#ff0000, #f85149);
-  background: var(--te-bg);
-  color: var(--te-text);
+  --zwf-syn-meta: light-dark(#404740, #8b949e);
+  --zwf-syn-keyword: light-dark(#770088, #ff7b72);
+  --zwf-syn-atom: light-dark(#221199, #79c0ff);
+  --zwf-syn-literal: light-dark(#116644, #7ee787);
+  --zwf-syn-string: light-dark(#aa1111, #a5d6ff);
+  --zwf-syn-string-2: light-dark(#ee4400, #ffa657);
+  --zwf-syn-definition: light-dark(#0000ff, #d2a8ff);
+  --zwf-syn-local: light-dark(#3300aa, #ffa657);
+  --zwf-syn-type: light-dark(#008855, #ffa657);
+  --zwf-syn-class: light-dark(#116677, #ffa657);
+  --zwf-syn-macro: light-dark(#225566, #d2a8ff);
+  --zwf-syn-property: light-dark(#0000cc, #79c0ff);
+  --zwf-syn-comment: light-dark(#994400, #8b949e);
+  --zwf-syn-invalid: light-dark(#ff0000, #f85149);
+  background: var(--zwf-bg);
+  color: var(--zwf-text);
   display: grid;
   /* left side | editing area | right side (hosts/workbench/workbench.css). An open right side is a share of the
-     widget (half; its separator sets --te-right-side), so opening or resizing the left side narrows only the editing
+     widget (half; its separator sets --zwf-right-side), so opening or resizing the left side narrows only the editing
      area (it keeps min(20rem, 25%), then the right side gives way too); a closed side is only its rail. */
-  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) var(--te-right-side, auto);
+  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) var(--zwf-right-side, auto);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   font-family: system-ui, sans-serif;
 }
-.typst-editor__editor-area {
+.zwf-editor__editor-area {
   grid-column: 2;
   grid-row: 1;
   min-height: 0;

@@ -46,7 +46,7 @@ export function hasHighlights(state: EditorState, layer: string): boolean {
 
 type Layers = Record<string, DecorationSet>;
 
-const key = new PluginKey<Layers>('typst-highlights');
+const key = new PluginKey<Layers>('zwf-highlights');
 
 function mapLayers(layers: Layers, tr: Transaction): Layers {
   return Object.fromEntries(Object.entries(layers).map(([layer, set]) => [layer, set.map(tr.mapping, tr.doc)]));

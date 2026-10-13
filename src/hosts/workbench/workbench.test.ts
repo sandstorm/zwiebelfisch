@@ -98,7 +98,7 @@ describe('WorkbenchHost', () => {
       subscriptions.push(panel, window.registerStatusBarItem(status, { alignment: 'left' }));
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
-    expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');
+    expect(host.querySelector('.zwf-editor__status-bar')!.textContent).toBe('status');
     workbench.dispose();
     expect(host.children).toHaveLength(0);
   });
@@ -107,8 +107,8 @@ describe('WorkbenchHost', () => {
     const { host } = setup(({ workbench }) => {
       workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
     });
-    const right = host.querySelector<HTMLElement>('.typst-editor__side--right')!;
-    expect([...right.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
+    const right = host.querySelector<HTMLElement>('.zwf-editor__side--right')!;
+    expect([...right.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
     const preview = right.querySelector<HTMLElement>('[data-panel=preview]')!;
     expect(preview.querySelector('.mock-preview')).not.toBeNull();
     expect(preview.hidden).toBe(false);
@@ -119,7 +119,7 @@ describe('WorkbenchHost', () => {
     const { host, workbench } = setup(({ workbench }) => {
       workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
     }, { settings: { 'workbench.rightSidePanel': 'devtools' } });
-    const shown = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__side--right .typst-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
+    const shown = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--right .zwf-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
     expect(shown()).toEqual(['devtools']);
     workbench.updateSettings({ 'workbench.rightSidePanel': null });
     expect(shown()).toEqual([]);
@@ -171,7 +171,7 @@ describe('WorkbenchHost', () => {
         workbench.registerMenuItem('view', { command: 'test.zoom', title: 'Zoom', group: 'preview', when: (context) => context.activeCustomEditorId === SOURCE_EDITOR }),
       );
     });
-    const bar = host.querySelector<HTMLElement>('.typst-editor__tabs')!;
+    const bar = host.querySelector<HTMLElement>('.zwf-editor__tabs')!;
     const actions = () => [...bar.querySelectorAll<HTMLButtonElement>('[role=toolbar][aria-label="Editor actions"] button')];
     const viewButton = () => actions().find((button) => button.textContent === 'View');
     expect(actions().map((button) => button.textContent)).toEqual(['View']);
@@ -234,18 +234,18 @@ describe('WorkbenchHost', () => {
     const progress = (kind: PreviewProgress['kind'], title: string, detail: string | null = null): PreviewProgress => ({ kind, title, detail, fraction: null });
     made.preview!.onDidChangeProgress!(progress('engine', 'Loading the Typst compiler…', '3.1 / 6.6 MB'));
     made.preview!.onDidChangeProgress!(progress('packages', 'Downloading @preview/merman 0.4.0…'));
-    expect(host.querySelector('.typst-editor__status-bar [data-testid=typst-progress]')).toBeNull();
-    expect(host.querySelector('.typst-editor__status-bar')!.textContent).not.toContain('Loading');
+    expect(host.querySelector('.zwf-editor__status-bar [data-testid=zwf-progress]')).toBeNull();
+    expect(host.querySelector('.zwf-editor__status-bar')!.textContent).not.toContain('Loading');
     made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
     made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
-    const errors = host.querySelectorAll('[data-testid=typst-notifications] [role=alert]');
+    const errors = host.querySelectorAll('[data-testid=zwf-notifications] [role=alert]');
     expect([...errors].map((error) => error.textContent)).toEqual([expect.stringContaining('The Typst compiler could not be loaded. HTTP 404')]);
   });
 
   it('shows the text and takes edits while the preview still loads the compiler', () => {
     const { host, project } = setup();
     made.preview!.onDidChangeProgress!({ kind: 'engine', title: 'Loading the Typst compiler…', detail: null, fraction: null });
-    const content = host.querySelector<HTMLElement>('.typst-editor__editor-area .cm-content')!;
+    const content = host.querySelector<HTMLElement>('.zwf-editor__editor-area .cm-content')!;
     expect(content.textContent).toContain('= Main');
     const view = EditorView.findFromDOM(content)!;
     view.dispatch({ changes: { from: view.state.doc.length, insert: 'typed' } });
@@ -255,9 +255,9 @@ describe('WorkbenchHost', () => {
   it('shows messages, resolving to the item chosen', async () => {
     const { host, context } = setup();
     const answer = context.window.showWarningMessage('Delete a.typ?', 'Delete');
-    const message = host.querySelector<HTMLElement>('[data-testid=typst-notifications] [role=alert]')!;
+    const message = host.querySelector<HTMLElement>('[data-testid=zwf-notifications] [role=alert]')!;
     expect(message.textContent).toContain('Delete a.typ?');
-    message.querySelector<HTMLButtonElement>('.typst-notification__item')!.click();
+    message.querySelector<HTMLButtonElement>('.zwf-notification__item')!.click();
     expect(await answer).toBe('Delete');
     expect(message.isConnected).toBe(false);
   });
@@ -293,11 +293,11 @@ describe('WorkbenchHost', () => {
       registered = workbench.registerEditorFrame(frame);
       window.registerCustomEditorProvider('test.image', { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
     });
-    const source = host.querySelector('.typst-editor__custom-editor[data-view-type="sourceEditor"]')!;
+    const source = host.querySelector('.zwf-editor__custom-editor[data-view-type="sourceEditor"]')!;
     expect(frame.top.parentElement).toBe(source);
     expect(source.lastElementChild).toBe(frame.bottom);
     workbench.open(path('/logo.png'));
-    const image = host.querySelector('.typst-editor__custom-editor[data-view-type="test.image"]')!;
+    const image = host.querySelector('.zwf-editor__custom-editor[data-view-type="test.image"]')!;
     expect([frame.top.nextElementSibling, frame.bottom.previousElementSibling]).toEqual([image, image]);
     workbench.open(path('/a.typ'));
     expect(frame.top.closest('[data-view-type="sourceEditor"]:not([hidden])')).not.toBeNull();
@@ -322,15 +322,15 @@ describe('WorkbenchHost', () => {
     const { host, workbench, context } = setup(undefined, { viewType: VISUAL_EDITOR });
     const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
     expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
-    const visual = host.querySelector('.typst-editor__custom-editor[data-view-type="visualEditor"]')!;
+    const visual = host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')!;
     tabs()[1].click();
     expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
-    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(false);
     workbench.open(path('/logo.png'));
-    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
+    expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(true);
     workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
-    expect(host.querySelector('.typst-editor__custom-editor[data-view-type="visualEditor"]')).toBe(visual);
-    expect(host.querySelectorAll('.typst-editor__custom-editor[data-view-type$="Editor"]')).toHaveLength(2);
+    expect(host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')).toBe(visual);
+    expect(host.querySelectorAll('.zwf-editor__custom-editor[data-view-type$="Editor"]')).toHaveLength(2);
   });
 
   it('tells about a moved selection in an editor, after it has the new one', () => {
@@ -421,7 +421,7 @@ describe('WorkbenchHost', () => {
   it('tells whether the user works in the editing area', () => {
     const { host, workbench } = setup();
     expect(workbench.isEditorFocused()).toBe(false);
-    host.querySelector<HTMLElement>('.typst-editor__editor-area .cm-content')!.focus();
+    host.querySelector<HTMLElement>('.zwf-editor__editor-area .cm-content')!.focus();
     expect(workbench.isEditorFocused()).toBe(true);
   });
 
@@ -436,11 +436,11 @@ describe('WorkbenchHost', () => {
       ),
     );
     expect(seen).toContain('/main.typ');
-    const marked = (root: Element) => [...root.querySelectorAll('.typst-source__path')].map((mark) => mark.textContent).join('');
-    expect(marked(host.querySelector('[data-testid=typst-source]')!)).toBe('Main');
+    const marked = (root: Element) => [...root.querySelectorAll('.zwf-source__path')].map((mark) => mark.textContent).join('');
+    expect(marked(host.querySelector('[data-testid=zwf-source]')!)).toBe('Main');
     workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
     // the box holds "= Main" without the line break
-    expect(marked(host.querySelector('.typst-visual__raw-block')!)).toBe('Mai');
+    expect(marked(host.querySelector('.zwf-visual__raw-block')!)).toBe('Mai');
   });
 });
 
@@ -470,7 +470,7 @@ describe('WorkbenchHost: search everywhere', () => {
         activate: ({ commands, subscriptions }) => subscriptions.push(commands.registerCommand('test.count', () => ran.push('count'))),
       },
     ]);
-    const field = () => host.querySelector<HTMLInputElement>('.typst-quick-pick input')!;
+    const field = () => host.querySelector<HTMLInputElement>('.zwf-quick-pick input')!;
     const options = () => [...host.querySelectorAll<HTMLElement>('[role=option]')];
     const enter = () => field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     return { host, workbench, ran, field, options, enter };
@@ -480,7 +480,7 @@ describe('WorkbenchHost: search everywhere', () => {
     const { host, workbench, field } = setupSearch();
     await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
     expect(field().value).toBe('>');
-    host.querySelector<HTMLElement>('[data-testid=typst-search-everywhere]')!.click();
+    host.querySelector<HTMLElement>('[data-testid=zwf-search-everywhere]')!.click();
     expect(field().value).toBe('');
   });
 
@@ -501,11 +501,11 @@ describe('WorkbenchHost: search everywhere', () => {
       workbench.registerSidePanel('help', { label: 'Help', icon: icon(), order: 20 });
       workbench.registerSidePanel('files', { label: 'Files', icon: icon(), order: 10 });
     });
-    const left = host.querySelector<HTMLElement>('.typst-editor__side--left .typst-editor__rail')!;
-    expect([...left.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.dataset.testid)).toEqual([
-      'typst-panel-toggle-files',
-      'typst-search-everywhere',
-      'typst-panel-toggle-help',
+    const left = host.querySelector<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail')!;
+    expect([...left.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.dataset.testid)).toEqual([
+      'zwf-panel-toggle-files',
+      'zwf-search-everywhere',
+      'zwf-panel-toggle-help',
     ]);
   });
 
@@ -515,7 +515,7 @@ describe('WorkbenchHost: search everywhere', () => {
       for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) target.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', shiftKey: type === 'keydown', bubbles: true }));
     };
     const rename = workbench.window.showInputBox({ title: 'Rename' });
-    const input = host.querySelector('.typst-quick-input input')!;
+    const input = host.querySelector('.zwf-quick-input input')!;
     shiftTwice(input);
     expect(host.querySelector('[aria-label=Rename]')).not.toBeNull();
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -539,13 +539,13 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(ran).toEqual(['count']);
     workbench.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
     workbench.registerMenuItem('editor/title', { command: 'test.count', title: 'Count' });
-    const button = host.querySelector<HTMLElement>('.typst-editor__tab-action[data-command="test.count"]')!;
+    const button = host.querySelector<HTMLElement>('.zwf-editor__tab-action[data-command="test.count"]')!;
     expect(button.title).toBe('Count (Ctrl+Shift+C)');
-    host.querySelector<HTMLElement>('.typst-editor__view-menu')!.click();
-    expect(host.querySelector('.typst-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
+    host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.click();
+    expect(host.querySelector('.zwf-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
     const panel = workbench.registerSidePanel('files', { label: 'Files', icon: workbench.ownerDocument.createElement('span') });
     workbench.commands.registerKeybinding('Alt+Digit1', 'workbench.view.files');
-    const rail = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!;
+    const rail = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!;
     rail.dispatchEvent(new Event('pointerenter'));
     expect(rail.title).toBe('Files (Alt+1)');
     await workbench.commands.executeCommand('workbench.view.files');
@@ -556,7 +556,7 @@ describe('WorkbenchHost: search everywhere', () => {
     const { workbench, options, enter } = setupSearch();
     await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':');
     // free text settings (workbench.rightSidePanel, test.name) are not offered
-    expect(options().map((option) => option.querySelector('.typst-quick-pick__label')!.textContent)).toEqual(['Workbench: Theme', 'Test: Wrap', 'Test: Color']);
+    expect(options().map((option) => option.querySelector('.zwf-quick-pick__label')!.textContent)).toEqual(['Workbench: Theme', 'Test: Wrap', 'Test: Color']);
     await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':wrap');
     enter();
     expect(workbench.settings['test.wrap']).toBe(true);

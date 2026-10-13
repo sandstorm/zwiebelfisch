@@ -25,17 +25,17 @@ export class ScopePicker {
   #activeFile: ProjectPath;
 
   constructor(doc: Document, window: Pick<WindowApi, 'activeFile' | 'onDidChangeActiveFile'>) {
-    this.element = element(doc, 'div', 'typst-search__scope');
-    this.#select = element(doc, 'select', 'typst-search__scope-select');
+    this.element = element(doc, 'div', 'zwf-search__scope');
+    this.#select = element(doc, 'select', 'zwf-search__scope-select');
     this.#select.setAttribute('aria-label', 'Search in');
     for (const [value, label] of [['project', 'Project'], ['file', 'Current file'], ['folder', 'Folder']]) this.#select.appendChild(element(doc, 'option', '', label)).value = value;
-    this.#target = element(doc, 'span', 'typst-search__scope-target');
-    this.#name = this.#target.appendChild(element(doc, 'span', 'typst-search__scope-name'));
-    this.#clear = this.#target.appendChild(element(doc, 'button', 'typst-search__scope-clear', '×'));
+    this.#target = element(doc, 'span', 'zwf-search__scope-target');
+    this.#name = this.#target.appendChild(element(doc, 'span', 'zwf-search__scope-name'));
+    this.#clear = this.#target.appendChild(element(doc, 'button', 'zwf-search__scope-clear', '×'));
     this.#clear.type = 'button';
     this.#clear.title = 'Search the whole project';
     this.#clear.setAttribute('aria-label', 'Search the whole project');
-    this.element.append(element(doc, 'span', 'typst-search__scope-label', 'in'), this.#select, this.#target);
+    this.element.append(element(doc, 'span', 'zwf-search__scope-label', 'in'), this.#select, this.#target);
     this.#activeFile = window.activeFile;
     this.#select.addEventListener('change', () => this.#chose(this.#select.value));
     this.#clear.addEventListener('click', () => this.pick({ kind: 'project' }));
@@ -79,7 +79,7 @@ export class ScopePicker {
     const choice = this.#choice;
     this.#select.value = choice.kind;
     this.#target.hidden = choice.kind === 'project';
-    this.#target.classList.toggle('typst-search__scope-target--folder', choice.kind === 'folder');
+    this.#target.classList.toggle('zwf-search__scope-target--folder', choice.kind === 'folder');
     this.#clear.hidden = choice.kind !== 'folder';
     this.#name.textContent = choice.kind === 'folder' ? `${ProjectPath.displayName(choice.path)}/` : ProjectPath.displayName(this.#activeFile);
   }

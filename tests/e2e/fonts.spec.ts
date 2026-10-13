@@ -8,7 +8,7 @@ test('loads only the default fonts the document uses, as separate assets, and re
     if (/\.(otf|ttf)$/.test(new URL(request.url()).pathname)) fonts.push(request.url());
   });
   await page.goto('/');
-  const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
+  const svg = page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first();
   await expect(svg.locator('use').first()).toBeAttached();
   // the simple example: Libertinus Serif regular, bold and italic, the math font and DejaVu Sans Mono for raw text
   // (demo/examples.test.ts)
@@ -24,24 +24,24 @@ test('loads a font the document starts using later', async ({ page }) => {
     if (/\.(otf|ttf)$/.test(new URL(request.url()).pathname)) fonts.push(request.url());
   });
   await page.goto('/');
-  const preview = page.getByTestId('typst-preview');
-  await expect(preview.locator('.typst-preview__page svg use').first()).toBeAttached();
+  const preview = page.getByTestId('zwf-preview');
+  await expect(preview.locator('.zwf-preview__page svg use').first()).toBeAttached();
   await expect.poll(() => fonts.length).toBe(5);
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.getByTestId('typst-source').locator('.cm-content').click();
+  await page.getByTestId('zwf-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   // strong and emphasised text is set in Libertinus Serif Bold Italic
   await page.keyboard.type('\n\nSome *_strong emphasis_*');
   await expect.poll(() => fonts.some((url) => url.includes('LibertinusSerif-BoldItalic'))).toBe(true);
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 });
 
 test('uses the font files among the project files: the documentation sets its text in Gabarito from fonts/', async ({ page }) => {
   await page.goto('/?example=docs');
   // "✓ compiled": no warning, so Typst knew the family the template asks for (demo/examples.test.ts)
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
   await openFile(page, 'fonts/Gabarito-Regular.ttf');
-  const info = page.getByTestId('typst-file-info');
+  const info = page.getByTestId('zwf-file-info');
   await expect(info.locator('h2')).toHaveText('fonts/Gabarito-Regular.ttf');
   await expect(info).toContainText('TTF file');
 });

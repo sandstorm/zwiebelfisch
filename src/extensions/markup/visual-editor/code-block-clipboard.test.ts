@@ -97,6 +97,6 @@ describe('a code block in a Visual editor', () => {
     const html = '<meta charset="utf-8"><div style="white-space: pre;"><div><span>def f(x):</span></div><div><span>    return x</span></div></div>';
     target.paste({ 'text/plain': 'def f(x):\r\n    return x', 'text/html': html, 'vscode-editor-data': '{"version":1,"mode":"python"}' });
     expect(target.doc.text).toBe('Some\n\n```python\ndef f(x):\n    return x\n```\n\n text.\n');
-    expect(target.parent.querySelector('.typst-markup__code-block')?.textContent).toContain('return x');
+    expect(target.parent.querySelector('.zwf-markup__code-block')?.textContent).toContain('return x');
   });
 });

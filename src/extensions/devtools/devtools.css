@@ -1,25 +1,25 @@
 /* The devtools' side panel (workbench/devtools-panel.ts), in the widget's color tokens. See devtools in devtools.ts,
    which registers it. */
-.typst-devtools {
+.zwf-devtools {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   font-size: 12px;
-  color: var(--te-text);
+  color: var(--zwf-text);
 }
 
-.typst-devtools__tabs {
+.zwf-devtools__tabs {
   display: flex;
   gap: 2px;
   padding: 4px;
-  border-bottom: 1px solid var(--te-divider);
+  border-bottom: 1px solid var(--zwf-divider);
 }
 
-.typst-devtools__tab,
-.typst-devtools__button {
+.zwf-devtools__tab,
+.zwf-devtools__button {
   font: inherit;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   background: none;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -27,45 +27,45 @@
   cursor: pointer;
 }
 
-.typst-devtools__tab:hover,
-.typst-devtools__button:hover {
-  background: var(--te-hover);
+.zwf-devtools__tab:hover,
+.zwf-devtools__button:hover {
+  background: var(--zwf-hover);
 }
 
-.typst-devtools__tab[aria-selected='true'] {
-  color: var(--te-text);
-  background: var(--te-selected);
+.zwf-devtools__tab[aria-selected='true'] {
+  color: var(--zwf-text);
+  background: var(--zwf-selected);
 }
 
-.typst-devtools__button {
-  border-color: var(--te-border);
+.zwf-devtools__button {
+  border-color: var(--zwf-border);
 }
 
-.typst-devtools__content {
+.zwf-devtools__content {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 4px 0;
 }
 
-.typst-devtools__note {
+.zwf-devtools__note {
   margin: 4px 8px;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
 }
 
-.typst-devtools__tree,
-.typst-devtools__list {
+.zwf-devtools__tree,
+.zwf-devtools__list {
   list-style: none;
   margin: 0;
   padding: 0;
   font-family: ui-monospace, monospace;
 }
 
-.typst-devtools__row--selected > .typst-devtools__node {
-  background: var(--te-accent-faint);
+.zwf-devtools__row--selected > .zwf-devtools__node {
+  background: var(--zwf-accent-faint);
 }
 
-.typst-devtools__node {
+.zwf-devtools__node {
   display: flex;
   gap: 6px;
   width: 100%;
@@ -79,35 +79,35 @@
   white-space: nowrap;
 }
 
-.typst-devtools__node:hover {
-  background: var(--te-hover);
+.zwf-devtools__node:hover {
+  background: var(--zwf-hover);
 }
 
-.typst-devtools__name,
-.typst-devtools__point {
-  color: var(--te-purple);
+.zwf-devtools__name,
+.zwf-devtools__point {
+  color: var(--zwf-purple);
 }
 
-.typst-devtools__range,
-.typst-devtools__time,
-.typst-devtools__count {
-  color: var(--te-faint);
+.zwf-devtools__range,
+.zwf-devtools__time,
+.zwf-devtools__count {
+  color: var(--zwf-faint);
 }
 
-.typst-devtools__badge,
-.typst-devtools__mark {
+.zwf-devtools__badge,
+.zwf-devtools__mark {
   padding: 0 4px;
   border-radius: 3px;
-  background: var(--te-chip);
-  color: var(--te-muted);
+  background: var(--zwf-chip);
+  color: var(--zwf-muted);
 }
 
-.typst-devtools__detail {
+.zwf-devtools__detail {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.typst-devtools__bar {
+.zwf-devtools__bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -115,97 +115,97 @@
   margin: 4px 8px;
 }
 
-.typst-devtools__button[aria-pressed='true'] {
-  color: var(--te-text);
-  background: var(--te-selected);
+.zwf-devtools__button[aria-pressed='true'] {
+  color: var(--zwf-text);
+  background: var(--zwf-selected);
 }
 
-.typst-devtools__filter {
+.zwf-devtools__filter {
   flex: 1;
   min-width: 8em;
   font: inherit;
-  color: var(--te-text);
-  background: var(--te-bg);
-  border: 1px solid var(--te-border);
+  color: var(--zwf-text);
+  background: var(--zwf-bg);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 2px 6px;
 }
 
-.typst-devtools__legend {
-  color: var(--te-faint);
+.zwf-devtools__legend {
+  color: var(--zwf-faint);
 }
 
-.typst-devtools__group {
+.zwf-devtools__group {
   margin: 0 8px 4px;
 }
 
-.typst-devtools__group > summary {
+.zwf-devtools__group > summary {
   cursor: pointer;
   font-weight: 600;
 }
 
 /* Entries wrap: nothing is cut off at the panel's edge. */
-.typst-devtools__contribution,
-.typst-devtools__event {
+.zwf-devtools__contribution,
+.zwf-devtools__event {
   padding: 2px 8px;
-  border-bottom: 1px solid var(--te-divider);
+  border-bottom: 1px solid var(--zwf-divider);
   overflow-wrap: anywhere;
 }
 
-.typst-devtools__contribution {
+.zwf-devtools__contribution {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: 6px;
 }
 
-.typst-devtools__contribution:hover,
-.typst-devtools__event:hover {
-  background: var(--te-hover);
+.zwf-devtools__contribution:hover,
+.zwf-devtools__event:hover {
+  background: var(--zwf-hover);
 }
 
-.typst-devtools__contribution--disposed {
+.zwf-devtools__contribution--disposed {
   text-decoration: line-through;
   opacity: 0.6;
 }
 
-.typst-devtools__title {
+.zwf-devtools__title {
   font-weight: 600;
 }
 
-.typst-devtools__fact {
-  color: var(--te-muted);
+.zwf-devtools__fact {
+  color: var(--zwf-muted);
 }
 
-.typst-devtools__head {
+.zwf-devtools__head {
   display: flex;
   flex-wrap: wrap;
   column-gap: 6px;
 }
 
-.typst-devtools__value {
+.zwf-devtools__value {
   margin: 0 0 0 1em;
   font: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.typst-devtools__fold > summary {
+.zwf-devtools__fold > summary {
   cursor: pointer;
   margin: 0;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
 }
 
-.typst-devtools__fold > summary.typst-devtools__value {
+.zwf-devtools__fold > summary.zwf-devtools__value {
   white-space: normal;
 }
 
-.typst-devtools__memory {
+.zwf-devtools__memory {
   padding: 4px 8px;
-  border-bottom: 1px solid var(--te-divider);
+  border-bottom: 1px solid var(--zwf-divider);
 }
 
-.typst-devtools__memory > summary {
+.zwf-devtools__memory > summary {
   cursor: pointer;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
 }

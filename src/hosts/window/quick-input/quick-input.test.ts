@@ -9,7 +9,7 @@ function setup() {
   const host = document.body.appendChild(document.createElement('div'));
   const button = host.appendChild(document.createElement('button'));
   const quickInput = new QuickInput(host);
-  const box = () => host.querySelector<HTMLElement>('.typst-quick-input');
+  const box = () => host.querySelector<HTMLElement>('.zwf-quick-input');
   const key = (target: Element, key: string) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   const type = (input: HTMLInputElement, value: string) => {
     input.value = value;
@@ -93,7 +93,7 @@ describe('showInputBox', () => {
     const first = quickInput.showInputBox({ title: 'First' });
     void quickInput.showInputBox({ title: 'Second' });
     expect(await first).toBeUndefined();
-    expect([...host.querySelectorAll('.typst-quick-input')].map((box) => box.getAttribute('aria-label'))).toEqual(['Second']);
+    expect([...host.querySelectorAll('.zwf-quick-input')].map((box) => box.getAttribute('aria-label'))).toEqual(['Second']);
   });
 
   it('is placed below what the user pressed last', () => {
@@ -141,7 +141,7 @@ describe('showQuickPick', () => {
     const options = () => [...dialog.querySelectorAll<HTMLElement>('[role=option]')].filter((option) => !option.hidden);
     expect(options().map((option) => option.textContent)).toEqual(['Rename…', 'Remove label <intro>', 'Rename only the label…']);
     type(input, 'ren');
-    expect(options().map((option) => option.querySelector('.typst-quick-pick__label')!.textContent)).toEqual(['Rename…', 'Rename only the label…']);
+    expect(options().map((option) => option.querySelector('.zwf-quick-pick__label')!.textContent)).toEqual(['Rename…', 'Rename only the label…']);
     expect(options()[0].getAttribute('aria-selected')).toBe('true');
     key(input, 'ArrowDown');
     expect(input.getAttribute('aria-activedescendant')).toBe(options()[1].id);

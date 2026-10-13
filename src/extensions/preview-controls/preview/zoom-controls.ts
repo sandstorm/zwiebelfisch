@@ -15,8 +15,8 @@ export const zoomControls: PreviewToolbarItem = (preview) => {
     return button;
   });
   const shown = doc.createElement('span');
-  shown.className = 'typst-preview-controls__zoom';
-  shown.dataset.testid = 'typst-preview-zoom';
+  shown.className = 'zwf-preview-controls__zoom';
+  shown.dataset.testid = 'zwf-preview-zoom';
   return {
     elements: [...buttons, shown],
     update() {

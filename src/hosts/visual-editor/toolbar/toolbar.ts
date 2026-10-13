@@ -38,7 +38,7 @@ export class Toolbar {
     const { groups, items, textStyles } = options;
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
-    this.root.className = 'typst-toolbar';
+    this.root.className = 'zwf-toolbar';
     this.root.setAttribute('role', 'toolbar');
     this.root.setAttribute('aria-label', 'Formatting');
     // Keep the selection in the text: buttons act on it, they must not take focus.
@@ -101,7 +101,7 @@ export class Toolbar {
   private rowGroup(group: ToolbarGroup, entries: Entry[]): void {
     if (entries.length === 0) return;
     const wrapper = this.root.ownerDocument.createElement('div');
-    wrapper.className = 'typst-toolbar__group';
+    wrapper.className = 'zwf-toolbar__group';
     if (group.kind === 'menu') wrapper.append(this.control(this.menu(group)));
     else wrapper.append(...entries.filter(isShown).map((entry) => (isAction(entry) ? this.button(entry) : this.control(entry))));
     this.root.append(wrapper);
@@ -170,10 +170,10 @@ export class Toolbar {
   private button(action: ToolbarAction, refreshers = this.refreshers): HTMLButtonElement {
     const button = this.root.ownerDocument.createElement('button');
     button.type = 'button';
-    button.className = 'typst-toolbar__button';
+    button.className = 'zwf-toolbar__button';
     if (action.icon) button.innerHTML = action.icon;
     else button.textContent = action.text ?? action.label;
-    button.classList.toggle('typst-toolbar__button--text', !action.icon);
+    button.classList.toggle('zwf-toolbar__button--text', !action.icon);
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${keyLabel(action.shortcut)})` : action.label;
     button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.tiptap.chain().focus()).run()));

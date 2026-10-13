@@ -11,14 +11,14 @@ test.beforeEach(async ({ page }) => {
 test('shows the document in the visual editor by default', async ({ page }) => {
   await expect(visual(page).locator('h1')).toHaveText('Typst in five minutes');
   await expect(visual(page).locator('strong').first()).toHaveText('stars');
-  await expect(visual(page).locator('.typst-visual__raw-block').first()).toContainText('#set page');
+  await expect(visual(page).locator('.zwf-visual__raw-block').first()).toContainText('#set page');
 });
 
 test('typing in the visual editor updates the Typst source', async ({ page }) => {
   await caretAtEnd(visual(page).locator('h1'));
   await page.keyboard.type(' World');
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('= Typst in five minutes World');
+  await expect(page.getByTestId('zwf-source')).toContainText('= Typst in five minutes World');
 });
 
 test('bold via keyboard shortcut becomes *…* in the source', async ({ page }) => {
@@ -27,7 +27,7 @@ test('bold via keyboard shortcut becomes *…* in the source', async ({ page }) 
   await page.keyboard.press('ControlOrMeta+b');
   await page.keyboard.type('new');
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('code. *new*');
+  await expect(page.getByTestId('zwf-source')).toContainText('code. *new*');
 });
 
 test('Mod-i makes typed text italic instead of triggering a browser shortcut', async ({ page }) => {
@@ -48,8 +48,8 @@ test('typing shortcuts follow Typst: "== " starts a heading, *…* is bold, _…
   await expect(visual(page).locator('strong', { hasText: 'bold' })).toBeVisible();
   await expect(visual(page).locator('em', { hasText: 'slanted' })).toBeVisible();
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('== Section');
-  await expect(page.getByTestId('typst-source')).toContainText('A *bold* and _slanted_ word');
+  await expect(page.getByTestId('zwf-source')).toContainText('== Section');
+  await expect(page.getByTestId('zwf-source')).toContainText('A *bold* and _slanted_ word');
 });
 
 test('Markdown\'s "## " still starts a heading', async ({ page }) => {
@@ -57,7 +57,7 @@ test('Markdown\'s "## " still starts a heading', async ({ page }) => {
   await page.keyboard.press('Enter');
   await page.keyboard.type('## Section');
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('== Section');
+  await expect(page.getByTestId('zwf-source')).toContainText('== Section');
 });
 
 test('clicking the preview selects the block in the visual editor', async ({ page }) => {

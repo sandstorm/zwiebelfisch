@@ -65,7 +65,7 @@ function suggestionPlugins(editor: Editor, trigger: CompletionTrigger, items: (q
     // the items are asked for synchronously, while showing (no fetching): a keystroke's list is there at once
     minQueryLength: Infinity,
     dismissOnOutsideClick: false,
-    decorationClass: 'typst-visual__suggestion',
+    decorationClass: 'zwf-visual__suggestion',
     command: ({ editor, range, props: item }) => item.command({ editor, range }),
     render: () => ({
       onStart: (next) => {

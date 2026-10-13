@@ -78,7 +78,7 @@ export const SERVER = 'http://127.0.0.1:1234';
 
 /**
  * Where the specs against that server open the demo: another port of the server's host, so the session cookie goes
- * along to the server (same site). The server serves the build there (TYPST_DEMO_DIST), not interception (`serve`).
+ * along to the server (same site). The server serves the build there (ZWF_DEMO_DIST), not interception (`serve`).
  */
 export const SERVER_DEMO = 'http://127.0.0.1:5199';
 
@@ -89,12 +89,12 @@ export const SERVER_DEMO = 'http://127.0.0.1:5199';
 export async function signIn(context: BrowserContext, user: string): Promise<void> {
   const response = await context.request.get(`${SERVER}/auth/login?${new URLSearchParams({ login_hint: user, return: '/' })}`);
   expect(response.ok(), await response.text()).toBe(true);
-  expect((await context.cookies(SERVER)).map((cookie) => cookie.name)).toContain('typst_session');
+  expect((await context.cookies(SERVER)).map((cookie) => cookie.name)).toContain('zwf_session');
 }
 
 /** The file panel's tree row of `path` (as shown: `chapters/intro.typ`, a folder `chapters`). */
 export function fileRow(scope: Page | Locator, path: string): Locator {
-  return scope.getByTestId('typst-files').locator(`[role=treeitem][title="${path}"]`);
+  return scope.getByTestId('zwf-files').locator(`[role=treeitem][title="${path}"]`);
 }
 
 /** Opens `path` in the file panel: expands the folders around it, then clicks its row. */

@@ -17,7 +17,7 @@ import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
  *   does after an edit from elsewhere) keeps its DOM, so what is inside, like
  *   an open note editor, survives;
  * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute;
- * - with `ownsPseudoElements`, `data-typst-pseudo="own"` on its DOM.
+ * - with `ownsPseudoElements`, `data-zwf-pseudo="own"` on its DOM.
  *
  * Then the raw boxes' keyboard navigation (`RawBoxNavigation`).
  */
@@ -70,12 +70,12 @@ function keepWhileRenderedSame(initial: PMNode, view: EditorView): NodeView {
   };
 }
 
-/** `data-typst-pseudo="own"` on the DOM of every node of the `types` (as a node decoration: whatever their `renderHTML`). */
+/** `data-zwf-pseudo="own"` on the DOM of every node of the `types` (as a node decoration: whatever their `renderHTML`). */
 function ownPseudoElements(types: ReadonlySet<string>): Plugin<DecorationSet> {
   const decorate = (doc: PMNode) => {
     const decorations: Decoration[] = [];
     doc.descendants((node, pos) => {
-      if (types.has(node.type.name)) decorations.push(Decoration.node(pos, pos + node.nodeSize, { 'data-typst-pseudo': 'own' }));
+      if (types.has(node.type.name)) decorations.push(Decoration.node(pos, pos + node.nodeSize, { 'data-zwf-pseudo': 'own' }));
     });
     return DecorationSet.create(doc, decorations);
   };

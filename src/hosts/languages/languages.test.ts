@@ -14,7 +14,7 @@ function hintOf(link: FollowableLink): string {
   const element = page.body.appendChild(page.createElement('span'));
   link.hover(new MouseEvent('mousemove'), element);
   vi.advanceTimersByTime(300);
-  const text = page.querySelector('.typst-link-hint')?.textContent ?? '';
+  const text = page.querySelector('.zwf-link-hint')?.textContent ?? '';
   link.leave(new MouseEvent('mouseleave'));
   vi.advanceTimersByTime(300);
   element.remove();

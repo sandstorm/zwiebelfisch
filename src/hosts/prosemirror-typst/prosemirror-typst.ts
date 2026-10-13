@@ -370,7 +370,7 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
 
 /** The base: paragraphs, text, line breaks (`\`), history, the drop cursor. */
 function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--te-accent)', width: 2 } });
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--zwf-accent)', width: 2 } });
 }
 
 /** The minimum schema's own nodes, as the grammar sees them. */

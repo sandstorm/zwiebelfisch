@@ -26,15 +26,15 @@ class CodeBlockView implements NodeView {
   ) {
     const doc = editor.view.dom.ownerDocument;
     this.dom = doc.createElement('div');
-    this.dom.className = 'typst-markup__code-block';
+    this.dom.className = 'zwf-markup__code-block';
     this.dom.setAttribute('spellcheck', 'false');
     this.header = this.dom.appendChild(doc.createElement('div'));
-    this.header.className = 'typst-markup__code-header';
+    this.header.className = 'zwf-markup__code-header';
     this.header.contentEditable = 'false';
     const label = this.header.appendChild(doc.createElement('span'));
     label.textContent = 'Code';
     this.language = this.header.appendChild(doc.createElement('input'));
-    this.language.className = 'typst-markup__code-language';
+    this.language.className = 'zwf-markup__code-language';
     this.language.setAttribute('aria-label', 'Language');
     this.language.placeholder = 'language';
     this.language.spellcheck = false;

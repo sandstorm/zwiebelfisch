@@ -110,6 +110,6 @@ function hint(state: EditorState): DecorationSet | null {
   for (let depth = $from.depth - 1; depth > 0; depth--) if ($from.node(depth).type.spec.tableRole) return null;
   const pos = $from.before();
   return DecorationSet.create(state.doc, [
-    Decoration.node(pos, pos + paragraph.nodeSize, { class: 'typst-slash-commands__hint', 'data-hint': 'Type / for commands' }),
+    Decoration.node(pos, pos + paragraph.nodeSize, { class: 'zwf-slash-commands__hint', 'data-hint': 'Type / for commands' }),
   ]);
 }

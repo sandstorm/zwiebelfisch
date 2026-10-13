@@ -40,14 +40,14 @@ export class SideBar {
     const doc = host.ownerDocument;
     this.#size = SIZES[side];
     this.state.size = this.#clamp(state.size);
-    this.element = div(doc, `typst-editor__side typst-editor__side--${side}`);
-    this.#rail = div(doc, 'typst-editor__rail');
+    this.element = div(doc, `zwf-editor__side zwf-editor__side--${side}`);
+    this.#rail = div(doc, 'zwf-editor__rail');
     this.#rail.setAttribute('role', 'toolbar');
     this.#rail.setAttribute('aria-label', side === 'left' ? 'Left panels' : 'Right panels');
     this.#rail.setAttribute('aria-orientation', 'vertical');
-    this.#bottom = div(doc, 'typst-editor__rail-bottom');
+    this.#bottom = div(doc, 'zwf-editor__rail-bottom');
     this.#rail.append(this.#bottom);
-    this.#panel = div(doc, 'typst-editor__panel');
+    this.#panel = div(doc, 'zwf-editor__panel');
     this.#resizer = this.#createResizer();
     this.#panel.append(this.#resizer);
     // the rail on the widget's outer edge
@@ -69,12 +69,12 @@ export class SideBar {
 
   addPanel(id: string, options: SidePanelOptions): SidePanel {
     const doc = this.host.ownerDocument;
-    const body = div(doc, 'typst-editor__panel-body');
-    body.id = `typst-panel-${id}-${Math.random().toString(36).slice(2, 8)}`;
+    const body = div(doc, 'zwf-editor__panel-body');
+    body.id = `zwf-panel-${id}-${Math.random().toString(36).slice(2, 8)}`;
     body.dataset.panel = id;
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'typst-editor__rail-button';
+    button.className = 'zwf-editor__rail-button';
     const command = `workbench.view.${id}`;
     // the key may be bound after the panel is added: named anew whenever the tooltip may show
     const describe = () => {
@@ -86,7 +86,7 @@ export class SideBar {
     button.addEventListener('focus', describe);
     button.setAttribute('aria-label', options.label);
     button.setAttribute('aria-controls', body.id);
-    button.dataset.testid = `typst-panel-toggle-${id}`;
+    button.dataset.testid = `zwf-panel-toggle-${id}`;
     button.append(options.icon);
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
     this.#place(button, options.order ?? 0, options.alignment === 'bottom');
@@ -111,7 +111,7 @@ export class SideBar {
 
   /** Puts `button` (one that runs something, not a panel's) among the rail's top buttons by `order`, until it is removed. */
   addAction(button: HTMLElement, order: number): void {
-    button.classList.add('typst-editor__rail-button');
+    button.classList.add('zwf-editor__rail-button');
     this.#place(button, order, false);
   }
 
@@ -156,7 +156,7 @@ export class SideBar {
   dispose(): void {
     for (const stop of this.#cleanup) stop();
     this.element.remove();
-    this.host.style.removeProperty('--te-right-side');
+    this.host.style.removeProperty('--zwf-right-side');
   }
 
   /** Inserts `button` into the rail's top or bottom group, before the first of its buttons with a higher order. */
@@ -247,8 +247,8 @@ export class SideBar {
   #applySize(): void {
     const size = this.state.size;
     if (this.#size.unit === 'px') this.#panel.style.width = `${size}px`;
-    else if (this.#shown === null) this.host.style.removeProperty('--te-right-side');
-    else this.host.style.setProperty('--te-right-side', `minmax(0, ${size}%)`);
+    else if (this.#shown === null) this.host.style.removeProperty('--zwf-right-side');
+    else this.host.style.setProperty('--zwf-right-side', `minmax(0, ${size}%)`);
     this.#resizer.setAttribute('aria-valuenow', String(size));
   }
 
@@ -265,7 +265,7 @@ export class SideBar {
   /** The panel's inner edge: drag (or arrow keys) to size the side; the arrow moves the edge. */
   #createResizer(): HTMLElement {
     const { min, max, step, label } = this.#size;
-    const resizer = div(this.host.ownerDocument, 'typst-editor__resizer');
+    const resizer = div(this.host.ownerDocument, 'zwf-editor__resizer');
     resizer.setAttribute('role', 'separator');
     resizer.setAttribute('aria-orientation', 'vertical');
     resizer.setAttribute('aria-label', label);
@@ -295,9 +295,9 @@ export class SideBar {
     const up = () => {
       doc.removeEventListener('pointermove', move);
       doc.removeEventListener('pointerup', up);
-      this.host.classList.remove('typst-editor--resizing');
+      this.host.classList.remove('zwf-editor--resizing');
     };
-    this.host.classList.add('typst-editor--resizing');
+    this.host.classList.add('zwf-editor--resizing');
     doc.addEventListener('pointermove', move);
     doc.addEventListener('pointerup', up);
   }
@@ -355,7 +355,7 @@ interface PanelEntry {
 
 /**
  * How a side is sized: the left one in pixels (the panel's width), the right one as a share of the widget in percent
- * (the grid column `--te-right-side`), so opening the left side narrows only the editing area.
+ * (the grid column `--zwf-right-side`), so opening the left side narrows only the editing area.
  */
 const SIZES = {
   left: { unit: 'px', min: 160, max: 480, initial: 240, step: 16, label: 'Left panel width' },

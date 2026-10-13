@@ -14,16 +14,16 @@ const fileText = (page: Page, path: string) => () =>
 
 test('a .bib opens in the text editor; an added entry is saved and the document can cite it', async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.files = { '/refs.bib': '@book{lamport, title = {LaTeX}, author = {Lamport, Leslie}, year = {1986}}\n' };
     el.value = 'As @knuth shows.\n\n#bibliography("refs.bib")\n';
   });
   // @knuth is not in the bibliography yet
-  await expect(editor(page).getByTestId('typst-status')).not.toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).not.toHaveText(/✓/);
   await fileRow(editor(page), 'refs.bib').click();
 
-  const text = editor(page).getByTestId('typst-text-file');
+  const text = editor(page).getByTestId('zwf-text-file');
   await expect(text.getByRole('heading', { name: 'refs.bib' })).toBeVisible();
   await expect(text.locator('.cm-content')).toContainText('@book{lamport');
   await text.locator('.cm-content').click();
@@ -32,17 +32,17 @@ test('a .bib opens in the text editor; an added entry is saved and the document 
   await page.keyboard.type('@book{knuth, title = {The TeXbook}, author = {Knuth, Donald}, year = {1984}}');
   await expect.poll(fileText(page, '/refs.bib')).toContain('@book{knuth, title = {The TeXbook}, author = {Knuth, Donald}, year = {1984}}');
   expect(await fileText(page, '/refs.bib')()).toContain('@book{lamport');
-  await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
+  await expect(editor(page).getByTestId('zwf-status')).toHaveText(/✓/);
 });
 
 test('a change of the file from the host shows up in the open text editor', async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await editor(page).evaluate((el: Editor) => {
     el.files = { '/data.csv': 'a,b\n' };
   });
   await fileRow(editor(page), 'data.csv').click();
-  const content = editor(page).getByTestId('typst-text-file').locator('.cm-content');
+  const content = editor(page).getByTestId('zwf-text-file').locator('.cm-content');
   await expect(content).toContainText('a,b');
   await editor(page).evaluate((el: Editor) => {
     el.files = { ...el.files, '/data.csv': 'a,b\n1,2\n' };

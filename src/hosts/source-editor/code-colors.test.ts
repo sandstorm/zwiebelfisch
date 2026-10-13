@@ -31,7 +31,7 @@ describe('codeColors', () => {
 
   it('colors the syntax from the widget tokens, with the light colors as fallback', () => {
     const rules = highlightStyle.module!.getRules();
-    expect(rules).toContain('var(--te-syn-keyword, #708)');
-    expect(rules).toContain('var(--te-syn-comment, #940)');
+    expect(rules).toContain('var(--zwf-syn-keyword, #708)');
+    expect(rules).toContain('var(--zwf-syn-comment, #940)');
   });
 });

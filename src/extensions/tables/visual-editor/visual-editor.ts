@@ -18,7 +18,7 @@ const Tables = Extension.create({
       addAttributes() {
         return { ...this.parent?.(), sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
       },
-    }).configure({ resizable: false, HTMLAttributes: { class: 'typst-tables__table' } }),
+    }).configure({ resizable: false, HTMLAttributes: { class: 'zwf-tables__table' } }),
     TableRow,
     TableCell.extend({ group: 'blockContainer', addAttributes: cellAttributes }),
     TableHeader.extend({ group: 'blockContainer', addAttributes: cellAttributes }),

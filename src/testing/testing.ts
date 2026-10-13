@@ -226,7 +226,7 @@ export function type(editor: Editor, text: string): void {
  * their state (pressed, disabled) only while it is open.
  */
 export function opened(button: HTMLButtonElement): HTMLButtonElement {
-  const trigger = button.closest('.typst-toolbar__menu')?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+  const trigger = button.closest('.zwf-toolbar__menu')?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
   if (trigger?.getAttribute('aria-expanded') === 'false') trigger.click();
   return button;
 }
@@ -250,7 +250,7 @@ export function blockHandle(view: EditorView, pos: number): HTMLElement {
   } finally {
     rects.mockRestore();
   }
-  return view.dom.parentElement!.querySelector<HTMLElement>('.typst-visual__block-handle')!;
+  return view.dom.parentElement!.querySelector<HTMLElement>('.zwf-visual__block-handle')!;
 }
 
 /**

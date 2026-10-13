@@ -24,10 +24,10 @@ export class TextFileEditor {
   ) {
     const doc = parent.ownerDocument;
     this.#root = doc.createElement('div');
-    this.#root.className = 'typst-text-files';
-    this.#root.dataset.testid = 'typst-text-file';
+    this.#root.className = 'zwf-text-files';
+    this.#root.dataset.testid = 'zwf-text-file';
     const title = doc.createElement('h2');
-    title.className = 'typst-text-files__title';
+    title.className = 'zwf-text-files__title';
     title.textContent = ProjectPath.displayName(options.path);
     this.#root.append(title);
     parent.append(this.#root);

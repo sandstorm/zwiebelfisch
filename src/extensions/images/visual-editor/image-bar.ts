@@ -63,7 +63,7 @@ function imageAnchor(editor: Editor): Anchor {
   const dom = image && (editor.view.nodeDOM(image.pos) as HTMLElement | null);
   if (!dom?.getBoundingClientRect) return null;
   // above the picture where it shows (the box's heading is above it)
-  const box = (dom.querySelector('.typst-images__frame') ?? dom).getBoundingClientRect();
+  const box = (dom.querySelector('.zwf-images__frame') ?? dom).getBoundingClientRect();
   return { top: box.top, left: box.left, right: box.right };
 }
 

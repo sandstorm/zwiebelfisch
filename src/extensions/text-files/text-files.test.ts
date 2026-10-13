@@ -45,13 +45,13 @@ describe('text files', () => {
     for (const name of ['data.csv', 'data.json', 'conf.yaml', 'conf.yml', 'Cargo.toml', 'feed.xml', 'notes.txt', 'README.md', 'flow.mmd']) {
       project.apply({ kind: 'create', path: path(`/${name}`), content: `${name}\n` });
       workbench.open(path(`/${name}`));
-      const editor = host.querySelector('[data-view-type="textFiles.editor"] [data-testid=typst-text-file]');
+      const editor = host.querySelector('[data-view-type="textFiles.editor"] [data-testid=zwf-text-file]');
       expect(editor?.querySelector('.cm-content')?.textContent, name).toBe(name);
       expect(window.getFileIcon(path(`/${name}`)), name).toContain('<svg');
     }
     project.apply({ kind: 'create', path: path('/logo.svg'), content: '<svg/>' });
     workbench.open(path('/logo.svg'));
-    expect(host.querySelector('[data-testid=typst-text-file]')).toBeNull();
+    expect(host.querySelector('[data-testid=zwf-text-file]')).toBeNull();
   });
 
   it('saves an edit of a .bib into the project, at once when the file is closed', async () => {
@@ -102,7 +102,7 @@ describe('text files', () => {
       },
     ]);
     workbench.open(path('/refs.bib'));
-    const marked = [...host.querySelectorAll('[data-testid=typst-text-file] .typst-source__path')].map((mark) => mark.textContent);
+    const marked = [...host.querySelectorAll('[data-testid=zwf-text-file] .zwf-source__path')].map((mark) => mark.textContent);
     expect(marked).toEqual(['book']);
   });
 
@@ -112,6 +112,6 @@ describe('text files', () => {
     workbench.open(path('/refs.bib'));
     view().dispatch({ changes: { from: 0, insert: 'x' } });
     vi.advanceTimersByTime(SAVE_DELAY);
-    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-notifications] [role=alert]')?.textContent).toContain('refs.bib not saved'));
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications] [role=alert]')?.textContent).toContain('refs.bib not saved'));
   });
 });

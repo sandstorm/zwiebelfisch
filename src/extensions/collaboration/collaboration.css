@@ -1,26 +1,26 @@
 /* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source editors,
-   in each user's color (--typst-remote-color, and --typst-remote-text for text on it); the account in the status bar.
+   in each user's color (--zwf-remote-color, and --zwf-remote-text for text on it); the account in the status bar.
    See collaboration in collaboration.ts, which registers it. */
-.typst-collaboration__selection {
-  background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
+.zwf-collaboration__selection {
+  background: color-mix(in srgb, var(--zwf-remote-color, #268bd2) 22%, transparent);
 }
 /* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look); the flag, as a box's, is the
    name in data-user drawn by ::after (no text in the editor). */
-.typst-collaboration__caret {
+.zwf-collaboration__caret {
   position: relative;
   margin: 0 -1px;
-  border-left: 1px solid var(--typst-remote-color, #268bd2);
-  border-right: 1px solid var(--typst-remote-color, #268bd2);
+  border-left: 1px solid var(--zwf-remote-color, #268bd2);
+  border-right: 1px solid var(--zwf-remote-color, #268bd2);
   word-break: normal;
   pointer-events: none;
 }
-.typst-collaboration__caret::after,
-.typst-collaboration__box:not([data-typst-pseudo='own'])::after {
+.zwf-collaboration__caret::after,
+.zwf-collaboration__box:not([data-zwf-pseudo='own'])::after {
   content: attr(data-user);
   position: absolute;
   padding: 0 4px;
-  background: var(--typst-remote-color, #268bd2);
-  color: var(--typst-remote-text, #fff);
+  background: var(--zwf-remote-color, #268bd2);
+  color: var(--zwf-remote-text, #fff);
   font: 600 11px/1.5 system-ui, sans-serif;
   font-style: normal;
   letter-spacing: normal;
@@ -30,14 +30,14 @@
   user-select: none;
   z-index: 2;
 }
-.typst-collaboration__caret::after {
+.zwf-collaboration__caret::after {
   bottom: 100%;
   left: -1px;
   border-radius: 3px 3px 3px 0;
 }
 /* Source editor (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
-.typst-collaboration__caret--transient { pointer-events: auto; }
-.typst-collaboration__caret--transient::before {
+.zwf-collaboration__caret--transient { pointer-events: auto; }
+.zwf-collaboration__caret--transient::before {
   content: '';
   position: absolute;
   top: -0.2em;
@@ -45,32 +45,32 @@
   width: 0.4em;
   height: 0.4em;
   border-radius: 50%;
-  background: var(--typst-remote-color, #268bd2);
+  background: var(--zwf-remote-color, #268bd2);
 }
-.typst-collaboration__caret--transient::after {
+.zwf-collaboration__caret--transient::after {
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
-  animation: typst-collaboration-flag 2.5s ease-in;
+  animation: zwf-collaboration-flag 2.5s ease-in;
 }
-.typst-collaboration__caret--transient:hover::after { opacity: 1; animation: none; }
-@keyframes typst-collaboration-flag {
+.zwf-collaboration__caret--transient:hover::after { opacity: 1; animation: none; }
+@keyframes zwf-collaboration-flag {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
 /* Visual editor: a box (raw code, image, page break, note) someone's caret is in; its name flag only on boxes whose
-   own ::after is free (the host marks the others data-typst-pseudo="own"). */
-.typst-collaboration__box {
+   own ::after is free (the host marks the others data-zwf-pseudo="own"). */
+.zwf-collaboration__box {
   position: relative;
-  outline: 2px solid var(--typst-remote-color, #268bd2);
+  outline: 2px solid var(--zwf-remote-color, #268bd2);
   outline-offset: 1px;
 }
-.typst-collaboration__box:not([data-typst-pseudo='own'])::after {
+.zwf-collaboration__box:not([data-zwf-pseudo='own'])::after {
   right: -3px;
   bottom: calc(100% + 3px);
   border-radius: 3px 3px 0 3px;
 }
 /* The account in the status bar: "Sign in", or the signed-in user's name (a click: the account menu). */
-.typst-collaboration__account {
+.zwf-collaboration__account {
   font: inherit;
   font-size: 12px;
   border: 0;
@@ -78,8 +78,8 @@
   padding: 2px 6px;
   border-radius: 3px;
   background: none;
-  color: var(--te-text);
+  color: var(--zwf-text);
   white-space: nowrap;
   cursor: pointer;
 }
-.typst-collaboration__account:hover { background: var(--te-hover); }
+.zwf-collaboration__account:hover { background: var(--zwf-hover); }

@@ -64,7 +64,7 @@ describe('ProgressIndicators', () => {
     const second = pending();
     const a = indicators.run({ location: ProgressLocation.EditingArea, title: 'Connecting to the room…' }, () => first.done);
     const b = indicators.run({ location: ProgressLocation.EditingArea, title: 'Again' }, () => second.done);
-    const note = host.querySelector<HTMLElement>('[data-testid="typst-editing-progress"]')!;
+    const note = host.querySelector<HTMLElement>('[data-testid="zwf-editing-progress"]')!;
     expect(note.previousElementSibling).toBe(editingArea);
     expect(note.querySelector('[role="status"]')!.textContent).toBe('Connecting to the room…');
     expect(editingArea.hasAttribute('inert')).toBe(true);
@@ -72,11 +72,11 @@ describe('ProgressIndicators', () => {
 
     first.fail(new Error('offline'));
     await expect(a).rejects.toThrow('offline');
-    expect(host.querySelectorAll('[data-testid="typst-editing-progress"]')).toHaveLength(1);
+    expect(host.querySelectorAll('[data-testid="zwf-editing-progress"]')).toHaveLength(1);
     expect(editingArea.hasAttribute('inert')).toBe(true);
     second.finish();
     await b;
-    expect(host.querySelector('[data-testid="typst-editing-progress"]')).toBeNull();
+    expect(host.querySelector('[data-testid="zwf-editing-progress"]')).toBeNull();
     expect(editingArea.hasAttribute('inert')).toBe(false);
     expect(editingArea.getAttribute('aria-busy')).toBe('false');
   });

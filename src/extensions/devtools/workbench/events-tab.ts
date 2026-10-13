@@ -19,9 +19,9 @@ export class EventsTab implements Tab {
     private readonly doc: Document,
     private readonly events: EventLog,
   ) {
-    this.element = element(doc, 'div', 'typst-devtools__events');
-    const bar = this.element.appendChild(element(doc, 'div', 'typst-devtools__bar'));
-    const filter = bar.appendChild(element(doc, 'input', 'typst-devtools__filter'));
+    this.element = element(doc, 'div', 'zwf-devtools__events');
+    const bar = this.element.appendChild(element(doc, 'div', 'zwf-devtools__bar'));
+    const filter = bar.appendChild(element(doc, 'input', 'zwf-devtools__filter'));
     filter.type = 'search';
     filter.placeholder = 'Filter by event name';
     filter.setAttribute('aria-label', 'Filter events by name');
@@ -29,7 +29,7 @@ export class EventsTab implements Tab {
       this.#query = filter.value;
       this.update();
     });
-    const pause = bar.appendChild(element(doc, 'button', 'typst-devtools__button', 'Pause'));
+    const pause = bar.appendChild(element(doc, 'button', 'zwf-devtools__button', 'Pause'));
     pause.setAttribute('aria-pressed', 'false');
     pause.title = 'Stop logging events, to read the log as it is';
     pause.addEventListener('click', () => {
@@ -37,14 +37,14 @@ export class EventsTab implements Tab {
       pause.setAttribute('aria-pressed', String(events.paused));
       this.update();
     });
-    const clear = bar.appendChild(element(doc, 'button', 'typst-devtools__button', 'Clear'));
+    const clear = bar.appendChild(element(doc, 'button', 'zwf-devtools__button', 'Clear'));
     clear.addEventListener('click', () => {
       events.clear();
       this.#rows.clear();
       this.update();
     });
-    this.#count = this.element.appendChild(element(doc, 'p', 'typst-devtools__note'));
-    this.#list = this.element.appendChild(element(doc, 'ol', 'typst-devtools__list'));
+    this.#count = this.element.appendChild(element(doc, 'p', 'zwf-devtools__note'));
+    this.#list = this.element.appendChild(element(doc, 'ol', 'zwf-devtools__list'));
   }
 
   update(): void {
@@ -62,11 +62,11 @@ export class EventsTab implements Tab {
   }
 
   #entry(entry: LoggedEvent): HTMLElement {
-    const item = element(this.doc, 'li', 'typst-devtools__event');
+    const item = element(this.doc, 'li', 'zwf-devtools__event');
     const time = new Date(entry.time);
     const clock = `${time.toTimeString().slice(0, 8)}.${String(time.getMilliseconds()).padStart(3, '0')}`;
-    const head = item.appendChild(element(this.doc, 'div', 'typst-devtools__head'));
-    head.append(element(this.doc, 'span', 'typst-devtools__time', clock), element(this.doc, 'span', 'typst-devtools__point', entry.event));
+    const head = item.appendChild(element(this.doc, 'div', 'zwf-devtools__head'));
+    head.append(element(this.doc, 'span', 'zwf-devtools__time', clock), element(this.doc, 'span', 'zwf-devtools__point', entry.event));
     item.append(this.#value(entry));
     item.title = `${entry.event} at ${clock}\n\n${entry.value.text}`;
     return item;
@@ -75,9 +75,9 @@ export class EventsTab implements Tab {
   /** The value: in place if short, else folded with its first line as the summary. */
   #value(entry: LoggedEvent): HTMLElement {
     const { line, text } = entry.value;
-    if (text.split('\n').length <= FOLD_LINES) return element(this.doc, 'pre', 'typst-devtools__value', text);
-    const details = element(this.doc, 'details', 'typst-devtools__fold');
-    details.append(element(this.doc, 'summary', 'typst-devtools__value', line), element(this.doc, 'pre', 'typst-devtools__value', text));
+    if (text.split('\n').length <= FOLD_LINES) return element(this.doc, 'pre', 'zwf-devtools__value', text);
+    const details = element(this.doc, 'details', 'zwf-devtools__fold');
+    details.append(element(this.doc, 'summary', 'zwf-devtools__value', line), element(this.doc, 'pre', 'zwf-devtools__value', text));
     return details;
   }
 }

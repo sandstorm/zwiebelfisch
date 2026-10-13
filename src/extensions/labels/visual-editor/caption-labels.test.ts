@@ -24,7 +24,7 @@ async function setup(text: string, prompts: TestPrompts) {
   createVisualEditor(parent, doc, { files: { '/cat.png': new Uint8Array([1]) }, prompts, contributions: [references({ labels: new LabelIndex(project), prompts })] });
   await settle();
   const click = async (name: string) => {
-    parent.querySelector('img.typst-visual__rendering')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    parent.querySelector('img.zwf-visual__rendering')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     parent.querySelector<HTMLButtonElement>(`[role="toolbar"][aria-label="Image"] button[aria-label="${name}"]`)!.click();
     await settle();
   };

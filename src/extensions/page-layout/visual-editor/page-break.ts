@@ -17,7 +17,7 @@ const PageBreak = Node.create({
   },
   renderHTML({ node }) {
     const weak = /\bweak\s*:\s*true\b/.test(node.attrs.src);
-    return ['div', { 'data-type': 'page-break', class: 'typst-page-layout__page-break', title: node.attrs.src }, ['span', weak ? 'Page break (weak)' : 'Page break']];
+    return ['div', { 'data-type': 'page-break', class: 'zwf-page-layout__page-break', title: node.attrs.src }, ['span', weak ? 'Page break (weak)' : 'Page break']];
   },
   addCommands() {
     return { setPageBreak: () => ({ commands }) => commands.insertContent({ type: this.name }) };

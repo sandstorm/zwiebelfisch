@@ -51,8 +51,8 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 function mount(options: Partial<EditorOptions> = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const editor = createEditor(host, { source: '= Hello\n\n#foo()', ...options });
-  const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
-  const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
+  const panel = host.querySelector<HTMLElement>('[data-testid=zwf-devtools]')!;
+  const toggle = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-devtools]')!;
   /** Shows the devtools panel (instead of the preview), or the preview again. */
   const show = (shown = true) => {
     if ((toggle.getAttribute('aria-pressed') === 'true') !== shown) toggle.click();
@@ -62,7 +62,7 @@ function mount(options: Partial<EditorOptions> = {}) {
     [...panel.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button) => button.textContent === name)!.click();
     return panel.querySelector<HTMLElement>('[role=tabpanel]')!;
   };
-  const memory = () => panel.querySelector<HTMLDetailsElement>('[data-testid=typst-devtools-memory]')!;
+  const memory = () => panel.querySelector<HTMLDetailsElement>('[data-testid=zwf-devtools-memory]')!;
   return { host, editor, tab, show, memory };
 }
 
@@ -80,22 +80,22 @@ afterEach(() => {
 describe('devtools', () => {
   it('leaves the widget working: the built-ins activate through the recording context', () => {
     const { host } = mount();
-    expect(host.querySelector('[data-testid=typst-visual] h1')?.textContent).toBe('Hello');
+    expect(host.querySelector('[data-testid=zwf-visual] h1')?.textContent).toBe('Hello');
   });
 
   it('is a panel on the right rail, after the preview, shown on a click instead of the preview', () => {
     const { host } = mount();
-    const right = host.querySelector<HTMLElement>('.typst-editor__side--right')!;
-    expect([...right.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
+    const right = host.querySelector<HTMLElement>('.zwf-editor__side--right')!;
+    expect([...right.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
     expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(true);
-    right.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!.click();
+    right.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-devtools]')!.click();
     expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(false);
     expect(right.querySelector<HTMLElement>('[data-panel=preview]')!.hidden).toBe(true);
   });
 
   it('is switched off and on with the setting devtools.enabled, showing the memory recorded meanwhile', () => {
     const { host, editor, memory } = mount({ settings: { 'devtools.enabled': false } });
-    const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
+    const toggle = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-devtools]')!;
     expect(toggle.hidden).toBe(true);
     engine.compiled(300 * 2 ** 20);
     editor.updateSettings({ 'devtools.enabled': undefined });
@@ -131,7 +131,7 @@ describe('devtools', () => {
     for (const expected of ['files', 'contributes.configuration', 'files.panel', 'default "auto"', 'commands.registerCommand', 'files.newFile', 'visualEditor.registerNode', 'heading', 'parses Heading', 'Mod+Alt+KeyM → comments.addComment', 'devtools', 'workbench.registerSidePanel']) {
       expect(text).toContain(expected);
     }
-    const heading = [...contributions.querySelectorAll<HTMLElement>('.typst-devtools__contribution')].find((row) => row.textContent?.startsWith('visualEditor.registerNodeheading'))!;
+    const heading = [...contributions.querySelectorAll<HTMLElement>('.zwf-devtools__contribution')].find((row) => row.textContent?.startsWith('visualEditor.registerNodeheading'))!;
     expect(heading.title).toMatch(/^visualEditor\.registerNode: heading\nby headings, registered at .+\n\n\[/);
   });
 
@@ -139,7 +139,7 @@ describe('devtools', () => {
     const contributions = mount().tab('Contributions');
     [...contributions.querySelectorAll('button')].find((button) => button.textContent === 'By contribution point')!.click();
     const renderers = [...contributions.querySelectorAll('details')].find((group) => group.querySelector('summary')?.textContent?.startsWith('visualEditor.registerRawBoxRenderer'))!;
-    const rows = [...renderers.querySelectorAll('.typst-devtools__contribution')].map((row) => row.textContent);
+    const rows = [...renderers.querySelectorAll('.zwf-devtools__contribution')].map((row) => row.textContent);
     // the image renderer (110) before the compiled snippets (100)
     expect(rows).toEqual([expect.stringMatching(/^images.*priority 110$/), expect.stringMatching(/^rendered-boxes.*priority 100$/)]);
   });
@@ -149,7 +149,7 @@ describe('devtools', () => {
     // Tiptap tells an editor's extensions it was created after a timeout
     await new Promise((resolve) => setTimeout(resolve));
     const document = tab('Document');
-    const rows = [...document.querySelectorAll('.typst-devtools__node')].map((row) => row.textContent);
+    const rows = [...document.querySelectorAll('.zwf-devtools__node')].map((row) => row.textContent);
     expect(rows[0]).toMatch(/^heading0–7/);
     expect(rows).toContainEqual(expect.stringMatching(/^rawBlock9–15box"#foo\(\)"/));
   });
@@ -161,7 +161,7 @@ describe('devtools', () => {
     expect(events.textContent).not.toContain('While hidden');
     for (let i = 0; i < 400; i++) editor.source = `= Shown ${i}`;
     await frame();
-    expect(events.querySelectorAll('.typst-devtools__event').length).toBeGreaterThan(400);
+    expect(events.querySelectorAll('.zwf-devtools__event').length).toBeGreaterThan(400);
     expect(events.textContent).toContain('content: "= Shown 0"');
     show(false);
     editor.source = '= Hidden again';
@@ -176,7 +176,7 @@ describe('devtools', () => {
     editor.source = '= Changed';
     await frame();
     expect(events.textContent).toContain('project.onDidChangeFile');
-    const change = [...events.querySelectorAll<HTMLElement>('.typst-devtools__event')].find((row) => row.textContent?.includes('project.onDidChangeFile'))!;
+    const change = [...events.querySelectorAll<HTMLElement>('.zwf-devtools__event')].find((row) => row.textContent?.includes('project.onDidChangeFile'))!;
     expect(change.textContent).toContain('kind: "update"');
     expect(change.title).toContain('content: "= Changed"');
 

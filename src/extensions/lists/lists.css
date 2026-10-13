@@ -1,7 +1,7 @@
 /* The lists extension's styles: task lists in the Visual editor.
-   See lists.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-lists__tasks { list-style: none; padding-left: 0.3em; }
-.typst-lists__tasks > li { display: flex; gap: 0.5em; align-items: baseline; }
-.typst-lists__tasks > li > label { flex: none; }
-.typst-lists__tasks > li > div { flex: 1; min-width: 0; }
-.typst-lists__tasks > li > div > p { margin: 0; }
+   See lists.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-lists__tasks { list-style: none; padding-left: 0.3em; }
+.zwf-lists__tasks > li { display: flex; gap: 0.5em; align-items: baseline; }
+.zwf-lists__tasks > li > label { flex: none; }
+.zwf-lists__tasks > li > div { flex: 1; min-width: 0; }
+.zwf-lists__tasks > li > div > p { margin: 0; }

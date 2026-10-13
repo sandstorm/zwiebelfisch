@@ -2,103 +2,103 @@
    scope, message, outcome of a replace, keys, result tree with the replace preview) and the matches highlighted in
    the editors.
    See search in search.ts, which registers it. */
-.typst-search {
+.zwf-search {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  color: var(--te-text-2);
+  color: var(--zwf-text-2);
   font-size: 13px;
 }
-.typst-search__modes {
+.zwf-search__modes {
   display: flex;
   margin: 8px 8px 0;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
   padding: 1px;
   align-self: flex-start;
 }
-.typst-search__mode {
+.zwf-search__mode {
   border: 0;
   border-radius: 4px;
   padding: 1px 10px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
-.typst-search__mode:hover { color: var(--te-text); }
-.typst-search__mode[aria-pressed='true'] { background: var(--te-selected); color: var(--te-text); }
-.typst-search__field {
+.zwf-search__mode:hover { color: var(--zwf-text); }
+.zwf-search__mode[aria-pressed='true'] { background: var(--zwf-selected); color: var(--zwf-text); }
+.zwf-search__field {
   display: flex;
   align-items: center;
   gap: 2px;
   margin: 8px 8px 4px;
   padding: 2px 3px 2px 0;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
-  background: var(--te-control);
+  background: var(--zwf-control);
 }
-.typst-search__field:focus-within { border-color: var(--te-accent); }
-.typst-search__replace { margin-top: 0; }
-.typst-search__replace[hidden] { display: none; }
-.typst-search__input {
+.zwf-search__field:focus-within { border-color: var(--zwf-accent); }
+.zwf-search__replace { margin-top: 0; }
+.zwf-search__replace[hidden] { display: none; }
+.zwf-search__input {
   flex: 1;
   min-width: 0;
   border: 0;
   padding: 4px 7px;
   background: none;
-  color: var(--te-text);
+  color: var(--zwf-text);
   font: inherit;
   outline: none;
 }
-.typst-search__toggle {
+.zwf-search__toggle {
   flex: none;
   min-width: 22px;
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 1px 3px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: 600 11px/16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   cursor: pointer;
 }
-.typst-search__toggle:hover { background: var(--te-hover); color: var(--te-text); }
-.typst-search__toggle[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); color: var(--te-text); }
-.typst-search__scope {
+.zwf-search__toggle:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-search__toggle[aria-pressed='true'] { border-color: var(--zwf-accent); background: var(--zwf-selected); color: var(--zwf-text); }
+.zwf-search__scope {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
   margin: 0 8px 4px;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font-size: 12px;
 }
-.typst-search__scope-select {
+.zwf-search__scope-select {
   flex: none;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 1px 2px;
-  background: var(--te-control);
-  color: var(--te-text);
+  background: var(--zwf-control);
+  color: var(--zwf-text);
   font: inherit;
 }
-.typst-search__scope-target {
+.zwf-search__scope-target {
   display: flex;
   align-items: center;
   min-width: 0;
   overflow: hidden;
 }
-.typst-search__scope-target[hidden] { display: none; }
-.typst-search__scope-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.typst-search__scope-target--folder {
+.zwf-search__scope-target[hidden] { display: none; }
+.zwf-search__scope-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-search__scope-target--folder {
   border-radius: 0.8em;
   padding: 0 2px 0 7px;
-  background: var(--te-chip);
-  color: var(--te-text-2);
+  background: var(--zwf-chip);
+  color: var(--zwf-text-2);
 }
-.typst-search__scope-clear {
+.zwf-search__scope-clear {
   flex: none;
   border: 0;
   border-radius: 50%;
@@ -106,55 +106,55 @@
   height: 16px;
   padding: 0;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: inherit;
   line-height: 16px;
   cursor: pointer;
 }
-.typst-search__scope-clear:hover { background: var(--te-hover); color: var(--te-text); }
-.typst-search__scope-clear[hidden] { display: none; }
-.typst-search__status { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-right: 8px; }
-.typst-search__message { flex: 1; min-width: 0; margin: 0; padding: 2px 10px 4px; color: var(--te-muted); font-size: 12px; }
-.typst-search__message:empty { display: none; }
-.typst-search__button {
+.zwf-search__scope-clear:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-search__scope-clear[hidden] { display: none; }
+.zwf-search__status { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-right: 8px; }
+.zwf-search__message { flex: 1; min-width: 0; margin: 0; padding: 2px 10px 4px; color: var(--zwf-muted); font-size: 12px; }
+.zwf-search__message:empty { display: none; }
+.zwf-search__button {
   flex: none;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 1px 8px;
-  background: var(--te-control);
-  color: var(--te-text);
+  background: var(--zwf-control);
+  color: var(--zwf-text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
-.typst-search__button:hover:not(:disabled) { background: var(--te-hover); }
-.typst-search__button:disabled { color: var(--te-faint); cursor: default; }
-.typst-search__button[hidden] { display: none; }
-.typst-search__notice {
+.zwf-search__button:hover:not(:disabled) { background: var(--zwf-hover); }
+.zwf-search__button:disabled { color: var(--zwf-faint); cursor: default; }
+.zwf-search__button[hidden] { display: none; }
+.zwf-search__notice {
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin: 0 8px 4px;
   border-radius: 4px;
   padding: 3px 6px;
-  background: var(--te-chip);
-  color: var(--te-text-2);
+  background: var(--zwf-chip);
+  color: var(--zwf-text-2);
   font-size: 12px;
 }
-.typst-search__notice[hidden] { display: none; }
-.typst-search__outcome { flex: 1; min-width: 0; }
-.typst-search__message--error { color: var(--te-danger); }
-.typst-search__empty {
+.zwf-search__notice[hidden] { display: none; }
+.zwf-search__outcome { flex: 1; min-width: 0; }
+.zwf-search__message--error { color: var(--zwf-danger); }
+.zwf-search__empty {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
   margin: 8px 10px;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font-size: 12px;
 }
-.typst-search__empty[hidden] { display: none; }
-.typst-search__empty-key { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.typst-search__tree {
+.zwf-search__empty[hidden] { display: none; }
+.zwf-search__empty-key { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.zwf-search__tree {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -163,8 +163,8 @@
   list-style: none;
   scrollbar-width: thin;
 }
-.typst-search__file,
-.typst-search__match {
+.zwf-search__file,
+.zwf-search__match {
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -174,56 +174,56 @@
   user-select: none;
   white-space: nowrap;
 }
-.typst-search__file { padding: 0 8px; color: var(--te-text); }
+.zwf-search__file { padding: 0 8px; color: var(--zwf-text); }
 /* A match's row: its line wraps to at most three rows beside the line number (the match is early in it, see
    match-preview.ts); "…" where it is clamped. */
-.typst-search__match {
+.zwf-search__match {
   align-items: flex-start;
   padding: 2px 8px 2px 28px;
   line-height: 18px;
   white-space: normal;
 }
-.typst-search__file:hover,
-.typst-search__match:hover { background: var(--te-hover); }
-.typst-search__file:focus,
-.typst-search__match:focus { outline: none; background: var(--te-selected); }
-.typst-search__file:focus-visible,
-.typst-search__match:focus-visible { box-shadow: inset 0 0 0 2px var(--te-accent); }
-.typst-search__chevron {
+.zwf-search__file:hover,
+.zwf-search__match:hover { background: var(--zwf-hover); }
+.zwf-search__file:focus,
+.zwf-search__match:focus { outline: none; background: var(--zwf-selected); }
+.zwf-search__file:focus-visible,
+.zwf-search__match:focus-visible { box-shadow: inset 0 0 0 2px var(--zwf-accent); }
+.zwf-search__chevron {
   flex: none;
   align-self: center;
   width: 0;
   height: 0;
   margin: 0 3px;
   border-block: 4px solid transparent;
-  border-left: 5px solid var(--te-faint);
+  border-left: 5px solid var(--zwf-faint);
   transition: transform 0.1s;
 }
-.typst-search__file[aria-expanded='true'] .typst-search__chevron { transform: rotate(90deg); }
-.typst-search__name { flex: none; font-weight: 500; }
-.typst-search__folder { flex: 1; min-width: 0; overflow: hidden; color: var(--te-muted); font-size: 12px; text-overflow: ellipsis; }
-.typst-search__count {
+.zwf-search__file[aria-expanded='true'] .zwf-search__chevron { transform: rotate(90deg); }
+.zwf-search__name { flex: none; font-weight: 500; }
+.zwf-search__folder { flex: 1; min-width: 0; overflow: hidden; color: var(--zwf-muted); font-size: 12px; text-overflow: ellipsis; }
+.zwf-search__count {
   flex: none;
   min-width: 1.6em;
   border-radius: 0.8em;
   padding: 0 5px;
-  background: var(--te-chip);
-  color: var(--te-text-2);
+  background: var(--zwf-chip);
+  color: var(--zwf-text-2);
   font-size: 11px;
   line-height: 16px;
   text-align: center;
 }
-.typst-search__line {
+.zwf-search__line {
   flex: none;
   min-width: 3ch;
-  color: var(--te-faint);
+  color: var(--zwf-faint);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.typst-search__match .typst-search__line { color: var(--te-muted); }
-.typst-search__preview {
+.zwf-search__match .zwf-search__line { color: var(--zwf-muted); }
+.zwf-search__preview {
   display: -webkit-box;
   flex: 1;
   min-width: 0;
@@ -236,38 +236,38 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.typst-search__hit { border-radius: 2px; background: var(--te-highlight); color: var(--te-text); }
+.zwf-search__hit { border-radius: 2px; background: var(--zwf-highlight); color: var(--zwf-text); }
 /* Replace mode's preview: the match struck through, its replacement after it (VS Code's diff colors). */
-.typst-search__old { background: light-dark(rgba(255, 0, 0, 0.15), rgba(255, 0, 0, 0.25)); color: var(--te-text); text-decoration: line-through; }
-.typst-search__new { background: light-dark(rgba(155, 185, 85, 0.3), rgba(155, 185, 85, 0.35)); color: var(--te-text); text-decoration: none; }
-.typst-search__row-action {
+.zwf-search__old { background: light-dark(rgba(255, 0, 0, 0.15), rgba(255, 0, 0, 0.25)); color: var(--zwf-text); text-decoration: line-through; }
+.zwf-search__new { background: light-dark(rgba(155, 185, 85, 0.3), rgba(155, 185, 85, 0.35)); color: var(--zwf-text); text-decoration: none; }
+.zwf-search__row-action {
   flex: none;
   align-self: center;
   border: 0;
   border-radius: 3px;
   padding: 0 4px;
   background: none;
-  color: var(--te-muted);
+  color: var(--zwf-muted);
   font: inherit;
   font-size: 12px;
   line-height: 18px;
   cursor: pointer;
 }
-.typst-search__row-action:hover { background: var(--te-hover); color: var(--te-text); }
+.zwf-search__row-action:hover { background: var(--zwf-hover); color: var(--zwf-text); }
 /* a match's replace shows on hover and on the row the tree is on; a file's always */
-.typst-search__match .typst-search__row-action { align-self: flex-start; visibility: hidden; }
-.typst-search__match:hover .typst-search__row-action,
-.typst-search__match:focus .typst-search__row-action { visibility: visible; }
+.zwf-search__match .zwf-search__row-action { align-self: flex-start; visibility: hidden; }
+.zwf-search__match:hover .zwf-search__row-action,
+.zwf-search__match:focus .zwf-search__row-action { visibility: visible; }
 
 /* The matches in the Visual and Source editors (VS Code's find match colors); the current one stronger and outlined.
    A raw box with a match in it is outlined as a whole. */
-.typst-search__highlight {
-  --typst-search-match: light-dark(rgba(234, 92, 0, 0.25), rgba(234, 92, 0, 0.33));
+.zwf-search__highlight {
+  --zwf-search-match: light-dark(rgba(234, 92, 0, 0.25), rgba(234, 92, 0, 0.33));
   border-radius: 2px;
-  background: var(--typst-search-match);
+  background: var(--zwf-search-match);
 }
-.typst-search__highlight--current {
-  --typst-search-match: light-dark(rgba(234, 92, 0, 0.45), rgba(234, 92, 0, 0.55));
+.zwf-search__highlight--current {
+  --zwf-search-match: light-dark(rgba(234, 92, 0, 0.45), rgba(234, 92, 0, 0.55));
   outline: 1px solid rgba(234, 92, 0, 0.8);
 }
-.typst-search__highlight[contenteditable='false'] { background: none; outline: 2px solid var(--typst-search-match); outline-offset: 1px; }
+.zwf-search__highlight[contenteditable='false'] { background: none; outline: 2px solid var(--zwf-search-match); outline-offset: 1px; }

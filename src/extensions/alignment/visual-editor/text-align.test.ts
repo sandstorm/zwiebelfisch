@@ -25,7 +25,7 @@ function setup(text: string) {
 }
 
 function textAlign(parent: HTMLElement, text: string): string {
-  const block = [...parent.querySelectorAll<HTMLElement>('.typst-visual p, .typst-visual h1, .typst-visual h2')].find((e) => e.textContent === text)!;
+  const block = [...parent.querySelectorAll<HTMLElement>('.zwf-visual p, .zwf-visual h1, .zwf-visual h2')].find((e) => e.textContent === text)!;
   return block.style.textAlign || 'left';
 }
 

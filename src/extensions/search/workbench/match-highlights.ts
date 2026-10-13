@@ -99,7 +99,7 @@ export interface CurrentMatch {
   readonly match: TextMatch;
 }
 
-const CLASS = 'typst-search__highlight';
+const CLASS = 'zwf-search__highlight';
 
 /** Replaces a Source editor's match marks. */
 const setMarks = StateEffect.define<DecorationSet>();

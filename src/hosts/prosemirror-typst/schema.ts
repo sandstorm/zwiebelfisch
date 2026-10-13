@@ -47,7 +47,7 @@ export const RawBlock = Node.create({
     return { src: { default: '', rendered: false }, sep: { default: null, rendered: false } };
   },
   renderHTML({ node }) {
-    return ['pre', { class: 'typst-visual__raw-block' }, node.attrs.src];
+    return ['pre', { class: 'zwf-visual__raw-block' }, node.attrs.src];
   },
 });
 
@@ -64,7 +64,7 @@ export const RawInline = Node.create({
     return { src: { default: '', rendered: false }, code: { default: false, rendered: false } };
   },
   renderHTML({ node }) {
-    return ['code', { class: 'typst-visual__raw-inline' }, node.attrs.src];
+    return ['code', { class: 'zwf-visual__raw-inline' }, node.attrs.src];
   },
 });
 
@@ -79,7 +79,7 @@ export const SoftBreak = Node.create({
     return { src: { default: '\n', rendered: false } };
   },
   renderHTML() {
-    return ['span', { class: 'typst-visual__soft-break' }, ' '];
+    return ['span', { class: 'zwf-visual__soft-break' }, ' '];
   },
 });
 

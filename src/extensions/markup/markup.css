@@ -1,31 +1,31 @@
 /* The markup extension's styles: links, highlighted text, inline code, code blocks and block quotes in the Visual editor.
-   See markup.ts, which registers it; colors from the widget's --te-* tokens. */
-.typst-markup__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
-.typst-markup__highlight { background: var(--te-highlight); color: inherit; }
+   See markup.ts, which registers it; colors from the widget's --zwf-* tokens. */
+.zwf-markup__link { color: var(--zwf-accent); text-decoration: underline; cursor: text; }
+.zwf-markup__highlight { background: var(--zwf-highlight); color: inherit; }
 /* Code: inline code and code blocks (plain text edited in place, with a language field) */
-.typst-markup__code-inline {
+.zwf-markup__code-inline {
   padding: 0 3px;
   border-radius: 4px;
-  background: var(--te-chip);
+  background: var(--zwf-chip);
   font: 0.85em ui-monospace, monospace;
 }
-.typst-markup__code-block {
+.zwf-markup__code-block {
   margin: 0 0 0.7em;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 6px;
-  background: var(--te-subtle);
+  background: var(--zwf-subtle);
 }
-.typst-markup__code-header {
+.zwf-markup__code-header {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 2px 8px;
-  border-bottom: 1px solid var(--te-border);
+  border-bottom: 1px solid var(--zwf-border);
   font: 600 12px system-ui, sans-serif;
-  color: var(--te-text-2);
+  color: var(--zwf-text-2);
   user-select: none;
 }
-.typst-markup__code-language {
+.zwf-markup__code-language {
   width: 9em;
   padding: 1px 4px;
   border: 1px solid transparent;
@@ -34,14 +34,14 @@
   font: 12px ui-monospace, monospace;
   color: inherit;
 }
-.typst-markup__code-language:hover,
-.typst-markup__code-language:focus { border-color: var(--te-border); background: var(--te-surface); outline: none; }
-.typst-markup__code-block pre {
+.zwf-markup__code-language:hover,
+.zwf-markup__code-language:focus { border-color: var(--zwf-border); background: var(--zwf-surface); outline: none; }
+.zwf-markup__code-block pre {
   margin: 0;
   padding: 6px 8px;
   font: 13px/1.45 ui-monospace, monospace;
-  color: var(--te-text);
+  color: var(--zwf-text);
   white-space: pre-wrap;
 }
-.typst-markup__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
-.typst-markup__quote > :last-child { margin-bottom: 0; }
+.zwf-markup__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--zwf-border); color: var(--zwf-text-2); }
+.zwf-markup__quote > :last-child { margin-bottom: 0; }

@@ -63,7 +63,7 @@ export class VisualEditor {
     const editor: VisualEditorContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text column: the text and what floats in it (bars, popovers), `position: relative`
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
-    body.className = 'typst-visual__body';
+    body.className = 'zwf-visual__body';
     this.content = body;
     this.tiptap = new Editor({
       element: body,
@@ -86,7 +86,7 @@ export class VisualEditor {
         ...contributed.tiptapExtensions.flatMap((provider) => provider(editor)),
       ],
       injectCSS: false,
-      editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
+      editorProps: { attributes: { class: 'zwf-visual', 'data-testid': 'zwf-visual' } },
       onTransaction: ({ transaction }) => {
         if (transaction.docChanged || !this.revealed?.selection.eq(transaction.selection)) this.revealed = null;
         this.afterTransaction(transaction);
@@ -286,7 +286,7 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     readonly keepsDom?: boolean;
     /**
      * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
-     * DOM `data-typst-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
+     * DOM `data-zwf-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
      */
     readonly ownsPseudoElements?: boolean;
   };
@@ -631,7 +631,7 @@ export interface FollowableLink {
   follow(): void;
   /**
    * The pointer moved (`event`) over it at `element`: it shows as links do in every editor, its hint ("Go to Figure ·
-   * Setup in ch2.typ (⌘+click or Alt+Enter)") and, while the modifier is held, the link look (`typst-link--mod`).
+   * Setup in ch2.typ (⌘+click or Alt+Enter)") and, while the modifier is held, the link look (`zwf-link--mod`).
    */
   hover(event: MouseEvent, element: Element): void;
   /** The pointer (`event`) left it. */
@@ -831,7 +831,7 @@ function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews:
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
-const FROM_DOCUMENT = 'typst-from-document';
+const FROM_DOCUMENT = 'zwf-from-document';
 
 /** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
 interface Ranked<T> {

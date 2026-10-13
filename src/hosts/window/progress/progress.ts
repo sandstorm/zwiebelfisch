@@ -26,10 +26,10 @@ export class ProgressIndicators {
   #inStatusBar({ title }: ProgressOptions): Indicator {
     const doc = this.places.editingArea.ownerDocument;
     const element = doc.createElement('div');
-    element.className = 'typst-editor__progress';
-    element.dataset.testid = 'typst-progress';
+    element.className = 'zwf-editor__progress';
+    element.dataset.testid = 'zwf-progress';
     const meter = new Meter(element, title);
-    const spinner = Object.assign(doc.createElement('span'), { className: 'typst-editor__progress-spinner' });
+    const spinner = Object.assign(doc.createElement('span'), { className: 'zwf-editor__progress-spinner' });
     spinner.setAttribute('aria-hidden', 'true');
     const label = Object.assign(doc.createElement('span'), { textContent: title ?? '' });
     element.append(spinner, label);
@@ -50,13 +50,13 @@ export class ProgressIndicators {
   #overEditingArea({ title }: ProgressOptions): Indicator {
     const area = this.places.editingArea;
     const doc = area.ownerDocument;
-    const overlay = Object.assign(doc.createElement('div'), { className: 'typst-editor__editing-progress' });
-    overlay.dataset.testid = 'typst-editing-progress';
-    const heading = Object.assign(doc.createElement('div'), { className: 'typst-editor__editing-progress-title', textContent: title ?? '' });
+    const overlay = Object.assign(doc.createElement('div'), { className: 'zwf-editor__editing-progress' });
+    overlay.dataset.testid = 'zwf-editing-progress';
+    const heading = Object.assign(doc.createElement('div'), { className: 'zwf-editor__editing-progress-title', textContent: title ?? '' });
     heading.setAttribute('role', 'status');
-    const bar = Object.assign(doc.createElement('div'), { className: 'typst-editor__editing-progress-bar' });
+    const bar = Object.assign(doc.createElement('div'), { className: 'zwf-editor__editing-progress-bar' });
     const meter = new Meter(bar, title);
-    const message = Object.assign(doc.createElement('div'), { className: 'typst-editor__editing-progress-message' });
+    const message = Object.assign(doc.createElement('div'), { className: 'zwf-editor__editing-progress-message' });
     overlay.append(heading, bar, message);
     // the newest on top
     (this.#notes.at(-1) ?? area).after(overlay);
@@ -125,7 +125,7 @@ class Meter {
     else this.element.removeAttribute('aria-valuetext');
     if (this.#done !== null) {
       this.element.setAttribute('aria-valuenow', String(Math.round(this.#done)));
-      this.element.style.setProperty('--te-progress', `${this.#done}%`);
+      this.element.style.setProperty('--zwf-progress', `${this.#done}%`);
     }
   }
 }

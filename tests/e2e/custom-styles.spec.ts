@@ -16,7 +16,7 @@ const STYLES = [
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');
-  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg')).toBeVisible();
   await page.locator('zwiebelfisch-editor').evaluate(
     (el: Editor, styles) => {
       el.files = { '/styles.typ': styles };
@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-const visual = (page: Page) => page.locator('zwiebelfisch-editor [data-testid="typst-visual"]:visible');
+const visual = (page: Page) => page.locator('zwiebelfisch-editor [data-testid="zwf-visual"]:visible');
 const styleMenu = (page: Page) => page.locator('zwiebelfisch-editor').getByRole('toolbar', { name: 'Formatting' }).getByRole('combobox', { name: 'Text style' });
 const value = (page: Page) => () => page.locator('zwiebelfisch-editor').evaluate((el: Editor) => el.value);
 
@@ -34,28 +34,28 @@ test('a declared block style wraps the paragraph, imports itself, stays editable
   await caretAtEnd(visual(page).locator('p', { hasText: 'A paragraph' }));
   await styleMenu(page).selectOption({ label: 'Note' });
   await expect.poll(value(page)).toBe('#import "styles.typ": note\n\nIntro\n\n#note[A paragraph to style.]\n');
-  const styled = visual(page).locator('.typst-styles__block.typst-styles--note');
+  const styled = visual(page).locator('.zwf-styles__block.zwf-styles--note');
   await expect(styled).toHaveAttribute('data-style-title', 'Note');
   await expect(styled.locator('p')).toHaveText('A paragraph to style.');
-  await expect(page.locator('zwiebelfisch-editor').getByTestId('typst-status')).toHaveText(/✓/); // compiles: the import works
+  await expect(page.locator('zwiebelfisch-editor').getByTestId('zwf-status')).toHaveText(/✓/); // compiles: the import works
 
   await caretAtEnd(styled.locator('p'));
   await page.keyboard.type(' More.');
   await expect.poll(value(page)).toContain('#note[A paragraph to style. More.]');
 
   await page.locator('zwiebelfisch-editor').getByRole('tab', { name: 'Source' }).click();
-  await expect(page.locator('zwiebelfisch-editor [data-testid="typst-source"]:visible')).toContainText('#note[A paragraph to style. More.]');
+  await expect(page.locator('zwiebelfisch-editor [data-testid="zwf-source"]:visible')).toContainText('#note[A paragraph to style. More.]');
   await page.locator('zwiebelfisch-editor').getByRole('tab', { name: 'Visual' }).click();
 
   await caretAtEnd(styled.locator('p'));
   await styleMenu(page).selectOption({ label: 'Normal text' });
   await expect.poll(value(page)).toBe('#import "styles.typ": note\n\nIntro\n\nA paragraph to style. More.\n');
-  await expect(visual(page).locator('.typst-styles__block')).toHaveCount(0);
+  await expect(visual(page).locator('.zwf-styles__block')).toHaveCount(0);
 });
 
 test('a declared inline style goes around the selected words', async ({ page }) => {
   await selectText(visual(page).locator('p', { hasText: 'A paragraph' }), 'paragraph');
   await styleMenu(page).selectOption({ label: 'Keyword' });
   await expect.poll(value(page)).toBe('#import "styles.typ": key\n\nIntro\n\nA #key[paragraph] to style.\n');
-  await expect(visual(page).locator('.typst-styles__inline')).toHaveText('paragraph');
+  await expect(visual(page).locator('.zwf-styles__inline')).toHaveText('paragraph');
 });

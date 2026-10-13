@@ -1,43 +1,43 @@
 /* The labels extension's styles: references (@key) as chips, labels (<key>) as tags.
-   See labels.ts, which registers it; colors from the widget's --te-* tokens. */
+   See labels.ts, which registers it; colors from the widget's --zwf-* tokens. */
 /* References (@key) as chips showing the label; what it labels is in the hover of its link; a missing label underlined wavy */
-.typst-labels__ref {
+.zwf-labels__ref {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4em;
   margin: 0 1px;
   padding: 0 5px;
   border-radius: 4px;
-  background: var(--te-selected);
-  color: var(--te-accent);
+  background: var(--zwf-selected);
+  color: var(--zwf-accent);
   font: 0.8em system-ui, sans-serif;
   white-space: nowrap;
   cursor: default;
 }
-.typst-labels__ref-supplement { color: var(--te-text); }
-.typst-labels__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
+.zwf-labels__ref-supplement { color: var(--zwf-text); }
+.zwf-labels__ref--unknown { background: var(--zwf-danger-soft); color: var(--zwf-danger); text-decoration: underline wavy var(--zwf-danger); text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
-.typst-labels__tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
-.typst-labels__tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
-.typst-labels__tag-name {
+.zwf-labels__tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
+.zwf-labels__tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
+.zwf-labels__tag-name {
   padding: 0 7px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--zwf-border);
   border-radius: 9px;
-  background: var(--te-subtle);
-  color: var(--te-muted);
+  background: var(--zwf-subtle);
+  color: var(--zwf-muted);
   font: inherit;
   cursor: pointer;
 }
-.typst-labels__tag-name::before { content: '<'; opacity: 0.5; }
-.typst-labels__tag-name::after { content: '>'; opacity: 0.5; }
-.typst-labels__tag-name:hover { border-color: var(--te-accent); color: var(--te-accent); }
-.typst-labels__tag-input {
+.zwf-labels__tag-name::before { content: '<'; opacity: 0.5; }
+.zwf-labels__tag-name::after { content: '>'; opacity: 0.5; }
+.zwf-labels__tag-name:hover { border-color: var(--zwf-accent); color: var(--zwf-accent); }
+.zwf-labels__tag-input {
   padding: 0 7px;
-  border: 1px solid var(--te-accent);
+  border: 1px solid var(--zwf-accent);
   border-radius: 9px;
-  background: var(--te-surface);
-  color: var(--te-text);
+  background: var(--zwf-surface);
+  color: var(--zwf-text);
   font: inherit;
   outline: none;
-  box-shadow: 0 0 0 2px var(--te-jump);
+  box-shadow: 0 0 0 2px var(--zwf-jump);
 }

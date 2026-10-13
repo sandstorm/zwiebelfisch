@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-test.skip(!process.env.TYPST_DOCS_E2E, 'needs the dev server: mise run test:e2e-docs');
+test.skip(!process.env.ZWF_DOCS_E2E, 'needs the dev server: mise run test:e2e-docs');
 
 const DEV_SERVER = 'http://127.0.0.1:5199';
 const FILE = resolve(import.meta.dirname, '../../docs/10_getting-started/01_getting-started.typ');
@@ -26,7 +26,7 @@ async function openGettingStarted(page: Page): Promise<void> {
   await page.locator('[role=tab]:visible', { hasText: 'Source' }).click();
 }
 
-const sourceLine = (page: Page, text: string) => page.locator('[data-testid=typst-source]:visible .cm-line', { hasText: text });
+const sourceLine = (page: Page, text: string) => page.locator('[data-testid=zwf-source]:visible .cm-line', { hasText: text });
 
 test('an edited heading is saved to the file in docs/', async ({ page }) => {
   await openGettingStarted(page);

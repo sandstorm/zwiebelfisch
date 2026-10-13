@@ -1,8 +1,8 @@
 /* The slash-commands extension's styles: the hint in the empty line holding the cursor.
-   See slash-commands.ts, which registers it; colors from the widget's --te-* tokens. */
+   See slash-commands.ts, which registers it; colors from the widget's --zwf-* tokens. */
 /* Floated with no height, so the line keeps its size and the caret its place. The empty alternative text keeps
    screen readers from reading the hint as content; browsers without that syntax take the first declaration. */
-.typst-slash-commands__hint::before {
+.zwf-slash-commands__hint::before {
   content: attr(data-hint);
   content: attr(data-hint) / '';
   float: left;
@@ -10,7 +10,7 @@
   /* smaller and lighter than the text, on the same line height (the paragraph's 1.5) */
   font-size: 0.8em;
   line-height: calc(1.5em / 0.8);
-  color: var(--te-faint-2);
+  color: var(--zwf-faint-2);
   pointer-events: none;
   user-select: none;
 }

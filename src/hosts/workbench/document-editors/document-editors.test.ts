@@ -41,7 +41,7 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   editors.register(window);
   window.registerCustomEditorProvider('test.image', { resolveCustomEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });
   const show = (at: string, viewType?: string) => window.showCustomEditor({ path: path(at), content: project.content(path(at))! }, viewType);
-  const visible = () => [...area.querySelectorAll<HTMLElement>('.typst-editor__pane')].filter((pane) => !pane.hidden);
+  const visible = () => [...area.querySelectorAll<HTMLElement>('.zwf-editor__pane')].filter((pane) => !pane.hidden);
   const change = (fileChange: FileChange) => project.apply(fileChange);
   return { area, editors, window, show, visible, change };
 }
@@ -76,7 +76,7 @@ describe('DocumentEditors', () => {
     show('/main.typ', SOURCE_EDITOR);
     edit();
     expect(document.text).toBe('= T\nAlps');
-    undo(EditorView.findFromDOM(area.querySelector<HTMLElement>('[data-testid="typst-source"]')!)!);
+    undo(EditorView.findFromDOM(area.querySelector<HTMLElement>('[data-testid="zwf-source"]')!)!);
     expect(document.text).toBe('Alpha\n');
   });
 
@@ -87,7 +87,7 @@ describe('DocumentEditors', () => {
       { viewType: SOURCE_EDITOR, displayName: 'Source' },
     ]);
     expect(show('/main.typ')).toBe(VISUAL_EDITOR);
-    expect(visible()[0].querySelector('.typst-visual p')?.textContent).toBe('Alpha');
+    expect(visible()[0].querySelector('.zwf-visual p')?.textContent).toBe('Alpha');
   });
 
   it("makes a document's view the first time it is shown in it, and keeps it while others are shown", () => {
@@ -95,9 +95,9 @@ describe('DocumentEditors', () => {
     show('/main.typ');
     show('/main.typ', SOURCE_EDITOR);
     show('/b.typ');
-    expect(area.querySelectorAll('.typst-editor__pane')).toHaveLength(3);
+    expect(area.querySelectorAll('.zwf-editor__pane')).toHaveLength(3);
     expect(visible()).toHaveLength(1);
-    expect(visible()[0].querySelector('[data-testid=typst-source]')?.textContent).toContain('Beta');
+    expect(visible()[0].querySelector('[data-testid=zwf-source]')?.textContent).toContain('Beta');
     expect(editors.activeTextEditor?.document.text).toBe('Beta\n');
     expect(editors.activeTextEditor?.viewType).toBe(SOURCE_EDITOR);
   });
@@ -115,7 +115,7 @@ describe('DocumentEditors', () => {
     show('/main.typ', SOURCE_EDITOR);
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 2, to: 3 }));
     expect(editors.activeTextEditor!.selection).toEqual({ from: 2, to: 3 });
-    expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
+    expect(visible()[0].querySelector('[data-testid=zwf-source]')).not.toBeNull();
   });
 
   it('disposes the editors of a deleted file, and keeps those of a renamed one', () => {
@@ -124,10 +124,10 @@ describe('DocumentEditors', () => {
     show('/main.typ');
     change({ kind: 'rename', from: path('/b.typ'), path: path('/c.typ') });
     show('/c.typ');
-    expect(area.querySelectorAll('.typst-editor__pane')).toHaveLength(2);
+    expect(area.querySelectorAll('.zwf-editor__pane')).toHaveLength(2);
     show('/main.typ');
     change({ kind: 'delete', path: path('/c.typ') });
-    expect(area.querySelectorAll('.typst-editor__pane')).toHaveLength(1);
+    expect(area.querySelectorAll('.zwf-editor__pane')).toHaveLength(1);
     expect(area.textContent).not.toContain('Beta');
   });
 
@@ -153,7 +153,7 @@ describe('DocumentEditors frame', () => {
     const pane = () => visible()[0];
     // Visual: below the toolbar, right before the text; last in the pane
     expect(top.previousElementSibling?.getAttribute('role')).toBe('toolbar');
-    expect(top.nextElementSibling?.className).toBe('typst-visual__body');
+    expect(top.nextElementSibling?.className).toBe('zwf-visual__body');
     expect(pane().lastElementChild).toBe(bottom);
     show('/main.typ', SOURCE_EDITOR);
     expect(pane().querySelector('.cm-editor')).not.toBeNull();

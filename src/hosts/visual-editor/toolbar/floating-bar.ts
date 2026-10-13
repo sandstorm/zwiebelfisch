@@ -20,7 +20,7 @@ export class FloatingBar {
   ) {
     const doc = container.ownerDocument;
     this.element = doc.createElement('div');
-    this.element.className = 'typst-floating-bar';
+    this.element.className = 'zwf-floating-bar';
     this.element.setAttribute('role', 'toolbar');
     this.element.setAttribute('aria-label', label);
     this.element.hidden = true;

@@ -24,7 +24,7 @@ export class FileTree {
 
   constructor(parent: HTMLElement, private readonly options: FileTreeOptions) {
     this.element = parent.ownerDocument.createElement('div');
-    this.element.className = 'typst-files__tree';
+    this.element.className = 'zwf-files__tree';
     this.element.setAttribute('role', 'tree');
     this.element.setAttribute('aria-label', 'Files');
     this.expanded = new Set(openFolders(options.state?.get<unknown>(OPEN_FOLDERS)));
@@ -85,15 +85,15 @@ export class FileTree {
 
   private rowElementFor(state: TreeState, row: Row, tabbable: boolean): HTMLElement {
     const doc = this.element.ownerDocument;
-    const item = element(doc, 'div', `typst-files__row typst-files__row--${row.kind}`);
+    const item = element(doc, 'div', `zwf-files__row zwf-files__row--${row.kind}`);
     item.setAttribute('role', 'treeitem');
     item.setAttribute('aria-level', String(row.depth + 1));
     item.tabIndex = tabbable ? 0 : -1;
     item.dataset.path = row.path;
     item.title = ProjectPath.displayName(row.path);
     item.draggable = true;
-    item.style.setProperty('--typst-files-depth', String(row.depth));
-    const name = element(doc, 'span', 'typst-files__name');
+    item.style.setProperty('--zwf-files-depth', String(row.depth));
+    const name = element(doc, 'span', 'zwf-files__name');
     name.textContent = row.name;
     if (row.kind === 'folder') {
       item.setAttribute('aria-expanded', String(row.expanded));
@@ -161,9 +161,9 @@ export class FileTree {
   private listenToDrags(): void {
     let target: HTMLElement | null = null;
     const mark = (next: HTMLElement | null) => {
-      target?.classList.remove('typst-files__row--drop');
+      target?.classList.remove('zwf-files__row--drop');
       target = next;
-      target?.classList.add('typst-files__row--drop');
+      target?.classList.add('zwf-files__row--drop');
     };
     const pathAt = (event: DragEvent): ProjectPath | null =>
       ProjectPath.parse((event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path ?? '');
@@ -248,7 +248,7 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
 
 function chevron(doc: Document): SVGSVGElement {
   const svg = icon(doc, 'chevron');
-  svg.classList.add('typst-files__chevron');
+  svg.classList.add('zwf-files__chevron');
   return svg;
 }
 
@@ -260,7 +260,7 @@ function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
 }
 
 function badge(doc: Document): HTMLElement {
-  const main = element(doc, 'span', 'typst-files__badge');
+  const main = element(doc, 'span', 'zwf-files__badge');
   main.textContent = 'Main';
   return main;
 }
@@ -275,15 +275,15 @@ function decorationsOf({ decorations, paths }: TreeState, row: Row): FileDecorat
 
 /** One badge per decoration, in its color, its tooltip as title; the row names them all. */
 function badges(doc: Document, decorations: readonly FileDecoration[]): HTMLElement {
-  const badges = element(doc, 'span', 'typst-files__decorations');
+  const badges = element(doc, 'span', 'zwf-files__decorations');
   badges.setAttribute('aria-label', decorations.flatMap((decoration) => decoration.tooltip ?? []).join(', '));
   for (const { badge, tooltip, color } of decorations) {
-    const dot = element(doc, 'span', 'typst-files__decoration');
+    const dot = element(doc, 'span', 'zwf-files__decoration');
     dot.textContent = badge ?? '';
     if (tooltip) dot.title = tooltip;
     if (color) {
-      dot.style.setProperty('--typst-files-decoration-color', color);
-      dot.style.setProperty('--typst-files-decoration-text', textColorOn(color));
+      dot.style.setProperty('--zwf-files-decoration-color', color);
+      dot.style.setProperty('--zwf-files-decoration-text', textColorOn(color));
     }
     badges.append(dot);
   }

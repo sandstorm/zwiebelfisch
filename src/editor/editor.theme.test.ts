@@ -44,7 +44,7 @@ describe('the setting workbench.theme', () => {
     const { host } = mount('dark');
     expect(host.dataset.theme).toBe('dark');
     const css = readFileSync('src/editor/editor.css', 'utf8');
-    expect(css).toContain(".typst-editor[data-theme='dark'] { color-scheme: dark; }");
+    expect(css).toContain(".zwf-editor[data-theme='dark'] { color-scheme: dark; }");
   });
 
   it('leaves the scheme to the page by default', () => {

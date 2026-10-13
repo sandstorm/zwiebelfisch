@@ -68,7 +68,7 @@ function setup() {
   const files = { '/main.typ': `#include "${CHAPTER_PATH.slice(1)}"\n`, '/template.typ': template, [CHAPTER_PATH]: CHAPTER };
   const editor = createEditor(host, { files });
   editor.open(CHAPTER_PATH);
-  const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
+  const pane = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__pane')].find((p) => !p.hidden)!;
   const tiptap = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   return { host, editor, pane, tiptap };
 }
@@ -87,9 +87,9 @@ describe("the docs' example block style", () => {
 
   it('shows a chapter\'s #example[```typ …```] as the styled block "Example" with the code block in it, unchanged when printed back', () => {
     const { pane, tiptap, editor } = setup();
-    const block = pane().querySelector<HTMLElement>('.typst-styles__block')!;
+    const block = pane().querySelector<HTMLElement>('.zwf-styles__block')!;
     expect(block.getAttribute('data-style-title')).toBe('Example');
-    const code = block.querySelector<HTMLElement>('.typst-markup__code-block');
+    const code = block.querySelector<HTMLElement>('.zwf-markup__code-block');
     expect(code).not.toBeNull();
     expect(code!.querySelector<HTMLInputElement>('input[aria-label="Language"]')!.value).toBe('typ');
     // without the indentation Typst removes
@@ -106,8 +106,8 @@ describe("the docs' example block style", () => {
       const host = document.body.appendChild(document.createElement('div'));
       const editor = createEditor(host, { files });
       editor.open(path);
-      const blocks = [...host.querySelectorAll<HTMLElement>('.typst-styles__block')].filter((b) => !b.closest('[hidden]'));
-      expect(blocks.map((b) => [b.dataset.styleTitle, b.querySelectorAll('.typst-markup__code-block').length]), path).toEqual(text.split('#example[').slice(1).map(() => ['Example', 1]));
+      const blocks = [...host.querySelectorAll<HTMLElement>('.zwf-styles__block')].filter((b) => !b.closest('[hidden]'));
+      expect(blocks.map((b) => [b.dataset.styleTitle, b.querySelectorAll('.zwf-markup__code-block').length]), path).toEqual(text.split('#example[').slice(1).map(() => ['Example', 1]));
       expect(editor.files[path]).toBe(text);
     }
   });

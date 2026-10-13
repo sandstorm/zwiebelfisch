@@ -15,8 +15,8 @@ async function setSource(page: Page, source: string) {
   await page.evaluate((text) => ((window as unknown as { editor: { source: string } }).editor.source = text), source);
 }
 
-const scroller = (page: Page) => page.locator('.typst-preview__scroller');
-const pages = (page: Page) => page.getByTestId('typst-preview').locator('.typst-preview__page');
+const scroller = (page: Page) => page.locator('.zwf-preview__scroller');
+const pages = (page: Page) => page.getByTestId('zwf-preview').locator('.zwf-preview__page');
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -24,8 +24,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('zooms in, out, to 100% and back to fit width', async ({ page }) => {
-  const toolbar = page.getByTestId('typst-preview-toolbar');
-  const zoom = page.getByTestId('typst-preview-zoom');
+  const toolbar = page.getByTestId('zwf-preview-toolbar');
+  const zoom = page.getByTestId('zwf-preview-zoom');
   const width = () => pages(page).first().evaluate((el) => el.getBoundingClientRect().width);
   const fitWidth = await width();
   await expect(zoom).toHaveText(/^Fit · \d+%$/);
@@ -48,15 +48,15 @@ test('zooms in, out, to 100% and back to fit width', async ({ page }) => {
 
 test('clicking keeps working when zoomed in', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
-  await page.getByTestId('typst-preview-toolbar').getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByTestId('zwf-preview-toolbar').getByRole('button', { name: 'Zoom in' }).click();
   await clickGlyph(pages(page).locator('svg use').first());
-  await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Typst in five minutes');
+  await expect(page.getByTestId('zwf-source').locator('.zwf-source__jump')).toHaveText('Typst in five minutes');
 });
 
 test('highlights the clicked text in the preview', async ({ page }) => {
   await clickGlyph(pages(page).locator('svg use').first());
   // every place the clicked text is drawn: the heading, and its entry in the demo's outline
-  const highlights = pages(page).first().locator('.typst-preview__highlight');
+  const highlights = pages(page).first().locator('.zwf-preview__highlight');
   await expect(highlights.first()).toBeVisible();
   const boxes = await highlights.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect));
   // the glyph's origin, not its bounding box: Firefox reports a size-less <use> as large as the page
@@ -75,8 +75,8 @@ test('highlights the clicked text in the preview', async ({ page }) => {
 
 test("a double click's highlights go with the next edit or once the selection moves, in either editor", async ({ page }) => {
   // the heading's outline, the first of its highlights (its entry in the demo's outline has one, too)
-  const outline = pages(page).first().locator('.typst-preview__highlight');
-  const jump = page.getByTestId('typst-source').locator('.typst-source__jump');
+  const outline = pages(page).first().locator('.zwf-preview__highlight');
+  const jump = page.getByTestId('zwf-source').locator('.zwf-source__jump');
   const heading = pages(page).locator('svg use').first();
 
   // Source editor: an edit removes the outline in the preview and the highlight in the source
@@ -112,16 +112,16 @@ test.describe('a 30-page document', () => {
     const rendered = await pages(page).locator('svg').count();
     expect(rendered).toBeGreaterThan(0);
     expect(rendered).toBeLessThan(10);
-    await expect(page.getByTestId('typst-preview-page-number')).toHaveText('1 / 30');
+    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('1 / 30');
 
     await scroller(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
-    await expect(page.getByTestId('typst-preview-page-number')).toHaveText('30 / 30');
+    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('30 / 30');
     await expect(pages(page).last().locator('svg')).toBeVisible();
     await expect(pages(page).first().locator('svg')).toHaveCount(0);
   });
 
   test('stays responsive while typing', async ({ page }) => {
-    await page.getByTestId('typst-source').locator('.cm-content').click();
+    await page.getByTestId('zwf-source').locator('.cm-content').click();
     await page.keyboard.press('ControlOrMeta+Home');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
@@ -130,15 +130,15 @@ test.describe('a 30-page document', () => {
     await page.keyboard.type(typed, { delay: 20 });
     // the keystrokes reached the editor without waiting for compilations to finish
     expect(Date.now() - started).toBeLessThan(typed.length * 20 + 3000);
-    await expect(page.getByTestId('typst-source')).toContainText(typed.trim());
+    await expect(page.getByTestId('zwf-source')).toContainText(typed.trim());
     // the preview caught up and still shows all pages, the first one rendered
     await expect(pages(page)).toHaveCount(30);
     await expect(pages(page).first().locator('svg')).toBeVisible();
-    await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+    await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   });
 
   test('moving the cursor scrolls the preview only when the target is off-screen', async ({ page }) => {
-    const source = page.getByTestId('typst-source').locator('.cm-content');
+    const source = page.getByTestId('zwf-source').locator('.cm-content');
     await source.getByText('Text of page 1.', { exact: false }).first().click();
     await page.waitForTimeout(500);
     expect(await scroller(page).evaluate((el) => el.scrollTop)).toBe(0);
@@ -146,13 +146,13 @@ test.describe('a 30-page document', () => {
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.press('ArrowUp'); // into the text of the last page
     await expect.poll(() => scroller(page).evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
-    await expect(page.getByTestId('typst-preview-page-number')).toHaveText('30 / 30');
+    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('30 / 30');
   });
 });
 
 test('dragging the separator between editor and preview resizes both', async ({ page }) => {
-  const preview = page.getByTestId('typst-preview');
-  const editingArea = page.locator('.typst-editor__editor-area');
+  const preview = page.getByTestId('zwf-preview');
+  const editingArea = page.locator('.zwf-editor__editor-area');
   const before = (await preview.boundingBox())!;
   const editingBefore = (await editingArea.boundingBox())!;
   const split = page.getByRole('separator', { name: 'Right panel width' });
@@ -169,20 +169,20 @@ test('dragging the separator between editor and preview resizes both', async ({ 
 });
 
 test("the preview's rail button hides the right side (the editor takes its room); hidden, it keeps compiling", async ({ page }) => {
-  const editingArea = page.locator('.typst-editor__editor-area');
+  const editingArea = page.locator('.zwf-editor__editor-area');
   const before = (await editingArea.boundingBox())!.width;
-  const toggle = page.getByTestId('typst-panel-toggle-preview');
+  const toggle = page.getByTestId('zwf-panel-toggle-preview');
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await toggle.click();
-  await expect(page.getByTestId('typst-preview')).toBeHidden();
+  await expect(page.getByTestId('zwf-preview')).toBeHidden();
   expect((await editingArea.boundingBox())!.width).toBeGreaterThan(before + 200);
   await setSource(page, '= Hidden\n\n#unknown-function()\n');
-  await expect(page.getByTestId('typst-status')).not.toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).not.toHaveText(/✓ compiled/);
   await setSource(page, '= Shown again\n');
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   await page.reload();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
-  await expect(page.getByTestId('typst-preview')).toBeHidden(); // remembered for the session
-  await page.getByTestId('typst-panel-toggle-preview').click();
+  await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('zwf-preview')).toBeHidden(); // remembered for the session
+  await page.getByTestId('zwf-panel-toggle-preview').click();
   await expect(pages(page).locator('svg').first()).toBeVisible();
 });

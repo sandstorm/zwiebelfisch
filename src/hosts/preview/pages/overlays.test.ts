@@ -14,7 +14,7 @@ function setup() {
   const layer = new OverlayLayer(list, 'mark');
   const marks = () =>
     [...parent.querySelectorAll<HTMLElement>('.mark')].map((mark) => ({
-      page: mark.closest<HTMLElement>('.typst-preview__page')!.dataset.number,
+      page: mark.closest<HTMLElement>('.zwf-preview__page')!.dataset.number,
       left: mark.style.left,
       width: mark.style.width,
     }));
