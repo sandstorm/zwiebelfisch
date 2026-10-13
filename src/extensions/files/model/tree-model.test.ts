@@ -26,6 +26,12 @@ describe('buildTree / visibleRows', () => {
     ]);
   });
 
+  it('lists the main file first in its folder, ahead of the folders', () => {
+    const rows = visibleRows(buildTree(PATHS, [], path('/chapters/intro.typ')), new Set([path('/chapters')]));
+    expect(names(rows).slice(0, 6)).toEqual(['chapters', '  intro.typ', '  parts', '  2-middle.typ', '  10-end.typ', 'img']);
+    expect(names(visibleRows(buildTree(PATHS, [], path('/Zeta.typ')), new Set()))).toEqual(['Zeta.typ', 'chapters', 'img', 'main.typ']);
+  });
+
   it('shows only the top level while folders are collapsed', () => {
     const rows = visibleRows(buildTree(PATHS), new Set());
     expect(rows.map((row) => [row.path, row.kind, row.expanded])).toEqual([

@@ -1,6 +1,6 @@
 import { Disposable } from '../../core/disposable/disposable';
-import type { ProjectPath } from '../../core/paths/paths';
-import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import { ProjectPath } from '../../core/paths/paths';
+import type { ExtensionContext, MenuContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
 import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';
@@ -12,9 +12,9 @@ import { icon } from './workbench/icons/icons';
  * read-only editor for any file no other editor opens (`files.file`, `priority: 'fallback'`: its name, size and type).
  *
  * The panel shows the project and the shown file, opens what is picked and uploads files dropped on the widget. It
- * changes nothing itself: every change goes through `workspace.applyEdit`. Its operations are commands
- * (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, each on a row), offered in two
- * menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context
+ * changes nothing itself: every change goes through `workspace.applyEdit`, a new main file through
+ * `project.setMain`. Its operations are commands (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`,
+ * `files.delete`, `files.setMainFile`, each on a row), offered in two menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context
  * menu; context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row). Its badges
  * come from every FileDecorationProvider (e.g. where collaborators are). The setting `files.panel` says when it is open;
  * Alt+1 (⌃1 on the Mac, none on Linux) shows and focuses it (`workbench.view.files`).
@@ -71,6 +71,7 @@ export function files(): TypstExtension {
         registerOperations(context, panel),
         window.registerSearchProvider(fileSearch(project, workbench)),
         window.onDidChangeActiveFile(render),
+        project.onDidChangeMain(() => panel.render(state())),
         window.onDidChangeFileDecorations(() => panel.render(state())),
         workbench.onDidChangeMenu((menuId) => menuId === NEW_FILE_MENU && panel.render(state())),
         workspace.onDidChangeConfiguration((event) => {
@@ -88,6 +89,7 @@ const COMMANDS = [
   { command: 'files.upload', title: 'Upload files…', category: 'Files' },
   { command: 'files.rename', title: 'Rename…', category: 'Files' },
   { command: 'files.delete', title: 'Delete…', category: 'Files' },
+  { command: 'files.setMainFile', title: 'Set as main file', category: 'Files' },
 ];
 
 const PANEL_SETTING = {
@@ -101,17 +103,25 @@ const PANEL_SETTING = {
 type PanelMode = 'auto' | 'show' | 'hide';
 
 /** The panel's operations as commands, and its own entries in "New" and in a row's context menu. */
-function registerOperations({ commands, workbench }: ExtensionContext, panel: FilePanel): Disposable {
+function registerOperations({ commands, workbench, project, window }: ExtensionContext, panel: FilePanel): Disposable {
+  // a .typ file that is not the main file yet, while the host lets the main file change
+  const mainCandidate = (context: MenuContext) =>
+    !project.mainLocked && context.resourceKind === 'file' && !context.resourceIsMain && ProjectPath.isTypst(context.resource as ProjectPath);
   return Disposable.from(
     commands.registerCommand('files.newFile', (resource?: ProjectPath) => panel.newFile(resource)),
     commands.registerCommand('files.newFolder', (resource?: ProjectPath) => panel.newFolder(resource)),
     commands.registerCommand('files.upload', (resource?: ProjectPath) => panel.upload(resource)),
     commands.registerCommand('files.rename', (resource?: ProjectPath) => panel.rename(resource)),
     commands.registerCommand('files.delete', (resource?: ProjectPath) => panel.delete(resource)),
+    commands.registerCommand('files.setMainFile', (resource?: ProjectPath) => {
+      const problem = project.setMain(resource ?? window.activeFile);
+      if (problem) void window.showErrorMessage(problem);
+    }),
     ...NEW_ENTRIES.flatMap((entry) => [
       workbench.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
       workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
     ]),
+    workbench.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', title: 'Set as main file', group: 'main', when: mainCandidate }),
     ...CHANGE_ENTRIES.map((entry) => workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
   );
 }

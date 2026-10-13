@@ -425,7 +425,7 @@ export class WorkbenchHost implements Workbench {
     // the hosts' CSS after the tokens and the frame, before the extensions'
     const hosts = [this.window, this.#languages, this.#preview, this.#sourceEditors, this.#visualEditor];
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
-    this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
+    this.#subscription = Disposable.from(project.onDidChangeFile((change) => this.#changed(change)), project.onDidChangeMain(() => this.#compile()));
     this.#extendEditors();
     this.#search = this.#registerSearch();
     this.#applyRightSidePanel();

@@ -8,8 +8,8 @@ import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type TreeKey
 
 /**
  * The project's files as a tree (`role=tree`, one `treeitem` per visible row):
- * folders first, expandable (open folders are remembered), the main file
- * marked, the shown file selected, the files' decorations as badges. One row has
+ * the main file first and marked, then folders, expandable (open folders are
+ * remembered), the shown file selected, the files' decorations as badges. One row has
  * the focus ("current": where new files go, what F2 and Delete act on).
  * Keyboard: arrows, Home/End, Enter, F2, Delete, Shift+F10 / the context menu
  * key (its context menu; also a right click). Rows can be dragged onto
@@ -77,7 +77,7 @@ export class FileTree {
     const hadFocus = this.element.contains((this.element.getRootNode() as Document | ShadowRoot).activeElement);
     const state = this.state;
     if (!state) return;
-    this.rows = visibleRows(buildTree(state.paths, state.folders), this.expanded);
+    this.rows = visibleRows(buildTree(state.paths, state.folders, state.main), this.expanded);
     const tabbable = this.rows.some((row) => row.path === this.current) ? this.current : (this.rows[0]?.path ?? null);
     this.element.replaceChildren(...this.rows.map((row) => this.rowElementFor(state, row, row.path === tabbable)));
     if (hadFocus && tabbable) this.rowElement(tabbable)?.focus();

@@ -4,8 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
-import type { Project } from '../core/project/project';
-import { ProjectPath } from '../core/paths/paths';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -49,20 +47,20 @@ afterEach(() => {
 });
 
 describe('files and source', () => {
-  it('`mainFile` names the main file; `source` and `onMainFileChange` follow when another becomes it, unless locked', () => {
-    let project: Project | undefined;
+  it('`mainFile` names the main file; `source` and `onMainFileChange` follow when another becomes it, unless locked', async () => {
     const onMainFileChange = vi.fn();
     const files = { '/thesis.typ': '= Thesis', '/a.typ': 'A' };
-    const probe = { id: 'probe', activate: (context: { project: Project }) => void (project = context.project) };
-    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files, onMainFileChange, extensions: (builtins) => [...builtins, probe] });
+    const { editor } = setup({ mainFile: { path: '/thesis.typ' }, files, onMainFileChange });
     expect(editor.source).toBe('= Thesis');
-    expect(project!.setMain(ProjectPath.of('/a.typ'))).toBeNull();
+    await editor.executeCommand('files.setMainFile', '/a.typ');
     expect(onMainFileChange).toHaveBeenCalledWith('/a.typ');
     expect(editor.source).toBe('A');
     editor.source = 'A!';
     expect(editor.files['/a.typ']).toBe('A!');
-    setup({ mainFile: { path: '/thesis.typ', locked: true }, files, extensions: (builtins) => [...builtins, probe] });
-    expect(project!.setMain(ProjectPath.of('/a.typ'))).toMatch(/cannot be changed/);
+    const locked = setup({ mainFile: { path: '/thesis.typ', locked: true }, files, onMainFileChange }).editor;
+    await locked.executeCommand('files.setMainFile', '/a.typ');
+    expect(locked.source).toBe('= Thesis');
+    expect(onMainFileChange).toHaveBeenCalledTimes(1);
   });
 
   it('`files` holds every file, the main one included; `source` is the main file\'s text', () => {
@@ -101,7 +99,7 @@ describe('the file panel in the widget', () => {
     expect(single.host.querySelector('[data-testid=typst-panel-toggle-files]')).not.toBeNull();
     const several = setup({ source: '= Hello', files: { '/chapters/intro.typ': 'Intro' } });
     expect(several.filesOpen()).toBe(true);
-    expect(several.items().map((t) => t.title)).toEqual(['chapters', 'main.typ']);
+    expect(several.items().map((t) => t.title)).toEqual(['main.typ', 'chapters']);
   });
 
   it('`hide` shows no panel and no rail button; `show` opens it for one file', () => {

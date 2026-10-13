@@ -11,8 +11,8 @@ import { SOURCE_EDITOR } from '../source-editor/source-editor';
 import { VISUAL_EDITOR } from '../visual-editor/visual-editor';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
-/** The options the workbench gave the (mocked) preview made last: how it hears the preview's progress. */
-const made = vi.hoisted(() => ({ preview: null as PreviewOptions | null }));
+/** The options the workbench gave the (mocked) preview made last (how it hears the preview's progress), and the main files it compiled. */
+const made = vi.hoisted(() => ({ preview: null as PreviewOptions | null, compiled: [] as string[] }));
 
 vi.mock('../preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -22,7 +22,9 @@ vi.mock('../preview/preview', async (importOriginal) => ({
       made.preview = options;
     }
     readonly toolbarItems: unknown[] = [];
-    update() {}
+    update(_files: unknown, main: string) {
+      made.compiled.push(main);
+    }
     reveal() {}
     snippet = async () => null;
     onDidRender = () => new Disposable(() => {});
@@ -84,6 +86,13 @@ describe('WorkbenchHost', () => {
     expect(workbench.window.activeFile).toBe('/b.typ');
     project.apply({ kind: 'delete', path: path('/b.typ') });
     expect(workbench.window.activeFile).toBe('/main.typ');
+  });
+
+  it('compiles the new main file once it is set', () => {
+    const { project } = setup();
+    made.compiled = [];
+    expect(project.setMain(path('/a.typ'))).toBeNull();
+    expect(made.compiled).toEqual(['/a.typ']);
   });
 
   it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {

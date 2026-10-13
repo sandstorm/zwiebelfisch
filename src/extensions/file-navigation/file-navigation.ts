@@ -50,10 +50,9 @@ export function fileNavigation(): TypstExtension {
         }
       };
       const links = new HistoryLinks(doc, go);
-      const top = doc.createElement('div');
-      top.className = 'typst-file-navigation__top';
+      const top = Object.assign(doc.createElement('div'), { className: 'typst-file-navigation__top' });
       top.append(links.element, readingOrder.top);
-      // recomputed on every open and every change: an #include may have been added, moved or removed
+      // recomputed on every open, every change and every new main file: an #include may have been added, moved or removed
       let typing: ReturnType<typeof setTimeout> | undefined;
       const show = () => {
         readingOrder.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
@@ -77,6 +76,8 @@ export function fileNavigation(): TypstExtension {
           if (change.kind === 'update') typing = setTimeout(show, READING_ORDER_DELAY_MS);
           else show();
         }),
+        // another main file reads its files in another order
+        project.onDidChangeMain(show),
         new Disposable(() => clearTimeout(typing)),
         commands.registerCommand(BACK, () => go('back')),
         commands.registerCommand(FORWARD, () => go('forward')),

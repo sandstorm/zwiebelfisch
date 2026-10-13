@@ -18,14 +18,16 @@ vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
 
 const path = ProjectPath.of;
 
+const row = (host: HTMLElement, title: string) => host.querySelector<HTMLElement>(`[role=treeitem][title="${title}"]`)!;
+
 afterEach(() => {
   document.body.replaceChildren();
   sessionStorage.clear();
 });
 
-function setup(...more: TypstExtension[]) {
+function setup(more: TypstExtension[] = [], { mainLocked = false } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
-  const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/chapters/a.typ': 'A\n' });
+  const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/chapters/a.typ': 'A\n', '/chapters/data.csv': 'a,b\n' }, { mainLocked });
   const workbench = new WorkbenchHost(host, project, { settings: { 'files.panel': 'show' } });
   workbench.activate([files(), ...more]);
   const row = (title: string) => host.querySelector<HTMLElement>(`[role=treeitem][title="${title}"]`)!;
@@ -59,14 +61,14 @@ describe('files', () => {
 
   it("other extensions add entries to the panel's menus; their command gets the row", () => {
     const seen: unknown[] = [];
-    const { contextMenu } = setup({
+    const { contextMenu } = setup([{
       id: 'test',
       activate: ({ commands, workbench, subscriptions }) =>
         subscriptions.push(
           commands.registerCommand('test.copyPath', (resource) => seen.push(resource)),
           workbench.registerMenuItem('explorer/context', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
         ),
-    });
+    }]);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).not.toContain('Copy path');
     const entries = contextMenu('main.typ');
     entries.find((entry) => entry.textContent === 'Copy path')!.click();
@@ -83,6 +85,30 @@ describe('files', () => {
     project.apply({ kind: 'create', path: path('/LICENSE'), content: 'MIT' });
     workbench.open(path('/LICENSE'));
     expect([...host.querySelectorAll('[data-testid=typst-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
+  });
+
+  it('"Set as main file" on a .typ row makes it the main file: first in its folder, marked; the old one can be renamed', () => {
+    const { host, project, contextMenu } = setup();
+    row(host, 'chapters').click();
+    const titles = (entries: HTMLElement[]) => entries.map((entry) => entry.textContent);
+    expect(titles(contextMenu('chapters/data.csv'))).not.toContain('Set as main file');
+    contextMenu('chapters/a.typ').find((entry) => entry.textContent === 'Set as main file')!.click();
+    expect(project.main).toBe('/chapters/a.typ');
+    const rows = [...host.querySelectorAll<HTMLElement>('[role=treeitem]')].map((item) => item.title);
+    expect(rows.slice(0, 2)).toEqual(['chapters', 'chapters/a.typ']);
+    expect(row(host, 'chapters/a.typ').querySelector('.typst-files__badge')?.textContent).toBe('Main');
+    expect(row(host, 'main.typ').querySelector('.typst-files__badge')).toBeNull();
+    expect(titles(contextMenu('chapters/a.typ'))).not.toContain('Set as main file');
+    expect(titles(contextMenu('main.typ'))).toEqual(['New file…', 'New folder…', 'Upload files…', 'Set as main file', 'Rename…', 'Delete']);
+  });
+
+  it('offers no "Set as main file" while the host locked the main file; the command refuses with a message', async () => {
+    const { host, project, contextMenu, workbench } = setup([], { mainLocked: true });
+    row(host, 'chapters').click();
+    expect(contextMenu('chapters/a.typ').map((entry) => entry.textContent)).not.toContain('Set as main file');
+    await workbench.commands.executeCommand('files.setMainFile', path('/chapters/a.typ'));
+    expect(project.main).toBe('/main.typ');
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-notifications] [role=alert]')?.textContent).toContain('The main file cannot be changed here.'));
   });
 
   it('a refused change is an error message', async () => {
