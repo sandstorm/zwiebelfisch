@@ -152,6 +152,19 @@ test('comments', async ({ page }) => {
   await shoot(page, 'comments', [visual(page).locator('p', { has: marker }), card], { padding: 12 });
 });
 
+test('find-in-files', async ({ page }) => {
+  await open(page, '/?example=advanced');
+  await page.getByTestId('typst-panel-toggle-search').click();
+  const panel = page.getByTestId('typst-search');
+  await panel.getByRole('textbox', { name: 'Find' }).fill('compile');
+  await expect(panel.getByRole('status').first()).toHaveText(/results? in \d+ files?/);
+  // Replace mode: each match struck through, its replacement after it
+  await panel.getByRole('button', { name: 'Replace', exact: true }).first().click();
+  await panel.getByRole('textbox', { name: 'Replace' }).fill('build');
+  await expect(panel.locator('.typst-search__new').first()).toHaveText('build');
+  await shoot(page, 'find-in-files', [panel], { height: 520 });
+});
+
 /** Opens the demo at `query` (Local mode unless it names a room) and waits for the first compile. */
 async function open(page: Page, query: string): Promise<void> {
   await page.goto(query);

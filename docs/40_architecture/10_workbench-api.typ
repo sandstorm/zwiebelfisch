@@ -96,7 +96,7 @@ if (choice === 'Open') workbench.open(path);
 
 == Search everywhere <architecture-workbench-api-search>
 
-Double Shift anywhere in the widget, the magnifier on the left rail (order 15: after Files, before Help), or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
+Double Shift anywhere in the widget, its button on the left rail (a field over a list; order 15: after Files and Find in files, before Help), or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
 
 ```ts
 window.registerSearchProvider({

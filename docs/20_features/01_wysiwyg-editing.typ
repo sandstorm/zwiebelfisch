@@ -50,7 +50,7 @@ Related Feature: Typing `@` is used to reference existing *labels* like figures 
 
 #screenshot("search-everywhere")
 
-*Press Shift twice*, or click the magnifier on the left rail.
+*Press Shift twice* (or Ctrl+P, ⌘P on Mac), or click its button on the left rail (a field over a list). To find every occurrence of a text, and replace it: @features-find-in-files.
 
 #table(
   columns: 3,

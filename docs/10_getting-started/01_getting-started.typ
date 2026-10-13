@@ -32,7 +32,7 @@ The screen:
   columns: 2,
   [Part], [What it holds],
   [Playground bar (top)], [Example; mode Local, Collaborate or GitLab (fake); your name; in Collaborate and GitLab mode a link that opens a second window as another user.],
-  [Left rail and side panel], [Files, Help; the magnifier opens search everywhere.],
+  [Left rail and side panel], [Files, Find in files (the magnifier), Help; the field over a list opens search everywhere.],
   [Editing area], [The shown file. A Typst file has the tabs Visual and Source (switching keeps the cursor); other files open in their own editor (spreadsheet, diagram, text).],
   [Right side and rail], [The preview; the devtools (@configuration-embedding-devtools).],
   [Status bar], [Errors and warnings; in GitLab mode what is not saved yet.],

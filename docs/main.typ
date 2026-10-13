@@ -28,6 +28,7 @@
   #include "20_features/10_comments.typ"
   #include "20_features/11_collaborative-editing.typ"
   #include "20_features/12_gitlab.typ"
+  #include "20_features/13_find-in-files.typ"
 ]
 
 = Configuration
