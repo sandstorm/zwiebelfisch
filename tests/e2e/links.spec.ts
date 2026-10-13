@@ -53,28 +53,28 @@ test.describe('references to sections in the documentation', () => {
   const heading = (page: Page, level: 'h1' | 'h2', text: string) => visual(page).locator(level, { hasText: text });
 
   test('⌘/Ctrl+click on a reference to a section far down the same file (opened from the file panel) scrolls there', async ({ page }) => {
-    await openFile(page, '30_configuration/01_options.typ');
-    const chip = visual(page).locator('.typst-labels__ref[data-target="configuration-options-editor"]').first();
+    await openFile(page, '40_architecture/11_development.typ');
+    const chip = visual(page).locator('.typst-labels__ref[data-target="architecture-development-writing-docs"]').first();
     await chip.hover();
-    await expect(hint(page)).toHaveText(/^Go to Section · Editor options in 30_configuration\/01_options\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    await expect(heading(page, 'h2', 'Editor options')).not.toBeInViewport();
+    await expect(hint(page)).toHaveText(/^Go to Section · Writing the docs in the demo in 40_architecture\/11_development\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await expect(heading(page, 'h2', 'Writing the docs in the demo')).not.toBeInViewport();
     await chip.click({ modifiers: ['ControlOrMeta'] });
-    await expect(heading(page, 'h2', 'Editor options')).toBeInViewport();
-    await expect(fileRow(page, '30_configuration/01_options.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h2', 'Writing the docs in the demo')).toBeInViewport();
+    await expect(fileRow(page, '40_architecture/11_development.typ')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('⌘/Ctrl+click on a reference to a chapter in another file opens it there; so does Alt+Enter', async ({ page }) => {
     await openFile(page, '10_getting-started/01_getting-started.typ');
-    const chip = visual(page).locator('.typst-labels__ref[data-target="features-mermaid-diagrams"]').first();
+    const chip = visual(page).locator('.typst-labels__ref[data-target="features-wysiwyg-editing"]').first();
     await chip.click({ modifiers: ['ControlOrMeta'] });
-    await expect(fileRow(page, '20_features/09_mermaid-diagrams.typ')).toHaveAttribute('aria-selected', 'true');
-    await expect(heading(page, 'h1', 'Mermaid diagrams')).toBeInViewport();
+    await expect(fileRow(page, '20_features/01_wysiwyg-editing.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h1', 'WYSIWYG editing')).toBeInViewport();
 
     await openFile(page, '10_getting-started/01_getting-started.typ');
-    await visual(page).locator('.typst-labels__ref[data-target="features-spreadsheets"]').first().click();
+    await visual(page).locator('.typst-labels__ref[data-target="configuration-options"]').first().click();
     await page.keyboard.press('Alt+Enter');
-    await expect(fileRow(page, '20_features/08_spreadsheets.typ')).toHaveAttribute('aria-selected', 'true');
-    await expect(heading(page, 'h1', 'Spreadsheets')).toBeInViewport();
+    await expect(fileRow(page, '30_configuration/01_options.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h1', 'Configuration options')).toBeInViewport();
   });
 });
 

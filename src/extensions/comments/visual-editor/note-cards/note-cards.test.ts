@@ -202,6 +202,19 @@ describe('the floating card', () => {
     view.reveal(SourceRange.of({ from: source.indexOf('more'), to: source.indexOf('more') }));
     expect(card()).toBeNull();
   });
+
+  it('a click into highlighted text from elsewhere puts the caret there (opening the card must not keep the caret from before)', () => {
+    const source = 'A #margin-note[key][range] and more.\n';
+    const { view, tiptap, texts } = setup(source);
+    const { view: pm } = tiptap();
+    view.reveal(SourceRange.of({ from: source.indexOf('key') + 1, to: source.indexOf('key') + 1 }));
+    const clicked = pm.state.selection.head;
+    view.reveal(SourceRange.of({ from: source.indexOf('more'), to: source.indexOf('more') }));
+    // ProseMirror asks handleClick before it reads the click's caret from the DOM
+    pm.someProp('handleClick', (click) => click(pm, clicked, new MouseEvent('click')));
+    expect(texts()).toEqual(['range']);
+    expect(pm.state.selection.head).toBe(clicked);
+  });
 });
 
 describe('threads', () => {

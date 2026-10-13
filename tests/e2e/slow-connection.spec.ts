@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, type Page, type Route } from '@playwright/test';
 import { test } from './fixtures';
+import { selectText } from './visual-helpers';
 
 const PACKAGES = resolve(import.meta.dirname, '../../.cache/typst-packages');
 
@@ -56,9 +57,9 @@ test('the Visual editor takes typing while the compiler loads; raw boxes show th
   const equation = visual.locator('.typst-visual__raw-block', { hasText: 'integral_0^1' });
   await expect(equation.locator('.typst-visual__code')).toContainText('integral_0^1');
   await expect(equation.locator('img.typst-visual__rendering')).toBeHidden();
-  await visual.locator('h1').click();
-  await page.keyboard.press('End');
-  await page.keyboard.type(' again');
+  // the caret set as a selection the editor has taken (a bare click races its focus handling while the page loads)
+  await selectText(visual.locator('h1'), 'minutes');
+  await page.keyboard.type('minutes again');
   await expect(visual.locator('h1')).toHaveText('Typst in five minutes again');
 
   wasm.release();

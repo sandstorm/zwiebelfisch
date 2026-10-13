@@ -88,8 +88,8 @@ test('"Comments" off hides the margin notes in the preview only, remembered', as
   await expect(comments).toBeChecked();
   await comments.click();
   await expect.poll(marginGlyphs(page)).toBe(0);
-  // the Visual editor keeps its notes
-  await expect(page.getByTestId('typst-note-card')).not.toHaveCount(0);
+  // the Visual editor keeps its notes (their markers; a card shows only when one is opened)
+  await expect(page.getByTestId('typst-visual').getByTestId('typst-note-marker')).not.toHaveCount(0);
 
   await page.reload();
   await expect(firstPage(page).locator('svg')).toBeVisible();
