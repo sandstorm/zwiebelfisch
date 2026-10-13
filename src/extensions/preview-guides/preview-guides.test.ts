@@ -8,7 +8,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type FontInfo, type TypstEngine, createEngine } from '../../core/typst-engine/typst-engine';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { withPackages } from '../../core/typst-packages/typst-packages';
-import type { PreviewViewOption } from '../../hosts/preview/preview';
+import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/preview';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { previewGuides } from './preview-guides';
 
@@ -32,7 +32,7 @@ const SPACING = options['previewGuides.blockSpacing'];
 
 /** The file the preview compiles with `on` applied in turn: their prelude, then `/main.typ` included. */
 function entry(on: readonly PreviewViewOption[]): string {
-  const { prelude } = on.reduce((made, option) => option.apply(made, true), { prelude: [] as readonly string[] });
+  const { prelude } = on.reduce<PreviewEntry>((made, option) => option.apply(made, true), { output: 'pages', prelude: [] });
   return `${prelude.join('\n')}\n#include "/main.typ"\n`;
 }
 
@@ -46,7 +46,7 @@ describe('previewGuides', () => {
     // drawn by the prelude itself: no package to download
     expect(entry([GUIDES])).not.toContain('#import');
     // off: nothing added
-    const start = { prelude: [] };
+    const start = { output: 'pages' as const, prelude: [] };
     expect([GUIDES, OUTLINES, SPACING].map((option) => option.apply(start, false))).toEqual([start, start, start]);
   });
 });

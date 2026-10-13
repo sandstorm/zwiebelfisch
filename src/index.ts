@@ -68,6 +68,7 @@ export type {
   PdfExportOption,
   PreviewContributions,
   PreviewEntry,
+  PreviewOutput,
   PreviewRenderer,
   PreviewRendererInfo,
   PreviewRendererView,

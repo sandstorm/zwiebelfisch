@@ -209,7 +209,7 @@ describe('Preview view options', () => {
     engine.answer = () => null;
   });
 
-  const view = (id: string, line: string, on = false): PreviewViewOption => ({ id, label: id, default: on, apply: (entry, value) => (value ? { prelude: [...entry.prelude, line] } : entry) });
+  const view = (id: string, line: string, on = false): PreviewViewOption => ({ id, label: id, default: on, apply: (entry, value) => (value ? { ...entry, prelude: [...entry.prelude, line] } : entry) });
 
   /** A preview whose engine compiles `/main.typ`; `compiled` lists what each compile request asked for. */
   function setup(diagnostics: object[] = []) {
@@ -273,7 +273,7 @@ describe('Preview view options', () => {
 
   it('applies an option also while it is off (one that adds Typst when off)', async () => {
     const { last } = setup();
-    preview.registerViewOption({ id: 'a.notes', label: 'Notes', default: true, apply: (entry, on) => (on ? entry : { prelude: [...entry.prelude, '#let hidden = true'] }) });
+    preview.registerViewOption({ id: 'a.notes', label: 'Notes', default: true, apply: (entry, on) => (on ? entry : { ...entry, prelude: [...entry.prelude, '#let hidden = true'] }) });
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
     await vi.waitFor(() => expect(last().main).toBe('/main.typ'));
     preview.setViewOptionValues({ 'a.notes': false });
@@ -608,6 +608,34 @@ describe('Preview renderers', () => {
     expect(shown()).toEqual(['follow']);
     preview.setActiveRenderer('pages');
     expect(shown()).toEqual(['follow', 'zoom']);
+  });
+
+  it('compiles HTML with the prelude of the view options for HTML only, telling them the output; its errors there have no file', async () => {
+    const { log, renderer } = setup();
+    const html: { main: string; files: Record<string, unknown> }[] = [];
+    const answer = engine.answer;
+    const error = { severity: 'error', message: 'in the prelude', hints: [], from: 0, to: 1, path: '/.typst-preview-view.typ' };
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      if (request.type !== 'html') return answer(request);
+      html.push({ main: request.main, files: request.files });
+      return { type: 'html', result: { files: [file], diagnostics: [{ ...error, path: request.main }], missingPackages: [] } };
+    };
+    const diagnostics: (string | null)[] = [];
+    preview.onDidChangeDiagnostics((found) => diagnostics.push(...found.map((d) => d.path)));
+    const line = (id: string, outputs?: PreviewViewOption['outputs']): PreviewViewOption => ({
+      id, label: id, default: true, outputs, apply: (entry) => ({ ...entry, prelude: [...entry.prelude, `// ${id} for ${entry.output}`] }),
+    });
+    preview.registerViewOption(line('a.pages'));
+    preview.registerViewOption(line('b.both', ['pages', 'html']));
+    preview.registerRenderer(renderer);
+    preview.setActiveRenderer('html');
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(log).toContain('update index.html'));
+    const { main, files } = html.at(-1)!;
+    expect(files['/main.typ']).toBe('Hi');
+    expect(files[main]).toBe('// b.both for html\n#include "/main.typ"\n');
+    expect(diagnostics.at(-1)).toBeNull();
   });
 
   it('compiles the pages for a snippet while another renderer is shown, once per update', async () => {

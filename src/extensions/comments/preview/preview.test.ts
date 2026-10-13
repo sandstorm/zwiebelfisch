@@ -81,7 +81,7 @@ describe('registerShowComments', () => {
     registerShowComments({ registerViewOption: (option) => (options.push(option), new Disposable(() => {})) }, project);
     return { option: options[0], project };
   };
-  const before: PreviewEntry = { prelude: ['#let before = 1'] };
+  const before: PreviewEntry = { output: 'pages', prelude: ['#let before = 1'] };
 
   it('registers "Comments", on by default', () => {
     expect(registered().option).toMatchObject({ id: 'comments.show', label: 'Comments', default: true });
@@ -99,9 +99,23 @@ describe('registerShowComments', () => {
 
   it('follows the project: the first note\'s import brings the style', () => {
     const { option, project } = registered({ '/main.typ': 'Plain\n' });
-    expect(option.apply({ prelude: [] }, true).prelude).toEqual([]);
+    expect(option.apply({ output: 'pages', prelude: [] }, true).prelude).toEqual([]);
     project.document(path('/main.typ'))!.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: NOTED }], 'test');
-    expect(option.apply({ prelude: [] }, true).prelude[0]).toContain('set-margin-note-defaults');
+    expect(option.apply({ output: 'pages', prelude: [] }, true).prelude[0]).toContain('set-margin-note-defaults');
+  });
+
+  it('applies to the HTML preview too, which leaves the notes out (also while on) and gives drafting the sizes of no page', () => {
+    const { option } = registered({ '/main.typ': NOTED.replace('0.2.2', '0.2.1') });
+    expect(option.outputs).toEqual(['pages', 'html']);
+    const html: PreviewEntry = { ...before, output: 'html' };
+    for (const show of [true, false]) {
+      const { prelude } = option.apply(html, show);
+      expect(prelude.slice(0, 2)).toEqual(['#let before = 1', '#import "@preview/drafting:0.2.1": set-margin-note-defaults']);
+      expect(prelude[2]).toMatch(/^#set-margin-note-defaults\(page-width: 0pt, .*\)$/);
+      expect(prelude.join('\n')).toContain('#show box:');
+      expect(prelude.join('\n')).not.toContain('stroke');
+    }
+    expect(registered({ '/main.typ': 'Plain\n' }).option.apply(html, true)).toBe(html);
   });
 
   it('while off, hides the notes by show rules, importing nothing', () => {
@@ -128,7 +142,7 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
     };
     /** What is drawn: glyphs and shapes per page. */
     const drawn = (svgs: string[]) => svgs.map((svg) => [svg.split('<use').length - 1, svg.split('<path').length - 1]);
-    const prelude = (main: string, show: boolean) => registered({ '/main.typ': main }).option.apply({ prelude: [] }, show).prelude;
+    const prelude = (main: string, show: boolean) => registered({ '/main.typ': main }).option.apply({ output: 'pages', prelude: [] }, show).prelude;
 
     it('draws a document with notes as the same document without them, keeping the noted text and its own underline', async () => {
       const engine = await engineWithDrafting();
@@ -154,6 +168,25 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
       const overridden = await compiled(engine, own, prelude(own, true));
       expect(overridden[0]).not.toContain('#e0a800');
       expect(overridden[0]).toContain('#0074d9');
+    }, 60_000);
+
+    it('compiles a document with notes to HTML without them, keeping the noted text, where drafting alone panics', async () => {
+      const engine = await engineWithDrafting();
+      const html = async (main: string, prelude: readonly string[]) => {
+        engine.bare.setSource('/main.typ', main);
+        engine.bare.setSource('/view.typ', `${prelude.join('\n')}\n#include "/main.typ"\n`);
+        const { files, diagnostics } = await engine.packages.compileHtml('/view.typ');
+        return { text: files.map((f) => new TextDecoder().decode(f.data)).join(), errors: diagnostics.filter((d) => d.severity === 'error').map((d) => d.message) };
+      };
+      expect((await html(noted, [])).errors).toEqual([expect.stringContaining('margin-note can only be called after')]);
+      // the margins of a book (inside, outside) too
+      for (const main of [noted, noted.replace('right: 4cm, rest: 1cm', 'inside: 2cm, outside: 4cm')]) {
+        const prelude = registered({ '/main.typ': main }).option.apply({ output: 'html', prelude: [] }, true).prelude;
+        const { text, errors } = await html(main, prelude);
+        expect(errors).toEqual([]);
+        expect(text).toMatch(/Alpha\s+Beta\s+Delta/);
+        expect(text).not.toMatch(/note/);
+      }
     }, 60_000);
 
     it('exports the PDF with comments in the same look', async () => {

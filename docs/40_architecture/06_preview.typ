@@ -19,7 +19,7 @@
   [`registerToolbarItem(item, { group, order, renderer })`], [A toolbar control. Groups `1_sync`, `2_view`, `3_export`. `renderer`: shown only while that renderer is active.], [`previewSync`, `previewControls`, `pdfExport`],
   [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (switch: `previewControls`)],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports.], [`comments`],
-  [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only.], [`previewGuides`, `comments`],
+  [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only (pages, or also HTML).], [`previewGuides`, `comments`],
 )
 
 The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage`, `clearClickHighlight()`, `setSelectionHighlight(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
@@ -72,12 +72,12 @@ preview.registerRenderer({
 
 - *`compileHtml(main)`*: Typst's bundle export (`document(path)`, `asset(path, data)`; a main file without `document` is one `index.html`), with the `html` and `bundle` features on and their "experimental" warnings left out. Every element with a source span gets `data-typst-element` (the span's number, `.2`, `.3` for repeats): stable while other text changes. The worker sends a file's bytes only when its hash changed.
 - *Cursor → element* (`elementsAtCursor`): the innermost syntax node at the cursor that produced an element (an element without span: its nearest ancestor with one); where that node's output is elsewhere too (a heading's text in an outline), the places inside an element of an enclosing node win. One per page, in bundle order; empty for a `#let` or a comment.
-- *The pages stay the host's*: their clicks, shading, zoom and snippets are API others use. With another renderer active, a snippet compiles the pages once per `update()`; view options apply to the pages only. Diagnostics and `onDidRender` come from the active renderer's compile.
+- *The pages stay the host's*: their clicks, shading, zoom and snippets are API others use. With another renderer active, a snippet compiles the pages once per `update()`. View options apply to HTML compiles only when their `outputs` include `html` (@architecture-preview-view). Diagnostics and `onDidRender` come from the active renderer's compile.
 - *`previewHtml`*: one page at a time in an `iframe sandbox="allow-same-origin"` (no scripts). A compile changes the page in place (`morphDocument`, matched by `data-typst-element`), so it keeps its scroll position. Links between pages switch the page, URLs open a new tab. Assets are blob URLs, made once per hash; a path the bundle lacks is looked up among the project's files (the docs' fonts). The cursor shows the page holding its element, else the first one listed; none keeps the page.
 
 == View options <architecture-preview-view>
 
-A `PreviewViewOption`'s `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`. While the prelude has lines, the preview compiles `/.typst-preview-view.typ`: the prelude, then `#include` of the main file. Diagnostics, clicks and snippets stay in the project's files; exports never see it.
+A `PreviewViewOption`'s `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`, for the compiles in its `outputs` (default `['pages']`; `entry.output` says which). While the prelude has lines, the preview compiles `/.typst-preview-view.typ`: the prelude, then `#include` of the main file. Diagnostics, clicks and snippets stay in the project's files; exports never see it.
 
 ```ts
 preview.registerViewOption({
@@ -88,5 +88,6 @@ preview.registerViewOption({
 
 - *Only* imports, `let`, `set` and `show` rules: content would come before the first page. Prefix names with the option's (`preview-guides-…`): all options share the file.
 - *The document wins:* set rules are defaults, so what a document sets itself wins. Prelude code must never fail: an error breaks every document's preview.
+- *`comments.show`* applies to HTML too: there drafting has no page and panics at the first note, so its prelude gives drafting zero page and margin sizes and leaves the notes out, whatever the option's value.
 - *View menu:* `previewControls` shows every option as a checkbox (menu `view`, group `preview`) and remembers the choices in its `globalState`; the host learns them through `setViewOptionValues`.
 - *`previewGuides`* (page guides, box outlines, block spacing; see its module comment): markers that take no space find the spacing, so layout stays the same (tests check glyph positions and page counts). Not shown: `h(..)` (a marker in a line would change line breaking) and the spacing between list items, table rows and stack children (their layout's own, not the flow's). Block spacing is its own option because it costs far more (140 ms vs. 640 ms on an edit of this book).

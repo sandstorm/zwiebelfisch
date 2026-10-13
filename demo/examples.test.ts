@@ -9,6 +9,8 @@ import { ProjectPath } from '../src/core/paths/paths';
 import { Disposable } from '../src/core/disposable/disposable';
 import type { ExtensionContext, PreviewViewOption, ProjectFiles } from '../src';
 import { previewGuides } from '../src/extensions/preview-guides/preview-guides';
+import { comments } from '../src/extensions/comments/comments';
+import { Project } from '../src/core/project/project';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
 const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
@@ -74,7 +76,7 @@ describe('demo examples', () => {
       const preview = { registerViewOption: (option: PreviewViewOption) => (options.push(option), new Disposable(() => {})) };
       previewGuides().activate({ preview, subscriptions: [] } as unknown as ExtensionContext);
       const guides = options.find(({ id }) => id === 'previewGuides.pageGuides')!;
-      const { prelude } = guides.apply({ prelude: [] }, true);
+      const { prelude } = guides.apply({ output: 'pages', prelude: [] }, true);
       const files = { ...exampleFiles(name), '/view.typ': `${prelude.join('\n')}\n#include "/main.typ"\n` };
       const { pages, diagnostics } = await compile(files, '/view.typ');
       expect(diagnostics).toEqual([]);
@@ -83,6 +85,29 @@ describe('demo examples', () => {
     },
     30_000,
   );
+
+  it('the simple example, with its margin note, compiles to HTML in the preview without errors: the comments leave the note out', async () => {
+    const files = exampleFiles('simple');
+    const options: PreviewViewOption[] = [];
+    const preview = { registerViewOption: (option: PreviewViewOption) => (options.push(option), new Disposable(() => {})) };
+    // what else the extension registers (the Visual editor's, the workbench's) is not looked at
+    const ignored: object = new Proxy(() => ignored, { get: (_, key) => (key === 'then' ? undefined : ignored) });
+    const context = new Proxy({ preview: { ...preview, registerPdfExportOption: ignored }, project: new Project(ProjectPath.of('/main.typ'), files), subscriptions: [] }, {
+      get: (target, key) => (key in target ? target[key as keyof typeof target] : ignored),
+    });
+    comments().activate(context as unknown as ExtensionContext);
+    const show = options.find(({ id }) => id === 'comments.show')!;
+    const { prelude } = show.apply({ output: 'html', prelude: [] }, true);
+    const view = { ...files, '/view.typ': `${prelude.join('\n')}\n#include "/main.typ"\n` };
+    const { files: html, diagnostics } = await load(view).compileHtml('/view.typ');
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expect(html.map((file) => file.path)).toContain('index.html');
+    // a range note: its text stays, the thread goes
+    const [, noted, thread] = /#margin-note\[([^\]]+)\]\[([^\]]+)\]/.exec(files['/main.typ'] as string)!;
+    const index = new TextDecoder().decode(html.find((file) => file.path === 'index.html')!.data);
+    expect(index).toContain(noted);
+    expect(index).not.toContain(thread.split(': ')[1].split('\n')[0]);
+  }, 30_000);
 
   it('keeps the default document the e2e specs expect', () => {
     const files = exampleFiles('simple');

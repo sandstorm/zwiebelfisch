@@ -363,10 +363,8 @@ export class Preview implements PreviewContributions {
    * nor `onDidRender` (the active renderer's compile tells those).
    */
   private async compilePages({ files, main }: Compile, superseded: () => boolean, quiet = false): Promise<void> {
-    const entry = viewEntry(this.viewOptions(), this.viewOptionValues);
-    // with no prelude, the main file itself, as an export compiles it
-    const compiled = entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
-    const response = await this.engine.request({ type: 'compile', files: compiled.files, main: compiled.main });
+    const compiled = this.withViewOptions({ files, main }, 'pages');
+    const response = await this.engine.request({ type: 'compile', ...compiled });
     if (response.type !== 'compile') return;
     this.answered(response.memoryInUse);
     const { pages } = response.result;
@@ -385,13 +383,12 @@ export class Preview implements PreviewContributions {
     this.pages.classList.toggle('typst-preview--stale', failed);
     this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
-    // what goes wrong in the view options' Typst is in no project file
-    if (!quiet && !superseded()) this.diagnosed.fire(response.result.diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d)));
+    if (!quiet && !superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
   }
 
-  /** Compiles HTML for `active` and has it show the files; its diagnostics are the preview's. View options are for pages. */
-  private async compileHtml({ files, main }: Compile, active: ActiveRenderer, superseded: () => boolean): Promise<void> {
-    const response = await this.engine.request({ type: 'html', files, main });
+  /** Compiles HTML for `active`, with the view options for `html`, and has it show the files; its diagnostics are the preview's. */
+  private async compileHtml(compile: Compile, active: ActiveRenderer, superseded: () => boolean): Promise<void> {
+    const response = await this.engine.request({ type: 'html', ...this.withViewOptions(compile, 'html') });
     if (response.type !== 'html') return;
     this.answered(response.memoryInUse);
     // Keep showing the last good files while the document has errors, dimmed as stale.
@@ -405,7 +402,19 @@ export class Preview implements PreviewContributions {
     }
     active.container.classList.toggle('typst-preview--stale', failed);
     this.progressChanged();
-    if (!superseded()) this.diagnosed.fire(response.result.diagnostics);
+    if (!superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
+  }
+
+  /**
+   * What to compile for `output`: with no prelude from the view options for it, `compile` itself (as an export
+   * compiles it), else `VIEW_ENTRY` holding the prelude, then including the main file.
+   */
+  private withViewOptions({ files, main }: Compile, output: PreviewOutput): Compile {
+    let entry: PreviewEntry = { output, prelude: [] };
+    for (const option of this.viewOptions()) {
+      if ((option.outputs ?? ['pages']).includes(output)) entry = option.apply(entry, this.viewOptionValues[option.id] ?? option.default);
+    }
+    return entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
   }
 
   /** A compile answered: the engine is loaded, and its memory is what it says. */
@@ -751,12 +760,17 @@ export interface PreviewViewOption {
   readonly description?: string;
   /** Whether it is on until someone chooses otherwise. */
   readonly default: boolean;
+  /** The compiles it applies to (default: the pages); `entry.output` tells which one `apply` is called for. */
+  readonly outputs?: readonly PreviewOutput[];
   /**
-   * What to compile with this option set to `value`, from what the options before it made. Called for every option,
-   * also when it is off; an option that changes nothing returns `entry` as it is.
+   * What to compile with this option set to `value`, from what the options before it made. Called for every option
+   * of the output, also when it is off; an option that changes nothing returns `entry` as it is.
    */
   apply(entry: PreviewEntry, value: boolean): PreviewEntry;
 }
+
+/** What a preview compile makes: the pages, or Typst's HTML export for a renderer. */
+export type PreviewOutput = 'pages' | 'html';
 
 /**
  * What the preview compiles around the main file: `prelude`, lines of Typst markup (imports, `let`, `set` and `show`
@@ -765,6 +779,8 @@ export interface PreviewViewOption {
  * content (a page break would come before the document).
  */
 export interface PreviewEntry {
+  /** The compile it is for. */
+  readonly output: PreviewOutput;
   readonly prelude: readonly string[];
 }
 
@@ -814,11 +830,9 @@ type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: stri
 /** The file the preview compiles while a view option is on: their prelude, then the main file included. */
 const VIEW_ENTRY = '/.typst-preview-view.typ';
 
-/** What the view options that are on make, applied in order. */
-function viewEntry(options: readonly PreviewViewOption[], values: Readonly<Record<string, boolean>>): PreviewEntry {
-  let entry: PreviewEntry = { prelude: [] };
-  for (const option of options) entry = option.apply(entry, values[option.id] ?? option.default);
-  return entry;
+/** `diagnostics` with what goes wrong in the view options' Typst, which is in no project file, without a path. */
+function inProjectFiles(diagnostics: readonly TypstDiagnostic[]): TypstDiagnostic[] {
+  return diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d));
 }
 
 function entryText({ prelude }: PreviewEntry, main: string): string {

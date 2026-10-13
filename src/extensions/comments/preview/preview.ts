@@ -28,6 +28,9 @@ export function registerIncludeComments(preview: Pick<PreviewContributions, 'reg
  * show rules: a margin note's box (its connector and the note, labelled `<margin-note>`) and the marks around a range
  * note's text (`<inline-note>`), whose text stays. The Visual editor's markers and the PDF (`comments.include`) are
  * not affected.
+ *
+ * The HTML preview always leaves the notes out: HTML has no margins. There drafting finds no page to measure (its
+ * `set-page-properties` is placed, which HTML ignores) and panics at the first note, so the prelude gives it sizes.
  */
 export function registerShowComments(preview: Pick<PreviewContributions, 'registerViewOption'>, project: Project): Disposable {
   return preview.registerViewOption({
@@ -35,8 +38,9 @@ export function registerShowComments(preview: Pick<PreviewContributions, 'regist
     label: 'Comments',
     description: 'The margin notes in the preview (the PDF has "Include comments")',
     default: true,
+    outputs: ['pages', 'html'],
     apply: (entry, show) => {
-      const lines = show ? noteDefaultsPrelude(project.files(), NOTE_STYLE) : HIDE_NOTES;
+      const lines = entry.output === 'html' ? htmlPrelude(project) : show ? noteDefaultsPrelude(project.files(), NOTE_STYLE) : HIDE_NOTES;
       return lines.length === 0 ? entry : { ...entry, prelude: [...entry.prelude, ...lines] };
     },
   });
@@ -58,6 +62,9 @@ const NOTE_STYLE = `
   }),
 `;
 
+/** Page and margin sizes for drafting where there is no page (HTML): without, a note panics. */
+const NO_PAGE = 'page-width: 0pt, margin-left: 0pt, margin-right: 0pt, margin-inside: 0pt, margin-outside: 0pt';
+
 /** Typst that draws drafting's margin notes as nothing, keeping the text of range notes; it imports nothing. */
 const HIDE_NOTES: PreviewEntry['prelude'] = [
   '#let comments-margin-note(it) = type(it.body) == content and it.body.func() == [].func() and it.body.children.any(part => part.func() == place and part.body.has("label") and part.body.label == <margin-note>)',
@@ -65,6 +72,12 @@ const HIDE_NOTES: PreviewEntry['prelude'] = [
   // a range note's text between its marks; an inline note of its own (a box, not underlined) goes
   '#show <inline-note>: it => if it.func() != underline { none } else if it.body.func() != [].func() { it } else { it.body.children.map(part => if part.func() == highlight { part.body.body } else if part.func() == underline { part.body }).join() }',
 ];
+
+/** The prelude that leaves the notes out where there is no page (HTML), when the project imports drafting. */
+function htmlPrelude(project: Project): string[] {
+  const sizes = noteDefaultsPrelude(project.files(), NO_PAGE);
+  return sizes.length === 0 ? [] : [...sizes, ...HIDE_NOTES];
+}
 
 /** `entry` with the notes left out of its sources and of the project's other `.typ` files. */
 function withoutComments(project: Project, entry: PdfEntry): PdfEntry {
