@@ -299,28 +299,141 @@ func TestWrongTokenIsDeniedAndGetsNothing(t *testing.T) {
 	intruder.eventually("in now", func() bool { return intruder.doc.Texts("files")["/x"] == "confidential" })
 }
 
-func TestStatelessReachesTheHookAndRepliesToOneClient(t *testing.T) {
-	type got struct {
-		room, payload string
-		user          collab.User
+// extension is an Extension for tests: it opens every room whose name starts with "x-", records what it
+// is told and lets the test decide when Left returns.
+type extension struct {
+	stateless chan got
+	opened    chan *collab.Room
+	left      chan chan struct{} // per Left call: closed by the test to let it return
+	closed    chan string
+}
+
+type got struct {
+	room, payload, name string
+	user                collab.User
+}
+
+func newExtension() *extension {
+	return &extension{stateless: make(chan got, 8), opened: make(chan *collab.Room, 8), left: make(chan chan struct{}, 8), closed: make(chan string, 8)}
+}
+
+func (x *extension) Open(r *collab.Room, doc *ydoc.Doc) (collab.Handler, error) {
+	if r.Name() == "x-broken" {
+		return nil, errors.New("cannot open")
 	}
-	calls := make(chan got, 1)
+	if r.Name()[:2] != "x-" {
+		return nil, nil
+	}
+	if err := doc.Write(nil, func(w *ydoc.Writer) { w.SetText("files", "/opened.typ", "by the extension") }); err != nil {
+		return nil, err
+	}
+	x.opened <- r
+	return &handler{x, r}, nil
+}
+
+type handler struct {
+	x *extension
+	r *collab.Room
+}
+
+func (h *handler) Stateless(p *collab.Peer, payload string) {
+	h.x.stateless <- got{p.Room(), payload, p.Name(), p.User()}
+	p.SendStateless("saved")
+	go h.r.BroadcastStateless("to all")
+}
+
+func (h *handler) Left(ctx context.Context) {
+	release := make(chan struct{})
+	h.x.left <- release
+	select {
+	case <-release:
+	case <-ctx.Done():
+	}
+}
+
+func (h *handler) Close() { h.x.closed <- h.r.Name() }
+
+func TestStatelessReachesTheExtensionAndRepliesToOneClient(t *testing.T) {
+	x := newExtension()
 	s := newServer(t, memStore(t), func(o *collab.Options) {
 		o.Authenticate = func(token, _ string) (collab.User, error) { return collab.User{Name: token}, nil }
-		o.Stateless = func(p *collab.Peer, payload string) {
-			calls <- got{p.Room(), payload, p.User()}
-			p.SendStateless("saved")
-		}
+		o.Extension = x
 	})
-	a := dial(t, s, "r", "alice")
-	b := dial(t, s, "r", "bob")
+	a := dial(t, s, "x-r", "alice")
+	b := dial(t, s, "x-r", "bob")
+	a.eventually("the extension wrote into the room before anyone joined", func() bool { return a.doc.Texts("files")["/opened.typ"] == "by the extension" })
 	a.send(msgStateless, lib0String("gitlab:save"))
-	require.Equal(t, got{"r", "gitlab:save", collab.User{Name: "alice"}}, <-calls)
-	a.eventually("the reply goes to a", func() bool { return len(a.stateless) == 1 && a.stateless[0] == "saved" })
-	time.Sleep(20 * time.Millisecond)
-	b.mu.Lock()
-	require.Empty(t, b.stateless, "and only to a")
-	b.mu.Unlock()
+	require.Equal(t, got{"x-r", "gitlab:save", "alice", collab.User{Name: "alice"}}, <-x.stateless)
+	a.eventually("the reply goes to a", func() bool { return len(a.stateless) == 2 && a.stateless[0] == "saved" })
+	b.eventually("and the broadcast to everyone", func() bool { return len(b.stateless) == 1 && b.stateless[0] == "to all" })
+}
+
+func TestPeerIsNamedByItsAwarenessWithoutAUser(t *testing.T) {
+	x := newExtension()
+	s := newServer(t, memStore(t), func(o *collab.Options) { o.Extension = x })
+	a := dial(t, s, "x-names", "secret")
+	update := awarenessUpdate(7, 1, `{"user":{"name":" Cleo ","color":"#fff"}}`)
+	a.send(msgAwareness, append([]byte{byte(len(update))}, update...))
+	a.eventually("echo", func() bool { return len(a.awareness) == 1 })
+	a.send(msgStateless, lib0String("hi"))
+	require.Equal(t, "Cleo", (<-x.stateless).name)
+}
+
+func TestExtensionKeepsTheRoomUntilLeftReturns(t *testing.T) {
+	st := memStore(t)
+	x := newExtension()
+	s := newServer(t, st, func(o *collab.Options) { o.Extension = x })
+	a := dial(t, s, "x-keep", "secret")
+	room := <-x.opened
+	a.close()
+	release := <-x.left
+	require.True(t, room.Empty())
+	require.True(t, room.Do(func(doc *ydoc.Doc) {
+		require.NoError(t, doc.Write(nil, func(w *ydoc.Writer) { w.SetText("files", "/late.typ", "after everyone left") }))
+	}), "still loaded")
+
+	// someone comes back meanwhile: the room stays when Left returns
+	b := dial(t, s, "x-keep", "secret")
+	b.eventually("same room", func() bool { return b.doc.Texts("files")["/late.typ"] == "after everyone left" })
+	close(release)
+	require.False(t, room.Empty())
+	b.close()
+	close(<-x.left)
+	require.Equal(t, "x-keep", <-x.closed)
+	require.False(t, room.Do(func(*ydoc.Doc) {}), "unloaded")
+	require.Equal(t, "after everyone left", storedTexts(t, st, "x-keep")["/late.typ"], "stored before unloading")
+
+	// a plain room next to it: the extension left it alone
+	c := dial(t, s, "plain", "secret")
+	c.edit(func(w *ydoc.Writer) { w.SetText("files", "/p", "plain") })
+	c.eventually("acknowledged", func() bool { return c.acks >= 1 })
+	require.Empty(t, x.opened)
+}
+
+func TestCloseEndsWhatTheExtensionWaitsFor(t *testing.T) {
+	x := newExtension()
+	s := collab.New(collab.Options{Store: memStore(t), Authenticate: collab.SharedToken(nil), Extension: x, Log: zerolog.Nop()})
+	a := dial(t, s, "x-closing", "")
+	<-x.opened
+	a.close()
+	<-x.left // never released: Close ends it
+	require.NoError(t, s.Close(context.Background()))
+	require.Equal(t, "x-closing", <-x.closed)
+}
+
+func TestExtensionErrorRefusesTheClients(t *testing.T) {
+	s := newServer(t, memStore(t), func(o *collab.Options) { o.Extension = newExtension() })
+	a := dial(t, s, "x-broken", "secret")
+	<-a.done
+	require.Equal(t, 4205, a.p.code)
+}
+
+func storedTexts(t *testing.T, st *store.Store, room string) map[string]string {
+	state, err := st.Load(room)
+	require.NoError(t, err)
+	d, err := ydoc.Load(state)
+	require.NoError(t, err)
+	return d.Texts("files")
 }
 
 func TestOneConnectionManyRoomsAndSessionAddresses(t *testing.T) {

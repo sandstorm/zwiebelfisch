@@ -60,6 +60,23 @@ func (d *Doc) Texts(m string) map[string]string {
 	return texts
 }
 
+// Values returns the plain values in root map m (key → value); texts and other shared types are left out.
+// Values are what lib0 encodes: nil, bool, string, []byte, numbers (int64, float32 or float64), []any and
+// map[string]any.
+func (d *Doc) Values(m string) map[string]any {
+	values := map[string]any{}
+	ymap := d.d.GetMap(m)
+	for _, key := range ymap.Keys() {
+		value, _ := ymap.Get(key)
+		switch value.(type) {
+		case *crdt.YText, *crdt.YMap, *crdt.YArray, *crdt.YXmlFragment, *crdt.YXmlElement, *crdt.YXmlText, *crdt.Doc:
+			continue
+		}
+		values[key] = value
+	}
+	return values
+}
+
 func (d *Doc) textsIn(m string) map[string]*crdt.YText {
 	handles := map[string]*crdt.YText{}
 	ymap := d.d.GetMap(m)
@@ -98,7 +115,7 @@ func (d *Doc) Write(origin any, fn func(w *Writer)) error {
 		switch op.kind {
 		case opSet:
 			shadow[k] = utf16.Encode([]rune(op.text))
-		case opDelete:
+		case opDelete, opValue:
 			shadow[k] = nil
 		case opEdit:
 			units, err := op.check(shadow[k])
@@ -121,6 +138,8 @@ func (d *Doc) Write(origin any, fn func(w *Writer)) error {
 				handles[k] = t
 			case opDelete:
 				txn.GetMap(op.m).Delete(txn, op.key)
+			case opValue:
+				txn.GetMap(op.m).Set(txn, op.key, op.value)
 			case opEdit:
 				if op.to > op.from {
 					handles[k].Delete(txn, op.from, op.to-op.from)
@@ -147,6 +166,12 @@ func (w *Writer) Edit(m, key string, from, to int, insert string) {
 	w.ops = append(w.ops, op{kind: opEdit, m: m, key: key, from: from, to: to, text: insert})
 }
 
+// Set puts a plain value under key in root map m: nil, bool, string, []byte, a number, or []any and
+// map[string]any of those (lib0's types; JSON-like values, e.g. from json.Unmarshal into any).
+func (w *Writer) Set(m, key string, value any) {
+	w.ops = append(w.ops, op{kind: opValue, m: m, key: key, value: value})
+}
+
 // Delete removes key from root map m.
 func (w *Writer) Delete(m, key string) {
 	w.ops = append(w.ops, op{kind: opDelete, m: m, key: key})
@@ -167,6 +192,7 @@ const (
 	opSet opKind = iota
 	opEdit
 	opDelete
+	opValue
 )
 
 type op struct {
@@ -174,6 +200,7 @@ type op struct {
 	m, key   string
 	from, to int
 	text     string
+	value    any
 }
 
 // check validates an edit against the text's UTF-16 units (nil: no text) and returns the units after it.

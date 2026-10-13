@@ -55,6 +55,39 @@ func TestWriteRefusesBadEdits(t *testing.T) {
 	}
 }
 
+func TestValuesNextToTexts(t *testing.T) {
+	d := ydoc.New()
+	since := int64(1_760_176_800_000) // above 2^31: a float64 on the wire, as lib0 writes JS numbers
+	require.NoError(t, d.Write(nil, func(w *ydoc.Writer) {
+		w.Set("meta", "baseSha", "abc")
+		w.Set("meta", "changes", map[string]any{"since": since, "editors": []any{"Ann"}, "files": []any{}})
+		w.Set("meta", "conflict", nil)
+		w.Set("assets", "/a.png", []byte{1, 2})
+		w.SetText("assets", "/text", "not a value")
+	}))
+	loaded, err := ydoc.Load(d.State())
+	require.NoError(t, err)
+	for _, doc := range []*ydoc.Doc{d, loaded} {
+		meta := doc.Values("meta")
+		require.Equal(t, "abc", meta["baseSha"])
+		require.Contains(t, meta, "conflict")
+		require.Nil(t, meta["conflict"])
+		b, err := json.Marshal(meta["changes"])
+		require.NoError(t, err)
+		require.JSONEq(t, `{"since":1760176800000,"editors":["Ann"],"files":[]}`, string(b))
+		require.Equal(t, map[string]any{"/a.png": []byte{1, 2}}, doc.Values("assets"), "texts left out")
+	}
+
+	// a value replaces a text and the other way round
+	require.NoError(t, d.Write(nil, func(w *ydoc.Writer) {
+		w.Set("assets", "/text", "sha")
+		w.SetText("assets", "/a.png", "text now")
+	}))
+	require.Equal(t, map[string]any{"/text": "sha"}, d.Values("assets"))
+	require.Equal(t, map[string]string{"/a.png": "text now"}, d.Texts("assets"))
+	require.Error(t, d.Write(nil, func(w *ydoc.Writer) { w.Edit("assets", "/text", 0, 0, "x") }), "a value is no text")
+}
+
 func TestStateRoundTripAndUpdatesCarryOrigin(t *testing.T) {
 	a := ydoc.New()
 	b := ydoc.New()
@@ -128,8 +161,12 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	require.NoError(t, a.Apply(update(21, 1, `{"user":"c"}`), two))
 	require.Error(t, a.Apply([]byte{1, 2}, two))
 
+	require.Equal(t, []map[string]any{{"user": "c"}}, a.States(two))
+	require.Len(t, a.States(one), 2)
+
 	removal := a.Remove(one)
 	require.NotNil(t, removal)
+	require.Empty(t, a.States(one))
 	require.Nil(t, a.Remove(one), "nothing left of one")
 
 	other := ydoc.NewAwareness()
@@ -219,6 +256,23 @@ func TestStateReadByYjs(t *testing.T) {
 			require.Equal(t, want, got)
 		})
 	}
+}
+
+func TestValuesReadByYjs(t *testing.T) {
+	d := ydoc.New()
+	require.NoError(t, d.Write(nil, func(w *ydoc.Writer) {
+		w.Set("meta", "changes", map[string]any{"since": float64(1_760_176_800_000), "editors": []any{"Ann"}})
+		w.Set("meta", "autoCommit", 0.5)
+		w.Set("meta", "conflict", nil)
+		w.Set("assets", "/a.png", []byte{1, 2, 255})
+		w.Set("assets", "/b.png", "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391")
+	}))
+	file := filepath.Join(t.TempDir(), "state.b64")
+	require.NoError(t, os.WriteFile(file, []byte(base64.StdEncoding.EncodeToString(d.State())), 0o600))
+	require.JSONEq(t, `{
+		"meta": {"changes": {"since": 1760176800000, "editors": ["Ann"]}, "autoCommit": 0.5, "conflict": null},
+		"assets": {"/a.png": {"bytes": [1, 2, 255]}, "/b.png": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"}
+	}`, string(testutil.RunNode(t, "read-state.ts", file, "=meta", "=assets")))
 }
 
 func utf16(s string) []uint16 {

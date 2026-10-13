@@ -2,6 +2,7 @@ package collab
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -171,10 +172,31 @@ type Peer struct {
 	room    string
 	user    User
 	r       *room
+	named   string // the name the client publishes in the awareness (owned by the room's goroutine)
 }
 
 // User is who the client authenticated as.
 func (p *Peer) User() User { return p.user }
+
+// Name is who the client is, by name: the user it authenticated as, else the name it publishes in the
+// room's awareness (`user.name`, as the widget's collaboration extension does), else "". Read it on the
+// room's goroutine (in a Handler method, an update listener of the document, or Room.Do).
+func (p *Peer) Name() string {
+	if p.user.Name != "" {
+		return p.user.Name
+	}
+	return p.named
+}
+
+// noteAwareness remembers the name in the awareness states the client sent (the last one it named).
+func (p *Peer) noteAwareness(states []map[string]any) {
+	for _, s := range states {
+		user, _ := s["user"].(map[string]any)
+		if name, _ := user["name"].(string); strings.TrimSpace(name) != "" {
+			p.named = strings.TrimSpace(name)
+		}
+	}
+}
 
 // Room is the room's name.
 func (p *Peer) Room() string { return p.room }

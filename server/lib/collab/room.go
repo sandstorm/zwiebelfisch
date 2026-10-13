@@ -25,6 +25,7 @@ type room struct {
 	firstDirty time.Time // when the oldest unstored change came
 	storeAt    *time.Timer
 	unloaded   bool
+	ext        Handler // nil: the extension left the room alone
 }
 
 func newRoom(s *Server, name string) *room {
@@ -90,6 +91,13 @@ func (r *room) load() {
 		r.broadcast(msgSync, ydoc.SyncUpdate(update))
 		r.changed()
 	})
+	if x := r.s.opts.Extension; x != nil {
+		if r.ext, err = x.Open(&Room{r}, r.doc); err != nil {
+			r.log.Warn().Err(err).Msg("cannot open the room")
+			r.loadErr = err
+			return
+		}
+	}
 	r.log.Debug().Bool("new", state == nil).Msg("room loaded")
 }
 
@@ -115,13 +123,32 @@ func (r *room) leave(p *Peer) {
 	if update := r.awareness.Remove(p); update != nil {
 		r.broadcast(msgAwareness, new(encoder).bytes(update).buf)
 	}
-	if len(r.peers) == 0 {
-		r.store()
-		r.unload()
+	if len(r.peers) > 0 {
+		return
 	}
+	r.store()
+	if r.ext == nil || r.s.ctx.Err() != nil {
+		r.unload()
+		return
+	}
+	// the extension may want the room a while longer (e.g. to commit it); it is joinable meanwhile
+	r.s.wg.Add(1) // the room's goroutine counts too, so a Close waiting for wg is not done yet
+	go func() {
+		defer r.s.wg.Done()
+		r.ext.Left(r.s.ctx)
+		r.do(func() {
+			if len(r.peers) == 0 && !r.unloaded {
+				r.store()
+				r.unload()
+			}
+		})
+	}()
 }
 
 func (r *room) unload() {
+	if r.ext != nil {
+		r.ext.Close()
+	}
 	r.unloaded = true
 	r.s.forget(r)
 	r.log.Debug().Msg("room unloaded")
@@ -156,6 +183,7 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 			r.log.Debug().Err(err).Msg("bad awareness update")
 			return
 		}
+		p.noteAwareness(r.awareness.States(p))
 		// to everyone, the sender too: the provider closes a connection that has been silent for 30 s
 		r.broadcast(msgAwareness, new(encoder).bytes(update).buf)
 	case msgQueryAwareness:
@@ -166,8 +194,8 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 		p.send(msgAwareness, new(encoder).bytes(update).buf)
 	case msgStateless:
 		payload := d.string()
-		if d.err == nil && r.s.opts.Stateless != nil {
-			r.s.opts.Stateless(p, payload)
+		if d.err == nil && r.ext != nil {
+			r.ext.Stateless(p, payload)
 		}
 	case msgAuth:
 		// a token refresh on an open room: nothing to do (Hocuspocus calls onTokenSync)

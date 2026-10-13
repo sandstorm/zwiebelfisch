@@ -4,8 +4,9 @@
 // People who edit one project together need its document in one place. A client opens a room by name and
 // token (Authenticate decides); the server syncs the room's document with it, relays every change and
 // presence (awareness) update to the room's other clients, and stores the document (debounced, and when
-// the last client leaves, after which the room is unloaded). It does not look inside a room; GitLab rooms
-// will (Stateless and the Peer's user are their hooks).
+// the last client leaves, after which the room is unloaded). It does not look inside a room; an Extension
+// does (GitLab rooms, package gitlab): it opens a room, gets its clients' stateless messages, and decides
+// when a room the last client left may unload.
 //
 // Each room runs on its own goroutine, which owns its document: everything that touches a room (a client's
 // message, joining, leaving, storing) is a function queued to it, so rooms need no locks and see events in
@@ -36,8 +37,8 @@ type Options struct {
 	// Debounce is the quiet time after a change before the room is stored (default 2 s); MaxDebounce bounds
 	// how long changes stay unstored while edits keep coming (default 10 s). As in Hocuspocus.
 	Debounce, MaxDebounce time.Duration
-	// Stateless, if set, receives the stateless messages clients send (called on the room's goroutine).
-	Stateless func(p *Peer, payload string)
+	// Extension, if set, adds behaviour to rooms (see Extension).
+	Extension Extension
 	Log       zerolog.Logger
 }
 
