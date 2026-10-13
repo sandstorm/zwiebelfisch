@@ -94,10 +94,24 @@ describe('calculateMarginNoteChanges', () => {
     expect(noted(text, 3)).toBe(`${IMPORT}= T#margin-note[|]\n#import "@preview/drafting:0.2.2": inline-note\nText\n`);
   });
 
-  it('adds no note above the file\'s own margin-note import: never a second import of it', () => {
-    const full = '= T\n#import "@preview/drafting:0.2.2": margin-note\nText\n';
-    expect(noted(full, 3)).toBe('null');
-    expect(noted(`${IMPORT}Text\n`, 0)).toBe('null');
+  it('adds the note above the file\'s own margin-note import and moves the import to the top', () => {
+    const full = `= T\n${IMPORT}Text\n`;
+    expect(noted(full, 3)).toBe(`${IMPORT}= T#margin-note[|]\nText\n`);
+    expect(noted(full, 0, 3)).toBe(`${IMPORT}#margin-note[= T][|]\nText\n`);
+    // a selection ending where the import's line starts
+    expect(noted('Hi\n#import "@preview/drafting:0.2.2": margin-note\n', 0, 3)).toBe(`${IMPORT}#margin-note[Hi\n][|]`);
+    // a caret at the very start, above the import
+    expect(noted(`${IMPORT}Text\n`, 0)).toBe(`${IMPORT}#margin-note[|]Text\n`);
+  });
+
+  it('moves the import line whole: the other names it imports stay with it', () => {
+    const text = '= T\n#import "@preview/drafting:0.2.2": inline-note, margin-note as mn, margin-note\nText\n';
+    expect(noted(text, 3)).toBe('#import "@preview/drafting:0.2.2": inline-note, margin-note as mn, margin-note\n= T#margin-note[|]\nText\n');
+    const star = '= T\n  #import "@preview/drafting:0.2.2": *\nText\n';
+    expect(noted(star, 3)).toBe('#import "@preview/drafting:0.2.2": *\n= T#margin-note[|]\nText\n');
+    // an import sharing its line with text moves alone
+    const shared = '= T\nA #import "@preview/drafting:0.2.2": margin-note\nText\n';
+    expect(noted(shared, 3)).toBe(`${IMPORT}= T#margin-note[|]\nA \nText\n`);
   });
 
   it('adds no note around statements: they would apply only inside it (a selected preamble box)', () => {

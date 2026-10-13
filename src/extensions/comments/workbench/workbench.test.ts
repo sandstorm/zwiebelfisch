@@ -4,7 +4,7 @@ import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
-import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, type TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import type { TextEditor } from '../../../hosts/window/window';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
@@ -33,7 +33,20 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
 }
 
 function sourceEditor(document: TypstDocument, selection: { from: number; to: number }): TextEditor {
-  return { document, viewType: SOURCE_EDITOR, selection: SourceRange.of(selection), revealRange: vi.fn(), insertSnippet: vi.fn() };
+  return { document, viewType: SOURCE_EDITOR, selection: SourceRange.of(selection), revealRange: vi.fn(), insertSnippet: vi.fn(), edit: edits((changes) => document.change(changes, 'test')) };
+}
+
+/** A `TextEditor.edit` that hands the edits made to `apply`. */
+function edits(apply: (changes: TextChange[]) => void): TextEditor['edit'] {
+  return (callback) => {
+    const changes: TextChange[] = [];
+    callback({
+      replace: ({ from, to }, insert) => changes.push({ from, to, insert }),
+      insert: (at, insert) => changes.push({ from: at, to: at, insert }),
+      delete: ({ from, to }) => changes.push({ from, to, insert: '' }),
+    });
+    apply(changes);
+  };
 }
 
 describe('comments.addComment', () => {
@@ -62,6 +75,7 @@ describe('comments.addComment', () => {
       },
       revealRange: (range) => view.reveal(range),
       insertSnippet: (snippet) => view.insert(snippet),
+      edit: edits((changes) => view.edit(changes)),
     };
     // as the widget wires it: the new note's card opens
     comment = setup(editor, notes).comment;
@@ -91,9 +105,23 @@ describe('comments.addComment', () => {
     const tiptap = (root.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     expect(tiptap.state.doc.firstChild?.type.name).toBe('rawBlock');
     tiptap.view.dispatch(tiptap.state.tr.setSelection(NodeSelection.create(tiptap.state.doc, 0)));
-    const editor: TextEditor = { document: doc, viewType: VISUAL_EDITOR, selection: view.selection(), revealRange: vi.fn(), insertSnippet: vi.fn() };
+    const editor: TextEditor = { document: doc, viewType: VISUAL_EDITOR, selection: view.selection(), revealRange: vi.fn(), insertSnippet: vi.fn(), edit: edits((changes) => view.edit(changes)) };
     setup(editor).comment();
     expect(doc.text).toBe(text);
     expect(root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.disabled).toBe(true);
+  });
+
+  it('adds a note on a heading above the file\'s import and moves the import to the top, in one undo step (Visual editor)', () => {
+    const root = document.body.appendChild(document.createElement('div'));
+    const text = `= Title\n\n${IMPORT}\nHello world.\n`;
+    const doc = new TypstDocument(text);
+    const view = new VisualEditor(root, doc, VisualEditorHost.from([marginNotes({ comment: () => {} })]));
+    const tiptap = (root.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    view.reveal(SourceRange.of({ from: 2, to: 7 }));
+    const editor: TextEditor = { document: doc, viewType: VISUAL_EDITOR, selection: view.selection(), revealRange: vi.fn(), insertSnippet: vi.fn(), edit: edits((changes) => view.edit(changes)) };
+    setup(editor).comment();
+    expect(doc.text).toBe(`${IMPORT}#margin-note[= Title][]\n\n\nHello world.\n`);
+    tiptap.commands.undo();
+    expect(doc.text).toBe(text);
   });
 });

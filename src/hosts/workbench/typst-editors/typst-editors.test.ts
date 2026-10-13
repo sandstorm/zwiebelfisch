@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 // Tests for typst-editors.ts, shown through the window's custom editors as the workbench does.
+import { undo } from '@codemirror/commands';
+import { EditorView } from '@codemirror/view';
+import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { type FileChange, Project } from '../../../core/project/project';
-import { SourceRange } from '../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { SOURCE_EDITOR } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditorHost } from '../../visual-editor/visual-editor';
 import { type TextEditorSelectionChangeEvent, WindowHost } from '../../window/window';
@@ -54,6 +57,27 @@ describe('TypstEditors', () => {
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 4, to: 4 }));
     show('/main.typ', SOURCE_EDITOR);
     expect(editors.activeTextEditor!.selection).toEqual(SourceRange.of({ from: 4, to: 4 }));
+  });
+
+  it('makes the edits of `edit` one undo step of the editor shown, in the Visual and in the Source editor', () => {
+    const { area, editors, show } = setup();
+    const edit = () =>
+      editors.activeTextEditor!.edit((builder) => {
+        builder.insert(SourceOffset.of(0), '= T\n');
+        builder.replace(SourceRange.of({ from: 1, to: 5 }), 'lps');
+        builder.delete(SourceRange.of({ from: 5, to: 6 }));
+      });
+    show('/main.typ');
+    const { document } = editors.activeTextEditor!;
+    edit();
+    expect(document.text).toBe('= T\nAlps');
+    (area.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.commands.undo();
+    expect(document.text).toBe('Alpha\n');
+    show('/main.typ', SOURCE_EDITOR);
+    edit();
+    expect(document.text).toBe('= T\nAlps');
+    undo(EditorView.findFromDOM(area.querySelector<HTMLElement>('[data-testid="typst-source"]')!)!);
+    expect(document.text).toBe('Alpha\n');
   });
 
   it('registers the Visual editor, then the Source editor, as the editors of *.typ; the Visual editor opens by default', () => {

@@ -54,7 +54,9 @@ function addComment(editor: TextEditor, cards: NoteCards): void {
   const { document } = editor;
   const added = calculateMarginNoteChanges(document.text, editor.selection);
   if (!added) return;
-  document.change(added.changes, ADD_COMMENT);
+  editor.edit((builder) => {
+    for (const change of added.changes) builder.replace(change, change.insert);
+  });
   if (editor.viewType !== VISUAL_EDITOR || !cards.editNote(document, added.note)) editor.revealRange({ from: added.note, to: added.note });
 }
 

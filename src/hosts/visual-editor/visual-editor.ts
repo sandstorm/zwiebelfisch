@@ -142,6 +142,13 @@ export class VisualEditor {
     insertTypst(this.tiptap, source);
   }
 
+  /** Applies `changes` of the source (its coordinates now) as one transaction: one undo step. */
+  edit(changes: readonly TextChange[]): void {
+    const { state } = this.tiptap;
+    const tr = applyTypstChanges(state.tr, parseTypst(applyChanges(this.document.text, changes), state.schema));
+    if (tr.docChanged) this.tiptap.view.dispatch(tr);
+  }
+
   /**
    * The source range the selection shows: where it starts, and where the
    * last character (or box) it covers ends; `from === to` for a caret. After

@@ -2,8 +2,8 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax } from './margin-note-syntax';
-import { SourceOffset, type SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
-import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
+import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
+import { calculateImportChange, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { calculatePageMarginChanges } from './page-margin';
 
 /**
@@ -15,7 +15,7 @@ import { calculatePageMarginChanges } from './page-margin';
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
  * `drafting` exactly once afterwards: an existing drafting import is extended,
- * else one is added at the top. The notes' look is not written into the
+ * one after the note moves to the top, else one is added at the top. The notes' look is not written into the
  * document: the preview and the PDF set it (NOTE_STYLE in ../preview/preview.ts).
  * Page margins drafting 0.2.2 cannot handle (a single length) get room for
  * notes on the right (see `calculatePageMarginChanges`).
@@ -23,15 +23,13 @@ import { calculatePageMarginChanges } from './page-margin';
  * Null where no note fits: the position is inside code, the selection holds
  * statements (`#set`, `#show`, `#import`, `#let`: wrapped, they would apply
  * only inside the note; a selected box of them, like a document's preamble in
- * the Visual editor, is no text to comment on), or the note would come before
- * the file's drafting import (a second import is no fix).
+ * the Visual editor, is no text to comment on).
  */
 export function calculateMarginNoteChanges(text: string, range: SourceRange): MarginNoteChanges | null {
   if (holdsStatements(text, range)) return null;
   const note = noteEdit(text, range);
-  const imported = note && withImport(text, note);
-  if (!note || !imported) return null;
-  const changes = [...imported, ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
+  if (!note) return null;
+  const changes = [...withImport(text, note), ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
   return { changes, note: SourceOffset.of(mapOffset(changes, note.at(-1)!.from) - 1) };
 }
@@ -123,17 +121,46 @@ function insert(at: number, text: string): TextChange {
 
 /**
  * `changes` (the note's, the first one at the start of its call) plus
- * whatever makes `margin-note` imported from drafting there; an import at the
- * note's position goes first. Null when the note would come before the file's
- * own import of it.
+ * whatever makes `margin-note` imported from drafting there: the file's own
+ * import of it, when it comes later, moves to the top (a second import would
+ * be no fix); else the edit `calculateImportChange` decides. An import at the
+ * note's position goes first.
  */
-function withImport(text: string, changes: TextChange[]): TextChange[] | null {
+function withImport(text: string, changes: TextChange[]): TextChange[] {
   const extra = marginNoteImport(text, changes[0].from);
   if (!extra) return changes;
-  if (!marginNoteImport(text, SourceOffset.of(text.length))) return null;
-  const same = changes.find((change) => change.from === extra.from);
-  if (same) return changes.map((change) => (change === same ? { ...same, insert: extra.insert + same.insert } : change));
-  return [extra, ...changes].sort((a, b) => a.from - b.from);
+  const later = laterImport(text, changes[0].from);
+  if (!later) return atOnePosition([extra, ...changes]);
+  return atOnePosition([insert(0, `${text.slice(later.statement.from, later.statement.to)}\n`), ...changes, { ...later.removed, insert: '' }]);
+}
+
+/**
+ * The file's import that brings `margin-note`, ending after `use`: its
+ * statement (`#import …`), and what moving it away removes (its whole line
+ * when it stands alone there).
+ */
+function laterImport(text: string, use: number): { statement: SourceRange; removed: SourceRange } | null {
+  for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
+    if (node.name !== 'ModuleImport' || node.to <= use || marginNoteImport(text, SourceOffset.of(node.to))) continue;
+    const statement = withHash(node);
+    const start = text.lastIndexOf('\n', statement.from - 1) + 1;
+    const end = text.indexOf('\n', statement.to);
+    const lineEnd = end < 0 ? text.length : end + 1;
+    const alone = text.slice(start, statement.from).trim() === '' && text.slice(statement.to, lineEnd).trim() === '';
+    return { statement, removed: alone ? SourceRange.of({ from: start, to: lineEnd }) : statement };
+  }
+  return null;
+}
+
+/** `changes` with those at one position made one change (inserts in order, then the removal there): TypstDocument.change takes non-overlapping changes. */
+function atOnePosition(changes: TextChange[]): TextChange[] {
+  const result: TextChange[] = [];
+  for (const change of [...changes].sort((a, b) => a.from - b.from)) {
+    const last = result.at(-1);
+    if (last?.from === change.from) result[result.length - 1] = { from: last.from, to: SourceOffset.of(Math.max(last.to, change.to)), insert: last.insert + change.insert };
+    else result.push(change);
+  }
+  return result;
 }
 
 /** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `calculateImportChange`). */

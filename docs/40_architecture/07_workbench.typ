@@ -150,7 +150,7 @@ window.registerSearchProvider({
 
 - *Read* through `project` (`files()`, `paths()`, `has`, `document`, `content`, `onDidChangeFile`); *change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project, the host's `allowFileChange`, the project again, then applies, and resolves to the refusal in words or `null`. `FileChange`: @architecture-core-project.
 - *Show* with `workbench.open(path, { selection?, viewType? })`; `window.activeFile` says what is shown.
-- *`window.activeTextEditor`* is the Typst editor (`revealRange`, `insertSnippet`, …); `null` for other files.
+- *`window.activeTextEditor`* is the Typst editor (`revealRange`, `insertSnippet`, `edit`, …); `null` for other files.
 - *`languages.getLanguageId(path)`* goes by the longest ending in `contributes.languages`.
 - *Dropped files* no editor took go to `workbench.onDidDropFiles`.
 
