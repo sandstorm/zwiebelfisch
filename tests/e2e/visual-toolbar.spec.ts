@@ -125,11 +125,14 @@ test('raw blocks are editable in place and change only their source', async ({ p
   await expect.poll(sourceText(page)).toMatch(/^#set par\(justify: true\)\n#import "@preview\/drafting:0\.2\.2"/);
 });
 
-test('arrow down on the last line of a raw block moves into the next block', async ({ page }) => {
+test('arrow down on the last line of a raw block moves onto the gap after it, then into the next block', async ({ page }) => {
   // the demo's first raw block (imports, set and show rules) ends in `#show link: underline`
   await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-line').last().click();
   await page.keyboard.press('Home');
   await page.keyboard.press('ArrowDown');
+  await expect(visual(page).locator('.typst-visual__block-gap')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  await expect(visual(page).locator('.typst-visual__block-gap')).toHaveCount(0);
   await page.keyboard.type('X');
   await expect(visual(page).locator('h1')).toHaveText('XTypst in five minutes');
 });

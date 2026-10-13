@@ -45,6 +45,8 @@ test('⌘/Ctrl+click on a reference in the Source editor scrolls the preview to 
   const source = page.locator('[data-testid=typst-source]:visible');
   await source.locator('.cm-line', { hasText: FROM.words }).click();
   await expect(previewPage(page, number)).not.toBeInViewport();
+  // the references are in the chapter's last line, which the Source editor draws only once it is scrolled there
+  await page.keyboard.press('ControlOrMeta+End');
   await source.locator('.typst-source__path', { hasText: `@${TARGET.label}` }).first().click({ modifiers: ['ControlOrMeta'] });
   await expect(source.locator('.cm-activeLine')).toContainText(`<${TARGET.label}>`);
   await expect(previewPage(page, number)).toBeInViewport();

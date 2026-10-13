@@ -5,7 +5,7 @@ import { EditorState, NodeSelection, type Selection, TextSelection, type Transac
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { SourceOffset, SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { DocumentPasteEdit, DocumentPasteEditProvider, PasteChoices } from '../languages/languages';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { BlockGaps, caretAtSource } from './block-gaps';
@@ -217,16 +217,34 @@ export function insertTypst(editor: Editor, source: string, at?: number, changes
     .chain()
     .focus()
     .command(({ tr, commands }) => {
-      if (changes.length > 0) applyTypstChanges(tr, parseTypst(applyChanges(serializeToTypst(tr.doc), changes), schema));
       const { selection, doc } = tr;
-      const $at = at === undefined ? selection.$to : doc.resolve(Math.min(tr.mapping.map(at), doc.content.size));
-      if (paragraph && $at.parent.inlineContent) {
-        return commands.insertContentAt(at === undefined ? { from: selection.from, to: selection.to } : { from: $at.pos, to: $at.pos }, paragraph.content);
-      }
-      const blockSelected = at === undefined && selection instanceof NodeSelection && selection.node.isBlock;
-      return commands.insertContentAt(blockSelected ? { from: $at.pos, to: $at.pos } : besideTextblock($at), content);
+      const $at = at === undefined ? selection.$to : doc.resolve(Math.min(at, doc.content.size));
+      const inline = paragraph !== null && $at.parent.inlineContent;
+      const range = insertionRange(at === undefined ? selection : null, $at, inline);
+      const edge = posToSource(doc, range.from);
+      const before = serializeToTypst(doc).length;
+      if (!commands.insertContentAt(range, inline ? paragraph.content : content)) return false;
+      if (changes.length === 0) return true;
+      // the changes go in after the insert: a fresh parse of the text before it has no empty paragraph to take over
+      const text = serializeToTypst(tr.doc);
+      applyTypstChanges(tr, parseTypst(applyChanges(text, shiftedPast(changes, edge, text.length - before)), schema));
+      return true;
     })
     .run();
+}
+
+/**
+ * Where `insertTypst` puts inline content (`inline`): in place of `selection`, else (a position given) at `$at`; where
+ * blocks: after the selected block, else beside the text block of `$at`.
+ */
+function insertionRange(selection: Selection | null, $at: ResolvedPos, inline: boolean): { from: number; to: number } {
+  if (inline) return selection ? { from: selection.from, to: selection.to } : { from: $at.pos, to: $at.pos };
+  return selection instanceof NodeSelection && selection.node.isBlock ? { from: $at.pos, to: $at.pos } : besideTextblock($at);
+}
+
+/** `changes` with those after source offset `edge` moved by `delta` (what an edit at `edge` added). */
+function shiftedPast(changes: readonly TextChange[], edge: SourceOffset, delta: number): TextChange[] {
+  return changes.map((change) => (change.to <= edge ? change : { ...change, from: SourceOffset.of(change.from + delta), to: SourceOffset.of(change.to + delta) }));
 }
 
 /** `text` with `changes` (in its coordinates, not overlapping) applied. */

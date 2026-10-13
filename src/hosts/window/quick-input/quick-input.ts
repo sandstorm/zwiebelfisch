@@ -6,7 +6,7 @@ import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOpti
  * (search everywhere). One box at a time over the widget `host` (a new one cancels the open one), placed below its
  * anchor and kept inside the widget (above the anchor where there is no room below): the anchor is what the user last
  * pressed or typed in (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS
- * Code's). Escape or a mouse press elsewhere cancels; closing gives the focus back to where it was.
+ * Code's). Escape or a mouse press elsewhere cancels; closing gives the focus back to where it was (an editor's caret, too).
  */
 export class QuickInput {
   #trigger: Element | null = null;
@@ -177,6 +177,7 @@ export class QuickInput {
     this.#open?.cancel();
     const root = this.host.getRootNode() as Document | ShadowRoot;
     const previous = root.activeElement;
+    const caret = caretIn(root, previous);
     const anchor = anchored ? this.#anchor(root) : null;
     const doc = this.host.ownerDocument;
     const outside = (event: MouseEvent) => {
@@ -190,7 +191,10 @@ export class QuickInput {
       const hadFocus = box.contains(root.activeElement);
       box.remove();
       if (this.#open?.box === box) this.#open = null;
-      if (hadFocus && previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      if (hadFocus && previous instanceof HTMLElement && previous.isConnected) {
+        previous.focus();
+        caret?.restore();
+      }
       resolve(value);
     };
     box.addEventListener('keydown', (event) => {
@@ -501,6 +505,26 @@ function selectionRect(root: Document | ShadowRoot): { top: number; bottom: numb
   const range = selection.getRangeAt(0);
   const rect = [...(range.getClientRects?.() ?? [])].find((r) => r.height > 0) ?? range.getBoundingClientRect?.();
   return rect && rect.height > 0 ? { top: rect.top, bottom: rect.bottom, left: rect.left } : null;
+}
+
+/**
+ * The selection inside `element` (an editor's caret), to put back after focusing it again: focusing an editable element
+ * whose selection went elsewhere sets the caret to its start (Chromium), which the editor would take for the user's.
+ */
+function caretIn(root: Document | ShadowRoot, element: Element | null): { restore(): void } | null {
+  const selection = selectionIn(root);
+  if (!element || !selection || selection.rangeCount === 0 || !element.contains(selection.anchorNode)) return null;
+  const { anchorNode, anchorOffset, focusNode, focusOffset } = selection;
+  return {
+    restore: () => {
+      if (anchorNode!.isConnected && focusNode!.isConnected) selection.setBaseAndExtent(anchorNode!, within(anchorNode!, anchorOffset), focusNode!, within(focusNode!, focusOffset));
+    },
+  };
+}
+
+/** `offset` in `node`, at most its end (the node may have shrunk meanwhile). */
+function within(node: Node, offset: number): number {
+  return Math.min(offset, node.nodeType === node.TEXT_NODE ? (node as Text).length : node.childNodes.length);
 }
 
 /** The selection in `root`: a shadow root's own where the browser has one (Chromium), else the document's. */

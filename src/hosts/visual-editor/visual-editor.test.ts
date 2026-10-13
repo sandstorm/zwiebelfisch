@@ -301,6 +301,13 @@ describe('insertTypst', () => {
     expect(doc.text).toBe('Any*bold* text\n');
   });
 
+  it('takes over an empty paragraph also with changes before it (an import)', () => {
+    const { doc, editor } = at('Title\n\nThe runs:\n', 18);
+    editor.commands.splitBlock();
+    insertTypst(editor, '#figure(sheets.Sheet1, caption: [ ])', undefined, [{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '#import "t.typ": sheets\n\n' }]);
+    expect(doc.text).toBe('#import "t.typ": sheets\n\nTitle\n\nThe runs:\n\n#figure(sheets.Sheet1, caption: [ ])\n');
+  });
+
   it('inserts at a position given (a drop) instead of the selection', () => {
     const { doc, editor } = at('Title\n\nSome text\n', 0);
     // position 3: after "Ti"
