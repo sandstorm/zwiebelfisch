@@ -84,13 +84,15 @@
 
 /// The note under a chapter heading whose text nobody has rewritten and checked by hand yet (every part but
 /// Features). Delete the call once a person has curated the chapter.
-#let unreviewed = block(
-  width: 100%,
-  inset: (x: 10pt, y: 7pt),
-  fill: colors.tint,
-  stroke: (left: 3pt + colors.sand),
-  [*Not yet reviewed.* _This chapter has not been rewritten, curated or checked by hand yet._],
-)
+#let unreviewed = {
+  let note = [*Not yet reviewed.* _This chapter has not been rewritten, curated or checked by hand yet._]
+  // HTML (the primary output): the class `unreviewed` in style.css
+  context if target() == "html" {
+    html.div(class: "unreviewed", note)
+  } else {
+    block(width: 100%, inset: (x: 10pt, y: 7pt), fill: colors.tint, stroke: (left: 3pt + colors.sand), note)
+  }
+}
 
 /// `numbers` (a heading counter's value) after a heading of `level`, as Typst steps it.
 #let step-heading(numbers, level) = {
