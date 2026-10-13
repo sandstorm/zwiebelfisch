@@ -225,6 +225,16 @@ describe('paste as', () => {
     undo(b.view.dom);
     expect(text('/book/two/b.typ')).toBe('Intro\n');
   });
+
+  it('after Mod+Shift+V the Visual editor pastes the characters: no typing rule makes `*x*` strong again', () => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    b.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'V', code: 'KeyV', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    clipboard(b.view.dom, 'paste', { 'text/plain': ' *plain* _text_' });
+    expect(text('/book/two/b.typ')).toBe('Intro \\*plain\\* \\_text\\_\n');
+  });
 });
 
 describe('Markdown pasted', () => {

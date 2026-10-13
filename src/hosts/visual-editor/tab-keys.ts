@@ -73,16 +73,33 @@ function indentLines(state: EditorState, indent: (tr: Transaction, lineStart: nu
 
 /**
  * Lets the Tab after an Escape in `dom` (the editor's, raw boxes included) through to the browser: caught before
- * any handler inside (capture phase), so neither a keymap nor a raw box's code editor consumes it.
+ * any handler inside (capture phase), so neither a keymap nor a raw box's code editor consumes it. The browser moves
+ * the focus from a focus stop just outside `dom` (after it; before it for Shift+Tab), so it leaves the editor rather
+ * than going on to what is focusable inside (a raw box's code, a code block's language).
  */
 function escapeThenTab(dom: HTMLElement): PluginView {
   let escaped = false;
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Tab' && escaped) event.stopImmediatePropagation();
+    if (event.key === 'Tab' && escaped) {
+      event.stopImmediatePropagation();
+      focusOutside(dom, event.shiftKey ? 'before' : 'after');
+    }
     if (!MODIFIERS.has(event.key)) escaped = event.key === 'Escape';
   };
   dom.addEventListener('keydown', onKeyDown, true);
   return { destroy: () => dom.removeEventListener('keydown', onKeyDown, true) };
+}
+
+/**
+ * Focuses a stop (out of the tab order itself) right `side` of `dom`, gone once the focus moves on: the browser's Tab
+ * then goes on from there.
+ */
+function focusOutside(dom: HTMLElement, side: 'before' | 'after'): void {
+  const stop = dom.ownerDocument.createElement('span');
+  stop.tabIndex = -1;
+  stop.addEventListener('blur', () => stop.remove(), { once: true });
+  dom[side](stop);
+  stop.focus({ preventScroll: true });
 }
 
 /** Keys pressed on their way to a combination (Shift for Shift+Tab): they keep an Escape's effect. */

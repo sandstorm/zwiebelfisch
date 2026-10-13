@@ -6,7 +6,8 @@ import type { DocumentNodeSpec } from './prosemirror-typst';
 
 /**
  * Source anchors of the base's paragraphs (`src`, its original Typst; `sep`, the whitespace to its next sibling) and
- * line breaks (`src`), and `label` on the node types of `specs` that are `labelled` (global attributes).
+ * line breaks (`src`), and `label` on the node types of `specs` that are `labelled` (global attributes). The paragraph
+ * a split makes is made in the editor: no anchors (its `sep` carried into a list item would make the list loose).
  *
  * The document with its lead and trail, raw Typst (block and inline), soft breaks, the typstSource mark; and the
  * extension giving StarterKit's paragraphs and line breaks their source anchors and labelled specs' node types their
@@ -18,7 +19,7 @@ export function sourceAnchors(specs: readonly DocumentNodeSpec[]): AnyExtension 
     addGlobalAttributes() {
       const label = { label: { default: null, rendered: false, keepOnSplit: false } };
       return [
-        { types: ['paragraph'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
+        { types: ['paragraph'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false, keepOnSplit: false } } },
         { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
         { types: specs.filter((spec) => spec.typst?.labelled).map((spec) => spec.name), attributes: label },
       ];

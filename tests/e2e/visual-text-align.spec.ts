@@ -54,9 +54,11 @@ test('Mod+Shift+E centers and Mod+Shift+L aligns left', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+Shift+E');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'center');
   await page.keyboard.press('ControlOrMeta+Shift+L');
-  await expect(toolbar(page).getByRole('menuitem', { name: 'Align left', includeHidden: true })).toHaveAttribute('aria-pressed', 'true');
   // left is the document's default, so the paragraph has no alignment of its own: CSS's `start`, left in LTR text
   await expect(freshParagraph(page)).toHaveCSS('text-align', /^(left|start)$/);
+  // a menu's items show their state only while it is open
+  await toolbar(page).getByRole('button', { name: 'Align', exact: true }).click();
+  await expect(toolbar(page).getByRole('menuitem', { name: 'Align left' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('one undo reverts an alignment', async ({ page }) => {

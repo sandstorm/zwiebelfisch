@@ -51,19 +51,27 @@ test('pasted inline Typst goes into the text; Mod+Shift+V pastes the characters'
 });
 
 test('copy puts the Typst of the selection on the clipboard; pasting it reads it back', async ({ page }) => {
-  await selectText(visual(page).locator('p').first(), 'bold');
+  // the demo's first paragraph: "… *stars* make text strong …"
+  await selectText(visual(page).locator('p').first(), 'stars');
   const data = await copy(page);
-  expect(data['text/plain']).toBe('*bold*');
-  expect(data['text/x-typst']).toBe('*bold*');
-  expect(data['text/html']).toContain('<strong>bold</strong>');
+  expect(data['text/plain']).toBe('*stars*');
+  expect(data['text/x-typst']).toBe('*stars*');
+  expect(data['text/html']).toContain('<strong>stars</strong>');
   await caretAtEnd(visual(page).locator('p').first());
   await paste(page, data);
-  await expect(visual(page).locator('p').first().locator('strong', { hasText: 'bold' })).toHaveCount(2);
+  await expect(visual(page).locator('p').first().locator('strong', { hasText: 'stars' })).toHaveCount(2);
 });
 
 const MERMAID = '#figure(mermaid("flowchart LR\\n  A --> B"), caption: [Flow])';
 
+/** Makes the main file `text` (the demo's imports merman already) and waits until the Visual editor shows it. */
+async function setSource(page: Page, text: string, shown: string): Promise<void> {
+  await page.evaluate((value) => ((window as unknown as { editor: { source: string } }).editor.source = value), text);
+  await expect(visual(page).locator('p', { hasText: shown })).toBeVisible();
+}
+
 test('pasted Typst gets the imports its names need, in the same undo step', async ({ page }) => {
+  await setSource(page, '= Imports\n\nSome text.\n', 'Some text.');
   await caretAtEnd(visual(page).locator('p').first());
   const before = await sourceText(page)();
   await paste(page, { 'text/plain': MERMAID });
@@ -73,6 +81,7 @@ test('pasted Typst gets the imports its names need, in the same undo step', asyn
 });
 
 test('the Source editor adds the imports of a paste too', async ({ page }) => {
+  await setSource(page, '= Imports\n\nSome text.\n', 'Some text.');
   await page.getByRole('tab', { name: 'Source' }).click();
   const content = page.getByTestId('typst-source').locator('.cm-content');
   await content.click();
