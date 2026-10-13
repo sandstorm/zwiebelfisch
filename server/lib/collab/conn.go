@@ -3,6 +3,7 @@ package collab
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 type conn struct {
 	s       *Server
 	t       Transport
+	req     *http.Request // that opened the connection: who it is (Authenticate)
 	ctx     context.Context
 	cancel  context.CancelFunc
 	log     zerolog.Logger
@@ -34,9 +36,9 @@ const (
 	maxQueued = 1024
 )
 
-func newConn(s *Server, t Transport, ctx context.Context, cancel context.CancelFunc) *conn {
+func newConn(s *Server, t Transport, req *http.Request, ctx context.Context, cancel context.CancelFunc) *conn {
 	return &conn{
-		s: s, t: t, ctx: ctx, cancel: cancel, log: s.opts.Log,
+		s: s, t: t, req: req, ctx: ctx, cancel: cancel, log: s.opts.Log,
 		out: make(chan []byte, maxQueued), peers: map[string]*Peer{}, pending: map[string][][]byte{},
 	}
 }
@@ -102,13 +104,13 @@ func (c *conn) authenticate(address string, d *decoder) {
 	}
 	room := roomOf(address)
 	authType := d.uint()
-	token := d.string()
+	d.string() // the token: unused, the connection's request says who it is
 	if d.err != nil || authType != authToken {
 		c.log.Debug().Str("room", room).Msg("bad auth message")
 		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
 		return
 	}
-	user, err := c.s.opts.Authenticate(token, room)
+	user, err := c.s.opts.Authenticate(c.req, room)
 	if err != nil {
 		reason := "permission-denied"
 		var refusal Refusal

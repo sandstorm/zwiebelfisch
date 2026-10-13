@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
+#MISE description="Start the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), then run the GitLab room Playwright spec (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
 #MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
@@ -10,8 +10,10 @@ set -euo pipefail
 args=("$@")
 [[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
 [[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-# plain rooms off (the default): gitlab.spec.ts checks that such a server refuses them
-.cache/bin/fake-gitlab &
+# plain rooms off (the default): gitlab.spec.ts checks that such a server refuses them. The demo build on :5199
+# (TYPST_DEMO_DIST): the specs open it there, same host as the server, so the session cookie goes along, and the
+# browser comes back there from signing in.
+TYPST_DEMO_DIST=dist/demo .cache/bin/fake-gitlab &
 server=$!
 trap 'kill "$server"' EXIT
 # wait until the server accepts connections (up to 10 s)

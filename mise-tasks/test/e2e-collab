@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server (in-memory, plain rooms) and run the two-user Playwright spec against the demo build"
+#MISE description="Start the playground server (in-memory, plain rooms, sign-in at its fake GitLab; the demo build on :5199) and run the two-user Playwright spec"
 #MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
@@ -10,7 +10,9 @@ set -euo pipefail
 args=("$@")
 [[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
 [[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-TYPST_COLLAB_DB=":memory:" TYPST_PLAIN_ROOMS=1 .cache/bin/typst-server &
+# the playground server: its fake GitLab signs the users in (typst-server needs a real provider). The demo build
+# on :5199 (TYPST_DEMO_DIST), same host as the server, so the session cookie goes along.
+TYPST_PLAIN_ROOMS=1 TYPST_DEMO_DIST=dist/demo .cache/bin/fake-gitlab &
 server=$!
 trap 'kill "$server"' EXIT
 # wait until the server accepts connections (up to 10 s)

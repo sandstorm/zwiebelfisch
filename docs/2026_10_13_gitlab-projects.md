@@ -9,7 +9,7 @@ and 15 "Open work") and delete once built. Legend: (v) verified in code or on th
 |---|---|
 | Project identity | Only the room name, chosen by the client: `gitlab:<project id or path>@<branch>` (`server/lib/gitlab/rooms.go: parseRoomName`). Always the whole repository; no subfolder. |
 | Demo "GitLab (fake)" | `?room=gitlab:demo/report@main` in the URL (`demo/playground.ts`, `GITLAB_ROOM`). The fake GitLab is in-memory (`server/lib/fakegitlab`); another branch name starts a fresh branch from `main`. The playground bar switches modes. |
-| Auth | Stub: `collab.SharedToken(TYPST_COLLAB_TOKEN)`, one token for every room and user (`server/lib/collab/auth.go`). Users are whatever name the client sends (`?user=Ann`). |
+| Auth | OpenID Connect sign-in (`server/lib/auth`), sessions in memory; GitLab rooms check Developer+ and push rights with the bot token (`server/lib/gitlab/access.go`). Built 2026-10-13 (plan step 1). |
 | GitLab access | One server-wide token with `api` scope (`TYPST_GITLAB_TOKEN`) does everything: tree, files, blobs, commits (`gitlab-api.ts`). Users never sign in to GitLab; commits name co-editors as `Co-authored-by:`. |
 | Persistence | SQLite: one Y.Doc per room, GitLab rooms included (`collab-server.ts`, `@hocuspocus/extension-sqlite`). Browser: localStorage/sessionStorage mementos for UI state (`hosts/workbench/memento`). Nothing per user on the server. |
 | Main file | GitLab rooms: per user (the client's `mainFile` option); other rooms share it (`project` map, `shared-main-file.ts`). |
@@ -138,7 +138,7 @@ HTML using the widget's CSS tokens, with the same list styling as the quick inpu
 
 | Part | Responsibility | Why there |
 |---|---|---|
-| Widget `src/` | unchanged mechanism: `collaboration({ url, room, token })`, `mainFile`, `scm`, quick input, status bar | It is embeddable in others' apps, which have their own sign-in and project model. No GitLab sign-in or chooser in it. |
+| Widget `src/` | unchanged mechanism: `collaboration({ url, room })` (the session cookie, no token), `mainFile`, `scm`, quick input, status bar | It is embeddable in others' apps, which have their own sign-in and project model. No GitLab sign-in or chooser in it. |
 | App shell (new `app/`, beside `demo/`) | routes, welcome screen, OAuth redirect, an extension `projects` (status bar widgets, commands, search provider) | Policy of one product. Like `demo/` but production; the demo's "GitLab (fake)" mode becomes this app against the fake GitLab. |
 | Server `server/` | OAuth confidential client, sessions, GitLab proxy for the chooser, recent projects, rooms with an access check, serves the app | Holds the tokens; must check access per room anyway. |
 
@@ -222,8 +222,8 @@ work plus a period of running both against the e2e suite.
 
 (Pasting a GitLab URL belongs to step 4's dialog; its resolver to the server step that lists projects.)
 
-1. **Server sign-in**: OAuth endpoints, sessions table, `Authenticate` from the session cookie, `/api/me`.
-   `FakeGitLab` gains `/oauth/authorize|token` and `/api/v4/user`. Test: server tests with the fake; e2e sign-in.
+1. ~~**Server sign-in**~~ Built (OpenID Connect instead of plain OAuth, sessions in memory instead of a table, the
+   access check of step 3 included; see `2026_10_13_go-server.md`).
 2. **Chooser API**: `/api/projects`, `/branches`, `/folders`, `/recent` against the fake. Test: unit tests per endpoint.
 3. **Folder rooms**: room name with folder; `GitLabRoom` path mapping and folder-scoped commits; access check on join
    with the user's token; commits as the saving user. Test: `gitlab-rooms.test.ts` cases for folder + permission refused.

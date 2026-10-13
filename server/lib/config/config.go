@@ -4,7 +4,6 @@
 //	PORT                (default 1234)
 //	TYPST_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
 //	TYPST_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing)
-//	TYPST_COLLAB_TOKEN  (default unset: no check) the token clients must send; set but empty, clients must send ""
 //	TYPST_PLAIN_ROOMS   (default off) 1/true: also serve plain rooms (any other name), backed by nothing but the DB
 //	TYPST_LOG_LEVEL     (default info) debug, info, warn, error
 //	TYPST_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
@@ -16,6 +15,15 @@
 //	TYPST_GITLAB_WEBHOOK_SECRET  (optional) enables POST /gitlab/webhook for push events
 //	TYPST_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in Co-authored-by trailers when theirs is unknown
 //	TYPST_GITLAB_AUTO_COMMIT     (default 10) minutes without edits before a room commits by itself; off: never
+//
+// Sign-in (OpenID Connect, required; package auth). The default provider is the GitLab instance:
+//
+//	TYPST_AUTH_ISSUER         (default TYPST_GITLAB_URL) the issuer; another one signs people in, but GitLab
+//	                          rooms refuse them (their GitLab user is unknown)
+//	TYPST_AUTH_CLIENT_ID      the application registered at the provider
+//	TYPST_AUTH_CLIENT_SECRET  its secret
+//	TYPST_AUTH_REDIRECT_URL   (default: /auth/callback on the host the browser names) the callback registered
+//	                          with the application, e.g. https://editor.example.org/auth/callback
 //
 // Plain rooms are off by default: the product's rooms are GitLab branches, and a plain room's content lives
 // only in this server's database.
@@ -38,9 +46,13 @@ type Config struct {
 	Port    int    `koanf:"port"`
 	Collab  struct {
 		DB string `koanf:"db"`
-		// Token is nil when TYPST_COLLAB_TOKEN is unset (no check).
-		Token *string `koanf:"token"`
 	} `koanf:"collab"`
+	Auth struct {
+		Issuer       string `koanf:"issuer"`
+		ClientID     string `koanf:"client_id"`
+		ClientSecret string `koanf:"client_secret"`
+		RedirectURL  string `koanf:"redirect_url"`
+	} `koanf:"auth"`
 	Rooms struct {
 		Plain bool `koanf:"plain"`
 	} `koanf:"rooms"`
@@ -67,13 +79,17 @@ var defaults = map[string]any{
 }
 
 var envKeys = map[string]string{
-	"PORT":               "port",
-	"TYPST_ADDRESS":      "address",
-	"TYPST_COLLAB_DB":    "collab.db",
-	"TYPST_COLLAB_TOKEN": "collab.token",
-	"TYPST_PLAIN_ROOMS":  "rooms.plain",
-	"TYPST_LOG_LEVEL":    "log.level",
-	"TYPST_LOG_FORMAT":   "log.format",
+	"PORT":              "port",
+	"TYPST_ADDRESS":     "address",
+	"TYPST_COLLAB_DB":   "collab.db",
+	"TYPST_PLAIN_ROOMS": "rooms.plain",
+	"TYPST_LOG_LEVEL":   "log.level",
+	"TYPST_LOG_FORMAT":  "log.format",
+
+	"TYPST_AUTH_ISSUER":        "auth.issuer",
+	"TYPST_AUTH_CLIENT_ID":     "auth.client_id",
+	"TYPST_AUTH_CLIENT_SECRET": "auth.client_secret",
+	"TYPST_AUTH_REDIRECT_URL":  "auth.redirect_url",
 
 	"TYPST_GITLAB_URL":            "gitlab.url",
 	"TYPST_GITLAB_TOKEN":          "gitlab.token",
@@ -101,6 +117,9 @@ func Load(environ []string) (Config, error) {
 	}
 	if c.Port <= 0 || c.Port > 65535 {
 		return Config{}, fmt.Errorf("config: PORT %d is not a port", c.Port)
+	}
+	if c.Auth.Issuer == "" {
+		c.Auth.Issuer = c.GitLab.URL
 	}
 	if c.Log.Format != "console" && c.Log.Format != "json" {
 		return Config{}, fmt.Errorf("config: TYPST_LOG_FORMAT %q is neither console nor json", c.Log.Format)

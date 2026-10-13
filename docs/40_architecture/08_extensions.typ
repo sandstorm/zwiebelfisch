@@ -165,7 +165,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
 
 === Optional extension <architecture-extensions-optional>
 
-`collaboration(options)` is exported, not in the list; a host adds it. It shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server).
+`collaboration(options)` is exported, not in the list; a host adds it. It shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection (the files; the main file too, except in GitLab rooms or when the host locked it), shows other users in every editor and registers a GitLab room's source control (@architecture-server). With a server, it joins as the user signed in there: the account is a status bar entry ("Sign in", or the name with "Sign out" in the menu `collaboration/account`), `collaboration.signIn` and `collaboration.signOut` are commands, and a room refused for being signed out offers to sign in (`SIGN_IN_REQUIRED`).
 
 === How they meet <architecture-extensions-meeting>
 

@@ -1,13 +1,14 @@
 // Command fake-gitlab is the demo playground's server (`mise run demo`, `server:dev-fake-gitlab`,
 // `test:e2e-gitlab`, the Docker image): the collaboration server with GitLab rooms against an in-memory fake
 // GitLab, whose project demo/report holds the demo's advanced example (template, chapters, images), plus
-// the playground endpoints (package playground). No real GitLab, no secrets, nothing stored. Any branch
-// works: gitlab:demo/report@<branch> starts at main. Run it from the repository root (it reads
-// demo/examples/advanced).
+// the playground endpoints (package playground). People sign in at the fake GitLab (its page is
+// /oauth/authorize here: any name, no password; everyone is a Developer). No real GitLab, no secrets,
+// nothing stored. Any branch works: gitlab:demo/report@<branch> starts at main. Run it from the repository
+// root (it reads demo/examples/advanced).
 //
 // Environment: as package config (PORT, TYPST_ADDRESS, TYPST_PLAIN_ROOMS, TYPST_GITLAB_AUTO_COMMIT,
-// TYPST_LOG_*; the database, the token and the real GitLab's settings are ignored: rooms live in memory,
-// anyone may open them), and
+// TYPST_LOG_*; the database, the sign-in's and the real GitLab's settings are ignored: rooms live in
+// memory, the fake GitLab signs people in), and
 //
 //	TYPST_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199), where Vite
 //	                 would serve it (playground.StaticFiles)
@@ -21,7 +22,7 @@ import (
 	"strconv"
 
 	"typst-editor/server/lib/app"
-	"typst-editor/server/lib/collab"
+	"typst-editor/server/lib/auth"
 	"typst-editor/server/lib/config"
 	"typst-editor/server/lib/fakegitlab"
 	"typst-editor/server/lib/gitlab"
@@ -66,7 +67,11 @@ func run() error {
 	defer st.Close()
 	webhookSecret := rand.Text()
 	server, err := app.New(app.Options{
-		Store: st, Authenticate: collab.SharedToken(nil), PlainRooms: cfg.Rooms.Plain, Log: log,
+		Store: st, PlainRooms: cfg.Rooms.Plain, Log: log,
+		Auth: auth.New(auth.Options{
+			Provider: gitlab.DefaultID, Issuer: fakegitlab.URL, ClientID: fakegitlab.ClientID,
+			ClientSecret: fakegitlab.ClientSecret, Client: fake.Client(), Log: log.With().Str("module", "auth").Logger(),
+		}),
 		GitLab: &gitlab.Options{
 			URL: fakegitlab.URL, Token: fakegitlab.Token, Client: fake.Client(),
 			WebhookSecret: webhookSecret, AutoCommit: autoCommit,

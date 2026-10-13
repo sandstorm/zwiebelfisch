@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,9 +20,9 @@ import (
 	"typst-editor/server/lib/testutil"
 )
 
-// The built binary on real ports: the playground endpoints next to the collaboration server, plain rooms
-// refused (not enabled) with the reason the real HocuspocusProvider gets, the built demo on DEMO_PORT, a
-// clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
+// The built binary on real ports: the playground endpoints next to the collaboration server, sign-in at the
+// fake GitLab (its page served here), plain rooms refused (not enabled) with the reason the real
+// HocuspocusProvider gets, the built demo on DEMO_PORT, a clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
 // package playground covers the handlers in-process.
 func TestPlaygroundBinary(t *testing.T) {
 	port, demoPort := freePort(t), freePort(t)
@@ -51,6 +52,15 @@ func TestPlaygroundBinary(t *testing.T) {
 	require.Contains(t, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/upstream?room=gitlab%%3Ademo%%2Freport%%40main", port)), "chapters/introduction.typ")
 	require.Equal(t, "Typst editor collaboration server", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", port)))
 	require.Equal(t, `{"plainRooms":false}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/api/info", port)))
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err)
+	browser := &http.Client{Jar: jar}
+	res, err := browser.Get(fmt.Sprintf("http://127.0.0.1:%d/auth/login?login_hint=Ann&return=/api/me", port))
+	require.NoError(t, err)
+	me, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Contains(t, string(me), `"name":"Ann"`, "signed in at the fake GitLab, back at /api/me")
 	refused := testutil.RunNode(t, "hocuspocus-clients.ts", "refused", "", fmt.Sprintf("ws://127.0.0.1:%d", port))
 	require.Contains(t, string(refused), "only GitLab rooms")
 	require.Equal(t, "<title>demo</title>", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", demoPort)))

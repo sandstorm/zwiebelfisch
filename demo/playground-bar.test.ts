@@ -26,7 +26,7 @@ describe('playground bar', () => {
     expect(link('Mode', 'Collaborate').hidden).toBe(true);
     expect(status().textContent).toMatch(/no server needed/);
     expect(button()).toBeUndefined();
-    expect(root.querySelector('[data-testid="second-window"]')).toBeNull();
+    expect(root.querySelector('[data-testid="second-user"]')).toBeNull();
   });
 
   it('GitLab comes first; Collaborate (a plain room) only once the server says it has plain rooms', () => {
@@ -55,12 +55,10 @@ describe('playground bar', () => {
     expect(new URLSearchParams(navigate.mock.calls[0][0]).get('user')).toBe('Ada');
   });
 
-  it('in a room: a second window joins as another user, and the status follows the server', () => {
+  it('in a room: no name field (the sign-in names the user), how to be a second user, and the status follows the server', () => {
     const { root, bar, status } = render('?room=r1&user=Ann');
-    const second = root.querySelector<HTMLAnchorElement>('[data-testid="second-window"]')!;
-    expect(second.target).toBe('_blank');
-    expect(Object.fromEntries(new URLSearchParams(second.search))).toEqual({ room: 'r1', user: 'Bob' });
-    expect(second.textContent).toContain('Bob');
+    expect(root.querySelector('input[name="user"]')).toBeNull();
+    expect(root.querySelector('[data-testid="second-user"]')!.textContent).toContain('private window');
     expect(status().textContent).toMatch(/Connecting/);
     bar.setServer('offline');
     expect(status().textContent).toContain('mise run demo');

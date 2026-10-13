@@ -10,23 +10,23 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
 // project is a Repository on a GitLab instance (REST API v4), for one project. Hidden: URLs and their
 // encoding, the token, pagination, base64, and the branch check GitLab lacks.
 type project struct {
-	api    string // …/api/v4/projects/<id or path, encoded>
-	token  string
-	client *http.Client
+	instance string // https://gitlab.example.org
+	api      string // …/api/v4/projects/<id or path, encoded>
+	token    string
+	client   *http.Client
 }
 
 func newProject(instance, token, id string, client *http.Client) *project {
-	return &project{
-		api:    strings.TrimSuffix(instance, "/") + "/api/v4/projects/" + url.PathEscape(id),
-		token:  token,
-		client: client,
-	}
+	instance = strings.TrimSuffix(instance, "/")
+	return &project{instance: instance, api: instance + "/api/v4/projects/" + url.PathEscape(id), token: token, client: client}
 }
 
 // APIError is GitLab's answer to a request it refused.
@@ -113,6 +113,106 @@ func (p *project) Commit(ctx context.Context, c CommitRequest) (Commit, error) {
 		result.Parent = commit.ParentIDs[0]
 	}
 	return result, nil
+}
+
+// Access asks for the user's role on the project (members/all: inherited ones too) and, for Developers and
+// up, the protected branch rules that match branch (wildcards included; a rule lets a role, a user, or a
+// group's members push). Reading the rules needs the bot to be at least Maintainer (r).
+func (p *project) Access(ctx context.Context, user, branch string) (Access, error) {
+	var member struct {
+		Level int `json:"access_level"`
+	}
+	if _, err := p.json(ctx, http.MethodGet, "/members/all/"+url.PathEscape(user), nil, &member); err != nil {
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Status == http.StatusNotFound {
+			return Access{}, nil
+		}
+		return Access{}, err
+	}
+	a := Access{Role: roleName(member.Level), Edit: member.Level >= developer}
+	if !a.Edit {
+		return a, nil
+	}
+	protected := false
+	for page := "1"; page != ""; {
+		var rules []protectedBranch
+		header, err := p.json(ctx, http.MethodGet, "/protected_branches?per_page=100&page="+page, nil, &rules)
+		if err != nil {
+			return Access{}, err
+		}
+		for _, rule := range rules {
+			if !branchPattern(rule.Name).MatchString(branch) {
+				continue
+			}
+			protected = true
+			for _, l := range rule.Push {
+				if a.Push, err = p.lets(ctx, l, user, member.Level); err != nil || a.Push {
+					return a, err
+				}
+			}
+		}
+		page = header.Get("X-Next-Page")
+	}
+	a.Push = !protected
+	return a, nil
+}
+
+// protectedBranch is a protected branch rule: who may push to the branches its name matches.
+type protectedBranch struct {
+	Name string       `json:"name"`
+	Push []pushAccess `json:"push_access_levels"`
+}
+
+// pushAccess lets a user, a group's members, or a role and up push (Level 0: No one).
+type pushAccess struct {
+	Level int    `json:"access_level"`
+	User  *int64 `json:"user_id"`
+	Group *int64 `json:"group_id"`
+}
+
+// lets is whether one push permission of a rule lets user (of role level) push.
+func (p *project) lets(ctx context.Context, l pushAccess, user string, level int) (bool, error) {
+	switch {
+	case l.User != nil:
+		return strconv.FormatInt(*l.User, 10) == user, nil
+	case l.Group != nil:
+		var member struct{}
+		group := &project{api: p.instance + "/api/v4/groups/" + strconv.FormatInt(*l.Group, 10), token: p.token, client: p.client}
+		_, err := group.json(ctx, http.MethodGet, "/members/all/"+url.PathEscape(user), nil, &member)
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Status == http.StatusNotFound {
+			return false, nil
+		}
+		return err == nil, err
+	}
+	return l.Level > 0 && level >= l.Level, nil
+}
+
+const developer = 30
+
+func roleName(level int) string {
+	switch {
+	case level >= 50:
+		return "Owner"
+	case level >= 40:
+		return "Maintainer"
+	case level >= 30:
+		return "Developer"
+	case level >= 20:
+		return "Reporter"
+	case level >= 15:
+		return "Planner"
+	case level >= 10:
+		return "Guest"
+	case level > 0:
+		return "Minimal Access"
+	}
+	return ""
+}
+
+// branchPattern matches the branches a protected branch rule's name covers (`*` is any text, `/` too).
+func branchPattern(name string) *regexp.Regexp {
+	return regexp.MustCompile("^" + strings.ReplaceAll(regexp.QuoteMeta(name), `\*`, ".*") + "$")
 }
 
 func gitlabAction(a Action) map[string]string {

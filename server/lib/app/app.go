@@ -1,11 +1,13 @@
 // Package app puts the collaboration server together, for both commands (typst-server, and fake-gitlab for
-// the demo): the rooms (package collab) with GitLab rooms (package gitlab) as their extension, and the HTTP
-// endpoints next to the WebSocket, on one port.
+// the demo): the rooms (package collab) with GitLab rooms (package gitlab) as their extension, the sign-in
+// (package auth), and the HTTP endpoints next to the WebSocket, on one port.
 //
-// It also decides which rooms exist. GitLab rooms always (when configured); plain rooms (any other name)
-// only when enabled: their content lives in nothing but the server's database, and the product leads
-// people to GitLab branches. A client asking for a plain room on a server without them is refused with a
-// reason the widget shows. GET /api/info tells clients beforehand, so the demo offers only what works.
+// It also decides who opens which room. GitLab rooms always (when configured), for people signed in whose
+// GitLab role lets them edit (gitlab.Rooms.Authorize); plain rooms (any other name) only when enabled, for
+// anyone signed in: their content lives in nothing but the server's database, and the product leads people
+// to GitLab branches. A refused client is told why, in words the widget shows (sign in first, only GitLab
+// rooms here, your role). GET /api/info tells clients beforehand which rooms exist, so the demo offers only
+// what works.
 package app
 
 import (
@@ -22,15 +24,20 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"typst-editor/server/lib/auth"
 	"typst-editor/server/lib/collab"
 	"typst-editor/server/lib/gitlab"
 )
 
-// Options configure a Server. Store and Authenticate are required.
+// SignInRequired is the reason a client that is not signed in is refused (SIGN_IN_REQUIRED in
+// src/core/room-protocol/room-protocol.ts: the widget offers to sign in).
+const SignInRequired = "Sign in to join this room."
+
+// Options configure a Server. Store and Auth are required.
 type Options struct {
 	Store collab.Store
-	// Authenticate checks a client's token (collab.SharedToken); which rooms exist is decided here.
-	Authenticate collab.Authenticate
+	// Auth is the sign-in: who sent a request.
+	Auth *auth.Auth
 	// PlainRooms enables rooms that are not GitLab rooms.
 	PlainRooms bool
 	// GitLab enables GitLab rooms (nil: none). Its Authenticate and Log are set here.
@@ -38,13 +45,14 @@ type Options struct {
 	Log    zerolog.Logger
 }
 
-// Server is the collaboration server as an http.Handler: the WebSocket (any path), GET /api/info, and
-// the GitLab rooms' endpoints (room files, webhook). Close it after the HTTP server is shut down.
+// Server is the collaboration server as an http.Handler: the WebSocket (any path), GET /api/info, the
+// sign-in (/auth/…, /api/me) and the GitLab rooms' endpoints (room files, webhook). Close it after the HTTP
+// server is shut down.
 type Server struct {
 	rooms  *collab.Server
 	gitlab *gitlab.Rooms // nil: no GitLab rooms
 	plain  bool
-	auth   collab.Authenticate
+	auth   *auth.Auth
 	mux    *http.ServeMux
 }
 
@@ -54,16 +62,26 @@ func New(o Options) (*Server, error) {
 	if !o.PlainRooms && o.GitLab == nil {
 		return nil, errors.New("no rooms to serve: configure GitLab (TYPST_GITLAB_URL, TYPST_GITLAB_TOKEN) or enable plain rooms (TYPST_PLAIN_ROOMS=1)")
 	}
-	s := &Server{plain: o.PlainRooms, auth: o.Authenticate, mux: http.NewServeMux()}
+	if o.Auth == nil {
+		return nil, errors.New("no sign-in: configure it (TYPST_AUTH_CLIENT_ID, TYPST_AUTH_CLIENT_SECRET)")
+	}
+	s := &Server{plain: o.PlainRooms, auth: o.Auth, mux: http.NewServeMux()}
 	var extension collab.Extension
 	if o.GitLab != nil {
 		g := *o.GitLab
-		g.Authenticate, g.Log = o.Authenticate, o.Log.With().Str("module", "gitlab").Logger()
+		g.Authenticate, g.Log = s.authenticate, o.Log.With().Str("module", "gitlab").Logger()
 		s.gitlab = gitlab.New(g)
 		extension = s.gitlab
+		files := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			auth.AllowCredentials(w, r) // the widget fetches room files with the cookie
+			s.gitlab.ServeHTTP(w, r)
+		})
 		for _, path := range s.gitlab.Paths() {
-			s.mux.Handle(path, s.gitlab)
+			s.mux.Handle(path, files)
 		}
+	}
+	for _, path := range o.Auth.Paths() {
+		s.mux.Handle(path, o.Auth)
 	}
 	s.rooms = collab.New(collab.Options{
 		Store: o.Store, Authenticate: s.authenticate, Extension: extension,
@@ -87,12 +105,25 @@ func (s *Server) info(w http.ResponseWriter, _ *http.Request) {
 	_ = json.NewEncoder(w).Encode(Info{PlainRooms: s.plain})
 }
 
-func (s *Server) authenticate(token, room string) (collab.User, error) {
-	if !s.plain && (s.gitlab == nil || !s.gitlab.Handles(room)) {
+// authenticate decides who opens room: the room must exist here, the client be signed in, and for a GitLab
+// room have a role that edits.
+func (s *Server) authenticate(r *http.Request, room string) (collab.User, error) {
+	isGitLab := s.gitlab != nil && s.gitlab.Handles(room)
+	if !s.plain && !isGitLab {
 		return collab.User{}, collab.Refusal{Reason: fmt.Sprintf(
 			"This server opens only GitLab rooms (gitlab:<project>@<branch>), not %q.", room)}
 	}
-	return s.auth(token, room)
+	identity, ok := s.auth.Identify(r)
+	if !ok {
+		return collab.User{}, collab.Refusal{Reason: SignInRequired}
+	}
+	user := collab.User{Provider: identity.Provider, ID: identity.Subject, Name: identity.Name, Email: identity.Email}
+	if isGitLab {
+		if err := s.gitlab.Authorize(r.Context(), user, room); err != nil {
+			return collab.User{}, err
+		}
+	}
+	return user, nil
 }
 
 // Close stores the open rooms and ends the GitLab rooms' work (or gives up when ctx ends).

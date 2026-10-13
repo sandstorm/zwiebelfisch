@@ -81,7 +81,7 @@ export type ClientMessage = {
   type: 'gitlab:save';
   /** Commit message (default 'Edit via Typst editor'). */
   message?: string;
-  /** Who saves, named in `gitlab:saved` when the token names nobody (the commit's author is the server's bot). */
+  /** Who saves, named in `gitlab:saved` when the server knows no name for the client (the commit's author is the server's bot). */
   author?: { name: string; email?: string };
 };
 
@@ -111,6 +111,12 @@ export type ServerMessage =
   | { type: 'gitlab:error'; message: string };
 
 export const DEFAULT_COMMIT_MESSAGE = 'Edit via Typst editor';
+
+/**
+ * The reason the server refuses a client that is not signed in (Hocuspocus' PermissionDenied): the widget offers to
+ * sign in instead of only telling it. The server's: `SignInRequired` in server/lib/app.
+ */
+export const SIGN_IN_REQUIRED = 'Sign in to join this room.';
 
 /** The HTTP path of a file of a room (relative to the server's base URL). */
 export function roomFilePath(room: string, path: string): string {

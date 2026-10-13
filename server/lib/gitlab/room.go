@@ -111,14 +111,19 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
 	return nil
 }
 
-// Stateless handles a client's save (gitlab:save): the outcome goes to everyone, or (nothing to commit, an
-// error) to the saving client only.
+// Stateless handles a client's save (gitlab:save), if the client's user may push to the branch: the
+// outcome goes to everyone, or (nothing to commit, an error, a refusal) to the saving client only.
 func (r *room) Stateless(p *collab.Peer, payload string) {
-	name, text, ok := parseSave(p.User(), payload)
+	user := p.User()
+	name, text, ok := parseSave(user, payload)
 	if !ok {
 		return
 	}
 	r.x.goTask(func() {
+		if err := r.x.mayPush(r.x.ctx, user, r.project, r.branch); err != nil {
+			p.SendStateless(message{Type: msgError, Message: err.Error()}.json())
+			return
+		}
 		result := r.save(r.x.ctx, name, text)
 		if result.Type == msgUnchanged || result.Type == msgError {
 			p.SendStateless(result.json())

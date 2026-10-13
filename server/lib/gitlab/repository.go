@@ -6,7 +6,7 @@ import (
 )
 
 // Repository is a branch-holding repository as a room needs it: read a commit's files, commit the room's
-// changes. It is the seam for other providers (GitHub, Gitea): the room logic knows nothing of GitLab's
+// changes, tell who may do so. It is the seam for other providers (GitHub, Gitea): the room logic knows nothing of GitLab's
 // REST API (api.go implements Repository for GitLab).
 type Repository interface {
 	// Head is the commit branch points at.
@@ -18,6 +18,19 @@ type Repository interface {
 	// Commit makes one commit of actions on top of ExpectedHead, which must still be the branch's head (else
 	// ErrConflict: upstream moved, nothing was committed).
 	Commit(ctx context.Context, c CommitRequest) (Commit, error)
+	// Access is what user (the provider's user id) may do with branch, as the repository's credentials (the
+	// bot's) can tell.
+	Access(ctx context.Context, user, branch string) (Access, error)
+}
+
+// Access is what a user may do with a branch.
+type Access struct {
+	// Role is the user's role on the project in the provider's words ("Reporter"); "": not a member.
+	Role string
+	// Edit: the role may change the branch (GitLab: Developer or more): join the room.
+	Edit bool
+	// Push: no protection of the branch keeps the user from pushing to it: save.
+	Push bool
 }
 
 // TreeEntry is a file of a commit: its path in the repository ("/chapter.typ") and blob sha.

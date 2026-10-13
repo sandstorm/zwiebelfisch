@@ -1,6 +1,6 @@
 // The playground bar above the demo editor: mode, example, room, user, server status. See main.ts.
 import { EXAMPLES } from './examples';
-import { MODES, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
+import { MODES, exampleLink, modeQuery, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
 export interface PlaygroundBar {
@@ -19,17 +19,17 @@ export interface BarActions {
 
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
- * every state has a URL), the user's name, a link that opens a second window
- * as another user in the same room, the server status with the command to
- * start it, and in GitLab mode "Simulate upstream commit". Collaborate (a plain room) is offered once the server
- * says it has plain rooms, or when the page is in one.
+ * every state has a URL), the user's name in Local mode (in a room, the widget's status bar shows whom the user
+ * signed in as), how to be a second user in a room, the server status with the command to start it, and in GitLab
+ * mode "Simulate upstream commit". Collaborate (a plain room) is offered once the server says it has plain rooms,
+ * or when the page is in one.
  */
 export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions): PlaygroundBar {
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
   const modes = modesNav(state, params);
-  root.append(examplesNav(state, params), modes, userForm(state, params, actions));
-  if (state.mode !== 'local') root.append(secondWindow(state, params));
+  root.append(examplesNav(state, params), modes);
+  root.append(state.mode === 'local' ? userForm(state, params, actions) : secondUser());
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
   root.append(status.element);
@@ -131,11 +131,11 @@ function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarA
   return form;
 }
 
-function secondWindow(state: PlaygroundState, params: URLSearchParams): HTMLElement {
-  const other = otherUser(state.user);
-  const link = el('a', { href: userQuery(other, params), target: '_blank', 'data-testid': 'second-window' }, `Open a second window as ${other}`);
-  link.title = 'Same room, another user: try remote cursors and concurrent edits';
-  return link;
+/** How to be someone else in the same room: the session is a cookie, so another browser session. */
+function secondUser(): HTMLElement {
+  const hint = el('span', { class: 'demo-bar__group', 'data-testid': 'second-user' }, 'Second user: this page in a private window, signed in as someone else');
+  hint.title = 'Same room, another user: try remote cursors and concurrent edits';
+  return hint;
 }
 
 function upstreamControls(actions: BarActions, status: StatusLine) {

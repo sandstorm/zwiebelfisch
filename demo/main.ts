@@ -2,7 +2,8 @@
 //
 // Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
 // `?example=simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
-// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), and `&user=<name>`. Without `room`
+// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`, which signs people in at its fake
+// GitLab: the widget's status bar has "Sign in"), and `&user=<name>` (Local mode). Without `room`
 // (Local mode, the default and what the static e2e build uses) it never talks to a server. The shown file and the cursor's line are the URL's fragment (open-file-hash.ts, an
 // extension of the demo's own). The playground bar above the editor switches all of this (playground-bar.ts).
 //
@@ -11,17 +12,12 @@
 import { collaboration, createTypstEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';
-import { editorOptions, playgroundFromQuery, userQuery } from './playground';
+import { editorOptions, playgroundFromQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
 import { probeServer, simulateUpstream, type ServerProbe } from './server-status';
 
 const params = new URLSearchParams(location.search);
 const state = playgroundFromQuery(params);
-// In a room the name goes into the URL, so a reload stays the same user and the second window is someone else.
-if (state.room !== null && !params.has('user')) {
-  params.set('user', state.user);
-  history.replaceState(null, '', userQuery(state.user, params));
-}
 
 const bar = renderPlaygroundBar(document.getElementById('playground')!, params, {
   // the open file (the hash) stays open

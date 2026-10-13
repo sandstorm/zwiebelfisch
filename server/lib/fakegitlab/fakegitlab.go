@@ -1,10 +1,12 @@
 // Package fakegitlab is an in-memory GitLab for tests and the demo playground: one project, its branches,
-// and commits with full snapshots.
+// commits with full snapshots, its members and protected branches, and a sign-in (signin.go).
 //
 // GitLab rooms are tested without network, ports or secrets. GitLab answers the REST endpoints (API v4) a
 // GitLab client calls for one project (the project, branches, tree, files, blobs, commits with actions; see
 // api.go) as an http.Handler, and Client serves them in-process. A test also plays GitLab's other users and
-// failures: Push as a colleague, a push racing the next commit, a failing commit, unreachable branches.
+// failures: Push as a colleague, a push racing the next commit, a failing commit, unreachable branches; and
+// who may do what: SetAccess (a member's role), Protect (who may push to a branch). Everyone who signs in is
+// a Developer unless told otherwise.
 //
 // Commits follow GitLab's Commits API where a client could notice: start_branch / start_sha / force decide
 // the parent and whether an existing branch may be overwritten, last_commit_id is checked per file, and
@@ -49,6 +51,7 @@ type Author struct{ Name, Email string }
 // GitLab is the fake instance with its one project. Safe for concurrent use.
 type GitLab struct {
 	project string
+	signIn  *IdentityProvider
 
 	mu           sync.Mutex
 	commits      map[string]*Commit
@@ -59,7 +62,25 @@ type GitLab struct {
 	failure      *failure
 	unreachable  map[string]bool
 	autoBranches bool
+	access       map[int]int // user id → access level (unset: Developer)
+	protected    []protection
 }
+
+// protection is a protected branch rule: who may push to branches matching pattern.
+type protection struct {
+	pattern   string // a branch name; * matches anything
+	pushLevel int    // the access level that may push (NoAccess: nobody by level)
+	users     []int  // and these users
+}
+
+// GitLab's access levels.
+const (
+	NoAccess   = 0
+	Guest      = 10
+	Reporter   = 20
+	Developer  = 30
+	Maintainer = 40
+)
 
 type race struct {
 	files   Files
@@ -73,12 +94,41 @@ type failure struct {
 
 // New returns a GitLab whose project (path with namespace, e.g. "demo/report") has branch main with files.
 func New(project string, files Files) *GitLab {
-	g := &GitLab{project: project, commits: map[string]*Commit{}, branches: map[string]string{}, unreachable: map[string]bool{}}
+	g := &GitLab{
+		project: project, signIn: NewIdentityProvider(URL, "/oauth/authorize"),
+		commits: map[string]*Commit{}, branches: map[string]string{}, unreachable: map[string]bool{}, access: map[int]int{},
+	}
 	g.branches["main"] = g.record("", files, "Initial commit", upstream).SHA
 	return g
 }
 
 var upstream = Author{Name: "Upstream", Email: "upstream@test"}
+
+// IdentityProvider is the fake's sign-in, with issuer URL. Its page (the authorization endpoint) is
+// /oauth/authorize on the host that sent the browser there: whoever serves the fake to browsers mounts it.
+func (g *GitLab) IdentityProvider() *IdentityProvider { return g.signIn }
+
+// SetAccess gives the user named name (an account, created if new) access level to the project (NoAccess:
+// not a member).
+func (g *GitLab) SetAccess(name string, level int) User {
+	u := g.signIn.SignIn(name)
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.access[u.ID] = level
+	return u
+}
+
+// Protect protects the branches matching pattern (a name, * matching anything): only members with
+// pushLevel or more, and the users named, may push.
+func (g *GitLab) Protect(pattern string, pushLevel int, users ...string) {
+	rule := protection{pattern: pattern, pushLevel: pushLevel}
+	for _, name := range users {
+		rule.users = append(rule.users, g.signIn.SignIn(name).ID)
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.protected = append(g.protected, rule)
+}
 
 // Project is the project's path with namespace.
 func (g *GitLab) Project() string { return g.project }

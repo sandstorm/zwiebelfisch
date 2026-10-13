@@ -6,7 +6,8 @@
 // It also answers the HTTP endpoints next to the WebSocket: a room's files (images, data) and GitLab's push
 // webhook. The room logic (room.go) works against a Repository (repository.go); api.go is GitLab's REST
 // API behind it. Commits are made with the server's bot token: the bot is the author, the editors are
-// Co-authored-by trailers. No user token is used or kept here.
+// Co-authored-by trailers. No user token is used or kept here; who may join and save is checked with the
+// bot's token (access.go).
 //
 // See docs/40_architecture/09_server.typ, "GitLab rooms".
 package gitlab
@@ -31,17 +32,22 @@ import (
 	"typst-editor/server/lib/ydoc"
 )
 
+// DefaultID is the provider id of GitLab rooms unless Options.ID says otherwise.
+const DefaultID = "gitlab"
+
 // Options configure Rooms. URL and Token are required.
 type Options struct {
 	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>`) and of the webhook path
-	// (`/<ID>/webhook`). Default "gitlab".
+	// (`/<ID>/webhook`), and the provider of the users it lets in (their collab.User.ID is a user id of
+	// this instance). Default DefaultID.
 	ID string
 	// URL is the GitLab instance, e.g. https://gitlab.com; Token a bot token with `api` scope (server-side,
 	// never sent to clients): the author of every commit.
 	URL, Token string
 	// Client makes the REST calls (default: one with a 30 s timeout).
 	Client *http.Client
-	// Authenticate decides who may read a room's files (the room's token, as for the WebSocket).
+	// Authenticate decides who may read a room's files (as for the WebSocket: the app's check, which
+	// includes Authorize).
 	Authenticate collab.Authenticate
 	// WebhookSecret is what GitLab sends as X-Gitlab-Token with push events ("": no webhook endpoint).
 	WebhookSecret string
@@ -66,6 +72,7 @@ type Rooms struct {
 	autoCommit  time.Duration
 	leaveDelay  time.Duration
 	blobs       *blobCache
+	accessCache accessCache
 	clock       clock
 	log         zerolog.Logger
 	http        *http.ServeMux
@@ -81,7 +88,7 @@ type Rooms struct {
 // New returns the GitLab rooms for opts.
 func New(opts Options) *Rooms {
 	if opts.ID == "" {
-		opts.ID = "gitlab"
+		opts.ID = DefaultID
 	}
 	if opts.AuthorEmail == "" {
 		opts.AuthorEmail = "typst-editor@localhost"
@@ -98,16 +105,11 @@ func New(opts Options) *Rooms {
 	ctx, cancel := context.WithCancel(context.Background())
 	x := &Rooms{
 		opts: opts, prefix: opts.ID + ":", authorEmail: opts.AuthorEmail, autoCommit: opts.AutoCommit,
-		leaveDelay: LeaveDelay, blobs: newBlobCache(64 << 20), clock: opts.clock, log: opts.Log,
-		ctx: ctx, cancel: cancel, open: map[string]*room{},
+		leaveDelay: LeaveDelay, blobs: newBlobCache(64 << 20), accessCache: accessCache{entries: map[accessKey]cachedAccess{}},
+		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel, open: map[string]*room{},
 	}
 	x.http = http.NewServeMux()
 	x.http.HandleFunc("GET /rooms/{room}/files/{path...}", x.serveFile)
-	x.http.HandleFunc("OPTIONS /rooms/{room}/files/{path...}", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Access-Control-Allow-Methods", "GET")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
-		w.WriteHeader(http.StatusNoContent)
-	})
 	if opts.WebhookSecret != "" {
 		x.http.HandleFunc("POST /"+opts.ID+"/webhook", x.serveWebhook)
 	}
@@ -273,30 +275,28 @@ func (x *Rooms) editorOf(origin any) *person {
 	return &person{c.Name(), email}
 }
 
-// ServeHTTP answers GET /rooms/<room>/files/<path> (a file of an open room, with the room's token as
-// `Authorization: Bearer <token>`; blob bytes are cached by sha) and POST /<ID>/webhook (GitLab push events
-// with X-Gitlab-Token; merges the push into the open rooms of that branch).
+// ServeHTTP answers GET /rooms/<room>/files/<path> (a file of an open room to whom Authenticate lets in;
+// blob bytes are cached by sha) and POST /<ID>/webhook (GitLab push events with X-Gitlab-Token; merges the
+// push into the open rooms of that branch). CORS is the app's.
 func (x *Rooms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	x.http.ServeHTTP(w, r)
 }
 
 func (x *Rooms) serveFile(w http.ResponseWriter, r *http.Request) {
 	name, file := r.PathValue("room"), "/"+r.PathValue("path")
+	if x.opts.Authenticate == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	x.mu.Lock()
 	open := x.open[name]
 	x.mu.Unlock()
 	if open == nil {
 		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if x.opts.Authenticate == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if _, err := x.opts.Authenticate(strings.TrimSpace(token), name); err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	content, ok, err := open.asset(r.Context(), file)

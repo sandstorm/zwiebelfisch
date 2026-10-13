@@ -9,6 +9,10 @@ package fakegitlab
 //	GET  /repository/blobs/<sha>/raw    the bytes
 //	POST /repository/commits            branch, commit_message, start_branch, start_sha, force, author_*, actions
 //	GET  /repository/commits/<sha>      a commit (its message with trailers, author, parents)
+//	GET  /members/all/<user id>         a member's access level (404: not a member)
+//	GET  /protected_branches            the protected branch rules (push_access_levels)
+//
+// The sign-in's endpoints (/.well-known/…, /oauth/…) are signin.go's.
 //
 // Errors are GitLab's JSON {"message": …} with its status codes and (where a client might match them) texts.
 
@@ -27,8 +31,12 @@ import (
 	"strings"
 )
 
-// ServeHTTP answers the API, as GitLab at URL would.
+// ServeHTTP answers the API and the sign-in, as GitLab at URL would.
 func (g *GitLab) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/oauth/") || strings.HasPrefix(r.URL.Path, "/.well-known/") {
+		g.signIn.ServeHTTP(w, r)
+		return
+	}
 	if !authorized(r) {
 		fail(w, http.StatusUnauthorized, "401 Unauthorized")
 		return
@@ -97,6 +105,10 @@ func (g *GitLab) route(w http.ResponseWriter, method, tail string, query url.Val
 		g.commit(w, body)
 	case is("GET", "repository", "commits", "*"):
 		g.commitInfo(w, segments[2])
+	case is("GET", "members", "all", "*"):
+		g.member(w, segments[2])
+	case is("GET", "protected_branches"):
+		g.protectedBranches(w)
 	default:
 		fail(w, http.StatusNotFound, "404 Not Found")
 	}
@@ -118,7 +130,43 @@ func (g *GitLab) branch(w http.ResponseWriter, name string) {
 		fail(w, http.StatusNotFound, "404 Branch Not Found")
 		return
 	}
-	reply(w, http.StatusOK, map[string]any{"name": name, "commit": map[string]any{"id": sha}})
+	reply(w, http.StatusOK, map[string]any{"name": name, "commit": map[string]any{"id": sha}, "protected": g.protection(name) != nil})
+}
+
+// protection is the rule protecting branch (nil: none). Called with mu held.
+func (g *GitLab) protection(branch string) *protection {
+	for i, p := range g.protected {
+		if ok, _ := path.Match(p.pattern, branch); ok {
+			return &g.protected[i]
+		}
+	}
+	return nil
+}
+
+func (g *GitLab) member(w http.ResponseWriter, id string) {
+	n, _ := strconv.Atoi(id)
+	u, ok := g.signIn.UserByID(n)
+	level, set := g.access[n]
+	if !set {
+		level = Developer
+	}
+	if !ok || level == NoAccess {
+		fail(w, http.StatusNotFound, "404 Not found")
+		return
+	}
+	reply(w, http.StatusOK, map[string]any{"id": u.ID, "username": u.Username, "name": u.Name, "state": "active", "access_level": level})
+}
+
+func (g *GitLab) protectedBranches(w http.ResponseWriter) {
+	rules := []map[string]any{}
+	for i, p := range g.protected {
+		levels := []map[string]any{{"access_level": p.pushLevel, "user_id": nil, "group_id": nil}}
+		for _, u := range p.users {
+			levels = append(levels, map[string]any{"access_level": Maintainer, "user_id": u, "group_id": nil})
+		}
+		rules = append(rules, map[string]any{"id": i + 1, "name": p.pattern, "push_access_levels": levels})
+	}
+	reply(w, http.StatusOK, rules)
 }
 
 type treeItem struct {

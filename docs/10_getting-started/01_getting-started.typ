@@ -26,7 +26,7 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
   caption: [The editor: left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
 )
 
-- *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name. In Collaborate and GitLab mode, a link opens a second window as another user.
+- *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name (Local mode). In Collaborate and GitLab mode you sign in at the fake GitLab (the status bar's "Sign in", any name); a second user is a private window.
 - *Left rail*: Files, Find in files (the magnifier), search everywhere (a field over a list), Help.
 - *Editing area*: a Typst file has the tabs Visual and Source (switching keeps the cursor); spreadsheets, diagrams and text files open in their own editor.
 - *Right side*: the preview, or the devtools (@configuration-embedding-devtools).
@@ -42,7 +42,7 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
   [`?example=simple|advanced|docs`], [The example. `docs` saves to `docs/` only with `mise run demo` (@architecture-development-writing-docs).],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`?room=<name>`], [Collaborate mode: a plain room on the local server (the playground server has them; a real one only with `TYPST_PLAIN_ROOMS=1`).],
-  [`&user=<name>`], [The name others see; signs comments and co-authors commits.],
+  [`&user=<name>`], [Local mode: your name (signs comments). In a room you are whom you signed in as: the status bar's "Sign in" goes to the fake GitLab, which takes any name.],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line.],
 )
 

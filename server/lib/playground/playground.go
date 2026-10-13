@@ -1,6 +1,7 @@
 // Package playground is the demo playground's server side (`mise run demo`, the Docker image): GitLab rooms
-// without a real GitLab. A fakegitlab.GitLab holds the project, and dev-only HTTP endpoints let the demo's
-// playground bar simulate a colleague's push or a GitLab outage. The package also reads the demo's repository
+// without a real GitLab. A fakegitlab.GitLab holds the project and signs people in (its sign-in page is
+// served here), and dev-only HTTP endpoints let the demo's playground bar simulate a colleague's push or a
+// GitLab outage. The package also reads the demo's repository
 // from disk (ReadProjectFiles) and serves the built demo without Vite (StaticFiles).
 //
 // Never part of a real deployment: only server/cmd/fake-gitlab uses it. See docs/40_architecture/11_development.typ.
@@ -42,6 +43,8 @@ type Options struct {
 // Handler answers the playground endpoints and hands every other request to next (the collaboration
 // server). The endpoints answer anyone (CORS *), so the demo on another port may call them:
 //
+//   - GET /oauth/authorize: the fake GitLab's sign-in page (its other sign-in endpoints are in-process;
+//     the browser only ever comes here).
 //   - GET /playground: {project, room}; tells the demo that this server has the fake GitLab, and which room
 //     is its repository.
 //   - POST /playground/upstream?room=gitlab:<project>@<branch>[&change=append|heading]: commits a change to
@@ -64,6 +67,9 @@ func (e *endpoints) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var handle func(w http.ResponseWriter, r *http.Request)
 	method := http.MethodPost
 	switch r.URL.Path {
+	case "/oauth/authorize":
+		e.opts.GitLab.IdentityProvider().ServeHTTP(w, r)
+		return
 	case "/playground":
 		handle, method = e.describe, http.MethodGet
 	case "/playground/upstream":

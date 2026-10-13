@@ -34,6 +34,8 @@ type fakeRepo struct {
 	unreachable bool
 	// alwaysMove: someone pushes before every commit
 	alwaysMove bool
+	// access is what a user (by id) may do; unset: everything (a Developer, no protection)
+	access map[string]Access
 }
 
 type failure struct {
@@ -48,7 +50,7 @@ type fakeCommit struct {
 }
 
 func newFakeRepo(files map[string]any) *fakeRepo {
-	r := &fakeRepo{commits: map[string]*fakeCommit{}, branches: map[string]string{}}
+	r := &fakeRepo{commits: map[string]*fakeCommit{}, branches: map[string]string{}, access: map[string]Access{}}
 	r.branches["main"] = r.record("", files, "Initial commit").sha
 	return r
 }
@@ -211,6 +213,26 @@ func (r *fakeRepo) Commit(_ context.Context, req CommitRequest) (Commit, error) 
 	c := r.record(head.sha, changes, req.Message)
 	r.branches[req.Branch] = c.sha
 	return Commit{Sha: c.sha, Parent: head.sha}, nil
+}
+
+func (r *fakeRepo) Access(_ context.Context, user, branch string) (Access, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.calls = append(r.calls, "access "+user+" "+branch)
+	if r.unreachable {
+		return Access{}, errUnreachable
+	}
+	if a, ok := r.access[user]; ok {
+		return a, nil
+	}
+	return Access{Role: "Developer", Edit: true, Push: true}, nil
+}
+
+// setAccess sets what user may do.
+func (r *fakeRepo) setAccess(user string, a Access) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.access[user] = a
 }
 
 // fakeHost is the collaboration room around a GitLab room: one document, run under a lock.

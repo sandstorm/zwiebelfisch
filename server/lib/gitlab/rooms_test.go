@@ -67,7 +67,7 @@ func setup(t *testing.T, o setupOptions) *env {
 	}
 	e := &env{t: t, repo: o.repo, clock: &fakeClock{now: atTen}}
 	e.x = New(Options{
-		URL: "https://gitlab.test", Token: "bot-token", Authenticate: collab.SharedToken(ptr("room-token")),
+		URL: "https://gitlab.test", Token: "bot-token", Authenticate: signedIn,
 		WebhookSecret: "hook-secret", AutoCommit: o.autoCommit, Log: zerolog.Nop(),
 		repository: func(p string) Repository { require.Equal(t, projectPath, p); return e.repo },
 		clock:      e.clock,
@@ -194,14 +194,24 @@ func (e *env) conflict() *roomConflict {
 	return &c
 }
 
-// get requests a file of the room over HTTP.
-func (e *env) get(path, token string) *httptest.ResponseRecorder {
+// signedIn lets in requests with a session cookie (the stand-in for the app's check).
+func signedIn(r *http.Request, _ string) (collab.User, error) {
+	if c, err := r.Cookie("session"); err != nil || c.Value == "" {
+		return collab.User{}, collab.Refusal{Reason: "Sign in"}
+	}
+	return collab.User{}, nil
+}
+
+// get requests a file of the room over HTTP as the session's user ("": signed out).
+func (e *env) get(path, session string) *httptest.ResponseRecorder {
 	var segments []string
 	for _, s := range strings.Split(path, "/") {
 		segments = append(segments, url.PathEscape(s))
 	}
 	req := httptest.NewRequest(http.MethodGet, "/rooms/"+url.PathEscape(roomName)+"/files"+strings.Join(segments, "/"), nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	if session != "" {
+		req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	}
 	res := httptest.NewRecorder()
 	e.x.ServeHTTP(res, req)
 	return res
@@ -241,23 +251,16 @@ func TestLoading(t *testing.T) {
 		require.Len(t, e.assets(), 150)
 	})
 
-	t.Run("serves the other files over HTTP to holders of a room token, blobs cached by sha", func(t *testing.T) {
+	t.Run("serves the other files over HTTP to whom Authenticate lets in, blobs cached by sha", func(t *testing.T) {
 		e := setup(t, setupOptions{})
-		res := e.get("/img/logo.png", "room-token")
+		res := e.get("/img/logo.png", "ann")
 		require.Equal(t, http.StatusOK, res.Code)
 		require.Equal(t, "image/png", res.Header().Get("Content-Type"))
-		require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Origin"))
 		require.Equal(t, logo, res.Body.Bytes())
-		e.get("/img/logo.png", "room-token")
+		e.get("/img/logo.png", "ann")
 		require.Equal(t, 1, e.repo.count("blob "+blobSha(logo)))
-		require.Equal(t, http.StatusUnauthorized, e.get("/img/logo.png", "wrong").Code)
-		require.Equal(t, http.StatusNotFound, e.get("/missing.png", "room-token").Code)
-
-		options := httptest.NewRequest(http.MethodOptions, "/rooms/x/files/a.png", nil)
-		res = httptest.NewRecorder()
-		e.x.ServeHTTP(res, options)
-		require.Equal(t, http.StatusNoContent, res.Code)
-		require.Equal(t, "Authorization", res.Header().Get("Access-Control-Allow-Headers"))
+		require.Equal(t, http.StatusUnauthorized, e.get("/img/logo.png", "").Code)
+		require.Equal(t, http.StatusNotFound, e.get("/missing.png", "ann").Code)
 	})
 
 	t.Run("a stored room opens with its own state and merges what was pushed meanwhile", func(t *testing.T) {
@@ -363,14 +366,14 @@ func TestSaving(t *testing.T) {
 			w.Delete(assetsMap, "/a.png")
 			w.Delete(assetsMap, "/b.png")
 		})
-		require.Equal(t, upload, e.get("/img/upload.png", "room-token").Body.Bytes())
+		require.Equal(t, upload, e.get("/img/upload.png", "ann").Body.Bytes())
 		require.Equal(t, msgSaved, e.save("").Type)
 		files := e.repo.head("main").files
 		require.Equal(t, []string{"/img/upload.png", mainTyp, "/renamed.png"}, slices.Sorted(maps.Keys(files)))
 		require.Equal(t, upload, files["/img/upload.png"])
 		require.Equal(t, blobSha(upload), e.assets()["/img/upload.png"], "the upload is a repository file now")
 		require.Equal(t, map[string]string{"/img/upload.png": blobSha(upload), "/renamed.png": blobSha(logo)}, e.base().Assets)
-		require.Equal(t, upload, e.get("/img/upload.png", "room-token").Body.Bytes(), "from the cache")
+		require.Equal(t, upload, e.get("/img/upload.png", "ann").Body.Bytes(), "from the cache")
 		require.Zero(t, e.repo.count("blob "+blobSha(upload)))
 	})
 }

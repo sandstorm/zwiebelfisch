@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server (Go) on ws://127.0.0.1:1234: GitLab rooms (TYPST_GITLAB_URL and TYPST_GITLAB_TOKEN, e.g. in mise.local.toml), plain rooms only with TYPST_PLAIN_ROOMS=1; SQLite in server/.data/"
+#MISE description="Start the collaboration server (Go) on ws://127.0.0.1:1234: sign-in (TYPST_AUTH_CLIENT_ID, TYPST_AUTH_CLIENT_SECRET) and GitLab rooms (TYPST_GITLAB_URL, TYPST_GITLAB_TOKEN), e.g. in mise.local.toml; plain rooms only with TYPST_PLAIN_ROOMS=1; SQLite in server/.data/"
 set -euo pipefail
 # env: server/lib/config (docs/30_configuration/03_collaboration-server.typ). Restart it after a change (no watcher).
 exec go run ./server/cmd/typst-server "$@"

@@ -3,6 +3,8 @@
 
 A project can be a branch of a GitLab repository: everyone edits the branch's files together, and the changes go back to GitLab as commits.
 
+*Sign in with GitLab:* the status bar's "Sign in". You edit a project when you are a Developer (or more) in it, and save when you may push to its branch.
+
 *The status bar shows what is not in GitLab yet*, e.g. "Not in GitLab: 3 files · 14 min (Ann, Bob)". The file panel marks changed files M and new ones A.
 
 *Click "Save to GitLab…"* to commit every change since the last commit, with a message you enter.

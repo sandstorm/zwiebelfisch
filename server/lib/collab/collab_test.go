@@ -3,7 +3,10 @@ package collab_test
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,8 +20,9 @@ import (
 )
 
 // The whole message flow in-process (the sandbox the tests run in cannot bind ports): clients are Go
-// HocuspocusProvider stand-ins on a pipe, holding their own ydoc.Doc. hocuspocus_test.go runs the real
-// provider the same way.
+// HocuspocusProvider stand-ins on a pipe, holding their own ydoc.Doc, each with the upgrade request a
+// browser would send (a cookie "session" says who signed in). hocuspocus_test.go runs the real provider the
+// same way.
 
 func TestMain(m *testing.M) { goleak.VerifyTestMain(m) }
 
@@ -33,13 +37,29 @@ const (
 )
 
 func newServer(t *testing.T, st collab.Store, opts ...func(*collab.Options)) *collab.Server {
-	o := collab.Options{Store: st, Authenticate: collab.SharedToken(ptr("secret")), Debounce: 20 * time.Millisecond, Log: zerolog.Nop()}
+	o := collab.Options{Store: st, Authenticate: signedIn, Debounce: 20 * time.Millisecond, Log: zerolog.Nop()}
 	for _, f := range opts {
 		f(&o)
 	}
 	s := collab.New(o)
 	t.Cleanup(func() { require.NoError(t, s.Close(context.Background())) })
 	return s
+}
+
+// signedIn lets in whoever has a session (the stand-in for package auth), as nobody in particular.
+func signedIn(r *http.Request, _ string) (collab.User, error) {
+	if session(r) == "" {
+		return collab.User{}, errors.New("not signed in")
+	}
+	return collab.User{}, nil
+}
+
+func session(r *http.Request) string {
+	c, err := r.Cookie("session")
+	if err != nil {
+		return ""
+	}
+	return c.Value
 }
 
 func memStore(t *testing.T) *store.Store {
@@ -106,17 +126,22 @@ type serverOrigin struct{ _ byte }
 
 var fromServer = &serverOrigin{}
 
-func dial(t *testing.T, s *collab.Server, address, token string) *client {
-	c := connect(t, s, address)
-	c.authenticate(token)
+// dial connects as the session's user ("": signed out) and opens the room at address.
+func dial(t *testing.T, s *collab.Server, address, session string) *client {
+	c := connect(t, s, address, session)
+	c.authenticate()
 	return c
 }
 
 // connect opens a connection without sending anything yet.
-func connect(t *testing.T, s *collab.Server, address string) *client {
+func connect(t *testing.T, s *collab.Server, address, session string) *client {
 	c := &client{t: t, address: address, p: newPipe(), done: make(chan struct{}), doc: ydoc.New()}
+	upgrade := httptest.NewRequest(http.MethodGet, "/", nil)
+	if session != "" {
+		upgrade.AddCookie(&http.Cookie{Name: "session", Value: session})
+	}
 	served := make(chan struct{})
-	go func() { defer close(served); s.Serve(context.Background(), c.p) }()
+	go func() { defer close(served); s.Serve(context.Background(), c.p, upgrade) }()
 	go c.read()
 	c.doc.OnUpdate(func(update []byte, origin any) {
 		if origin != fromServer {
@@ -127,8 +152,9 @@ func connect(t *testing.T, s *collab.Server, address string) *client {
 	return c
 }
 
-func (c *client) authenticate(token string) {
-	c.send(msgAuth, append([]byte{0}, lib0String(token)...))
+// authenticate sends the provider's Auth message (its token is empty: the widget sends none), then SyncStep1.
+func (c *client) authenticate() {
+	c.send(msgAuth, append([]byte{0}, lib0String("")...))
 	c.send(msgSync, c.doc.SyncStep1())
 }
 
@@ -264,13 +290,13 @@ func TestStoresDebouncedAndWhenTheLastClientLeaves(t *testing.T) {
 
 func TestCloseStoresOpenRooms(t *testing.T) {
 	st := memStore(t)
-	s := collab.New(collab.Options{Store: st, Authenticate: collab.SharedToken(nil), Debounce: time.Hour, Log: zerolog.Nop()})
-	a := dial(t, s, "open", "anything")
+	s := collab.New(collab.Options{Store: st, Authenticate: signedIn, Debounce: time.Hour, Log: zerolog.Nop()})
+	a := dial(t, s, "open", "ann")
 	a.edit(func(w *ydoc.Writer) { w.SetText("files", "/x", "unsaved") })
 	a.eventually("acknowledged", func() bool { return a.acks >= 1 })
 	require.NoError(t, s.Close(context.Background()))
 	require.Equal(t, "unsaved", storedText(t, st, "open"))
-	b := connect(t, s, "open")
+	b := connect(t, s, "open", "ann")
 	<-b.done // refused: closed
 }
 
@@ -288,32 +314,47 @@ func storedText(t *testing.T, st *store.Store, room string) string {
 	return ""
 }
 
-func TestWrongTokenIsDeniedAndGetsNothing(t *testing.T) {
-	s := newServer(t, memStore(t))
-	a := dial(t, s, "secret-room", "secret")
+func TestRefusedClientGetsNothingAndMayTryAgain(t *testing.T) {
+	var admitted atomic.Bool // later: say, the room's owner gave the newcomer access
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) {
+			if session(r) == "newcomer" && !admitted.Load() {
+				return collab.User{}, errors.New("no access")
+			}
+			return collab.User{}, nil
+		}
+	})
+	a := dial(t, s, "secret-room", "ann")
 	a.edit(func(w *ydoc.Writer) { w.SetText("files", "/x", "confidential") })
 
-	intruder := dial(t, s, "secret-room", "wrong")
-	intruder.eventually("denied", func() bool { return len(intruder.auth) == 1 && intruder.auth[0] == "denied" })
+	newcomer := dial(t, s, "secret-room", "newcomer")
+	newcomer.eventually("denied", func() bool { return len(newcomer.auth) == 1 && newcomer.auth[0] == "denied" })
 	time.Sleep(50 * time.Millisecond) // anything the server would (wrongly) send comes by now
-	require.Empty(t, intruder.texts(), "the SyncStep1 sent with the bad token was dropped, not answered")
+	require.Empty(t, newcomer.texts(), "the SyncStep1 sent before the refusal was dropped, not answered")
 
-	// the provider may try again on the same connection
-	intruder.authenticate("secret")
-	intruder.eventually("in now", func() bool { return intruder.doc.Texts("files")["/x"] == "confidential" })
+	// the provider may try again on the same connection (the check runs again, on the same request)
+	admitted.Store(true)
+	newcomer.authenticate()
+	newcomer.eventually("in now", func() bool { return newcomer.doc.Texts("files")["/x"] == "confidential" })
+}
+
+func TestSignedOutIsRefused(t *testing.T) {
+	c := dial(t, newServer(t, memStore(t)), "room", "")
+	c.eventually("refused", func() bool { return len(c.reasons) == 1 })
+	require.Equal(t, "permission-denied", c.reasons[0])
 }
 
 func TestRefusalTellsItsReason(t *testing.T) {
 	s := newServer(t, memStore(t), func(o *collab.Options) {
-		o.Authenticate = func(string, string) (collab.User, error) {
+		o.Authenticate = func(*http.Request, string) (collab.User, error) {
 			return collab.User{}, collab.Refusal{Reason: "no plain rooms here"}
 		}
 	})
-	c := dial(t, s, "room", "secret")
+	c := dial(t, s, "room", "ann")
 	c.eventually("refused", func() bool { return len(c.reasons) == 1 })
 	require.Equal(t, "no plain rooms here", c.reasons[0])
 
-	other := dial(t, newServer(t, memStore(t)), "room", "wrong")
+	other := dial(t, newServer(t, memStore(t)), "room", "")
 	other.eventually("refused", func() bool { return len(other.reasons) == 1 })
 	require.Equal(t, "permission-denied", other.reasons[0], "other errors are not told")
 }
@@ -375,7 +416,7 @@ func (h *handler) Close() { h.x.closed <- h.r.Name() }
 func TestStatelessReachesTheExtensionAndRepliesToOneClient(t *testing.T) {
 	x := newExtension()
 	s := newServer(t, memStore(t), func(o *collab.Options) {
-		o.Authenticate = func(token, _ string) (collab.User, error) { return collab.User{Name: token}, nil }
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) { return collab.User{Name: session(r)}, nil }
 		o.Extension = x
 	})
 	a := dial(t, s, "x-r", "alice")
@@ -431,8 +472,8 @@ func TestExtensionKeepsTheRoomUntilLeftReturns(t *testing.T) {
 
 func TestCloseEndsWhatTheExtensionWaitsFor(t *testing.T) {
 	x := newExtension()
-	s := collab.New(collab.Options{Store: memStore(t), Authenticate: collab.SharedToken(nil), Extension: x, Log: zerolog.Nop()})
-	a := dial(t, s, "x-closing", "")
+	s := collab.New(collab.Options{Store: memStore(t), Authenticate: signedIn, Extension: x, Log: zerolog.Nop()})
+	a := dial(t, s, "x-closing", "ann")
 	<-x.opened
 	a.close()
 	<-x.left // never released: Close ends it
@@ -464,7 +505,7 @@ func TestOneConnectionManyRoomsAndSessionAddresses(t *testing.T) {
 
 	// a second room on b's connection
 	other := &client{t: t, address: "two", p: b.p, done: make(chan struct{}), doc: ydoc.New()}
-	other.authenticate("secret")
+	other.authenticate()
 	b.eventually("room two answers on b's connection: Authenticated, SyncStep1, SyncStep2", func() bool {
 		return string(b.foreign) == string([]byte{msgAuth, msgSync, msgSync})
 	})
@@ -481,18 +522,3 @@ func TestBadMessageClosesTheConnection(t *testing.T) {
 	<-a.done
 	require.Equal(t, 4205, a.p.code)
 }
-
-func TestSharedToken(t *testing.T) {
-	_, err := collab.SharedToken(nil)("anything", "r")
-	require.NoError(t, err, "no token configured: everyone")
-	_, err = collab.SharedToken(ptr("s3cret"))("s3cret", "r")
-	require.NoError(t, err)
-	_, err = collab.SharedToken(ptr("s3cret"))("", "r")
-	require.ErrorIs(t, err, collab.ErrInvalidToken)
-	_, err = collab.SharedToken(ptr(""))("anything", "r")
-	require.ErrorIs(t, err, collab.ErrInvalidToken, "an empty token configured is still a check")
-	_, err = collab.SharedToken(ptr(""))("", "r")
-	require.NoError(t, err)
-}
-
-func ptr(s string) *string { return &s }

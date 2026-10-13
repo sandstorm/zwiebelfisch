@@ -1,15 +1,18 @@
 // The eager half of collaboration. See collaboration in collaboration.ts.
+import type { Account } from './account';
 import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
+import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
 /**
  * The widget's side of a Collaboration: loads it on demand (so this file stays outside model/, the lazily loaded
  * chunk), publishes the local selection when the editors report a change (`selectionChanged`), and tells the widget
- * where everyone else is.
+ * where everyone else is. With a server, it joins as the account's signed-in user, and only then: signed out (or
+ * refused for that), it asks the widget to offer signing in.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
@@ -17,19 +20,23 @@ export class CollaborationLink {
   private scheduled = false;
   /**
    * Settles once the project is shared: the collaboration code loaded and, with a server, the room synced (its text
-   * is in the project), or once that failed (the user is told why, e.g. the server's reason for refusing the room).
-   * Until then, what the editors show may still be replaced.
+   * is in the project), or once that failed (the user is told why, e.g. the server's reason for refusing the room) or
+   * the user must sign in first. Until then, what the editors show may still be replaced.
    */
   readonly ready: Promise<void>;
 
+  /** `account`: the user's account on the server of `options` (null: the host's own Y.Doc, no server). */
   constructor(
     options: CollaborationOptions,
     shared: SharedRoom,
     private readonly widget: LinkedWidget,
+    private readonly account: Account | null = null,
   ) {
     this.ready = this.start(options, shared).catch((error: unknown) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason === SIGN_IN_REQUIRED) return this.widget.signInRequired?.();
       console.error('collaboration could not start:', error);
-      this.widget.tell?.(`Cannot join the room: ${error instanceof Error ? error.message : String(error)}`, 'error');
+      this.widget.tell?.(`Cannot join the room: ${reason}`, 'error');
     });
   }
 
@@ -39,6 +46,13 @@ export class CollaborationLink {
   }
 
   private async start(options: CollaborationOptions, shared: SharedRoom): Promise<void> {
+    if (this.account) {
+      const identity = await this.account.refresh();
+      if (!identity) throw new Error(SIGN_IN_REQUIRED);
+      // others see the name the server knows (in GitLab rooms, the GitLab account's)
+      shared = { ...shared, user: { ...shared.user, name: identity.name } };
+    }
+    if (this.disposed) return;
     const { Collaboration } = await import('./model/model');
     const collaboration = await Collaboration.start(options, shared, this.widget.tell);
     if (this.disposed) {
@@ -88,6 +102,8 @@ export interface LinkedWidget {
   onSourceControl?(sourceControl: GitLabSourceControl): void;
   /** Tells the user what the room's source control has to say (its outcomes and news). */
   tell?: Tell;
+  /** The server lets only signed-in users join, and the user is not (or no longer) signed in. */
+  signInRequired?(): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
