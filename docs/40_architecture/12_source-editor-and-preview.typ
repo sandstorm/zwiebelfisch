@@ -1,8 +1,10 @@
 = Source editor and preview <architecture-source-editor-and-preview>
 
+The contribution points of the Source editor, of document links in all editors, and of the preview.
+
 == Source editor <architecture-source-editor-and-preview-source>
 
-`sourceEditor.registerCodeMirrorExtension(extension)` adds a CodeMirror `Extension` to every Source editor, the existing ones included. Pass the same value for all editors, or a function that makes one per editor from its `SourceEditorContext` (`document`).
+`sourceEditor.registerCodeMirrorExtension(extension)` adds a #link("https://codemirror.net/")[CodeMirror] `Extension` to every Source editor, open ones included. Pass one value for all editors, or a function of the editor's `SourceEditorContext` (`document`).
 
 ```ts
 import { EditorView } from '@codemirror/view';
@@ -12,18 +14,16 @@ subscriptions.push(
   sourceEditor.registerCodeMirrorExtension((editor) => myLint(editor.document)), // per editor
 );
 ```
-
-- The Source editor itself only keeps text and selection in sync with its document. The Typst language, colors, lint, links and other users' carets are all contributions.
-- The code in the Visual editor's raw boxes is CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(editor => extension)`. The typst-language extension registers its syntax in both. Both look like CodeMirror's default in the widget's light or dark scheme (`codeColors`, from the Source editor host), as does any CodeMirror an extension makes with it.
-- What fits any text, not only Typst, goes to every CodeMirror of the widget: `sourceEditor.registerSharedCodeMirrorExtension(extension)` adds it to the Source editors, the raw boxes' code and every CodeMirror that includes `sourceEditor.createSharedCodeMirrorExtension()` (the text files' editor), open or made later, until disposed. The invisibles extension registers `highlightWhitespace()` this way while invisible characters are shown. An extension making its own CodeMirror includes it next to `codeColors`:
+- *The Source editor itself* only keeps text and selection in sync with its document. Typst highlighting, colors, lint, links and other users' carets are contributions.
+- *Raw boxes* in the Visual editor are CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(editor => extension)`. All of them use the widget's light or dark `codeColors`.
+- *For any text*, not only Typst, use `sourceEditor.registerSharedCodeMirrorExtension(extension)`: it reaches the Source editors, raw boxes and every CodeMirror that includes `sourceEditor.createSharedCodeMirrorExtension()` (invisibles registers `highlightWhitespace()` this way). Your own CodeMirror includes it next to `codeColors`:
 
 ```ts
 new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.createSharedCodeMirrorExtension()] });
 ```
-
 == Document links <architecture-source-editor-and-preview-links>
 
-`languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links to the texts `selector` matches. The Source editors, the code of raw boxes and the text files' editor show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it ("Open …", or the link's `tooltip` for a link with a `target`, as VS Code's "Follow link"); a plain click edits. The Visual editor follows them the same way: the picture of a raw box its primary link (the first in text order that leads somewhere), the text the link under the pointer or at the cursor (a reference chip, a link mark), its tooltip as the hover.
+`languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links, as VS Code's "Follow link". ⌘-click or Alt+Enter follows a link, hovering shows where it leads, a plain click edits. The Source editors, raw boxes, the text files' editor and the Visual editor (reference chips, link marks, a box's picture) all show them.
 
 ```ts
 languages.registerDocumentLinkProvider({ language: 'typst' }, {
@@ -36,44 +36,42 @@ languages.registerDocumentLinkProvider({ language: 'typst' }, {
   },
 });
 ```
-
-- `TextDocument`: `path` (the file the text is in), `languageId`, `text` (a whole file's, or a part of one: a raw box's code). Language ids: `typst` for Typst files and raw boxes; the text files by ending: `csv`, `json`, `yaml`, `toml`, `xml`, `bibtex`, `plaintext`, `markdown`, `mermaid`. Whoever hands a text over names its language; the host knows none.
-- `DocumentSelector`: a `DocumentFilter` `{ language? }` or a list of them; a filter without `language` matches every text.
-- `DocumentLink`: `range` (a `SourceRange` in the text given), `target?` (a project file `ProjectPath`, or an external `URL`, `https:` or `mailto:`, opened in a new tab), `selection?` (with a file: the range in it to select, e.g. a label), `tooltip?` (what following it does: "Edit diagram", "Go to Figure · Setup in method.typ"; without a target, what the hover says), `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
-- The built-in providers: file paths (document-links), references and `#link(<label>)` to their label (labels), web and mail addresses (markup).
-- A more specific link for the same path (diagrams' and Mermaid's "Edit diagram", spreadsheets' "Edit spreadsheet" on a `.ic.gen.typ`, over the plain file link) comes from a provider of a higher `priority`: it replaces the other where they overlap, so it is also a box's primary link.
-- Keep `provideDocumentLinks` cheap; `resolveDocumentLink(link)` may fill in `target`, `tooltip` or `command` when a link is shown or followed.
-- Only the providers whose selector matches a text are asked; where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
-- An extension's own CodeMirror editor shows them as the Source editors do with `languages.createDocumentLinksCodeMirrorExtension(languageId, () => path)`.
+- *`TextDocument`:* `path`, `languageId` (`typst`, or the text file's: `csv`, `json`, `bibtex`, `mermaid`, …), `text` (a whole file or a raw box's code).
+- *`DocumentSelector`:* `{ language? }` or a list of them; no `language` matches every text.
+- *`DocumentLink`:* `range`, `target?` (a `ProjectPath` or an `https:`/`mailto:` `URL`), `selection?` (the range to select in the target), `tooltip?`, `command?` (offered in the hover, e.g. to create a missing file).
+- *Priority* (default 100): where links overlap, the higher one wins. Diagrams' "Edit diagram" (110) thus replaces the plain file link, also as a box's primary link (its first link in text order).
+- *Cheap:* keep `provideDocumentLinks` fast; `resolveDocumentLink(link)` may fill in the rest when a link is shown or followed.
+- *Built-in:* file paths (document-links), references and `#link(<label>)` (labels), web and mail addresses (markup).
+- *Your own CodeMirror* shows them with `languages.createDocumentLinksCodeMirrorExtension(languageId, () => path)`.
 
 == Preview <architecture-source-editor-and-preview-preview>
 
-The preview keeps the mechanism: the engine worker, compiles, the page list, hit-testing, scrolling. What sits on top is contributed.
+The preview keeps the mechanism: the engine worker, compiles, pages, hit-testing, scrolling. Everything on top is contributed.
 
 #table(
   columns: 2,
   [Member], [What],
-  [`registerToolbarItem(item, { group, order })`], [A toolbar control. Groups sort by name; the built-ins: `1_sync` ("Follow cursor"), `2_view` (zoom, page number), `3_export` ("Download PDF")],
+  [`registerToolbarItem(item, { group, order })`], [A toolbar control. Built-in groups: `1_sync` ("Follow cursor"), `2_view` (zoom, page number), `3_export` ("Download PDF")],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports],
   [`pdfExportOptions()`], [The registered options, in the order an export applies them],
-  [`registerViewOption(option, { priority })`], [A way to look at the pages in the preview only (a checkbox entry in the View menu)],
+  [`registerViewOption(option, { priority })`], [A way to look at the pages, in the preview only],
   [`viewOptions()`], [The registered view options, in the order the preview applies them],
   [`onDidChangeViewOptions`], [A view option was registered or disposed],
-  [`setViewOptionValues(values)`], [Which view options are on, by id; the others at their default],
-  [`reveal(path, range)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
-  [`onDidClickPage`], [A click on something with a source location in a project file: `{ path, from, to }`; outlined until the next click or compile],
-  [`clearClickHighlight()`], [Removes the outline of the last click now],
-  [`setSelectionHighlight(path, ranges, text)`], [Shades where `ranges` of `path` are drawn (selection color, no outline), once the pages show a compile of `text`; looked up again after each compile; replaces the ranges before, `[]` clears],
-  [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files; `path` is a `ProjectPath`, `null` without location or in a package file],
+  [`setViewOptionValues(values)`], [Which view options are on, by id],
+  [`reveal(path, range)`], [Scrolls to where a source range is drawn; cheap on every cursor move],
+  [`onDidClickPage`], [A click on something from a project file: `{ path, from, to }`],
+  [`clearClickHighlight()`], [Removes the outline of the last click],
+  [`setSelectionHighlight(path, ranges, text)`], [Shades where `ranges` are drawn; `[]` clears],
+  [`onDidChangeDiagnostics`], [Errors and warnings of each compile],
   [`onDidRender`], [After every successful compile],
-  [`engineMemory`, `onDidChangeEngineMemory`], [The bytes of wasm memory the engine held after the last compile (0 before the first), and when that changed: it grows, never shrinks, and the engine crashes at 4 GB. To look at (devtools); nothing needs to act on it],
-  [`snippet(path, range, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
+  [`engineMemory`, `onDidChangeEngineMemory`], [The engine's wasm memory, for devtools],
+  [`snippet(path, range, text)`], [How a source range is drawn, as SVG; `null` when it draws nothing],
   [`exportPdf(entry)`], [A PDF of `entry.main` from the files last compiled],
 )
 
 === Toolbar items <architecture-source-editor-and-preview-toolbar>
 
-A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`: a `PageIndex`, counted from 0, and the page count) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
+A `PreviewToolbarItem` is a function of the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`). It returns its `elements`, an optional `update()` (at most once per frame) and `dispose()`.
 
 ```ts
 const pageNumber: PreviewToolbarItem = (preview) => {
@@ -88,10 +86,9 @@ const pageNumber: PreviewToolbarItem = (preview) => {
 };
 preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20 });
 ```
-
 === PDF export options <architecture-source-editor-and-preview-pdf>
 
-A `PdfExportOption` changes what is compiled, never the documents: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry, value)`, which returns a new `PdfEntry` (`main`, `sources`: `.typ` texts replacing or adding files).
+A `PdfExportOption` changes what is compiled, never the documents. `apply(entry, value)` returns a new `PdfEntry` (`main`, `sources`).
 
 ```ts
 preview.registerPdfExportOption({
@@ -102,14 +99,12 @@ preview.registerPdfExportOption({
   apply: (entry, include) => (include ? entry : withoutComments(project, entry)),
 });
 ```
-
-- An export applies every option, also those that are off, by `priority` (default 100, higher first), each to what the ones before made.
-- An `id` registered twice throws.
-- The host passes values by id: `editor.exportPdf({ 'comments.include': true })`; an unknown id rejects.
+- *Order:* an export applies every option, also those that are off, by `priority` (default 100, higher first).
+- *Ids* are unique; the host passes values by id: `editor.exportPdf({ 'comments.include': true })`.
 
 === View options <architecture-source-editor-and-preview-view>
 
-A `PreviewViewOption` changes how the preview shows the document, never the documents nor their PDFs: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry, value)`, called for every option with its value, as a PDF export option's. It returns a new `PreviewEntry` (`prelude`: lines of Typst markup run before the main file), or `entry` itself where the value changes nothing. Each option adds its own lines, so options compose.
+A `PreviewViewOption` changes how the preview shows the document, never the documents or their PDFs. `apply(entry, value)` adds lines to the `PreviewEntry`'s `prelude`, or returns `entry` unchanged.
 
 ```ts
 preview.registerViewOption({
@@ -119,9 +114,9 @@ preview.registerViewOption({
   apply: (entry, on) => (on ? { ...entry, prelude: [...entry.prelude, '#set block(stroke: 1pt + rgb(217, 70, 239, 50%))'] } : entry),
 });
 ```
-
-- While the options' prelude has lines, the preview compiles a file of its own: the prelude, then `#include` of the main file. The main file is included, not copied: diagnostics, clicks, the cursor's place and snippets stay in the project's files. An error in the prelude is reported without a path; a click on what it draws (an outline) is not reported. With an empty prelude the main file is compiled as before. An option may add lines in either state: "Comments" (`comments.show`, on by default) gives drafting's margin notes the editor's look when on (only in a project that imports drafting, so other projects compile their main file directly) and hides them by show rules when off.
-- The prelude's lines are imports, `let`, `set` and `show` rules: they must make no content (it would come before the document's first page). Set rules are defaults, so what a document sets itself wins. A page background or foreground set by the document replaces the prelude's (`previewGuides` therefore draws in the foreground when the background was replaced). Names are the option's own (`preview-guides-…`): every option's lines share the file.
-- The preview applies the options by `priority` (default 100, higher first), each to what the ones before made. An `id` registered twice throws.
-- Every option appears in the View menu at the top right of the editing area (menu `view`, group `preview`, checked while on): `previewControls` registers an entry per option (following `onDidChangeViewOptions`), hands this viewer's choices to `setViewOptionValues(values)` (ids of options registered later included) and remembers them in its `globalState`. Changing the values or the options compiles again.
-- Raw boxes' pictures are cut from the preview's pages (`snippet`), so they show what the options draw; compiling them apart would be a second compile per edit.
+- *Prelude:* while it has lines, the preview compiles the prelude, then `#include`s the main file. Diagnostics, clicks and snippets stay in the project's files.
+- *What goes in:* only imports, `let`, `set` and `show` rules, since content would come before the first page. Prefix names with the option's (`preview-guides-…`): all options share the file.
+- *Document wins:* set rules are defaults, so what a document sets itself wins.
+- *Order* by `priority` (default 100, higher first). Ids are unique.
+- *View menu:* `previewControls` shows every option as a checkbox entry (menu `view`, group `preview`) and remembers the choices in its `globalState`.
+- *Raw boxes* are cut from the preview's pages (`snippet`), so they show what the options draw.

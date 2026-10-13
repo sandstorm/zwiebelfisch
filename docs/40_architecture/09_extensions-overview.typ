@@ -10,18 +10,17 @@ interface TypstExtension {
 }
 ```
 
-- `activate` runs once, in list order. Everything it registers returns a `Disposable`; push each into `context.subscriptions`.
-- The editor disposes `subscriptions` on `dispose`, in reverse order.
-- Write an extension as a function that makes it (`wordCount()`), as every built-in is, so it can take options later.
-- Every type an extension implements or declares is exported from the package. What it only reaches through its context (`Project`, `TypstDocument`) is typed without an import.
+- *`activate` runs once*, in list order. Push every `Disposable` it gets into `context.subscriptions`; they are disposed with the editor, in reverse order.
+- *Write a factory* (`wordCount()`), as every built-in does, so it can take options later.
+- *Every type an extension implements or declares* is exported from the package.
 
 == Adding, leaving out, replacing <architecture-extensions-overview-list>
 
-The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
+The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions); leave one out by its id (@architecture-built-in-extensions).
 
 == Example: word count <architecture-extensions-overview-example>
 
-The words of the shown file in the status bar, a setting for its label, a command the host can run.
+The words of the shown file in the status bar, with a setting for its label and a command the host can run.
 
 ```ts
 import { createTypstEditor, type TypstExtension } from 'typst-editor';
@@ -82,7 +81,7 @@ What `activate` gets (`ExtensionContext`):
   [`workspace`], [`applyEdit`, settings], [@architecture-workbench-api-settings],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@architecture-workbench-api],
   [`scm`], [Source controls], [@architecture-workbench-api-scm],
-  [`languages`], [Document links in texts, what a dropped file becomes, the language of a file, help sheets; by language], [@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help],
+  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file], [@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help],
   [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights (experimental)], [@architecture-visual-editor-constructs],
   [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@architecture-source-editor-and-preview],
   [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@architecture-source-editor-and-preview-preview],
@@ -90,19 +89,17 @@ What `activate` gets (`ExtensionContext`):
 
 == Settings <architecture-extensions-overview-settings>
 
-- Declare each setting in `contributes.configuration.properties`, by full id `<section>.<key>` under the extension's own section.
-- A `ConfigurationProperty` has `type`, `default`, `description` and an optional `enum`.
-- The host sets values with `createTypstEditor({ settings })` and changes them later through `editor.settings`.
-- Read with `workspace.getConfiguration(section).get(key)`.
-- Follow `workspace.onDidChangeConfiguration`: the host may change values at any time.
-- A value of the wrong type, or outside `enum`, counts as unset. A value for an undeclared setting is ignored. Both log a console warning.
-- An id declared twice is an error.
+Settings work as VS Code's (see the example above):
+
+- *Declare* each in `contributes.configuration.properties` as `<section>.<key>`, with `type`, `default`, `description` and an optional `enum`.
+- *Read* with `workspace.getConfiguration(section).get(key)`, and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.settings`).
+- *A wrong value* (wrong type, outside `enum`) counts as unset; an undeclared setting is ignored. Both log a warning. An id declared twice is an error.
 
 == Rules <architecture-extensions-overview-rules>
 
 - *Extensions never depend on each other.* What one offers another goes through a generic contribution point (document links, file decorations, source controls) or a command id, never an import.
 - *Command ids* are `<extension>.<name>` (`pdfExport.export`).
-- *Rank competing contributions* with a `priority` or a `group` + `order`:
+- *Rank competing contributions* with a `priority` or a `group` + `order`. Registration order counts only within one extension.
 
 #table(
   columns: 2,
@@ -114,13 +111,13 @@ What `activate` gets (`ExtensionContext`):
   [Custom editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
   [Search providers' groups], [`order` (default 100, lower first), then `id`],
   [Visual editor nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
+  [Side panels' rail buttons], [`side`, then `alignment`, then `order`],
+  [Source editor extensions], [CodeMirror's `Prec`],
 )
-
-Equal ranks fall back to registration order, which counts only within one extension: never rely on it across extensions.
 
 == Five vocabularies <architecture-extensions-overview-vocabularies>
 
-An extension meets up to five vocabularies. Every name says whose it is:
+An extension meets up to five vocabularies; every name says whose it is.
 
 #table(
   columns: 3,
@@ -132,7 +129,6 @@ An extension meets up to five vocabularies. Every name says whose it is:
   [The Typst language], [`#callout(title: "Tip")[…]`], [What parse rules read and `toTypst` writes],
 )
 
-- A member that takes or returns a framework object names the framework: `registerTiptapExtension`, `registerCodeMirrorExtension`.
-- Framework types are used as they are, never renamed.
-- Pinned versions are part of the API: *codemirror-lang-typst 0.6.0* (its syntax node names are those of Typst's `typst-syntax` crate) and *Tiptap 3.31* (`@tiptap/core`).
-- Take ProseMirror objects (schema, state, transactions) from the editor, never from a copy of your own.
+- *A member that takes a framework object names the framework*: `registerTiptapExtension`, `registerCodeMirrorExtension`. Framework types are never renamed.
+- *Pinned versions are part of the API*: codemirror-lang-typst 0.6.0 and Tiptap 3.31.
+- *Take ProseMirror objects* (schema, state, transactions) from the editor, never from a copy of your own.

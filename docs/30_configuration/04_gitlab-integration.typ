@@ -1,8 +1,6 @@
 = GitLab integration <configuration-gitlab-integration>
 
-A collaboration room (@configuration-collaboration-server) can be a branch of a GitLab repository: the server loads the branch and commits the room's changes back.
-
-With the server configured for GitLab, the room `gitlab:<project id or path>@<branch>` is that branch:
+A collaboration room (@configuration-collaboration-server) can be a branch of a GitLab repository: the room `gitlab:<project id or path>@<branch>` loads the branch and commits the changes back.
 
 ```ts
 createTypstEditor(host, {
@@ -15,19 +13,17 @@ createTypstEditor(host, {
 });
 ```
 
-- *Loading:* the first user to open the room makes the server load the branch. `.typ` files become shared text; the widget fetches the other files from the server (`GET /rooms/<room>/files/<path>`, token as `Authorization: Bearer`).
-- Saving, merging and conflicts as the users see them: @features-gitlab.
-
-Server configuration, e.g. in a git-ignored `mise.local.toml` `[env]` section (never commit the token):
+Configure the server with environment variables, e.g. in a git-ignored `mise.local.toml` (*never commit the token*):
 
 #table(
   columns: 2,
   [Variable], [Meaning],
-  [`TYPST_GITLAB_URL`], [The GitLab instance, e.g. `https://gitlab.com`.],
-  [`TYPST_GITLAB_TOKEN`], [Server-side token with `api` scope; clients never see it.],
-  [`TYPST_GITLAB_WEBHOOK_SECRET`], [Optional: enables `POST /gitlab/webhook`. Add a push webhook with this secret in the GitLab project.],
-  [`TYPST_GITLAB_AUTHOR_EMAIL`], [Optional: the author email when the user's is unknown.],
-  [`TYPST_GITLAB_AUTO_COMMIT`], [Minutes without edits before a room saves by itself (default `10`; fractions allowed); `off`: only "Save to GitLab…".],
+  [`TYPST_GITLAB_URL`], [Required: the GitLab instance, e.g. `https://gitlab.com`.],
+  [`TYPST_GITLAB_TOKEN`], [Required: a token with `api` scope. Clients never see it.],
+  [`TYPST_GITLAB_WEBHOOK_SECRET`], [Enables `POST /gitlab/webhook`: add a push webhook with this secret in the GitLab project.],
+  [`TYPST_GITLAB_AUTHOR_EMAIL`], [The author email when the user's is unknown.],
+  [`TYPST_GITLAB_AUTO_COMMIT`], [Minutes without edits before a room saves by itself (default `10`); `off`: only "Save to GitLab…".],
 )
 
-GitLab rooms need both `TYPST_GITLAB_URL` and `TYPST_GITLAB_TOKEN`.
+- Files other than `.typ` are fetched from the server (`GET /rooms/<room>/files/<path>`, the token as `Authorization: Bearer`), so it must be reachable over HTTP too.
+- Saving and conflicts, as users see them: @features-gitlab.

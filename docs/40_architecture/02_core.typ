@@ -1,8 +1,8 @@
 = Core <architecture-core>
 
-The models everything builds on. Rules for `src/core/`:
+The models everything builds on, in `src/core/`. Its rules:
 
-- No DOM globals or types (`fetch`, `Blob` and streams are allowed: workers have them).
+- No DOM globals or types (`fetch`, `Blob` and streams are fine: workers have them).
 - No editor library (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`) and no Yjs.
 - Imports only `core/`. Tests run in Node.
 
@@ -18,27 +18,28 @@ new TypstDocument(text)
 .onDidChange: Event<{ contentChanges, origin }>
 ```
 
-- *Source offsets:* `SourceOffset` (a branded number, UTF-16 code units into the text) and `SourceRange` (`{ from, to }` of them); `TextChange` is a `SourceRange` plus `insert`. Made with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in (string indices, Lezer nodes, CodeMirror, Yjs, the engine). Never a ProseMirror position: only the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert (@architecture-prosemirror-typst-position-map).
+- *Source offsets:* `SourceOffset` (branded number, UTF-16 code units) and `SourceRange` (`{ from, to }`); a `TextChange` is a `SourceRange` plus `insert`. Make them with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in.
+- *Never a ProseMirror position:* only `sourceToPos` / `posToSource` convert (@architecture-prosemirror-typst-position-map).
 - *Echo suppression:* an editor passes itself as `origin` and ignores events with its own origin.
-- *Ordered delivery:* a change made by a listener while others are being told is queued, so every listener sees changes in the order they were made.
-- `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo history survive a whole new text.
-- *No collaboration here:* the collaboration extension binds a `Y.Text` to a document from outside (@configuration-collaboration-server).
+- *Ordered delivery:* a change made by a listener is queued, so every listener sees changes in the order they were made.
+- `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo survive a whole new text.
+- *No collaboration here:* the collaboration extension binds a `Y.Text` from outside (@configuration-collaboration-server).
 
 == Project <architecture-core-project>
 
 Which files a project has and which changes are allowed.
-
-- Files by `ProjectPath`. Every `.typ` file is a `TypstDocument` (kept across renames, so open editors survive); every other file is stored as given (`FileContent`: `string | Uint8Array`; `FileContent.bytes(content)` encodes text as UTF-8).
-- The main file always exists; it cannot be renamed or deleted. `.typ` files keep their ending.
-- `check(change)` returns a reason or null; `apply(change)` throws where `check` refuses.
-- `replace(files)` reports a `delete`, `create` or `update` per file and keeps the documents of paths that stay.
-- `onDidChangeFile` fires for every change: `apply`, `replace`, and every document edit (as `update`). Nobody is refreshed by hand.
 
 ```ts
 type FileChange =
   | { kind: 'create'; path; content } | { kind: 'update'; path; content }
   | { kind: 'delete'; path }          | { kind: 'rename'; from; path }
 ```
+
+- *Files by `ProjectPath`:* a `.typ` file is a `TypstDocument` (kept across renames, so open editors survive); any other file is a `FileContent` (`string | Uint8Array`).
+- *The main file* always exists and cannot be renamed or deleted. `.typ` files keep their ending.
+- `check(change)` returns a reason or null; `apply(change)` throws where `check` refuses.
+- `replace(files)` reports a `delete`, `create` or `update` per file and keeps the documents of paths that stay.
+- `onDidChangeFile` fires for every change, document edits included (as `update`). Nobody refreshes by hand.
 
 == Paths <architecture-core-paths>
 
@@ -48,36 +49,34 @@ Two branded strings: free at runtime, usable as keys, unchanged through `postMes
   columns: (auto, 1fr),
   table.header[Type][Meaning],
   [`ProjectPath`], [Where a file is: `/chapters/intro.typ`. Absolute, no `.`, `..` or empty segments.],
-  [`PathReference`], [A path as written in Typst source: `img/logo.png`, `../x.typ`, `/data.csv`.],
+  [`PathReference`], [A path as written in Typst: `img/logo.png`, `../x.typ`, `/data.csv`.],
 )
 
 - `resolve(file, reference)` resolves as Typst does; `referenceTo(file, target)` writes the reverse.
-- Parsed once, at the edges (public API, Yjs keys, drag data, storage, engine paths). Inside, every path is typed.
+- *Parsed once, at the edges* (public API, Yjs keys, drag data, storage, engine paths). Inside, every path is typed.
 - `isTypst(path)` is the only file kind core knows.
-- `name(path)` is the last segment (`intro.typ`); `displayName(path)` the path without its leading slash, as shown to people.
+- `name(path)` is the last segment; `displayName(path)` the path without its leading slash.
 
 == The Typst engine <architecture-core-engine>
 
 The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engine`) compiled to wasm. The preview runs it in a worker (@architecture-preview).
 
 - `typst-engine`: `createEngine(wasm)`; `addFont`, `addLazyFont`; `setSource`, `setBinary`, `remove`; `compile`, `exportPdf`; `jumpFromClick`, `jumpFromCursor`, `boxesForRanges`.
-- `engine-assets`: the wasm URL and `DEFAULT_FONTS` (URL and faces per file) for the main thread, apart so the worker bundle does not copy them.
-- `typst-packages`: `withPackages(engine, fetchPackage?, onDidChangeDownloads?)` compiles, downloads the missing `@preview` packages, compiles again; `onDidChangeDownloads` hears which packages are on the way.
-- Conventions: UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`; people see `index + 1`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`).
-- A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
-- *Memory*: Typst memoizes (comemo) in one global cache that only `comemo::evict` shrinks. The engine evicts after every `compile` and `exportPdf` what the last 10 did not use, as `typst watch` does. `memoryInUse` tells the wasm memory's bytes (it never shrinks; `ENGINE_MEMORY_LIMIT`, 4 GiB, is the most); the devtools show it after every compile (@configuration-embedding-devtools). Without it, every compile of an edited document added to the cache (7 MB per compile of a 200-section document; the docs book reached the wasm's 4 GB after about 300 compiles) until an allocation failed.
-- *Crashes*: a panic (a bug in Typst or the engine; e.g. `#range(200000000)`: `capacity overflow`) or memory running out traps the wasm in the middle of a call. What that call left half done (a Rust borrow held, a lock taken) makes every later call fail, so the instance is lost: from then on every call of every engine throws the first call's `TypstEngineCrash`. Its message is the panic's (the engine's `onPanic` hook tells it to JS before the trap; Rust's stderr goes nowhere in the browser), else the trap's error and the memory in use. It is also logged (`console.error`). Only a new instance compiles again: the preview starts a new worker (@architecture-preview-concepts).
+- `engine-assets`: the wasm URL and `DEFAULT_FONTS` for the main thread, apart so the worker bundle does not copy them.
+- `typst-packages`: `withPackages(engine, fetchPackage?, onDidChangeDownloads?)` compiles, downloads missing `@preview` packages, compiles again.
+- *Units:* UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`). A diagnostic's path is a `ProjectPath`, or `null` without location or in a package.
+- *Memory:* after every `compile` and `exportPdf` the engine evicts the memoized results the last 10 did not use, as `typst watch` does. `memoryInUse` tells the wasm memory's bytes (it never shrinks; the most is `ENGINE_MEMORY_LIMIT`, 4 GiB); the devtools show it (@configuration-embedding-devtools).
+- *Crashes:* a panic or running out of memory traps the wasm, and the instance is lost: every later call throws the first `TypstEngineCrash` (with the panic's message), also logged. The preview then starts a new worker (@architecture-preview-concepts).
 
 === Fonts <architecture-core-engine-fonts>
 
-Typst's font book needs every face's `FontInfo` (family, variant, coverage) before a compile; a face's data only when the layout uses it (`World::font(index)`).
+Typst needs every face's `FontInfo` before a compile, but a face's data only when the layout uses it. So fonts load lazily.
 
-- *Font index*: `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`, 16 KB), computed by the engine's own wasm, so it matches the pinned Typst.
-- `addLazyFont({ name, faces, load })`: the faces go into the book; the first `World::font` call for one of them calls `load()` and keeps the result. Synchronous, inside the compile: no second compile, and only the faces used are fetched.
-- *A file that cannot be loaded* (`load()` returns null, e.g. the download failed): its faces stay absent and Typst falls back to another font. The compile or PDF export that needed it reports a warning without location ("Font file NewCMMath-Book.otf could not be loaded; Typst used another font."), shown like any other diagnostic. Once per file: `load()` is not called again.
-- `addFont(data)`: all faces of a file, data at once (a host's own fonts). Cannot be removed.
-- *Project fonts*: a project file ending in `.ttf`, `.otf`, `.ttc` or `.otc` (any folder, any case; not a package's) is a font as well, as on typst.app. The engine reads its faces in `setBinary` (only that file's: the preview sends bytes only when they change) and drops them in `remove`; the font book is the added fonts, then the project fonts by path, rebuilt from the faces it has. Nothing else to call: whoever hands the engine the project's files hands it the project's fonts.
-- The preview's worker loads a file with a synchronous `XMLHttpRequest` (allowed in workers only); a compile waits for it.
+- *Font index:* `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`), computed by the engine's own wasm.
+- `addLazyFont({ name, faces, load })`: the faces go into the font book; the first use of one calls `load()` synchronously, inside the compile. In the worker that is a synchronous `XMLHttpRequest`.
+- *A file that cannot be loaded:* Typst falls back to another font and the compile reports a warning without location.
+- `addFont(data)`: all faces of a file at once (a host's own fonts).
+- *Project fonts:* a project file ending in `.ttf`, `.otf`, `.ttc` or `.otc` is a font too, as on typst.app. Whoever hands the engine the project's files hands it its fonts.
 
 #table(
   columns: (auto, auto, auto),
@@ -103,13 +102,17 @@ Typst's font book needs every face's `FontInfo` (family, variant, coverage) befo
   [raw-block highlighting (two-face, syntect)], [0.9 MB data + code], [hardly compresses],
 )
 
-- Typst's crates have no feature flags for any of these. Leaving one out takes a patched copy of a dependency (hypher, two-face, hayagriva) or a fork of Typst.
-- *Not done*: patched dependencies, a fork, `opt-level = "z"` (−0.4 MB brotli, slower compiles unmeasured), a second engine for PDF export (Typst's document can't cross wasm modules: it would compile again).
-- *Delivery*: `dist/lib` names the wasm and the fonts with a content hash, so a host can cache them as `immutable`. Compression and `Content-Type: application/wasm` (streaming compile) are the host's server's job; there is no pre-compression step.
-- Fonts load on demand only, no prefetch (@architecture-core-engine-fonts).
+- *No feature flags:* Typst's crates cannot leave any of these out without a patched dependency or a fork of Typst.
+- *Not done:* patched dependencies, a fork, `opt-level = "z"` (−0.4 MB brotli), a second engine for PDF export (it would compile again).
+- *Delivery:* `dist/lib` names the wasm and the fonts with a content hash, so a host can cache them as `immutable`. Compression and `Content-Type: application/wasm` are the host's server's job.
 
 == Typst syntax <architecture-core-syntax>
 
-Typst knowledge several extensions need, from the Lezer tree of `codemirror-lang-typst` (`syntaxTree`: the last one is kept, so the link providers reading one text parse it once): the paths a text names (`findFilePaths`), the files' reading order (`neighbours`; asked after every change, it parses only the files whose text changed), the change that imports a name (`calculateImportChange`), the names imports bind (`importedNames`), and helpers specs read calls with (`calleeName`, `namedArgument`, …).
+Typst knowledge several extensions need, read from the Lezer tree of `codemirror-lang-typst` (`syntaxTree` keeps the last one, so one text is parsed once):
 
-Also in core: `Disposable`, `EventEmitter`, `CancellationToken` (VS Code's, for async providers), `User`, `uploads` (files from the computer as `create` changes, and the free name one takes when it goes into a text), `room-protocol` (the rooms' Y.Doc layout, shared with @architecture-server), `color-scheme`.
+- `findFilePaths`: the paths a text names.
+- `neighbours`: the files' reading order; it parses only the files whose text changed.
+- `calculateImportChange`, `importedNames`: the change that imports a name, and the names imports bind.
+- `calleeName`, `namedArgument`, …: helpers specs read calls with.
+
+*Also in core:* `Disposable`, `EventEmitter`, `CancellationToken` (VS Code's), `User`, `uploads` (files from the computer as `create` changes), `room-protocol` (the rooms' Y.Doc layout, shared with @architecture-server), `color-scheme`.

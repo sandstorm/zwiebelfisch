@@ -2,7 +2,7 @@
 
 = Workbench <architecture-workbench>
 
-`src/hosts/workbench/` and VS Code's namespaces in `src/hosts/{commands,window,scm,languages,workspace}/`. The widget's frame, the extension API's entry, and the composition of all hosts. The frame knows no feature by name: a feature is a `TypstExtension`.
+`src/hosts/workbench/` is the widget's frame, the extension API's entry and the composition of all hosts; VS Code's namespaces live in `src/hosts/{commands,window,scm,languages,workspace}/`. The frame knows no feature by name: a feature is a `TypstExtension`.
 
 #figure(
   mermaid(read("../diagrams/workbench-composition.mmd"), width: 85%),
@@ -11,58 +11,58 @@
 
 == Concepts <architecture-workbench-concepts>
 
-- *`TypstExtension`* (@architecture-extensions-overview): registers its contributions once, at activation. Hosts apply them to every editor they create later.
-- *`ExtensionContext`*: `project`, `subscriptions`, `globalState` / `workspaceState`, the five namespaces, `workbench` (the frame), and the view hosts `visualEditor`, `sourceEditor`, `preview`.
-- *Namespaces as hosts* (table below): each is its own module, an interface plus a host class implementing it directly. No forwarding facade.
-- *Generic contribution points*: extensions never depend on each other, not even through a service registry. A host offers a point any extension may use; the consumer reads every contribution. Competing contributions are ordered by an explicit tie-breaker, never by registration order alone.
-- *The frame*: `WorkbenchLayout` (a `SideBar` on the left and on the right, the editing area between them, the status bar); `EditorTabs` (a tab per editor of the shown file, at its right end the `editor/title` menu and "View ▾"; shown while it has tabs or buttons).
-- *Two sides* (`SideBar`, VS Code's primary and secondary side bar, named by place): a rail on the widget's outer edge with a button per side panel (`registerSidePanel(id, { side, alignment, order })`, default left; a top group, and a bottom group at the rail's far end), one panel shown per side, a separator on its inner edge (drag or arrow keys; the left side in pixels, the right side as 20–80 % of the widget). Which panel shows: the viewer's pick (clicking the shown one hides the side, the editing area takes the room), else the side's default panel (the right side's: the setting `workbench.rightSidePanel`, default `preview`), else the first panel whose owner asked (`setDefault`, e.g. `files.panel`). Picks and sizes are kept in the session memento (`layout`). Narrower than 720 px, the left panel lies over the editing area. A panel tells whether it is shown (`SidePanel.visible`, `onDidChangeVisibility`, fired after the side's layout is done).
-- *The preview is the right side's built-in panel* (`preview`), registered by the workbench before any extension, so it comes first on the right rail. It compiles whether shown or not (diagnostics, raw box snippets, selection shading).
-- *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source editor are the two built-in ones for `*.typ` (`visualEditor`, `sourceEditor`), registered by the workbench (`TypstEditors`) before any extension, so they win ties. They stay hosts with contribution points, like VS Code's built-in text editor.
-- *Tabs = "open with"*: a file several editors match gets a tab each; the one picked (a tab, `open(path, { viewType })`) is the user's choice for every later file it matches. Visual / Source is this switch for Typst files.
-- *`TypstEditors`*: a document's Visual or Source editor is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both editors (`activeTextEditor`); switching between them, the one shown gets the other's selection; the editor frame goes into the visible editor (around any other editor's panel).
-- *Menus*: the workbench keeps the entries (`registerMenuItem`) and shows `editor/title` in the tab bar, then "View ▾", which pops up the menu `view` through `showContextMenu` (one View menu for the editors and the preview: group `editor`, the invisibles; group `preview`, the preview's view options, which `previewControls` lists). An entry with `toggled` (VS Code's) is a checkbox entry (`menuitemcheckbox`, a check mark while it holds). Every other menu pops up through `window.showContextMenu(menuId, { anchor, title, context, args })`, which reads the entries whose `when` holds and runs the chosen one's command with `args` (the file panel: `explorer/context` on a row, `file/newFile` under "New"). Editors and side panels never draw menus of their own.
-- *Search everywhere* (`window`'s `search/`): one quick pick (`QuickInput.createQuickPick`, rows set as the user types) over every registered `SearchProvider`, a group each. Each change of the text cancels the previous round (`CancellationTokenSource`, `core/cancellation`) and asks the providers of the typed prefix, or all; synchronous results show at once, async ones as they come. Items are matched fuzzily (label, else description) unless the provider matched them. Opened by double Shift (the window listens on the widget in the capture phase, so inside the editors too: a second Shift within 300 ms of releasing the first, nothing else pressed; it fires on the second release; not while an input box or quick pick is open), by the command `workbench.action.searchEverywhere` and by a button on the left rail, among the side panels' buttons (order 15: after Files, before Help). The workbench adds two groups of its own: the commands extensions declare (`contributes.commands`) and the settings.
-- *State*: `StorageMemento` behind `globalState` and `workspaceState` (@architecture-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
+- *`TypstExtension`* (@architecture-extensions-overview) registers its contributions once, at activation. Hosts apply them to every editor they create later.
+- *`ExtensionContext`*: `project`, `subscriptions`, `globalState` / `workspaceState`, the five namespaces, `workbench` (the frame) and the view hosts `visualEditor`, `sourceEditor`, `preview`.
+- *Namespaces are hosts*: each is a module with an interface and a host class implementing it. No facade.
+- *Generic contribution points*: extensions never depend on each other. A host offers a point, the consumer reads every contribution, and an explicit tie-breaker orders competing ones (table below).
+- *The frame*: `WorkbenchLayout` (a `SideBar` left and right, the editing area between, the status bar) and `EditorTabs` (a tab per editor of the shown file, the `editor/title` menu, "View ▾").
+- *Two sides*, as VS Code's primary and secondary side bar: a rail with a button per panel (`registerSidePanel(id, { side, alignment, order })`), one panel shown per side, sizes kept in the session. Narrower than 720 px, the left panel lies over the editing area.
+- *The preview is the right side's built-in panel* (`preview`). It compiles whether shown or not.
+- *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source editor are the built-in ones for `*.typ`, registered by `TypstEditors` before any extension, as VS Code's built-in text editor.
+- *Tabs are "open with"*: a file several editors match gets a tab each; the one picked is remembered for later files.
+- *`TypstEditors`* keeps a document's editors alive while hidden (`retainContextWhenHidden`), with cursor, scroll and undo history. One `TextEditor` per document spans both; the one shown gets the other's selection.
+- *Menus*: the workbench keeps the entries (`registerMenuItem`) and pops them up with `window.showContextMenu(menuId, { anchor, title, context, args })`. An entry with `toggled` is a checkbox. Editors and side panels never draw menus of their own.
+- *Search everywhere* (`window/search/`): one quick pick over every `SearchProvider`, a group each, as IntelliJ's. Opened by Shift twice, `workbench.action.searchEverywhere` or the left rail's button. The workbench adds the groups for commands and settings.
+- *State*: `StorageMemento` behind `globalState` and `workspaceState` (@architecture-workbench-api-state).
 
 #table(
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, contributed menus (`showContextMenu`), progress (`withProgress`), search everywhere's providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity; search providers: `order`, then `id`],
-  [`scm`], [source controls], [— (all listed; a duplicate id throws)],
-  [`languages`], [document link providers, drop edit providers, help providers and paste edit providers for a `DocumentSelector` (by `languageId`); the language of a path (`getLanguageId`, from `contributes.languages` and the workbench's `typst`)], [links, drop edits: `priority` (default 100); help: all shown; paste edits: all, in registration order (overlapping additional edits dropped); an ending declared for two languages throws],
+  [`window`], [messages, input box, quick pick, save dialog, menus (`showContextMenu`), `withProgress`, search providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority`, then pattern specificity; search: `order`, then `id`],
+  [`scm`], [source controls], [all listed; a duplicate id throws],
+  [`languages`], [document links, drop edits, paste edits, help providers by `DocumentSelector`; `getLanguageId`], [links, drop edits: `priority`; help, paste edits: all],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
-  [`workbench`], [`open`, side panels (left and right), editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order` within their side],
+  [`workbench`], [`open`, side panels, editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order`],
 )
 
 == Lifecycle <architecture-workbench-lifecycle>
 
-+ The constructor makes every host and the frame, and puts the CSS in: first the tokens and the frame (`typst-editor.css`) with the workbench's own (`<style id="typst-editor-styles">`), then each host's `<name>.css` (its `styleSheet`; the Visual editor's after ProseMirror's vendored `prosemirror.css`). The extensions' follow at activation.
-+ `activate(list)` declares every extension's settings (`contributes.configuration`) and languages (`contributes.languages`), and collects its commands for people (`contributes.commands`), so any declared setting and language is readable during activation. Values for undeclared ids: console warning, ignored.
++ The constructor makes every host and the frame and adds the CSS: the frame's, then each host's. Extensions add theirs at activation.
++ `activate(list)` declares every extension's settings, languages and commands (`contributes`), so they are readable during activation.
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
-+ The main file is shown (in the editor the option `viewType` names) and compiled. Views are created later, on demand, with what was registered.
-+ `dispose()` disposes the extensions in reverse list order, each one's subscriptions in reverse, then the frame.
++ The main file is shown (in the editor `viewType` names) and compiled. Views are created later, on demand.
++ `dispose()` disposes the extensions in reverse order, then the frame.
 
 == Loading <architecture-workbench-loading>
 
-What the widget shows depends on what has arrived. Nothing in the editing area waits for the engine.
+Nothing in the editing area waits for the engine.
 
 #table(
   columns: (auto, 1fr),
   table.header[Arrived][Shown],
-  [the JS (main chunk, CSS inlined)], [the frame and the shown file's text, editable: `createTypstEditor` is synchronous, the editors read only `TypstDocument`s],
-  [the engine worker's chunk, then the wasm (22 MB, streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB" (in the pane only, not in the status bar)],
-  [the engine, compiling], [the loader: "Compiling…" (the status bar shows the compile status); font files and packages as they download ("Downloading \@preview/merman 0.4.0…")],
-  [the first pages], [the pages; raw boxes swap their code for their pictures (each decoded first, faded in)],
+  [the JS], [the frame and the shown file's text, editable (`createTypstEditor` is synchronous)],
+  [the worker, then the wasm (streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB"],
+  [the engine, compiling], ["Compiling…", then packages and fonts as they download],
+  [the first pages], [the pages; raw boxes swap their code for their pictures],
 )
 
-- *`window.withProgress(options, task)`* (VS Code's): shows a task until its promise settles. `ProgressLocation.Window`: a spinner and "title: message" on the status bar's right. `ProgressLocation.EditingArea` (ours): a note over the editing area in its grid cell, the editing area `inert` and `aria-busy` meanwhile; for what the editors must wait for (collaboration: "Connecting to the room…" until the room's text is there).
-- What the preview loads (`PreviewProgress`, @architecture-preview-concepts) shows in the preview's pane only, never in the status bar; the workbench turns a compiler that cannot be loaded or crashed into an error message.
+- *`window.withProgress(options, task)`* (VS Code's) shows a task until it settles: `ProgressLocation.Window` on the status bar, `ProgressLocation.EditingArea` (ours) as a note over the editing area, which is `inert` meanwhile (collaboration: "Connecting to the room…").
+- *The preview's progress* shows in its pane only; a compiler that cannot load or crashed becomes an error message.
 
 == Changes and settings <architecture-workbench-changes>
 
-- `workspace.applyEdit(change)`: the project's check, the host's `allowFileChange` (may be async), the project's check again, then apply. Resolves to the refusal in words, or null.
-- Settings: declared by extensions and by the workbench (`workbench.theme`, `workbench.rightSidePanel`); values come from the host and replace each other as a whole. A value of the wrong type falls back to the default, with a warning. `inspect(key)` tells whether the host set one.
+- *`workspace.applyEdit(change)`* checks the project, the host's `allowFileChange`, the project again, then applies. It resolves to the refusal in words, or null.
+- *Settings* are declared by extensions and the workbench (`workbench.theme`, `workbench.rightSidePanel`), as VS Code's settings. A value of the wrong type falls back to the default, with a warning.
 
 API reference: @architecture-workbench-api.

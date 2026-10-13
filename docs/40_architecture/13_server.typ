@@ -2,42 +2,52 @@
 
 = Server <architecture-server>
 
-`server/` (Node package, Hocuspocus; TypeScript run by Node directly). Relays, authenticates and stores collaboration rooms. Looks inside a room only when it is backed by a GitLab branch.
+`server/` relays, authenticates and stores the collaboration rooms. It is a #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server in TypeScript, run by Node directly. It looks inside a room only when the room is a GitLab branch.
 
 == Concepts <architecture-server-concepts>
 
-- *Room*: one Y.Doc per project, named by the client. The map names live in `src/core/room-protocol/`, which the server imports (and nothing else of the widget).
-- *`collabConfiguration(options)`* (`collab-server.ts`): the Hocuspocus configuration. Extensions in order: storage, `GitLabExtension` (if `gitlab` is set), extra ones (`extensions`). `createCollabServer({ port, … })` wraps it in a `Server` on 127.0.0.1.
-- *Storage*: any Hocuspocus extension with `onLoadDocument` / `onStoreDocument`. Default: SQLite at `database` (`:memory:` if unset). It keeps every room's Yjs state, GitLab rooms included.
-- *`Authenticate(token, room) → { name?, email? }`* (`auth.ts`): runs per connection; rejecting refuses it. The only one today is the stub `sharedToken(expected)`: no `expected`, everyone may open every room.
-- *`GitLabExtension` / `GitLabRoom`* (`gitlab/`): a room named `gitlab:<project id or path>@<branch>` is that branch. The server config holds the only GitLab token.
-- *`FakeGitLab`* (`gitlab/fake-gitlab.ts`) and *`playground/`*: an in-memory GitLab and dev-only endpoints for the demo and the e2e specs. Never loaded by `main.ts`.
+```ts
+// collab-server.ts: a Server on 127.0.0.1, or its configuration alone (tests run it in-process)
+function createCollabServer(options: CollabOptions & { port: number; address?: string }): Server;
+function collabConfiguration(options?: CollabOptions): Partial<Configuration>;
+interface CollabOptions { storage?; database?; authenticate?; debounce?; quiet?; gitlab?: GitLabOptions; extensions? }
+
+// auth.ts: runs per connection; rejecting refuses it
+type Authenticate = (token: string, room: string) => Promise<AuthenticatedUser>; // { name?, email? }
+```
+
+- *Room*: one Y.Doc per project, named by the client. Its map names live in `src/core/room-protocol/`, the only part of the widget the server imports.
+- *Extensions*, in order: storage, `GitLabExtension` (when `gitlab` is set), then `extensions`.
+- *Storage*: any Hocuspocus extension with `onLoadDocument` / `onStoreDocument`. Default: SQLite at `database` (`:memory:` when unset). It stores every room, GitLab rooms included.
+- *`Authenticate`*: the only one today is the stub `sharedToken(expected)`. Without `expected`, everyone opens every room.
+- *`FakeGitLab`* (`gitlab/fake-gitlab.ts`) and `playground/` are an in-memory GitLab and dev endpoints for the demo and the e2e specs. `main.ts` never loads them.
 
 #table(
   columns: (auto, 1fr, auto),
   table.header[Y.Doc entry][Content][Rooms],
   [`files`], [`Y.Map<path, Y.Text>`: every `.typ` file], [all],
   [awareness], [`user`, `cursor` (relative positions)], [all],
-  [`assets`], [`Y.Map<path, sha | Uint8Array>`: other files (blob sha, or uploaded bytes not committed yet)], [GitLab],
-  [`meta`], [written by the server: `baseSha`, `base`, `baseAssets`, `lastCommits`; `changes` (what is not in GitLab yet), `conflict` (until resolved), `commitFailure` (until the next commit or merge), `autoCommit` (minutes or null)], [GitLab],
+  [`assets`], [`Y.Map<path, sha | Uint8Array>`: the other files (blob sha, or uploaded bytes not committed yet)], [GitLab],
+  [`meta`], [written by the server: the base (`baseSha`, `base`, `baseAssets`, `lastCommits`), `changes`, `conflict`, `commitFailure`, `autoCommit`; see `room-protocol.ts`], [GitLab],
 )
 
 == GitLab rooms <architecture-server-gitlab>
+
+A room named `gitlab:<project id or path>@<branch>` is that branch (`GitLabExtension`, `GitLabRoom` in `gitlab/`). Only the server config holds a GitLab token.
 
 #figure(
   mermaid(read("../diagrams/gitlab-room.mmd"), width: 100%),
   caption: [A GitLab room: open, save, auto-commit, webhook and the answers.],
 )
 
-- *Optimistic concurrency per file*: update / move / delete carry the file's `last_commit_id`, so GitLab refuses an action whose file changed upstream.
-- *Commit actions*: a deleted + created pair with at least half the content equal is a `move` (git's rename rule); uploads go as base64.
-- *Merge* (`merge.ts`): per path, take upstream where the room did not change it, keep the room's where upstream did not; both changed → `merge3` (node-diff3, by lines); changed vs. deleted → conflict. Any conflict: nothing applied, `gitlab:conflict` with the room's ranges. Otherwise one transaction of minimal text edits, so cursors elsewhere stay put.
-- *Uncommitted changes* (`meta.changes`, `RoomChanges`): the files that differ from the base (`added` / `modified` / `deleted`, from the commit actions), since when, and the editors' names in the order of their first edit. Written 0.5 s after an edit and right after each commit or merge; null when clean.
-- *Editors*: every Y.Doc change not made by the room itself is an edit, by the connection's authenticated `user.name`, else the `user.name` its client publishes in the awareness (neither: counted, not named). A commit takes the edits it contains (`Editors.take`); edits made meanwhile stay. Every commit lists the other editors as `Co-authored-by:` (emails as for the author).
-- *Auto-commit* (`GitLabOptions.autoCommit`, default 10 minutes, `false`: off): author = most edits; message "Edits by Ann, Bob: a.typ, b.typ, c.typ and 2 more".
-- *Conflict*: a failed merge writes `meta.conflict` (`{ sha, paths }`); every new base (merge, commit) clears it.
-- *Failed commit* (GitLab unreachable, or refusing the commit; manual or auto): the room writes `meta.commitFailure` (`{ message, at }`), so everyone sees it, also who joins later; every new base (merge, commit) and a conflict (GitLab answered) clear it. A failed auto-commit is tried again after the next edit.
-- *Files endpoint*: `GET /rooms/<room>/files/<path>` with the room token as Bearer → the bytes of a repository file, from a shared LRU `BlobCache`.
+- *Optimistic concurrency per file*: update, move and delete carry the file's `last_commit_id`, so GitLab refuses them when the file changed upstream.
+- *Commit actions*: a deleted + created pair with at least half the content equal is a `move`, as git detects renames.
+- *Merge* (`merge.ts`): per path, take the side that changed; both changed → `merge3` by lines. Any conflict: nothing is applied and `meta.conflict` is set. Otherwise minimal text edits, so cursors stay put.
+- *Uncommitted changes* (`meta.changes`): the files that differ from the base, since when, and who edited them.
+- *Editors* (`editors.ts`): every change not made by the room is an edit by the connection's user. A commit names the others as `Co-authored-by:`.
+- *Auto-commit* (`GitLabOptions.autoCommit`, default 10 minutes idle): the author is who edited most.
+- *Failure*: a failed commit sets `meta.commitFailure`, so everyone sees it. The next commit or merge clears it and `meta.conflict`.
+- *Files endpoint*: `GET /rooms/<room>/files/<path>` with the room token as Bearer returns a repository file's bytes, from a shared `BlobCache`.
 
 == Entry points <architecture-server-entry-points>
 
@@ -45,7 +55,7 @@
   columns: (auto, 1fr, 2fr),
   table.header[File][Task][Configuration],
   [`main.ts`], [`server:dev`], [environment variables: @configuration-collaboration-server-running, @configuration-gitlab-integration],
-  [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, the Docker image], [`PORT`, `HOST`; `TYPST_DEMO_DIST`: also serves that built demo on `DEMO_PORT` (5199), as the Docker image does; plain rooms + `gitlab:demo/report@<any branch>` holding `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (simulates a push), `POST /playground/outage` (GitLab unreachable for a branch)],
+  [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, the Docker image], [`PORT`, `HOST`; `TYPST_DEMO_DIST` also serves that built demo on `DEMO_PORT` (5199); a GitLab room `gitlab:demo/report@<any branch>` with `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (a push), `POST /playground/outage` (GitLab unreachable)],
 )
 
-The widget's side (`collaboration` extension, `GitLabSourceControl`): @configuration-collaboration-server and @architecture-built-in-extensions.
+The widget's side is the `collaboration` extension (@configuration-collaboration-server, @architecture-built-in-extensions).

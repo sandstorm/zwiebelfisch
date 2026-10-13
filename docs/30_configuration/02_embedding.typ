@@ -1,19 +1,13 @@
 = Embedding <configuration-embedding>
 
-Two ways in, same options (@configuration-options):
+You embed the editor as the element `<typst-editor>` or with `createTypstEditor(host, options)`. Both take the same options (@configuration-options).
 
-#table(
-  columns: 2,
-  [Use], [When],
-  [`<typst-editor>` (@configuration-embedding-element)], [Plain HTML or any framework that renders elements, no glue code: text inside the tag, settings as an attribute, changes as DOM events, gone with the element. A shadow root keeps the page's CSS and the editor's apart.],
-  [`createTypstEditor(host, options)` (@configuration-embedding-api)], [Your code drives the editor: the returned handle (commands, `exportPdf`, `dispose`) and callbacks. It fills `host` in your page's DOM; its styles go into the page's document (or the shadow root `host` is in).],
-)
+- *`<typst-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
+- *`createTypstEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and callbacks.
 
 == A first editor <configuration-embedding-first-editor>
 
-`mise run build:lib` builds the library into `dist/lib` (@configuration-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
-
-Without a bundler:
+Run `mise run build:lib`, then copy `dist/lib` into your site (it is not on npm yet):
 
 ```html
 <script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
@@ -25,7 +19,7 @@ Without a bundler:
 </typst-editor>
 ```
 
-From JavaScript:
+Or from JavaScript, with the repository folder as dependency (its `package.json` exports it as `typst-editor`):
 
 ```ts
 import { createTypstEditor } from 'typst-editor';
@@ -36,7 +30,7 @@ const editor = createTypstEditor(document.getElementById('editor')!, {
 });
 ```
 
-A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
+A complete page is `examples/plain-html/index.html`: serve the repository root and open `/examples/plain-html/`.
 
 == The library build <configuration-embedding-library>
 
@@ -45,30 +39,22 @@ A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, s
 #table(
   columns: 2,
   [File], [Content],
-  [`typst-editor.js`], [ES module, all dependencies bundled. Importing it registers `<typst-editor>`.],
-  [`typst_engine_bg.<hash>.wasm`], [The Typst compiler and PDF export (about 22 MB, 9 MB gzipped).],
-  [`fonts/<name>.<hash>.otf`, `.ttf`], [Typst's default fonts, each downloaded when a document first uses it.],
+  [`typst-editor.js`], [The ES module, all dependencies bundled. Importing it registers `<typst-editor>`.],
+  [`typst_engine_bg.<hash>.wasm`], [The Typst compiler (about 22 MB, 9 MB gzipped).],
+  [`fonts/<name>.<hash>.otf`, `.ttf`], [Typst's default fonts, each downloaded on first use.],
   [other `*-<hash>.js`], [Chunks loaded on demand (e.g. collaboration).],
   [`assets/engine.worker-<hash>.js`], [The compile worker.],
   [`types/index.d.ts`], [TypeScript declarations.],
 )
 
-- Keep the folder together; serve it from any path. The module finds its files through `new URL(…, import.meta.url)`.
-- Every file but `typst-editor.js` and `types/` has its content's hash in the name, and the code refers to it by that name.
+*Keep the folder together* and serve it from any path. Your server should send:
 
-What the host server should send:
+- the wasm as `Content-Type: application/wasm`;
+- the hashed files with `Cache-Control: public, max-age=31536000, immutable`, and `typst-editor.js` with `no-cache` and an `ETag`;
+- compressed files if you like (gzip or brotli); the wasm shrinks most.
+- *Content-Security-Policy:* `connect-src https://packages.typst.org` for `@preview` packages, and `frame-src https://embed.diagrams.net` (or your `diagrams.editorUrl`) for the diagram editor.
 
-- The wasm as `Content-Type: application/wasm`, so the browser compiles it while it streams.
-- For the hashed files, `Cache-Control: public, max-age=31536000, immutable`: a new build has new names, so a long-lived cache never serves a stale file. `typst-editor.js` has a fixed name: cache it briefly or revalidate it (`no-cache` with an `ETag`).
-- Compression is up to the server (gzip or brotli on the fly or pre-compressed by the host); the build writes no compressed copies. The wasm shrinks most (22 MB → 9 MB gzipped), the fonts by about a third.
-- Importing without a DOM (SSR) is safe: nothing is registered.
-- Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`, @configuration-options-diagrams).
-
-Bundlers:
-
-- *Vite:* add the package to `optimizeDeps.exclude`. Pre-bundling moves the module into `node_modules/.vite` and breaks the relative asset URLs.
-- *Webpack 5, Rollup:* pick up the `new URL(…)` assets and copy them.
-- *Anything else:* copy `dist/lib` as it is and import `typst-editor.js` from there.
+*Bundlers:* in Vite, add the package to `optimizeDeps.exclude`, as pre-bundling breaks the relative asset URLs. Webpack 5 and Rollup pick up the `new URL(…)` assets. Anything else: copy `dist/lib` and import `typst-editor.js` from there.
 
 == Custom element <configuration-embedding-element>
 
@@ -91,21 +77,19 @@ Bundlers:
 #table(
   columns: 2,
   [Member], [Behaviour],
-  [`options` property], [`Partial<TypstEditorOptions>` (@configuration-options-editor), read when the element connects. Set it before appending the element. Its `onFilesChange` / `onOpen` run as well as the events.],
+  [`options` property], [The options (@configuration-options-editor), read when the element connects.],
   [`settings` attribute, property], [The settings (@configuration-options-setting).],
-  [`value` property, attribute], [The main file's text. Setting it is one minimal edit: cursor and undo history survive. The property is not reflected to the attribute.],
-  [`files` property], [Every file, the main file included. Setting it replaces them all.],
-  [`executeCommand(id, ...args)`], [Runs an extension's command; rejects while not connected.],
+  [`value` property, attribute], [The main file's text. Setting it keeps cursor and undo history.],
+  [`files` property], [Every file. Setting it replaces them all.],
+  [`executeCommand(id, ...args)`], [Runs an extension's command.],
   [`exportPdf(options?)`], [The PDF as a `Blob` (@configuration-embedding-pdf).],
-  [`change` event], [`detail: { path, content }`: what the file at `path` holds now; `content: null` when it is gone. Fires for every changed file, the collaborators' edits included. A rename fires twice: old path with `null`, new path with the content.],
-  [`files-change` event], [`detail`: the `FileChange`, renames as such (`onFilesChange`).],
-  [`open` event], [`detail: { path }`: another file is shown (`onOpen`).],
+  [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
+  [`files-change` event], [`detail`: the `FileChange`, as `onFilesChange` gets it.],
+  [`open` event], [`detail: { path }`: another file is shown.],
 )
 
-- Main file's text, first found: `value` (property or attribute), the element's text, `options.source`, `options.files[main]`.
-- Setting `value` or `files` dispatches no events. All events bubble and are `composed`.
-- Size: `display: block`, default height `24rem`. Set `height` on the element.
-- Moving the element keeps its content; the editor inside is rebuilt.
+- Set `options` *before appending the element*. Setting `value` or `files` dispatches no events.
+- The element is `display: block` with a default height of `24rem`; set `height` on it.
 - Another tag name: `defineTypstEditorElement('my-editor')`.
 
 ```js
@@ -117,11 +101,14 @@ document.body.append(editor);   // options are read now
 
 === Shadow DOM and theming <configuration-embedding-theming>
 
-- The element renders into an open shadow root: page CSS cannot break the editor, the editor's CSS cannot leak out.
-- Colors are CSS custom properties on `.typst-editor` (`--te-accent`, `--te-border`, `--te-bg`, `--te-text`, …). They inherit into the shadow root: `typst-editor { --te-accent: rebeccapurple }`.
-- Dark mode follows the page's `color-scheme`: light by default, dark under `color-scheme: dark`, the OS's under `color-scheme: light dark`. The setting `workbench.theme` overrides it.
+The element renders into a shadow root, so your page's CSS and the editor's stay apart. Colors are CSS custom properties, which inherit into it:
+
+```css
+typst-editor { --te-accent: rebeccapurple; }   /* also --te-border, --te-bg, --te-text, … */
+```
+
+- *Dark mode follows the page's `color-scheme`*; the setting `workbench.theme` overrides it.
 - In dark mode the preview shows the pages inverted. The exported PDF is unchanged.
-- `createTypstEditor` puts its styles into `document.head`, or into the shadow root its host lives in.
 
 == createTypstEditor <configuration-embedding-api>
 
@@ -141,35 +128,32 @@ const editor = createTypstEditor(host, {   // attach host to the document first,
 });
 ```
 
-The options: @configuration-options-editor.
-
-The returned `TypstEditor`:
+It returns a `TypstEditor`:
 
 #table(
   columns: 2,
   [Member], [Meaning],
-  [`files`], [Every file with its current content. Assigning replaces them all and recompiles.],
-  [`source`], [The main file's text. Assigning is one minimal edit, reported as an `update`.],
+  [`files`], [Every file with its current content. Assigning replaces them all.],
+  [`source`], [The main file's text. Assigning is one minimal edit.],
   [`settings`], [The settings (@configuration-options-setting).],
   [`activeFile`], [The path of the file shown.],
-  [`open(path)`], [Shows `path`, if the project has it.],
-  [`executeCommand(id, ...args)`], [Runs a command; resolves to its result, rejects for an unknown id or a failure.],
+  [`open(path)`], [Shows `path`.],
+  [`executeCommand(id, ...args)`], [Runs a command and resolves to its result.],
   [`exportPdf(options?)`], [The PDF (@configuration-embedding-pdf).],
   [`dispose()`], [Removes the editor.],
 )
 
 === Files <configuration-embedding-files>
 
-- Paths are absolute: they start with `/`, no `.` or `..` segments. Another key, or bytes for a `.typ` file, throws.
-- `onFilesChange` is the one place to hear about changes: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It reports every `.typ` edit (`update` with the full text), the file panel's changes, the collaborators' changes and assignments to `files` or `source`.
-- Assigning `files`: missing paths are deleted, new ones created, changed ones updated (open editors keep their cursor); each is reported. A map without the main file leaves its text as it is.
-- Bytes reach the compile worker only when the `Uint8Array` changes: reuse the array for unchanged files.
-- `#import "@preview/name:version"` works without configuration: the worker downloads the package from `packages.typst.org` on first use and keeps it in the Cache API.
-
 ```ts
 editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };
 editor.open('/chapters/outro.typ');
 ```
+
+- Paths are *absolute*: they start with `/`.
+- *`onFilesChange` is the one place to hear about changes*: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It covers edits, the file panel, collaborators and your own assignments.
+- Reuse the `Uint8Array` of unchanged files: only a new array is sent to the compiler again.
+- `#import "@preview/…"` works without configuration: packages are downloaded from `packages.typst.org` and cached.
 
 === PDF export <configuration-embedding-pdf>
 
@@ -178,13 +162,11 @@ const final = await editor.exportPdf();                              // margin n
 const draft = await editor.exportPdf({ 'comments.include': true });  // margin notes kept
 ```
 
-- Options are export options by id (@configuration-options-pdf); the others keep their default (not the viewer's choice). An unknown id rejects.
-- Rejects with the compiler's error when the document has errors.
-- The same as `executeCommand('pdfExport.export', options)`.
+It takes the export options (@configuration-options-pdf) and rejects when the document has errors. It is the same as `executeCommand('pdfExport.export', options)`.
 
 === Extensions <configuration-embedding-extensions>
 
-Every feature is an extension, the built-in ones too. `extensions` makes the list from the built-ins:
+Every feature is an extension, the built-in ones too. Make your list from the built-ins:
 
 ```ts
 createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, wordCount()] });                             // add
@@ -192,27 +174,16 @@ createTypstEditor(host, { extensions: (builtinExtensions) => builtinExtensions.f
 createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
 
-- Collaboration is not built in: add `collaboration(…)` with its connection (@configuration-collaboration-server).
+- Collaboration is not built in: add `collaboration(…)` (@configuration-collaboration-server).
 - The built-ins and their ids: @architecture-built-in-extensions. Writing one: @architecture-extensions-overview.
-- On `<typst-editor>`, put `extensions` into `options` before the element connects.
 
 === Devtools <configuration-embedding-devtools>
 
-A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Always there; the setting `devtools.enabled: false` removes it (@configuration-options-devtools).
+"Devtools" on the right rail shows what the editor is made of while it runs, as your browser's devtools do for a page. Switch it off with `devtools.enabled: false`.
 
-On top, a line with the Typst engine's memory after the last compile that changed it: `Typst engine memory: 312 MB of 4 GB (8%)`, with `peak …` when it held more before (a crashed engine is replaced by a new, small one). Opened, it lists the latest 20 changes, newest first: when, how much, by how much. The engine's wasm memory grows and never shrinks; at 4 GB the engine crashes and the preview starts a new one. A long document levels off (the docs book at about 780 MB); a value that keeps growing with every edit is a leak.
+- *Typst engine memory* on top: the engine's wasm memory only grows. A long document levels off; a value that keeps growing with every edit is a leak.
+- *Document*: the shown file's ProseMirror document as a tree, each node with its source range (@architecture-prosemirror-typst).
+- *Contributions*: every `register…` call and declared setting, by extension or by contribution point.
+- *Events*: every `onDid…` event as it fires, while the panel is shown.
 
-```ts
-createTypstEditor(host, { settings: { 'devtools.enabled': false } });
-```
-
-#table(
-  columns: (auto, 1fr),
-  table.header[Tab][Shows],
-  [Document], [The shown file's ProseMirror document as a tree (@architecture-prosemirror-typst): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
-  [Contributions], [Every `register…` call and declared setting, in its contribution point's terms (`heading · priority 100 · parses Heading`, `Mod+Alt+KeyM → comments.addComment`, a panel by its side and order); by extension (activation order) or by contribution point, competitors in the order the host resolves them. `late`: made after activation; struck through: disposed. The tooltip: the arguments in full and the line that registered it.],
-  [Events], [Every `onDid…` event of the extension context as it fires while the panel is shown (all of them; none while it is hidden, the log then stays as it was), its value pretty-printed as it was then; filter by name, Pause, Clear.],
-)
-
-- It sees only what any extension sees: `createTypstEditor` gives it the final list (the host's extensions included), and each extension's `activate` gets a context whose namespaces record every registration (and its `dispose`). The hosts keep no listing for it.
-- Contributions and the engine's memory are recorded from the start, also while the panel is hidden or switched off: they cannot be asked for later. Events are logged only while the panel is shown (`SidePanel.visible`): they are many, and each costs a formatted value.
+It sees only what any extension sees: each extension's context records its registrations.

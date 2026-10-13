@@ -1,6 +1,6 @@
 = Built-in extensions <architecture-built-in-extensions>
 
-`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtinExtensions) => […]`; `devtools` then wraps the final list, last.
+Every feature lives in `src/extensions/<name>/`; no host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes it with `extensions: (builtinExtensions) => […]`; `devtools` wraps the final list, last.
 
 == Shape of an extension <architecture-built-in-extensions-shape>
 
@@ -12,93 +12,87 @@ extensions/<name>/
   workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
-- Factories without options (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection.
+- *Factories take no options* (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection.
 
 == The list <architecture-built-in-extensions-list>
 
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
-  [`typstLanguage`], [Typst highlighting in Source editors and raw boxes (colored by the Source editor host's `codeColors`); the help sheet "Typst basics"; a Typst file dropped into another becomes `#include "…"` (not into itself)], [source editor, raw-box CodeMirror, help provider, drop edit provider],
-  [`imports`], [Typst pasted into a file gets the imports it needs, in the paste's undo step: the copied file's (a copy from either editor puts them on the clipboard as `application/x-typst-imports`, paths written from the target file), else the known imports], [paste edit provider; reads `languages.provideKnownImports`],
-  [`documentLinks`], [file paths in Typst text as links; command `documentLinks.createFile`], [link provider],
-  [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only fallback editor `files.file` (`priority: 'fallback'`) for any other file; setting `files.panel`; search group "Files"], [side panel, menus, custom editor, search provider],
-  [`help`], [the left side panel "Help" (next to Files): the help sheets of the shown file's language; rows dragged into an editor (the Visual editor reads Typst rows as Typst, a Tiptap extension), Enter inserts at the cursor (`help.insertAtCursor`), menu `help/row` with "Copy" (`help.copy`)], [side panel, commands, menu, Tiptap extension; reads `languages.getLanguageId` and `provideHelp`],
-  [`fileNavigation`], ["← previous file" / "next file →" in reading order (looked up again on every open, create, rename and delete, and 300 ms after typing pauses); "← Back to …" / "Forward to … →" above supplementary files, over every change of the shown file (`fileNavigation.back` / `forward`, VS Code's keys)], [editor frame, commands, key bindings],
-  [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ` (sheets, values, named areas); "New spreadsheet…"; "Insert spreadsheet" (a new one with a starter table, as a figure); the language `ironcalc` (`.ic`) and its help sheet "Spreadsheet formulas"; a path to `name.ic.gen.typ` is a link "Edit spreadsheet" to `name.ic` (priority 110); a `.ic` or `.ic.gen.typ` dropped into the text becomes the figure of its first sheet with the import (priority 110, over the include)], [custom editor, `file/newFile`, toolbar, `contributes.languages`, help provider, link provider, drop edit provider],
-  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror (`textFiles.editor`, the Source editor's look `codeColors` and its shared extensions, with the document links for each file's language id); search group "Text" over these and the Typst files (async, in slices); their languages (`csv`, `json`, `yaml`, `toml`, `xml`, `bibtex`, `plaintext`, `markdown`, `mermaid`); the help sheet "BibTeX"], [custom editor, search provider, `contributes.languages`, help provider],
-  [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Insert diagram" (a new one as a figure); "Edit diagram" (the link on a diagram's path, priority 110: ⌘/Ctrl+click on its box's picture); setting `diagrams.editorUrl`; a diagram dropped into the text becomes its figure (priority 110, over the image)], [custom editor, toolbar, document link provider, drop edit provider],
-  [`mermaid`], ["Insert Mermaid diagram" (a new `.mmd` with a starter flowchart, as a figure drawn by `@preview/merman`, with the import); "Edit diagram" (the link on a `.mmd` path, priority 110: ⌘/Ctrl+click on its box's picture); the help sheet "Mermaid basics" (language `mermaid`); `mermaid` comes from merman (a known import); a `.mmd` dropped into the text becomes its figure with the import], [toolbar, document link provider, help provider, known import, drop edit provider],
+  [`typstLanguage`], [Typst highlighting, the help sheet "Typst basics"; a dropped Typst file becomes `#include "…"`], [source editor, help, drop edit],
+  [`imports`], [pasted Typst gets the imports it needs (the copied file's, else the known ones)], [paste edit],
+  [`documentLinks`], [file paths in Typst text as links; `documentLinks.createFile`], [document links],
+  [`files`], [the file panel and its commands; the read-only fallback editor; search group "Files"], [side panel, menus, custom editor, search],
+  [`fileNavigation`], ["← previous file" / "next file →" in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
+  [`help`], [the side panel "Help" with the shown file's help sheets; rows drag or insert into the editor], [side panel, commands, menu, Tiptap extension],
+  [`spreadsheets`], [`.ic` in IronCalc, written also as `name.ic.gen.typ`; "New spreadsheet…", "Insert spreadsheet"], [custom editor, menus, toolbar, languages, help, links, drop edit],
+  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror; search group "Text"], [custom editor, search, languages, help],
+  [`diagrams`], [`.drawio.png` in diagrams.net; "New diagram…", "Insert diagram", "Edit diagram"], [custom editor, toolbar, links, drop edit],
+  [`mermaid`], ["Insert Mermaid diagram" (a `.mmd` drawn by `@preview/merman`), "Edit diagram", "Mermaid basics"], [toolbar, links, help, known import, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
-  [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`); their status bar entries and resource states (file decorations)], [`editor/title`, status bar, file decorations],
-  [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes; web and mail addresses as document links], [nodes, marks, toolbar, document link provider],
-  [`math`], [typing math: the closing `$` of `$…$` makes the raw box the parser makes for it (inline; display math `$ … $` alone in a paragraph: a block); Insert → "Inline math" (`$$`) and "Display math" (`$  $`), the cursor inside the new box's code (`editRawBox`)], [Tiptap extension (an input rule), toolbar],
-  [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
+  [`sourceControl`], ["Save to _label_…" and status bar entries for the registered source controls], [`editor/title`, status bar, file decorations],
+  [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, toolbar, links],
+  [`math`], [the closing `$` makes a math box; Insert → "Inline math", "Display math"], [Tiptap input rule, toolbar],
+  [`headings`], [headings and their numbering; search group "Headings"], [node, text styles, search],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
-  [`images`], [image boxes, "Insert image", image files pasted (uploaded), image files read-only (`images.editor`); an image dropped into the text (from the file panel or the desktop) becomes `#image("…")`], [node, toolbar, custom editor, drop edit provider],
-  [`figures`], [`#figure(..)` around any `figureBody` node, caption as rich text; search group "Figures" (by caption, tables and listings too)], [nodes, search provider],
+  [`images`], [image boxes, "Insert image", pasted and dropped images, the image viewer], [node, toolbar, custom editor, drop edit],
+  [`figures`], [`#figure(..)` around any `figureBody` node; search group "Figures"], [nodes, search],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
   [`outline`], [`#outline(..)` as a box, "Table of contents"], [node, toolbar],
   [`pageLayout`], [page breaks, horizontal rules], [nodes, toolbar],
   [`lists`], [bulleted, numbered and task lists], [nodes, toolbar],
   [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
-  [`comments`], [margin notes in the text, each thread in a card floating at its note's marker; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include` (on: a generated entry sets the notes' look, then includes the main file); view option `comments.show` ("Comments", default on: on, the preview's prelude sets the notes' look with the drafting version the project imports; off, it draws drafting's notes as nothing by show rules on its labels, a range note's text kept); the notes' look lives only there, never in the documents; search group "Comments"], [node, mark, Tiptap extension, command, PDF option, view option, search provider],
-  [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"; search group "Labels" (not figures', not bibliography keys); references and `#link(<label>)` as links to their label; a pasted label the project has gets `-1`, `-2`, …, the references in the paste with it], [nodes, toolbar, completion items, search provider, document link provider, paste edit provider],
-  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"; the inline styles also as "Styles" in the selection bar (a menu following the declarations, left out without inline styles); search group "Styles" (applies to the selection in either editor; the Visual editors followed by a Tiptap extension)], [node, mark, text style provider, toolbar menu (in the `selection` bar) and its provided items, Tiptap extension, search provider],
-  [`invisibles`], [invisible characters on demand ("Invisible characters" in the View menu, checked while shown): in the Visual editor `·` spaces, `°` non-breaking spaces, `→` tabs, `↵` line breaks, `¶` paragraph ends (decorations drawn by CSS; once when turned on, then only the paragraphs an edit touches); in every CodeMirror `highlightWhitespace()`; `invisibles.toggle`, setting `invisibles.show`, else the viewer's last choice (`globalState`)], [Tiptap extension (decorations), shared CodeMirror extension, menu `view`, command],
-  [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`; the hint "Type / for commands" in the empty paragraph holding the cursor (not in table cells)], [completion items (reads toolbar and text styles), Tiptap extension (a decoration)],
-  [`previewSync`], [preview follows the cursor; shades the selection; a click selects the source, its outline goes with the next edit or selection move; settings `previewSync.followCursor`, `previewSync.highlightSelection`], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`, `clearClickHighlight`],
-  [`previewControls`], [zoom, page number; an entry per view option in the View menu (group `preview`, its own command `previewControls.toggleViewOption.<id>`, `toggled` while on), following registrations; this viewer's choices kept in `globalState`], [preview toolbar, menu `view`, commands, `setViewOptionValues`, `onDidChangeViewOptions`],
-  [`previewGuides`], [view options "Page guides", "Box outlines" (set rules for `block` and `box`, a `show v` rule) and "Block spacing" (`show` rules for `v`, `block` and `par`), off by default (@architecture-built-in-extensions-guides)], [view options],
-  [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
-  [`devtools`], [Not in `builtinExtensions()`: `devtools(extensions)` wraps the final list, the host's extensions included, and appends itself, so it records every extension's contributions from activation on (proxies around each context's namespaces), and the preview's `engineMemory`. Shows them with the shown document in a right side panel (@configuration-embedding-devtools), and every event while the panel is shown (subscribed on `SidePanel.onDidChangeVisibility`); setting `devtools.enabled` (default `true`) removes the panel, the recording of contributions and memory goes on. `model/` describes values, the document and the engine's memory as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
+  [`comments`], [margin notes with threads in cards; PDF option `comments.include`, view option `comments.show`; search group "Comments"], [node, mark, command, PDF and view option, search],
+  [`labels`], [`LabelIndex`, reference chips, label tags, the `@` list; pasted labels renamed; search group "Labels"], [nodes, toolbar, completion, search, links, paste edit],
+  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"; search group "Styles"], [node, mark, text styles, toolbar menu, search],
+  [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, shared CodeMirror extension, menu, command],
+  [`slashCommands`], [`/` lists the Insert menu and the text styles; the hint "Type / for commands"], [completion, Tiptap decoration],
+  [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`],
+  [`previewControls`], [zoom, page number; a View menu entry per view option], [preview toolbar, menu `view`, commands],
+  [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-built-in-extensions-guides)], [view options],
+  [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [command, preview toolbar],
+  [`devtools`], [not in the list: wraps the final list and records every contribution; a right side panel (@configuration-embedding-devtools)], [right side panel, every contribution point],
 )
 
 === Optional extension <architecture-built-in-extensions-optional>
 
 Exported from the package, not in the list; a host adds it.
 
-#table(
-  columns: (auto, 2fr, 1fr),
-  table.header[Extension][What it adds][Through],
-  [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every editor (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
-)
+- *`collaboration(options)`* shares the project over #link("https://yjs.dev/")[Yjs] through the host's connection, shows other users in every editor and registers a GitLab room's source control (@architecture-server).
 
 == How they meet <architecture-built-in-extensions-meeting>
 
 #table(
   columns: (auto, auto, auto),
   table.header[Contribution point][Provided by][Read by],
-  [document links], [`documentLinks` (`typst`), `labels` (references), `markup` (URLs), `diagrams` and `mermaid` ("Edit diagram", priority 110)], [the Visual editor (raw boxes' code and pictures, the text), the Source editors, `textFiles`' editor, `images`],
+  [document links], [`documentLinks`, `labels`, `markup`, `diagrams`, `mermaid`], [the Visual and Source editors, `textFiles`, `images`],
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [help providers], [`typstLanguage`, `mermaid`, `spreadsheets`, `textFiles`], [`help`],
   [known imports], [`mermaid`], [`imports`],
-  [paste edit providers], [`imports`, `labels`], [the Visual editor (Typst pastes), the Source editors],
-  [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`' editor (links by language), `help`],
-  [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
+  [paste edit providers], [`imports`, `labels`], [the Visual and Source editors],
+  [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`, `help`],
+  [source controls], [`collaboration`], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],
-  [view options], [`previewGuides`, `comments`], [`previewControls` (the View menu)],
-  [menu `view`], [`invisibles` (group `editor`), `previewControls` (group `preview`)], [the workbench ("View ▾" in the tab bar)],
+  [view options], [`previewGuides`, `comments`], [`previewControls`],
+  [menu `view`], [`invisibles`, `previewControls`], [the workbench ("View ▾")],
   [text style menu], [`headings`, `styles`], [the Visual editor toolbar, `slashCommands`],
   [Insert menu], [`images`, `diagrams`, `mermaid`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual editor toolbar, `slashCommands`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
   [menu `file/newFile`], [`files`, `spreadsheets`, `diagrams`], [`files`],
-  [search providers], [`files`, `headings`, `labels`, `figures`, `styles`, `comments`, `textFiles`; the workbench (commands, settings)], [search everywhere (the window)],
-  [`contributes.commands`], [`files`, `headings`, `comments`, `diagrams`, `spreadsheets`, `invisibles`], [the workbench's "Commands" group],
-  [shared CodeMirror extensions], [`invisibles`], [the Source editors, raw boxes (the workbench), `textFiles`' editor],
+  [search providers], [`files`, `headings`, `labels`, `figures`, `styles`, `comments`, `textFiles`; the workbench], [search everywhere],
+  [`contributes.commands`], [`files`, `headings`, `comments`, `diagrams`, `spreadsheets`, `invisibles`], [the "Commands" search group],
+  [shared CodeMirror extensions], [`invisibles`], [every CodeMirror],
 )
 
-Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @architecture-visual-editor-constructs.
+- *Other extensions' schema names* are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @architecture-visual-editor-constructs.
 
 == Page guides and box outlines <architecture-built-in-extensions-guides>
 
-`previewGuides` adds three view options (@architecture-source-editor-and-preview-view). Their Typst, run before the main file in the preview only:
+`previewGuides` adds three view options (@architecture-source-editor-and-preview-view), as LaTeX's showframe. Their Typst runs before the main file, in the preview only.
 
-- *Page guides*: a few lines of Typst drawing the text area, the header's bottom, the footer's top and the column gutters as the page background, read from the page's own settings as Typst lays the page out: margins left `auto` are 2.5/21 of the shorter fixed page side, ratios are of the page laid out (`layout`, so `width: auto` and `height: auto` pages work), `inside` / `outside` follow the binding (by default the text direction's) and the page number, header ascent and footer descent are relative to the margin. The code is total over the page's settings: an error in it would be the preview's error for every document, and Typst has no `try`. `@preview/scaffolder` draws the same, but reads `page.width` and `page.height` as lengths (`expected relative length, found auto` for a page of `auto` height) and takes no resolved sizes, so the guides are drawn here; no package is downloaded either. A document that sets a background replaces it; the foreground then draws the guides (`context if page.background != guides { guides }`), over the text. A document that sets both has no guides.
-- *Box outlines*: `set block(stroke: …)` and `set box(stroke: …)`. Set rules are defaults: a document's own set rules and arguments win. Typst folds a stroke argument with the stroke set before it, so a document's `stroke: red` would take a set rule's thickness and dash: the outline has no dash and Typst's own thickness (1pt), and only its translucent paint shows where a document's stroke names no paint (`stroke: 2pt`), or on the sides a document leaves out (`stroke: (left: red)`).
-- *Vertical spacing* (with "Box outlines"): every `v(…)` is shaded as Typst laid it out, `1fr` too: a `show v` rule puts a placed marker before the spacing and one after it, and the first draws a band down to the second (`context`, `here()`, `query` of the next end marker, a `metadata` with the label `<preview-guides-v-end>`, which no document uses). The start has to be placed content: a tag (a bare `metadata`) moves past the spacing to the content after it. The start is placed at the flow's right edge, the end at its left one, so the band is as wide as the flow laid out (a `v` in a figure or a narrow block stays inside it); this costs nothing measurable. Placed content takes no space, and Typst's flow looks past it when weak spacing collapses, so the layout stays as it is; the tests check the glyph positions and page counts of a document with fixed, `fr`, weak, page-top and show-rule spacing (the docs' title page and heading rules), and of this book. One exception: a tight list, enum or term list starts with a weak `v` that Typst keeps only right after a paragraph; a marker in front would drop it. The `show list` / `enum` / `terms` rules set a state that the next `v` reads, so that one gets no marker. Limits: weak spacing that collapses into a paragraph's or block's spacing (or into a larger weak `v`) gets no band of its own, as the spacing laid out is the one before the markers; "Block spacing" shows it as the gap; weak spacing dropped at a page top shows nothing; spacing cut by a page break and negative spacing show nothing; spacing that does not fit runs past the page's bottom as Typst lays it out, and so does its band. The band is a translucent teal hatch (`/`) with thin top and bottom edges (red on the inverted dark-mode pages, beside the green outlines). `h(…)` is not shaded: a marker inside a paragraph would sit among the line's items, where line breaking, justification and weak spacing at line ends would have to be proven unaffected.
-- *Block spacing*: the gaps between blocks and paragraphs, a view option of its own, as it costs much more than the outlines. Typst's flow collapses an item's `below`, the weak `v`s after it and the next item's `above` into one spacing, kept right after the first item: the lowest weakness wins (a weak `v`, then a set `above` / `below`, then `auto` and the paragraph spacing), of equals the larger. So a marker after an item lands after the gap, never at its top. `show block` and `show par` rules return the item itself (nothing rebuilt: no show rule recursion, no label replaced) between tags: a `metadata` at its top, one at its end with its spacing below (resolved in a `context`: `auto` is the paragraph spacing, `em` the item's text size). A `show v` rule of its own adds one per `v`, placed, so that the end tag of the item above stops before the spacing (a tight list's `v` gets a bare tag, as above); so it needs nothing of "Box outlines" and draws the same with it on, never a `v`'s band. A placed marker before each item works out the gap above it from these tags as the flow does, and draws it (hatched `\`) up from the end tag of the item above, which lands where the next content starts. It draws only when the positions show both items in one flow: that end tag at the marker's height (less the strong `v`s between) and at the left edge of its own item's top tag, and that top tag at the marker (a placed marker stays behind when its item moves to the next page, a tag moves with it). The marker sits at the flow's right edge, which gives the band the flow's width as laid out (a figure's caption gap stays inside the figure). Paragraphs get no placed marker after them: placed content between a paragraph and a tight list drops the list's spacing, tags do not. The bands are boxes, as rects and lines are blocks, which would get markers themselves; both options define the band's look with the same lines, so each prelude stands on its own. The tags are labelled by page and kind (`preview-guides-end-<page>`, `preview-guides-start-<page>`), so each marker's two queries see one page. Tags numbered in document order (by a state or a count) would be renumbered by every new paragraph, so an edit would lay out all that follows again (2.2 s for this book); a query of all tags after each marker is quadratic. Tests: glyph positions and page counts with each option alone and both, of the docs' title page and heading rules, a sticky heading moved to the next page, a breakable block over a page break, lists, a table, a grid, a figure, a quote, a box, and this book; the band heights of each. The book's title page shows how a gap is worked out: the bar below the title is shown by the `title` element, whose show-set rule gives every block in it `above: 1.125em` (of the title's size, 20.1 pt), which wins over the title block's `below: 12pt` (both are set: the larger wins). Limits: the spacing between list items, table and grid rows and stack children is their layout's own, not the flow's, and shows nothing; gaps in fractions (`above: 1fr`) or relative to the page show nothing; a `v(1fr)` takes the gap away (as in Typst); where one cell's or stack child's last item ends exactly where the next one's first item starts (a single column, no gutter, no inset), the two look like one flow and a band is drawn over the first item's bottom.
-- *Cost* (this book, 127 pages, in the engine under Node, median of runs): the first compile takes 5.6 s with no option on, 5.85 s with "Box outlines", 8.5 s with "Block spacing", 8.65 s with both; an edit 140 ms, 165 ms, 640 ms, 720 ms; a new paragraph 140 ms, 160 ms, 655 ms, 740 ms. Most of "Block spacing" is the three markers per block and paragraph (thousands here) that Typst evaluates on each compile; "Box outlines" adds two per `v`.
-- *Inset on its own*: Typst 0.15 lets a `show block` rule read `inset` and `outset` (all fields are filled in). Drawing them means returning a new block from the rule, which the rule matches again ("maximum show rule depth exceeded") unless marked by a label, and a label would replace the document's own (its references break); blocks Typst makes for lists or headings cannot be rebuilt from their fields at all. So the outline is the box Typst draws a stroke on: around the inset, widened by the outset.
-- *Colors*: a blue (`#3b82f6`), a translucent magenta (`#d946ef`, 50 %) and a translucent teal (`#14b8a6`), mid-tones that read on the inverted pages of the dark mode, too.
-- *Raw boxes*: their pictures are cut from the preview's pages, so they show guides, outlines and bands. Compiling the pictures without the options would need a second compile per edit; the pictures show what the preview shows instead.
+- *Page guides* draw the text area, header, footer and column gutters as the page background, read from the page's settings. The code must never fail: an error would break every document's preview.
+- *Box outlines* are `set block(stroke: ..)` and `set box(stroke: ..)`, so a document's own strokes win. They also shade every `v(..)` with a hatched band.
+- *Block spacing* shades the gap between blocks and paragraphs. It is its own option, as it costs much more (an edit of this book: 140 ms without, 640 ms with).
+- *Markers that take no space* find the spacing: placed content before and after, so the layout stays as it is. Tests check glyph positions and page counts with each option.
+- *Not shown*: `h(..)` (a marker in a line would change line breaking), the spacing between list items, table rows and stack children (their layout's own, not the flow's), and the inset on its own.
+- *Raw boxes* are cut from the preview's pages, so they show the guides too.

@@ -1,6 +1,6 @@
 = Workbench API <architecture-workbench-api>
 
-VS Code's namespaces and shapes: `commands`, `window`, `workspace`, `scm`, plus `workbench`, the editor's frame. Use `window` to talk to the user, never popups of your own.
+VS Code's namespaces and shapes: `commands`, `window`, `workspace`, `scm`, plus `workbench`, the editor's frame. Talk to the user through `window`, never through popups of your own.
 
 == Commands <architecture-workbench-api-commands>
 
@@ -10,11 +10,10 @@ await commands.executeCommand<number>('wordCount.count');
 commands.registerKeybinding('Mod+Alt+KeyW', 'wordCount.count');
 ```
 
-- `registerCommand`: an id registered twice throws.
-- `executeCommand<T>(id, ...args)` calls the handler synchronously (the user's gesture, selection and focus are as now) and resolves to its result. It rejects for an unknown id and when the handler throws or rejects.
-- `registerKeybinding(key, command)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Ctrl or Cmd). The command runs without arguments, before any editor sees the key.
-- The host runs commands too: `editor.executeCommand(id, ...args)`.
-- Commands for people get a name in `contributes.commands` (VS Code's): search everywhere lists them while they are registered, as "Category: Title", and runs them without arguments. Declare only commands that work without any.
+- *`registerCommand`* throws for an id registered twice.
+- *`executeCommand<T>(id, ...args)`* runs the handler synchronously and resolves to its result. It rejects for an unknown id or a failing handler. The host runs commands with `editor.executeCommand(id, ...args)`.
+- *`registerKeybinding(key, command)`*: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is ⌘ or Ctrl). It runs the command without arguments, before any editor sees the key.
+- *Commands for people* get a name in `contributes.commands`, as in VS Code. Search everywhere lists them as "Category: Title" and runs them without arguments, so declare only commands that work without any:
 
 ```ts
 export const wordCount = (): TypstExtension => ({
@@ -24,7 +23,7 @@ export const wordCount = (): TypstExtension => ({
 });
 ```
 
-- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
+- *`workbench.action.searchEverywhere(text?)`* opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
 
 == Menus <architecture-workbench-api-menus>
 
@@ -38,9 +37,7 @@ workbench.registerMenuItem('explorer/context', {
 });
 ```
 
-`MenuItem`: `command`, `title?` (default: the command id), `icon?` (SVG markup in `currentColor`), `when?(context)`, `toggled?(context)`, `group?`, `order?`.
-
-An entry that turns something on or off says whether it is on with `toggled` (VS Code's): the menu shows it as a checkbox entry (`menuitemcheckbox`) with a check mark while `toggled` holds.
+`MenuItem`: `command`, `title?` (default: the command id), `icon?` (SVG in `currentColor`), `when?(context)`, `toggled?(context)`, `group?`, `order?`. An entry with `toggled` shows as a checkbox entry, as in VS Code:
 
 ```ts
 workbench.registerMenuItem('view', {
@@ -54,45 +51,43 @@ workbench.registerMenuItem('view', {
 #table(
   columns: 4,
   [Menu], [Where], [Context], [Command gets],
-  [`editor/title`], [Buttons at the right end of the editing area's tab bar (shown for every file while it has tabs or buttons)], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
-  [`view`], [The View menu: "View ▾" after them, a popup; groups `editor` (how the editors show the text: "Invisible characters") and `preview` (the preview's view options, @architecture-source-editor-and-preview-view)], [as `editor/title`], [nothing],
-  [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
+  [`editor/title`], [Buttons at the right end of the editing area's tab bar], [`activeCustomEditorId`, `resource`], [nothing],
+  [`view`], [The View menu; groups `editor` ("Invisible characters") and `preview` (@architecture-source-editor-and-preview-view)], [as `editor/title`], [nothing],
+  [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind`, `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
   [`help/row`], [A help row's context menu], [none], [the text the row inserts],
 )
 
-- Entries sort by `group` (`navigation` first, the others by name, a separator between groups), then `order`.
-- `when` and `toggled` are asked each time the menu is shown.
-- An editor or side panel shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New"), the help panel for `help/row`.
-- `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
+- *Order:* by `group` (`navigation` first, then by name, separators between), then `order`. `when` and `toggled` are asked each time the menu shows.
+- *Showing a menu:* `window.showContextMenu(menuId, { anchor, title, context, args })` opens it at a point or below an element. Its chosen command gets `args`; nothing shows while no entry applies.
+- *`getMenuItems(menuId, context)`* and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" without any).
 
 == Messages and quick input <architecture-workbench-api-messages>
 
 #table(
   columns: 2,
   [Call], [Resolves to],
-  [`showInformationMessage(message, ...items)`, `showWarningMessage`, `showErrorMessage`], [The item pressed (a string or `MessageItem { title }`), or `undefined` once closed],
+  [`showInformationMessage(message, ...items)`, `showWarningMessage`, `showErrorMessage`], [The item pressed (a string or `MessageItem { title }`), or `undefined`],
   [`showInputBox({ title, prompt, value, valueSelection, placeHolder, validateInput })`], [The text, or `undefined` on Escape],
-  [`showQuickPick(items, { title, placeHolder, canPickMany })`], [The `QuickPickItem` (or string) picked, the checked items with `canPickMany`, or `undefined`],
+  [`showQuickPick(items, { title, placeHolder, canPickMany })`], [The item(s) picked, or `undefined`],
   [`showSaveDialog({ title, defaultUri, filters })`], [A new file's `ProjectPath`, or `undefined`],
-  [`showContextMenu(menuId, { anchor, title, context, args })`], [Nothing: shows a contributed menu (@architecture-workbench-api-menus); the chosen entry's command runs],
-  [`withProgress({ location, title }, (progress) => task)`], [What the task resolves to; shown until it settles],
+  [`showContextMenu(menuId, { anchor, title, context, args })`], [Nothing: shows a contributed menu (@architecture-workbench-api-menus)],
+  [`withProgress({ location, title }, (progress) => task)`], [What the task resolves to],
 )
-
-- Messages are not modal. An information message without items closes by itself; warnings and errors stay.
-- One input box or quick pick (search everywhere included) at a time: a new one cancels the open one.
-- `showSaveDialog` refuses names of existing files and names without one of the `filters` endings (`{ Diagrams: ['drawio.png'] }`; `'*'`: any). Creating the file is the caller's job (`workspace.applyEdit`).
-- `withProgress`: `ProgressLocation.Window` puts a spinner with "title: message" into the status bar; `ProgressLocation.EditingArea` lays a note over the editing area, which takes no input until the task settles. `progress.report({ message, increment })`: `increment` is percent done since the last report.
-- `defaultUri`: a file or folder starts the name in that folder; a path the project has no file at, with one of the `filters` endings, is proposed as the name (`ProjectPath.unique(path, exists)` makes it free: `table-2.ic`).
 
 ```ts
 const choice = await window.showInformationMessage(`${path}: ${words} words`, 'Open');
 if (choice === 'Open') workbench.open(path);
 ```
 
+- *Messages* are not modal. An information message without items closes by itself.
+- *One input at a time:* a new input box or quick pick cancels the open one.
+- *`showSaveDialog`* refuses existing names and names without a `filters` ending (`{ Diagrams: ['drawio.png'] }`). Creating the file is your job (`workspace.applyEdit`).
+- *`withProgress`:* `ProgressLocation.Window` puts a spinner into the status bar, `ProgressLocation.EditingArea` blocks the editing area until the task settles.
+
 == Search everywhere <architecture-workbench-api-search>
 
-Double Shift anywhere in the widget, the magnifier on the left rail (order 15: after Files, before Help), or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
+Shift twice, the magnifier on the left rail or `workbench.action.searchEverywhere` open one quick pick over every search provider, a group each: `window.registerSearchProvider(provider)`.
 
 ```ts
 window.registerSearchProvider({
@@ -108,26 +103,23 @@ window.registerSearchProvider({
 });
 ```
 
-- `provideItems(query, token)`: asked again whenever the text changes; `query` is the text after the prefix, trimmed. May return a Promise: check `token.isCancellationRequested` (VS Code's `CancellationToken`) between steps; a cancelled round's results are dropped.
-- Items without `highlights` (most providers): return every candidate; the search matches them fuzzily against `label`, else `description`, and marks the match. Items with `highlights` were matched by the provider (text search) and show as given, in its order.
-- `SearchItem`: a `QuickPickItem` (`label`, `description`, `detail`) plus `accept()`, called once the search is closed and the focus is back where it was, still within the key press or click.
-- `prefix` typed first narrows the search to the providers with that prefix; they then show up to 100 results, otherwise 5 per group (the heading says how many more). The line below the list names every prefix.
-- Groups by `order` (lower first, default 100), then `id`.
-
-The built-in providers:
+- *`provideItems(query, token)`* is asked on every change of the text after the prefix. When it is async, check `token.isCancellationRequested` between steps.
+- *Matching:* return every candidate; the search matches them fuzzily. Items with `highlights` were matched by the provider and show as given.
+- *`SearchItem`:* a `QuickPickItem` plus `accept()`, called once the search is closed and the focus is back.
+- *`prefix`* typed first narrows the search to the providers with that prefix. Groups sort by `order` (default 100).
 
 #table(
   columns: 4,
   [Group], [Prefix], [Order], [From],
-  [Files], [`/`], [10], [`files`: name and path; opens],
-  [Headings], [`#`], [20], [`headings`: every Typst file's; opens at the heading],
-  [Labels], [`@`], [30], [`labels`: labels of headings, equations and the rest, not of figures or bibliography keys; opens at the label],
-  [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption (and label); opens at the figure],
+  [Files], [`/`], [10], [`files`: opens],
+  [Headings], [`#`], [20], [`headings`: opens at the heading],
+  [Labels], [`@`], [30], [`labels`: labels except figures' and bibliography keys],
+  [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption],
   [Commands], [`>`], [40], [the workbench: `contributes.commands`; runs],
-  [Styles], [`*`], [50], [`styles`: applies to the selection (Visual editor: as its menu; Source editor: `#name[selection]`), with the import],
-  [Comments], [`!`], [60], [`comments`: notes by first message and authors; opens at the note, in the Visual editor its card],
-  [Settings], [`:`], [70], [the workbench: booleans switch, `enum` settings ask for the value (for this widget, until the host sets the settings again)],
-  [Text], [`%`], [90], [`textFiles`: lines of every Typst and text file holding the query (from 2 characters, at most 200); opens with the match selected],
+  [Styles], [`*`], [50], [`styles`: applies to the selection],
+  [Comments], [`!`], [60], [`comments`: opens at the note],
+  [Settings], [`:`], [70], [the workbench: switches booleans, asks for `enum` values],
+  [Text], [`%`], [90], [`textFiles`: lines of Typst and text files; opens with the match selected],
 )
 
 == The frame <architecture-workbench-api-frame>
@@ -135,10 +127,10 @@ The built-in providers:
 #table(
   columns: 2,
   [Member], [What],
-  [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; within a side the higher `priority` further left],
-  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`), in the rail's `alignment` group (`'top'`, the default, or `'bottom'`, at the rail's far end), by `order` there (lower first, default 0); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, and VS Code's `WebviewView` `visible` + `onDidChangeVisibility`: shown now, also as the narrow widget's overlay while open; never while unavailable, e.g. to work for the panel only while it is seen). One panel per side shows; ids are unique across both sides],
-  [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor: inside a Typst editor's content, scrolling with it; around any other editor's panel; one frame at a time],
-  [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (inside a `<typst-editor>`'s shadow root too); use the `--te-*` color tokens],
+  [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; a higher `priority` sits further left],
+  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button; returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`, `visible`, `onDidChangeVisibility`). One panel per side shows],
+  [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
+  [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],
   [`workbench.user`], [Who works here, as the host said; `undefined`: anonymous],
   [`workbench.isEditorFocused()`], [Whether the focus is in the editing area],
@@ -146,17 +138,17 @@ The built-in providers:
 
 == Files and editors <architecture-workbench-api-files>
 
-- *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
-- *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
-- `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
-- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_EDITOR`, `'sourceEditor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
-- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_EDITOR` or `SOURCE_EDITOR`, `selection` as a `SourceRange`, `revealRange(range)`, `insertSnippet(snippet)`: the Typst in place of the selection, as it is (no tab stops), the Visual editor reading it as Typst; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
-- *Languages of files*: `languages.getLanguageId(path)` names the language of a file by the longest ending declared for it (`contributes.languages: [{ id: 'bibtex', extensions: ['.bib'] }]`, VS Code's; the workbench declares `typst` for `.typ`), undefined for none. An ending declared for two languages throws.
-- *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no editor took.
+- *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)`, `content(path)`, `onDidChangeFile`.
+- *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules and the host's `allowFileChange`, and resolves to the refusal reason or `null`.
+- *`FileChange`:* `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
+- *Show* with `workbench.open(path, { selection?, viewType? })`. `window.activeFile` and `onDidChangeActiveFile` say what is shown.
+- *The Typst editor:* `window.activeTextEditor` (`document`, `viewType`, `selection`, `revealRange(range)`, `insertSnippet(snippet)`; `null` for other files) and `onDidChangeTextEditorSelection`.
+- *Languages:* `languages.getLanguageId(path)`, by the longest ending in `contributes.languages` (`[{ id: 'bibtex', extensions: ['.bib'] }]`, as in VS Code).
+- *Dropped files* no editor took go to `workbench.onDidDropFiles`.
 
 == Custom editors <architecture-workbench-api-custom-editors>
 
-Every file opens in a custom editor (VS Code's), Typst files too: `window.registerCustomEditorProvider(viewType, provider, options)`.
+Every file opens in a custom editor, as in VS Code, Typst files too: `window.registerCustomEditorProvider(viewType, provider, options)`.
 
 ```ts
 window.registerCustomEditorProvider('csv.table', {
@@ -167,32 +159,27 @@ window.registerCustomEditorProvider('csv.table', {
 }, { filenamePattern: '*.csv', displayName: 'Table', icon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 3h12v10H2zM2 7h12M6 3v10"/></svg>' });
 ```
 
-- `viewType`: `<extension>.<name>`, unique.
-- `displayName`: its tab. A file several editors match gets a tab per editor, best first (the editing area's "open with").
-- `filenamePattern`: a case-insensitive glob over the file name (`*.csv`, `*.{png,jpg}`), over the path from the root if it has a `/`.
-- `priority`: a number (only orders editors), `'default'` (100), `'fallback'` (only files no other editor opens, without a tab) or `'option'` (only when chosen).
-- Of the editors matching a file: the one the user chose last (a tab, or `workbench.open(path, { viewType })`), else the highest `priority`, then the most specific pattern (more literal characters: `*.drawio.png` over `*.png` over `*`; `*.csv` over `*.{csv,json,…}`), then the first registered.
-- `icon`: SVG markup, 16×16 view box, strokes in `currentColor`; the file panel shows it on the rows of the files it opens.
-- Every open gets a new panel. Fill `panel.element`; store edits with `workspace.applyEdit({ kind: 'update', path, content })`; store what is pending in `panel.onDidDispose`.
-- `retainContextWhenHidden: true` keeps a file's panel, hidden, while something else is shown (`panel.visible`, `panel.onDidChangeViewState`), and shows it again when the file opens in this editor again; it follows a rename and is disposed when the file is deleted.
-
-The built-in ones, to beat or to leave alone:
+- *`filenamePattern`:* a case-insensitive glob over the name (`*.{png,jpg}`), over the path if it has a `/`.
+- *`priority`:* a number, `'default'` (100), `'fallback'` (files no other editor opens) or `'option'` (only when chosen).
+- *Which editor opens:* the one the user chose last, else the highest `priority`, then the most specific pattern (`*.drawio.png` over `*.png`).
+- *`displayName`* is its tab: a file several editors match gets a tab each. `icon` shows in the file panel.
+- *Panels:* every open gets a new one. Store edits with `workspace.applyEdit`, pending ones in `panel.onDidDispose`. `retainContextWhenHidden: true` keeps the panel while hidden.
 
 #table(
   columns: 3,
   [View type], [Pattern], [Priority],
-  [`visualEditor` (`VISUAL_EDITOR`)], [`*.typ`: the Visual editor, retained], [default (registered first)],
-  [`sourceEditor` (`SOURCE_EDITOR`)], [`*.typ`: the Source editor, retained], [default],
+  [`visualEditor` (`VISUAL_EDITOR`)], [`*.typ`, retained], [default (registered first)],
+  [`sourceEditor` (`SOURCE_EDITOR`)], [`*.typ`, retained], [default],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.editor`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
   [`textFiles.editor`], [`*.{csv,json,yaml,yml,toml,xml,bib,txt,md,mmd}`], [default],
-  [`files.file`], [`*`: any other file, read-only (name, size, type)], [`'fallback'`],
+  [`files.file`], [`*`: read-only name, size and type], [`'fallback'`],
 )
 
 == Help <architecture-workbench-api-help>
 
-The help panel (the built-in `help`) shows cheat sheets for the language of the shown file. A language's extension contributes its sheet: `languages.registerHelpProvider(selector, provider)`, with the `DocumentSelector` of document links (`{ language }`; none: every file).
+The help panel shows a cheat sheet for the language of the shown file: `languages.registerHelpProvider(selector, provider)`.
 
 ```ts
 languages.registerHelpProvider({ language: 'csv' }, {
@@ -204,36 +191,27 @@ languages.registerHelpProvider({ language: 'csv' }, {
 });
 ```
 
-- `HelpSheet`: `title`, `sections` (`title`, `rows`), `links?` (`label`, `href`: `http(s)` only, opened in a new tab). Plain data: the panel renders it, a list per section; no markup from providers.
-- `HelpRow`: `snippet` (shown), `description`, `insert?` (what the row puts into the text; default: `snippet`).
-- A row dragged into an editor carries its text as `text/plain` (the Source and text editors insert it where it is dropped); a row of a `typst` sheet also as `application/x-typst-snippet`, which the Visual editor reads as Typst (`insertTypst`). Enter inserts the selected row at the cursor of the shown Typst editor (`TextEditor.insertSnippet`); with another kind of file shown it is copied. A row's context menu is `help/row` (its commands get the row's text): "Insert at cursor" (`help.insertAtCursor`), "Copy" (`help.copy`); add entries with `workbench.registerMenuItem('help/row', …)`.
-- `languages.provideHelp(languageId)`: every matching provider's sheet, for a view of its own.
+- *Plain data:* the panel renders the `HelpSheet`; providers give no markup. `insert` defaults to `snippet`.
+- *Using a row:* drag it into an editor, or press Enter to insert it at the cursor. Rows of a `typst` sheet drop into the Visual editor as Typst.
+- *Row menu:* `help/row` has "Insert at cursor" and "Copy"; add your own with `workbench.registerMenuItem('help/row', …)`.
+- *`languages.provideHelp(languageId)`* returns every matching sheet, for a view of your own.
 
-The built-in sheets:
-
-#table(
-  columns: 3,
-  [Language], [Sheet], [From],
-  [`typst` (`.typ`)], [Typst basics], [`typst-language`],
-  [`mermaid` (`.mmd`)], [Mermaid basics], [`mermaid` (the language: `text-files`)],
-  [`ironcalc` (`.ic`)], [Spreadsheet formulas], [`spreadsheets`],
-  [`bibtex` (`.bib`)], [BibTeX], [`text-files`],
-)
+Built-in sheets: `typst` (`typst-language`), `mermaid` (`mermaid`), `ironcalc` (`spreadsheets`), `bibtex` (`text-files`).
 
 == Known imports <architecture-workbench-api-known-imports>
 
-Typst pasted into a file gets the imports it needs (the built-in `imports`). For text copied in the widget, the source file's imports travel along. For text from elsewhere, an extension says where the names of its constructs come from:
+Pasted Typst gets the imports it needs (the built-in `imports`). For text from outside the widget, say where a name comes from:
 
 ```ts
 languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: '@preview/merman:0.4.0' });
 ```
 
-- A pasted `mermaid(..)` in a file that neither defines nor imports `mermaid` adds `#import "@preview/merman:0.4.0": mermaid` at the top, or `mermaid` to an import of merman (any version) already there.
-- `languages.provideKnownImports(languageId)`: every matching declaration, in registration order.
+- A pasted `mermaid(..)` then adds `#import "@preview/merman:0.4.0": mermaid`, or extends an import of merman that is already there.
+- `languages.provideKnownImports(languageId)` returns every matching declaration.
 
 == Drop edits <architecture-workbench-api-drop-edits>
 
-A project file dragged from the file panel, or a file from the desktop once uploaded, dropped into a Typst file (the Visual or the Source editor) becomes what an extension makes of it (VS Code's `DocumentDropEditProvider`):
+A file dropped into a Typst file becomes what an extension makes of it, as VS Code's `DocumentDropEditProvider`:
 
 ```ts
 languages.registerDocumentDropEditProvider({ language: 'typst' }, {
@@ -247,14 +225,13 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 }, { priority: 110 });
 ```
 
-- `document` is the text dropped into (`path`, `languageId`, `text`); `position` the source offset of the drop; `file` the dropped `ProjectPath`.
-- The providers are asked by `priority` (default 100, higher first; equal: registration order); the first edit wins. Diagrams (110) win over images for `.drawio.png`, spreadsheets (110) over the Typst files' `#include` for `.ic.gen.typ`.
-- `insertText` goes in at the drop position: the Source editor inserts it there, the Visual editor reads it as Typst (inline content into the text, blocks after the block there, as `insertTypst`). `additionalEdit` (changes of `text` before the drop, in its coordinates) goes into the same transaction: one undo step.
-- Files from the desktop dropped into the text are uploaded first (to the folder the first provider by priority names with `provideUploadFolder(document, file)`, `file` being where it would go at the top, e.g. the images' folder for an image; else to the top of the project; a file of the same name and content is used as it is, another content gets the next free name, `name-2.ext`, …), then each is a drop of that project file, the first where they were dropped, the others after it. A refused upload is an error message. Files dropped elsewhere on the widget go to `workbench.onDidDropFiles`.
+- *Order:* by `priority` (default 100, higher first); the first edit wins. Diagrams and spreadsheets use 110.
+- *`insertText`* goes in at the drop; the Visual editor reads it as Typst. `additionalEdit` joins the same undo step.
+- *Desktop files* are uploaded first, to the folder `provideUploadFolder(document, file)` names (else the project's top), then dropped as project files.
 
 == Copy and paste <architecture-workbench-api-paste>
 
-An extension takes part in copy and paste of a language's text with a paste edit provider (VS Code's `DocumentPasteEditProvider`). The editors do the paste: the Visual editor for Typst it reads as Typst, the Source editors for any paste.
+Take part in copy and paste with a paste edit provider, as VS Code's `DocumentPasteEditProvider`:
 
 ```ts
 languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
@@ -267,39 +244,40 @@ languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
 });
 ```
 
-- `prepareDocumentPaste?(document, copied, dataTransfer)`: on a copy or cut from `document` (a `TextDocument`: `path`, `languageId`, `text`), after the editor has put the copied text (`copied`) on the clipboard; adds what a paste will need.
-- `provideDocumentPasteEdits(document, ranges, text, dataTransfer)`: on a paste of `text` in place of `ranges` (the selection; `document` as it is before the paste). Returns a `DocumentPasteEdit`, or undefined for none: `insertText`, what goes in instead of `text`, and `additionalEdits?`, other `TextChange`s of the text before the paste. They go into the paste's transaction: one undo step.
-- The providers of a paste run in registration order, each given the text the ones before left. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text.
-- The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
+- *`prepareDocumentPaste?`* runs on copy or cut and adds what a paste will need.
+- *`provideDocumentPasteEdits`* returns what goes in instead of `text`, plus `additionalEdits` elsewhere, in one undo step.
+- *Chain:* providers run in registration order, each on the text the ones before left. Overlapping additional edits are dropped.
+- *Built-in:* `imports` (the imports a paste needs), `labels` (new names for clashing labels).
 
 == File decorations <architecture-workbench-api-decorations>
 
-`window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
+`window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }`. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
 
 == Settings and state <architecture-workbench-api-settings>
 
-- `workspace.getConfiguration('<section>')`: `get(key, default?)`, `has(key)`, `inspect(key)` (`defaultValue`, `globalValue`: the host's).
-- `workspace.onDidChangeConfiguration(event)`: `event.affectsConfiguration('<section>.<key>')` or a whole section.
+- `workspace.getConfiguration('<section>')`: `get(key, default?)`, `has(key)`, `inspect(key)`.
+- `workspace.onDidChangeConfiguration(event)`: `event.affectsConfiguration('<section>.<key>')`.
 - Declaring settings: @architecture-extensions-overview-settings.
 
 === Memento <architecture-workbench-api-state>
 
-`globalState` and `workspaceState` are VS Code's `Memento`: `keys()`, `get(key, default?)`, `update(key, value)` (JSON-like; `undefined` removes). Each extension's values are apart from the others'.
+`globalState` and `workspaceState` are VS Code's `Memento`: `keys()`, `get(key, default?)`, `update(key, value)`. Each extension has its own values.
 
 #table(
   columns: 3,
   [Memento], [Kept], [Storage],
   [`globalState`], [For this viewer, across widgets and visits], [`localStorage`],
-  [`workspaceState`], [For this project, during the browser session], [`sessionStorage`, under the main file's path],
+  [`workspaceState`], [For this project, during the browser session], [`sessionStorage`],
 )
 
-What `get` returns comes from outside: check its shape. Without storage nothing is kept and nothing fails.
+Check the shape of what `get` returns: it comes from outside. Without storage nothing is kept and nothing fails.
 
 == Source controls <architecture-workbench-api-scm>
 
-`scm.registerSourceControl(sourceControl)` offers somewhere the project can be committed; `scm.sourceControls` and `onDidChangeSourceControls` are for whoever shows them. The collaboration extension registers the GitLab branch behind a room; source-control shows it.
+`scm.registerSourceControl(sourceControl)` offers a place to commit the project to; `scm.sourceControls` and `onDidChangeSourceControls` are for whoever shows them. The collaboration extension registers a room's GitLab branch; source-control shows it.
 
-`SourceControl`: `id`, `label`, `defaultCommitMessage?`, `state` (`{ busy }`), `resourceStates?`, `statusBarCommands?`, `onDidChange`, `commit(message)`. The source control reports the outcome itself, through `window.show…Message`.
+`SourceControl`: `id`, `label`, `defaultCommitMessage?`, `state` (`{ busy }`), `resourceStates?`, `statusBarCommands?`, `onDidChange`, `commit(message)`.
 
-- `resourceStates`: the files with changes not committed, `{ path, decorations?: { badge?, tooltip?, color? } }`. Source-control shows the decorations in the file panel (also on closed folders); a deleted file has no row but counts.
-- `statusBarCommands`: `{ title, tooltip?, backgroundColor?: 'warning' }` entries at the start of the status bar (`'warning'` stands out, for what needs the user). Unlike VS Code's, they name no command: a click commits (asks for the message).
+- *`resourceStates`:* the uncommitted files, with decorations for the file panel.
+- *`statusBarCommands`:* entries at the start of the status bar. A click commits; `'warning'` makes an entry stand out.
+- *Outcome:* the source control reports it itself, through `window.show…Message`.
