@@ -83,7 +83,7 @@ What `activate` gets (`ExtensionContext`):
   [`scm`], [Source controls], [@architecture-workbench-api-scm],
   [`languages`], [Document links, drop and paste edits, help sheets, the language of a file], [@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help],
   [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights (experimental)], [@architecture-visual-editor-constructs],
-  [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@architecture-source-editor-and-preview],
+  [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@architecture-source-editor-host],
   [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@architecture-source-editor-and-preview-preview],
 )
 
