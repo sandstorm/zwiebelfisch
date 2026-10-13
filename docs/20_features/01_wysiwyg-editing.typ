@@ -32,6 +32,8 @@ Code blocks work with \`\`\`, as you know from Markdown.
 
 *Moving blocks:* hovering a block (a paragraph, a heading, a list item, a table, a figure, a styled block, …) shows a grip (six dots) in the left margin, as in Notion or Slite. Drag it to move the block, its Typst unchanged; click it to select the block.
 
+*Before and after a block:* the arrow keys stop between a block style, figure, table or code box and what follows (a blinking line across the text), so you can write right after it; a click into the space between blocks does the same. Backspace there selects the block before.
+
 == Slash commands
 
 #screenshot("slash-commands")

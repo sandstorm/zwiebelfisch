@@ -89,13 +89,12 @@ describe('raw boxes', () => {
     expect(cm.state.doc.toString()).toBe('#set text(size: 12pt)');
   });
 
-  it('arrow keys at the edges leave the box', () => {
+  it('arrow keys at the edges leave the box, onto the caret between blocks beside it', () => {
     const { parent, box } = setup(RAW);
     const cm = box('.typst-visual__raw-block');
     cm.dispatch({ selection: { anchor: cm.state.doc.length } });
     expect(key(cm, 'ArrowDown').defaultPrevented).toBe(true);
-    const selection = parent.ownerDocument.getSelection()!;
-    expect(selection.anchorNode?.textContent).toBe('Hello');
+    expect(parent.querySelector('.typst-visual__block-gap')).not.toBeNull();
   });
 
   it('Tab indents a raw block\'s code and stays in an inline box; Escape, then Tab goes to the browser', () => {

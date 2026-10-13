@@ -1,7 +1,5 @@
-/* ProseMirror core styles (prosemirror-view/style/prosemirror.css, and prosemirror-gapcursor/style/gapcursor.css
-   with the theme's accent, MIT), vendored so they also
-   reach a shadow root; Tiptap's own CSS injection is disabled. See VisualEditorHost in visual-editor.ts, whose
-   styleSheet holds them. */
+/* ProseMirror core styles (prosemirror-view/style/prosemirror.css, MIT), vendored so they also reach a shadow root;
+   Tiptap's own CSS injection is disabled. See VisualEditorHost in visual-editor.ts, whose styleSheet holds them. */
 .ProseMirror {
   position: relative;
 }
@@ -55,31 +53,4 @@ img.ProseMirror-separator {
   display: inline !important;
   border: none !important;
   margin: 0 !important;
-}
-
-/* The gap cursor: the cursor between two blocks where no text can go (two boxes, after a table at the end) */
-.ProseMirror-gapcursor {
-  display: none;
-  pointer-events: none;
-  position: absolute;
-}
-
-.ProseMirror-gapcursor:after {
-  content: "";
-  display: block;
-  position: absolute;
-  top: -2px;
-  width: 20px;
-  border-top: 2px solid var(--te-accent);
-  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
-}
-
-@keyframes ProseMirror-cursor-blink {
-  to {
-    visibility: hidden;
-  }
-}
-
-.ProseMirror-focused .ProseMirror-gapcursor {
-  display: block;
 }

@@ -9,6 +9,7 @@ import { minimalChange, type SourceOffset } from '../../../core/typst-document/t
 import { setRawBoxDecorations, type FollowableLink, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
 import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
 import { codeColors } from '../../source-editor/source-editor';
+import { blockGapAt } from '../block-gaps';
 import { RenderedBox } from './rendered-box';
 
 /**
@@ -299,13 +300,13 @@ class RawBox implements NodeView {
     ];
   }
 
-  /** Moves the cursor into the outer editor, just before or after this box. */
+  /** Moves the cursor into the outer editor, just before or after this box: into the gap there, else the text. */
   private leave(side: Side): boolean {
     const pos = this.getPos();
     if (pos === undefined) return false;
     const outer = this.tiptap.view;
     const $edge = outer.state.doc.resolve(side < 0 ? pos : pos + this.node.nodeSize);
-    outer.dispatch(outer.state.tr.setSelection(Selection.near($edge, side)).scrollIntoView());
+    outer.dispatch(outer.state.tr.setSelection(blockGapAt($edge) ?? Selection.near($edge, side)).scrollIntoView());
     outer.focus();
     return true;
   }
@@ -315,7 +316,8 @@ class RawBox implements NodeView {
     if (pos === undefined) return false;
     const outer = this.tiptap.view;
     const tr = outer.state.tr.delete(pos, pos + this.node.nodeSize);
-    outer.dispatch(tr.setSelection(Selection.near(tr.doc.resolve(Math.min(pos, tr.doc.content.size)))).scrollIntoView());
+    const $at = tr.doc.resolve(Math.min(pos, tr.doc.content.size));
+    outer.dispatch(tr.setSelection(blockGapAt($at) ?? Selection.near($at)).scrollIntoView());
     outer.focus();
     return true;
   }

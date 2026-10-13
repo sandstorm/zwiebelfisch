@@ -360,9 +360,9 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   return tr;
 }
 
-/** The base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
+/** The base: paragraphs, text, line breaks (`\`), history, the drop cursor. */
 function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--te-accent)', width: 2 }, gapcursor: undefined });
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--te-accent)', width: 2 } });
 }
 
 /** The minimum schema's own nodes, as the grammar sees them. */
