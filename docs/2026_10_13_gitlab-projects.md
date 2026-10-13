@@ -236,9 +236,9 @@ work plus a period of running both against the e2e suite.
 
 ## Open questions
 
-1. Branch: part of the project (dropdown, default preselected), as proposed — or always the default branch?
-2. Recent projects on the server per user (proposed) or in the browser only?
-3. Scope `api` (needed for REST commits, broad) acceptable, or commit with a service token and use `read_api` for users?
-4. Auto-commit when nobody is signed in any more: skip (proposed) or a service token?
-5. One GitLab instance per deployment (proposed), or several (instance in the URL)?
-6. Language: stay on Node now and revisit with server-side compile (proposed), or switch to Rust now?
+1. ~~Branch~~ Decided: part of the project (dropdown, default preselected).
+2. ~~Recents~~ Decided: on the server per user.
+3. Scope / commit author: user token preferred, but the user is unsure about commits → research again (in progress).
+4. Auto-commit after everyone left: needed somehow (user) → research how (in progress).
+5. Instances / providers: later maybe GitHub or other git hosting too; several providers possible, one server is the default. Complexity being estimated.
+6. ~~Language~~ Decided: Go (see 2026_10_13_go-server.md).
