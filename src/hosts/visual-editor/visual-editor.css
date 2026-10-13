@@ -28,9 +28,6 @@
 }
 .typst-visual__raw-block,
 .typst-visual__raw-inline { cursor: text; transition: box-shadow 0.15s, background 0.15s; }
-/* A block box is dragged by its frame and title (and picture); its code is text */
-.typst-visual__raw-block { cursor: grab; }
-.typst-visual__raw-block > .typst-visual__code { cursor: text; }
 .typst-visual__raw-block:hover,
 .typst-visual__raw-inline:hover { background: var(--te-hover); }
 .typst-visual__raw-block:focus-within,
@@ -64,6 +61,24 @@
    toolbar whatever its own z-index. */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; isolation: isolate; }
 .typst-visual__body > .typst-visual { min-width: 0; }
+/* The handle beside the block under the pointer (block-handle.ts): in the text's left padding, aligned with the
+   block's first line; dragged to move the block, clicked to select it */
+.typst-visual__block-handle {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--te-faint);
+  cursor: grab;
+  user-select: none;
+}
+.typst-visual__block-handle:hover { background: var(--te-hover); color: var(--te-text-2); }
+.typst-visual__block-handle:active { cursor: grabbing; }
+.typst-visual__block-handle[hidden] { display: none; }
 .typst-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;

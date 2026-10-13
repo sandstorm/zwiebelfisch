@@ -90,9 +90,7 @@ export const RawBoxNavigation = Extension.create({
  * tools (an image: heading, resize handles); clicking the picture of a box
  * with tools selects the box rather than opening the code (double-click,
  * or Enter do).
- * A box of a draggable node type (`rawBlock`, an image, …) is dragged by its own parts (frame, title, picture; not
- * its code or tools): the outer editor moves the node, as it moves selected text. What the outer editor drags
- * lands beside a box it is dropped on, not in its code.
+ * What the outer editor drags (a block by its handle, text) lands beside a box it is dropped on, not in its code.
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
@@ -129,7 +127,6 @@ class RawBox implements NodeView {
     this.showDecorations(decorations);
     this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
     this.tools = spec?.tools ? spec.tools(this.toolsHost(wrapper, editor), node) : null;
-    this.dom.addEventListener('pointerdown', (event) => this.allowDrag(event.target as globalThis.Node), true);
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
@@ -175,9 +172,8 @@ class RawBox implements NodeView {
     this.dom.classList.remove('ProseMirror-selectednode');
   }
 
-  /** Events in the box are its own, except a drag of the box itself and the drags and drops of the outer editor. */
+  /** Events in the box are its own, except the drags and drops of the outer editor. */
   stopEvent(event: Event): boolean {
-    if (event.type === 'dragstart') return event.target !== this.dom;
     if (event.type.startsWith('drag') || event.type === 'drop') return this.tiptap.view.dragging === null;
     return true;
   }
@@ -212,14 +208,8 @@ class RawBox implements NodeView {
     });
   }
 
-  /** A press on `target` drags the box if its node type is draggable and `target` is the box's own: frame, title, picture. */
-  private allowDrag(target: globalThis.Node): void {
-    const own = target === this.dom || target === this.rendered?.picture || this.label?.contains(target) === true;
-    this.dom.draggable = this.node.type.spec.draggable === true && own;
-  }
-
   /**
-   * A drop on the code of what the outer editor drags (a box, text) is the outer editor's: sent again from the box
+   * A drop on the code of what the outer editor drags (a block, text) is the outer editor's: sent again from the box
    * (see `stopEvent`), it lands beside the box rather than in the code as text.
    */
   private dropBeside(event: DragEvent): boolean {

@@ -42,7 +42,6 @@ export const RawBlock = Node.create({
   group: 'block',
   atom: true,
   selectable: true,
-  draggable: true,
   addAttributes() {
     return { src: { default: '', rendered: false }, sep: { default: null, rendered: false } };
   },

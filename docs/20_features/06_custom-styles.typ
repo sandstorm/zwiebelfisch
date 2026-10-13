@@ -41,7 +41,7 @@ A block or inline style is a Typst function with a `/// @style` doc comment, in 
 - The preview shows the real look, as above: the green bar of the tip, the frame of the key cap.
 - The text style menu offers both and adds the import where needed.
 - The bar above a text selection offers the inline styles too: Styles → *Key* (✓ where the selection has it: takes it off).
-- Drag a block style's frame (its name or edge) to move it, call and all, as you drag selected text.
+- A block style moves with all it wraps by the grip beside it (@features-wysiwyg-editing), its call unchanged.
 - *Normal text* removes a block style. "New style…" adds a block style to `styles.typ`.
 - Search everywhere applies a style to the selection: `*` and its name.
 - Calls of functions not declared as styles stay raw boxes.

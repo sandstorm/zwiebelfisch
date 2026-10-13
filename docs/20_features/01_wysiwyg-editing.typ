@@ -30,6 +30,8 @@ The "markdown shortcuts" you know, like typing `- ` or `- [ ]` work as expected.
 
 Code blocks work with \`\`\`, as you know from Markdown.
 
+*Moving blocks:* hovering a block (a paragraph, a heading, a list item, a table, a figure, a styled block, …) shows a grip (six dots) in the left margin, as in Notion or Slite. Drag it to move the block, its Typst unchanged; click it to select the block.
+
 == Slash commands
 
 #screenshot("slash-commands")

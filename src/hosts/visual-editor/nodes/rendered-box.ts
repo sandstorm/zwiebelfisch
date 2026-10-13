@@ -8,7 +8,7 @@ import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-ed
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of
  * the code while the box does not have focus. Clicking the picture activates
- * the box (pressing it may drag the box instead); it leads where the box links to, as a link in text does: hovered,
+ * the box; it leads where the box links to, as a link in text does: hovered,
  * it shows the link's hint and, while the modifier is held, the link look
  * (`FollowableLink.hover`), and Mod+click follows it. Until the renderer has a picture (the
  * preview's first compile), the box shows its code; a picture is decoded
@@ -45,10 +45,9 @@ export class RenderedBox {
     if (renderer.className) this.picture.classList.add(renderer.className);
     this.picture.alt = '';
     this.picture.hidden = true;
-    // a press on the picture may drag the box (see RawBox), not the image, so a click activates or follows the link
-    this.picture.draggable = false;
-    this.picture.addEventListener('click', (event) => {
-      const link = host.link();
+    this.picture.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      const link = event.button === 0 ? host.link() : null;
       if (link?.isFollowEvent(event)) link.follow();
       else host.activate();
     });

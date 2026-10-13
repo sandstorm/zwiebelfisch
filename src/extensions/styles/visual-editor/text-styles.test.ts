@@ -8,7 +8,7 @@ import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-d
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/typst-style-index';
 import { scanStyles, type TypstStyle } from '../model/discover';
-import { createVisualEditor, dragStart, drop } from '../../../testing/testing';
+import { blockHandle, createVisualEditor, dragStart, drop } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles, styleApplier } from './visual-editor';
@@ -185,14 +185,14 @@ describe('styleApplier', () => {
 });
 
 describe('block styles in the Visual editor', () => {
-  it('a styled block is dragged by its frame and moves with its call verbatim, in one undo step', () => {
+  it('a styled block moves by its handle with its call verbatim, in one undo step', () => {
     const text = '#note(kind: "tip")[A *noted* paragraph.]\n\nAfter\n';
     const { doc, parent } = setup(text);
     const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
-    const frame = parent.querySelector<HTMLElement>('.typst-styles__block')!;
-    dragStart(frame);
-    expect(tiptap.view.dragging?.move).toBe(true);
-    drop(tiptap.view, parent.querySelector('p:last-child')!, tiptap.state.doc.content.size);
+    const { view } = tiptap;
+    // the pointer beside the paragraph in the style: the handle is the style's, with all in it
+    dragStart(blockHandle(view, 2));
+    drop(view, parent.querySelector('p:last-child')!, view.state.doc.content.size);
     expect(doc.text).toBe('After\n\n#note(kind: "tip")[A *noted* paragraph.]\n');
     tiptap.commands.undo();
     expect(doc.text).toBe(text);

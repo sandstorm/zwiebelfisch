@@ -13,8 +13,6 @@ export const StyledBlock = Node.create({
   group: 'block',
   content: 'block+',
   defining: true,
-  // dragged by its frame (the text in it selects as usual)
-  draggable: true,
   addAttributes() {
     return {
       name: { default: '', rendered: false },

@@ -20,13 +20,13 @@ async function setup(text: string, prompts?: TestPrompts) {
   const picture = () => box().querySelector<HTMLImageElement>('img.typst-visual__rendering')!;
   /** The image bar's button `name`, the image selected first. */
   const button = (name: string) => {
-    click(picture());
+    mousedown(picture());
     return bar().querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
   };
   return { doc, view, parent, box, bar, button, picture };
 }
 
-const click = (target: Element) => target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+const mousedown = (target: Element) => target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
 const pointer = (target: EventTarget, type: string, clientX: number) =>
   target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX }));
 
@@ -34,7 +34,7 @@ describe('image tools', () => {
   it('clicking the picture selects the image (showing its bar) instead of its code', async () => {
     const { box, bar, picture } = await setup('Intro\n\n#image("cat.png")\n');
     expect(bar().hidden).toBe(true);
-    click(picture());
+    mousedown(picture());
     expect(box().classList).toContain('ProseMirror-selectednode');
     expect(bar().hidden).toBe(false);
     expect(box().querySelector<HTMLElement>('.typst-visual__code')!.hidden).toBe(true);

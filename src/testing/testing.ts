@@ -232,8 +232,30 @@ export function opened(button: HTMLButtonElement): HTMLButtonElement {
 }
 
 /**
- * The browser starting a drag of `source` (the element it drags: a `draggable` one). jsdom has no drag events and no
- * layout: a plain event with a stand-in `dataTransfer`, at (0, 0).
+ * The grip the Visual editor shows beside the block at document position `pos` of `view` (block-handle.ts), as the
+ * pointer moving beside the block shows it. jsdom has no layout: for that move, each node's DOM is laid out by its
+ * positions (its top 10px per position, as tall as its size), the pointer at the block's top.
+ */
+export function blockHandle(view: EditorView, pos: number): HTMLElement {
+  const laidOut = new Map<unknown, DOMRect>();
+  view.state.doc.descendants((node, at) => {
+    laidOut.set(view.nodeDOM(at), new DOMRect(0, at * 10, 100, node.nodeSize * 10));
+  });
+  const measure = Element.prototype.getBoundingClientRect;
+  const rects = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return laidOut.get(this) ?? measure.call(this);
+  });
+  try {
+    view.dom.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: pos * 10 }));
+  } finally {
+    rects.mockRestore();
+  }
+  return view.dom.parentElement!.querySelector<HTMLElement>('.typst-visual__block-handle')!;
+}
+
+/**
+ * The browser starting a drag of `source` (the element it drags: a `draggable` one, like a block's grip). jsdom has
+ * no drag events and no layout: a plain event with a stand-in `dataTransfer`, at (0, 0).
  */
 export function dragStart(source: Element): void {
   source.dispatchEvent(dragEvent('dragstart'));
@@ -251,7 +273,14 @@ export function drop(view: EditorView, target: Element, pos: number): void {
 
 function dragEvent(type: string): Event {
   const data = new Map<string, string>();
-  const dataTransfer = { files: [], clearData: () => data.clear(), setData: (f: string, v: string) => data.set(f, v), getData: (f: string) => data.get(f) ?? '' };
+  const dataTransfer = {
+    files: [],
+    effectAllowed: 'all',
+    clearData: () => data.clear(),
+    setData: (f: string, v: string) => data.set(f, v),
+    getData: (f: string) => data.get(f) ?? '',
+    setDragImage: () => {},
+  };
   return Object.assign(new Event(type, { bubbles: true, cancelable: true }), { dataTransfer, clientX: 0, clientY: 0 });
 }
 
