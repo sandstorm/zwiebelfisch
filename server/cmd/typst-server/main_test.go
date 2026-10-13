@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"typst-editor/server/lib/app"
 	"typst-editor/server/lib/fakegitlab"
 	"typst-editor/server/lib/testutil"
 )
@@ -57,7 +58,7 @@ func TestServerBinary(t *testing.T) {
 	stop := start(t, binary, env, port)
 	edit := clients(t, "edit", ws, session(t, server, "Ann"))
 	require.Equal(t, map[string]any{"/main.typ": "» Hello 😀 and B 𝄞"}, edit["texts"])
-	require.Equal(t, "permission-denied", edit["denied"])
+	require.Equal(t, app.SignInRequired, edit["denied"])
 	require.Equal(t, map[string]any{}, edit["intruderTexts"])
 	stop()
 
