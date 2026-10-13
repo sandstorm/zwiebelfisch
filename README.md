@@ -54,6 +54,8 @@ docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
 Open http://127.0.0.1:5199/: the built demo plus a collaboration server with a fake GitLab. Nothing is saved.
 Ctrl-C stops it. (`mise run docker:build` and `mise run docker:run` do the same.)
 
+Released images: `docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 ghcr.io/<owner>/<repo>:<version>` (`:main` follows the main branch).
+
 ## Quick start
 
 To work on the code: requires [mise](https://mise.jdx.dev); it pins every tool.
@@ -89,6 +91,8 @@ One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.t
 - **Features** (`docs/20_features/`): what users get, one chapter per area.
 - **Configuration** (`docs/30_configuration/`): configuration options, embedding, the collaboration server, GitLab integration, for technical users.
 - **Architecture** (`docs/40_architecture/`): how the code is built, writing an extension, conventions, development.
+
+Online: `https://<owner>.github.io/<repo>/` (the latest release, with the demo under `demo/`).
 
 Read it as a PDF (`mise run docs:pdf`), as HTML (`mise run docs:html`), or edit it live in the demo's
 Documentation example (`mise run demo` or `mise run demo:build`, then `?example=docs`).

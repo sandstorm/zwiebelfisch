@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Lint the GitHub workflows (.github/, actionlint with shellcheck) and the Dockerfile (hadolint)"
+set -euo pipefail
+actionlint
+hadolint Dockerfile
+echo "ci: workflows and Dockerfile clean"

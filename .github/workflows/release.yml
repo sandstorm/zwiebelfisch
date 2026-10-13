@@ -1,0 +1,69 @@
+# A version tag v1.2.3 releases: the library (dist/lib) as the npm package @<owner>/typst-editor 1.2.3 on GitHub's npm
+# registry, and a GitHub release with generated notes, the documentation book (PDF) and the package's tarball.
+# docker.yml pushes the image and pages.yml publishes the site for the same tag. A tag with a pre-release part
+# (v1.2.3-rc.1) makes a pre-release, published under the npm dist-tag `next`.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: mise run build:lib
+      - run: mise run docs:pdf
+
+      # package.json stays `private: true` and unscoped in the repository, so nothing publishes it by accident (to
+      # npmjs.org, say) and the owner is no part of the code. Only this checkout makes it publishable: GitHub's npm
+      # registry takes packages scoped by the repository's owner, versioned by the tag, linked to the repository.
+      - name: Pack the npm package
+        id: pack
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          npm pkg set \
+            name="@${GITHUB_REPOSITORY_OWNER,,}/typst-editor" \
+            version="$version" \
+            repository.type=git \
+            repository.url="git+${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+            publishConfig.registry=https://npm.pkg.github.com
+          npm pkg delete private
+          tarball="$(npm pack --pack-destination dist --json | jq -r '.[0].filename')"
+          echo "tarball=dist/$tarball" >>"$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >>"$GITHUB_OUTPUT"; fi
+
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          PRERELEASE: ${{ steps.pack.outputs.prerelease }}
+        run: |
+          npmrc="$RUNNER_TEMP/.npmrc"
+          # npm reads the token from the environment; it is never written to disk
+          # shellcheck disable=SC2016
+          echo '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' >"$npmrc"
+          tag=latest
+          [[ "$PRERELEASE" == true ]] && tag=next
+          npm publish "$TARBALL" --userconfig "$npmrc" --tag "$tag"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          PRERELEASE: ${{ steps.pack.outputs.prerelease }}
+        run: |
+          flags=()
+          [[ "$PRERELEASE" == true ]] && flags+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" "${flags[@]}" \
+            dist/docs/typst-editor.pdf "$TARBALL"
