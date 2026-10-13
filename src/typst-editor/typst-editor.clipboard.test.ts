@@ -6,6 +6,9 @@ import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
+import googleDocs from '../extensions/word-processors/visual-editor/fixtures/google-docs.html?raw';
+import libreOffice from '../extensions/word-processors/visual-editor/fixtures/libreoffice.html?raw';
+import word from '../extensions/word-processors/visual-editor/fixtures/word.html?raw';
 import { createTypstEditor, type TypstEditor } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -279,5 +282,31 @@ describe('Markdown pasted', () => {
     clipboard(b.view.dom, 'paste', { 'text/plain': '**a**', 'text/html': '<span>**a**</span>' });
     await editor.executeCommand('editor.action.pasteAs', { kind: 'typst.markdown' });
     expect(text('/book/two/b.typ')).toBe('Intro\\*\\*a\\*\\*\n');
+  });
+});
+
+describe('word processor HTML pasted into the Visual editor', () => {
+  /** The Typst of `/book/two/b.typ` after `html` (with its text) is pasted at its end. */
+  const pasted = (html: string) => {
+    const { editor, visual, text } = setup();
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': 'Results', 'text/html': html });
+    return text('/book/two/b.typ');
+  };
+
+  it('Word: its list paragraphs as nested and numbered lists, no empty paragraphs', () => {
+    expect(pasted(word)).toBe(
+      'Intro\n\n= Results\n\nThe run took *18\u00a0ms* and _4 ms_ warm, see *Table 1*.\n\n- Cold start\n  - With fonts\n- Incremental\n\n+ Compile\n+ Measure\n',
+    );
+  });
+
+  it("Google Docs: the heading's bold and the empty lines dropped, monospace text as code", () => {
+    expect(pasted(googleDocs)).toBe('Intro\n\n== Results\n\nThe run took *18 ms* and _4 ms_ warm.\n\n- Cold start\n- #underline[Incremental]\n\n`typst compile` builds it.\n');
+  });
+
+  it("LibreOffice: the heading's bold and the empty paragraph dropped, monospace text as code", () => {
+    expect(pasted(libreOffice)).toBe('Intro\n\n== Results\n\nThe run took *18 ms* and _4 ms_ warm, plain.\n\n- Cold start\n- #underline[Incremental]\n\n`typst compile` builds it.\n');
   });
 });
