@@ -126,6 +126,68 @@ describe('paste', () => {
   });
 });
 
+/** Typst copied from elsewhere, with what reads it wrongly as plain text: `#`, `=`, `*`, `$`. */
+const TYPST_CODE = '#set text(lang: "de")\n= Title\n\nSome *bold* $x^2$';
+const MONO = 'font-family: ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, monospace; font-size: 13.6px;';
+
+/** Clipboard HTML of code as browsers copy it (Chromium: elements with their computed style inline). */
+const SOURCES: Record<string, string> = {
+  'a GitHub Markdown fence': `<meta charset='utf-8'><div class="highlight highlight-source-typst notranslate position-relative" dir="auto" style="color: rgb(31, 35, 40); font-family: -apple-system, &quot;Segoe UI&quot;, sans-serif;"><pre style="${MONO} white-space: pre; padding: 16px;"><span class="pl-k" style="color: rgb(207, 34, 46);">#set</span> text(lang: <span class="pl-s">"de"</span>)\n<span class="pl-mh">= Title</span>\n\nSome *bold* $x^2$</pre></div>`,
+  'a documentation site <pre> without a language': `<div class="previewed-code"><pre><code><span class="typ-key">#set</span> <span class="typ-func">text</span>(lang: <span class="typ-str">"de"</span>)\n= Title\n\nSome *bold* $x^2$</code></pre></div>`,
+  'a part of a highlighted block (spans only)': `<meta charset='utf-8'><span style="color: rgb(31, 35, 40); ${MONO} white-space: pre; background-color: rgb(246, 248, 250);"><span class="pl-k">#set</span> text(lang: "de")\n= Title\n\nSome *bold* $x^2$</span>`,
+  'spans and line breaks in a monospace font': `<span style="${MONO}">#set text(lang: "de")</span><br><span style="${MONO}">= Title</span><br><br><span style="${MONO}">Some *bold* $x^2$</span>`,
+  'a web code editor (a <div> per line)': `<div class="cm-line">#set text(lang: "de")</div><div class="cm-line">= Title</div><div class="cm-line"><br></div><div class="cm-line">Some *bold* $x^2$</div>`,
+  'an editor of a <p> per line in a monospace font': `<p style="font-family: &quot;JetBrains Mono&quot;, monospace;">#set text(lang: "de")</p><p style="font-family: &quot;JetBrains Mono&quot;, monospace;">= Title</p><p style="font-family: &quot;JetBrains Mono&quot;, monospace;">Some *bold* $x^2$</p>`,
+  'VS Code in Typst mode': `<meta charset="utf-8"><div style="color: #d4d4d4; font-family: Menlo, monospace; white-space: pre;"><div><span>#set text(lang: "de")</span></div></div>`,
+};
+
+describe('paste of code from other sources', () => {
+  for (const [source, html] of Object.entries(SOURCES)) {
+    it(`reads code of Typst or no language as Typst: ${source}`, () => {
+      const { doc, select, paste } = setup('Intro\n');
+      select(5);
+      const items: Record<string, string> = { 'text/plain': TYPST_CODE.replace(/\n/g, '\r\n'), 'text/html': html };
+      if (source.startsWith('VS Code')) items['vscode-editor-data'] = '{"version":1,"isFromEmptySelection":false,"mode":"typst"}';
+      paste(items);
+      expect(doc.text).toBe(`Intro\n\n${TYPST_CODE}\n`);
+    });
+  }
+
+  it('pastes code of another language as a code block of it (a GitHub fence)', () => {
+    const { doc, select, paste } = setup('Intro\n');
+    select(5);
+    const html = `<div class="highlight highlight-source-python notranslate"><pre style="${MONO}"><span class="pl-k">def</span> f(x):\n    <span class="pl-k">return</span> x ** 2\n</pre></div>`;
+    paste({ 'text/plain': 'def f(x):\n    return x ** 2\n', 'text/html': html });
+    expect(doc.text).toBe('Intro\n\n```python\ndef f(x):\n    return x ** 2\n```\n');
+  });
+
+  it("pastes code VS Code copied in another language mode as a code block of it, its fence longer than the code's backticks", () => {
+    const { doc, select, paste } = setup('Intro\n');
+    select(5);
+    const html = '<meta charset="utf-8"><div style="white-space: pre;"><div><span>s = """```"""</span></div></div>';
+    paste({ 'text/plain': 's = """```"""', 'text/html': html, 'vscode-editor-data': '{"version":1,"mode":"python"}' });
+    expect(doc.text).toBe('Intro\n\n````python\ns = """```"""\n````\n');
+  });
+
+  it('reads code a language class names Typst or plain text as Typst', () => {
+    for (const language of ['typ', 'typst', 'text']) {
+      const { doc, select, paste } = setup('Text\n');
+      select(4);
+      paste({ 'text/plain': ' *bold*', 'text/html': `<pre><code class="language-${language}"> *bold*</code></pre>` });
+      expect(doc.text).toBe('Text *bold*\n');
+    }
+  });
+
+  it('pastes HTML with text outside code (prose with inline code, text only wrapped) through the schema', () => {
+    for (const html of ['<p>Use <code>*x*</code> here</p>', '<span style="white-space: pre-wrap;">*x*</span>']) {
+      const { doc, select, paste } = setup('Text\n');
+      select(4);
+      paste({ 'text/plain': '*x*', 'text/html': html });
+      expect(doc.text).toContain('\\*x\\*');
+    }
+  });
+});
+
 describe('copy', () => {
   it('puts the Typst source of the selection on the clipboard as text, and HTML along', () => {
     const source = 'Some *bold* text.\n';
