@@ -5,11 +5,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/config"
+	"github.com/sandstorm/zwiebelfisch/server/lib/config"
 )
 
 func TestDefaults(t *testing.T) {
-	c, err := config.Load([]string{"HOME=/home/x", "TYPST_UNRELATED=1"})
+	c, err := config.Load([]string{"HOME=/home/x", "ZWF_UNRELATED=1"})
 	require.NoError(t, err)
 	require.Equal(t, "127.0.0.1", c.Address)
 	require.Equal(t, 1234, c.Port)
@@ -24,11 +24,11 @@ func TestDefaults(t *testing.T) {
 
 func TestEnvironment(t *testing.T) {
 	c, err := config.Load([]string{
-		"PORT=4321", "TYPST_ADDRESS=0.0.0.0", "TYPST_COLLAB_DB=:memory:",
-		"TYPST_LOG_LEVEL=debug", "TYPST_LOG_FORMAT=json", "TYPST_PLAIN_ROOMS=1",
-		"TYPST_GITLAB_URL=https://gitlab.example", "TYPST_GITLAB_TOKEN=bot", "TYPST_GITLAB_WEBHOOK_SECRET=hook",
-		"TYPST_GITLAB_AUTHOR_EMAIL=a@example.org", "TYPST_GITLAB_AUTO_COMMIT=off",
-		"TYPST_AUTH_CLIENT_ID=app", "TYPST_AUTH_CLIENT_SECRET=s=1", "TYPST_AUTH_REDIRECT_URL=https://editor.example/auth/callback",
+		"PORT=4321", "ZWF_ADDRESS=0.0.0.0", "ZWF_COLLAB_DB=:memory:",
+		"ZWF_LOG_LEVEL=debug", "ZWF_LOG_FORMAT=json", "ZWF_PLAIN_ROOMS=1",
+		"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_GITLAB_TOKEN=bot", "ZWF_GITLAB_WEBHOOK_SECRET=hook",
+		"ZWF_GITLAB_AUTHOR_EMAIL=a@example.org", "ZWF_GITLAB_AUTO_COMMIT=off",
+		"ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=s=1", "ZWF_AUTH_REDIRECT_URL=https://editor.example/auth/callback",
 	})
 	require.NoError(t, err)
 	require.Equal(t, 4321, c.Port)
@@ -50,22 +50,22 @@ func TestEnvironment(t *testing.T) {
 
 func TestPlainRoomsSwitch(t *testing.T) {
 	for value, want := range map[string]bool{"1": true, "true": true, "0": false, "false": false, "": false} {
-		c, err := config.Load([]string{"TYPST_PLAIN_ROOMS=" + value})
+		c, err := config.Load([]string{"ZWF_PLAIN_ROOMS=" + value})
 		require.NoError(t, err, value)
 		require.Equal(t, want, c.Rooms.Plain, value)
 	}
-	_, err := config.Load([]string{"TYPST_PLAIN_ROOMS=perhaps"})
+	_, err := config.Load([]string{"ZWF_PLAIN_ROOMS=perhaps"})
 	require.Error(t, err)
 }
 
 func TestAnotherIssuer(t *testing.T) {
-	c, err := config.Load([]string{"TYPST_GITLAB_URL=https://gitlab.example", "TYPST_AUTH_ISSUER=https://id.example"})
+	c, err := config.Load([]string{"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_AUTH_ISSUER=https://id.example"})
 	require.NoError(t, err)
 	require.Equal(t, "https://id.example", c.Auth.Issuer)
 }
 
 func TestInvalid(t *testing.T) {
-	for _, environ := range [][]string{{"PORT=http"}, {"PORT=0"}, {"PORT=70000"}, {"TYPST_LOG_FORMAT=xml"}} {
+	for _, environ := range [][]string{{"PORT=http"}, {"PORT=0"}, {"PORT=70000"}, {"ZWF_LOG_FORMAT=xml"}} {
 		_, err := config.Load(environ)
 		require.Error(t, err, environ)
 	}

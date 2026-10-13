@@ -19,9 +19,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/app"
-	"typst-editor/server/lib/fakegitlab"
-	"typst-editor/server/lib/testutil"
+	"github.com/sandstorm/zwiebelfisch/server/lib/app"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
 )
 
 // The built binary on a real port, with real WebSockets from the real HocuspocusProvider: sign in (at the
@@ -39,7 +39,7 @@ func TestServerBinary(t *testing.T) {
 	require.NoError(t, probe.Close())
 
 	dir := t.TempDir()
-	binary := filepath.Join(dir, "typst-server")
+	binary := filepath.Join(dir, "zwiebelfisch")
 	build := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", binary, ".")
 	out, err := build.CombinedOutput()
 	require.NoError(t, err, string(out))
@@ -49,9 +49,9 @@ func TestServerBinary(t *testing.T) {
 	issuer.Config.Handler = fakegitlab.NewIdentityProvider(issuerURL, issuerURL+"/oauth/authorize")
 	issuer.Start()
 	defer issuer.Close()
-	signIn := []string{"TYPST_AUTH_ISSUER=" + issuerURL, "TYPST_AUTH_CLIENT_ID=" + fakegitlab.ClientID, "TYPST_AUTH_CLIENT_SECRET=" + fakegitlab.ClientSecret}
-	env := append(append(os.Environ(), fmt.Sprintf("PORT=%d", port), "TYPST_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
-		"TYPST_PLAIN_ROOMS=1", "TYPST_LOG_LEVEL=debug"), signIn...)
+	signIn := []string{"ZWF_AUTH_ISSUER=" + issuerURL, "ZWF_AUTH_CLIENT_ID=" + fakegitlab.ClientID, "ZWF_AUTH_CLIENT_SECRET=" + fakegitlab.ClientSecret}
+	env := append(append(os.Environ(), fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
+		"ZWF_PLAIN_ROOMS=1", "ZWF_LOG_LEVEL=debug"), signIn...)
 	server := fmt.Sprintf("http://127.0.0.1:%d", port)
 	ws := fmt.Sprintf("ws://127.0.0.1:%d", port)
 
@@ -71,7 +71,7 @@ func TestServerBinary(t *testing.T) {
 		refusal string
 	}{{nil, "sign-in is not configured"}, {signIn, "no rooms to serve"}} {
 		cmd := exec.Command(binary)
-		cmd.Env = append([]string{fmt.Sprintf("PORT=%d", port), "TYPST_COLLAB_DB=:memory:"}, bare.env...)
+		cmd.Env = append([]string{fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB=:memory:"}, bare.env...)
 		out, err = cmd.CombinedOutput()
 		require.Error(t, err)
 		require.Contains(t, string(out), bare.refusal)
@@ -91,7 +91,7 @@ func session(t *testing.T, server, name string) string {
 	u, err := url.Parse(server)
 	require.NoError(t, err)
 	for _, c := range jar.Cookies(u) {
-		if c.Name == "typst_session" {
+		if c.Name == "zwf_session" {
 			return c.String()
 		}
 	}

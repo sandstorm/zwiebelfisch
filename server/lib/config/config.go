@@ -2,27 +2,27 @@
 // sandstorm/dashica).
 //
 //	PORT                (default 1234)
-//	TYPST_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
-//	TYPST_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing)
-//	TYPST_PLAIN_ROOMS   (default off) 1/true: also serve plain rooms (any other name), backed by nothing but the DB
-//	TYPST_LOG_LEVEL     (default info) debug, info, warn, error
-//	TYPST_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
+//	ZWF_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
+//	ZWF_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing)
+//	ZWF_PLAIN_ROOMS   (default off) 1/true: also serve plain rooms (any other name), backed by nothing but the DB
+//	ZWF_LOG_LEVEL     (default info) debug, info, warn, error
+//	ZWF_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
 //
 // GitLab rooms (`gitlab:<project id or path>@<branch>`), enabled when URL and token are set:
 //
-//	TYPST_GITLAB_URL             e.g. https://gitlab.com
-//	TYPST_GITLAB_TOKEN           the bot's token (`api` scope), the author of every commit
-//	TYPST_GITLAB_WEBHOOK_SECRET  (optional) enables POST /gitlab/webhook for push events
-//	TYPST_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in Co-authored-by trailers when theirs is unknown
-//	TYPST_GITLAB_AUTO_COMMIT     (default 10) minutes without edits before a room commits by itself; off: never
+//	ZWF_GITLAB_URL             e.g. https://gitlab.com
+//	ZWF_GITLAB_TOKEN           the bot's token (`api` scope), the author of every commit
+//	ZWF_GITLAB_WEBHOOK_SECRET  (optional) enables POST /gitlab/webhook for push events
+//	ZWF_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in Co-authored-by trailers when theirs is unknown
+//	ZWF_GITLAB_AUTO_COMMIT     (default 10) minutes without edits before a room commits by itself; off: never
 //
 // Sign-in (OpenID Connect, required; package auth). The default provider is the GitLab instance:
 //
-//	TYPST_AUTH_ISSUER         (default TYPST_GITLAB_URL) the issuer; another one signs people in, but GitLab
+//	ZWF_AUTH_ISSUER         (default ZWF_GITLAB_URL) the issuer; another one signs people in, but GitLab
 //	                          rooms refuse them (their GitLab user is unknown)
-//	TYPST_AUTH_CLIENT_ID      the application registered at the provider
-//	TYPST_AUTH_CLIENT_SECRET  its secret
-//	TYPST_AUTH_REDIRECT_URL   (default: /auth/callback on the host the browser names) the callback registered
+//	ZWF_AUTH_CLIENT_ID      the application registered at the provider
+//	ZWF_AUTH_CLIENT_SECRET  its secret
+//	ZWF_AUTH_REDIRECT_URL   (default: /auth/callback on the host the browser names) the callback registered
 //	                          with the application, e.g. https://editor.example.org/auth/callback
 //
 // Plain rooms are off by default: the product's rooms are GitLab branches, and a plain room's content lives
@@ -79,23 +79,23 @@ var defaults = map[string]any{
 }
 
 var envKeys = map[string]string{
-	"PORT":              "port",
-	"TYPST_ADDRESS":     "address",
-	"TYPST_COLLAB_DB":   "collab.db",
-	"TYPST_PLAIN_ROOMS": "rooms.plain",
-	"TYPST_LOG_LEVEL":   "log.level",
-	"TYPST_LOG_FORMAT":  "log.format",
+	"PORT":            "port",
+	"ZWF_ADDRESS":     "address",
+	"ZWF_COLLAB_DB":   "collab.db",
+	"ZWF_PLAIN_ROOMS": "rooms.plain",
+	"ZWF_LOG_LEVEL":   "log.level",
+	"ZWF_LOG_FORMAT":  "log.format",
 
-	"TYPST_AUTH_ISSUER":        "auth.issuer",
-	"TYPST_AUTH_CLIENT_ID":     "auth.client_id",
-	"TYPST_AUTH_CLIENT_SECRET": "auth.client_secret",
-	"TYPST_AUTH_REDIRECT_URL":  "auth.redirect_url",
+	"ZWF_AUTH_ISSUER":        "auth.issuer",
+	"ZWF_AUTH_CLIENT_ID":     "auth.client_id",
+	"ZWF_AUTH_CLIENT_SECRET": "auth.client_secret",
+	"ZWF_AUTH_REDIRECT_URL":  "auth.redirect_url",
 
-	"TYPST_GITLAB_URL":            "gitlab.url",
-	"TYPST_GITLAB_TOKEN":          "gitlab.token",
-	"TYPST_GITLAB_WEBHOOK_SECRET": "gitlab.webhook_secret",
-	"TYPST_GITLAB_AUTHOR_EMAIL":   "gitlab.author_email",
-	"TYPST_GITLAB_AUTO_COMMIT":    "gitlab.auto_commit",
+	"ZWF_GITLAB_URL":            "gitlab.url",
+	"ZWF_GITLAB_TOKEN":          "gitlab.token",
+	"ZWF_GITLAB_WEBHOOK_SECRET": "gitlab.webhook_secret",
+	"ZWF_GITLAB_AUTHOR_EMAIL":   "gitlab.author_email",
+	"ZWF_GITLAB_AUTO_COMMIT":    "gitlab.auto_commit",
 }
 
 // Load reads the configuration from environ (os.Environ()'s format: "NAME=value").
@@ -122,7 +122,7 @@ func Load(environ []string) (Config, error) {
 		c.Auth.Issuer = c.GitLab.URL
 	}
 	if c.Log.Format != "console" && c.Log.Format != "json" {
-		return Config{}, fmt.Errorf("config: TYPST_LOG_FORMAT %q is neither console nor json", c.Log.Format)
+		return Config{}, fmt.Errorf("config: ZWF_LOG_FORMAT %q is neither console nor json", c.Log.Format)
 	}
 	return c, nil
 }

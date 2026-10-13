@@ -8,8 +8,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 )
 
 // Who may edit and save: GitLab's answers (api.go against the fake GitLab, which answers members and

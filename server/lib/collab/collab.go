@@ -97,7 +97,7 @@ func (s *Server) Close(ctx context.Context) error {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("Typst editor collaboration server\n"))
+		_, _ = w.Write([]byte("Zwiebelfisch collaboration server\n"))
 		return
 	}
 	// Any origin here: Authenticate decides per room, from r (the session cookie, which other sites' pages

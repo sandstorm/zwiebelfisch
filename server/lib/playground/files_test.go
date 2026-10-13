@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/playground"
+	"github.com/sandstorm/zwiebelfisch/server/lib/playground"
 )
 
 // StaticFiles on a folder like dist/demo, in-process (no port).

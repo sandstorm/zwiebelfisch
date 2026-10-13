@@ -6,11 +6,11 @@
 // nothing stored. Any branch works: gitlab:demo/report@<branch> starts at main. Run it from the repository
 // root (it reads demo/examples/advanced).
 //
-// Environment: as package config (PORT, TYPST_ADDRESS, TYPST_PLAIN_ROOMS, TYPST_GITLAB_AUTO_COMMIT,
-// TYPST_LOG_*; the database, the sign-in's and the real GitLab's settings are ignored: rooms live in
+// Environment: as package config (PORT, ZWF_ADDRESS, ZWF_PLAIN_ROOMS, ZWF_GITLAB_AUTO_COMMIT,
+// ZWF_LOG_*; the database, the sign-in's and the real GitLab's settings are ignored: rooms live in
 // memory, the fake GitLab signs people in), and
 //
-//	TYPST_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199), where Vite
+//	ZWF_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199), where Vite
 //	                 would serve it (playground.StaticFiles)
 package main
 
@@ -21,14 +21,14 @@ import (
 	"os"
 	"strconv"
 
-	"typst-editor/server/lib/app"
-	"typst-editor/server/lib/auth"
-	"typst-editor/server/lib/config"
-	"typst-editor/server/lib/fakegitlab"
-	"typst-editor/server/lib/gitlab"
-	"typst-editor/server/lib/logging"
-	"typst-editor/server/lib/playground"
-	"typst-editor/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/app"
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
+	"github.com/sandstorm/zwiebelfisch/server/lib/config"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/logging"
+	"github.com/sandstorm/zwiebelfisch/server/lib/playground"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 const projectDir = "demo/examples/advanced"
@@ -88,7 +88,7 @@ func run() error {
 
 	log.Info().Str("room", playground.Room).Bool("plainRooms", cfg.Rooms.Plain).Msg("playground server with the fake GitLab")
 	sites := []app.Site{{Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler}}
-	if dist := os.Getenv("TYPST_DEMO_DIST"); dist != "" {
+	if dist := os.Getenv("ZWF_DEMO_DIST"); dist != "" {
 		port, err := strconv.Atoi(envOr("DEMO_PORT", "5199"))
 		if err != nil {
 			return fmt.Errorf("DEMO_PORT: %w", err)

@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // The stand-ins the room tests run against: a repository in memory (what GitLab does for a room, with the

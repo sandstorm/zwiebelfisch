@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // room is one loaded room: its document, presence and peers, owned by the goroutine in run.

@@ -1,4 +1,4 @@
-// Package app puts the collaboration server together, for both commands (typst-server, and fake-gitlab for
+// Package app puts the collaboration server together, for both commands (zwiebelfisch, and fake-gitlab for
 // the demo): the rooms (package collab) with GitLab rooms (package gitlab) as their extension, the sign-in
 // (package auth), and the HTTP endpoints next to the WebSocket, on one port.
 //
@@ -24,9 +24,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"typst-editor/server/lib/auth"
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/gitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
 )
 
 // SignInRequired is the reason a client that is not signed in is refused (SIGN_IN_REQUIRED in
@@ -60,10 +60,10 @@ type Server struct {
 // error.
 func New(o Options) (*Server, error) {
 	if !o.PlainRooms && o.GitLab == nil {
-		return nil, errors.New("no rooms to serve: configure GitLab (TYPST_GITLAB_URL, TYPST_GITLAB_TOKEN) or enable plain rooms (TYPST_PLAIN_ROOMS=1)")
+		return nil, errors.New("no rooms to serve: configure GitLab (ZWF_GITLAB_URL, ZWF_GITLAB_TOKEN) or enable plain rooms (ZWF_PLAIN_ROOMS=1)")
 	}
 	if o.Auth == nil {
-		return nil, errors.New("no sign-in: configure it (TYPST_AUTH_CLIENT_ID, TYPST_AUTH_CLIENT_SECRET)")
+		return nil, errors.New("no sign-in: configure it (ZWF_AUTH_CLIENT_ID, ZWF_AUTH_CLIENT_SECRET)")
 	}
 	s := &Server{plain: o.PlainRooms, auth: o.Auth, mux: http.NewServeMux()}
 	var extension collab.Extension

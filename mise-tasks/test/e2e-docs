@@ -19,4 +19,4 @@ for _ in $(seq 300); do
   sleep 0.1
 done
 # one worker: every browser edits the same file
-TYPST_DOCS_E2E=1 pnpm exec playwright test tests/e2e/docs-editing.spec.ts --workers=1 ${args[@]+"${args[@]}"}
+ZWF_DOCS_E2E=1 pnpm exec playwright test tests/e2e/docs-editing.spec.ts --workers=1 ${args[@]+"${args[@]}"}

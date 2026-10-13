@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // What the widget and the server agree on about a GitLab room: the maps of its document and the stateless

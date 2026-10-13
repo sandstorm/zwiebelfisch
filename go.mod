@@ -1,4 +1,4 @@
-module typst-editor
+module github.com/sandstorm/zwiebelfisch
 
 go 1.27.1
 

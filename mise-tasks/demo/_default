@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # plain rooms on: the Collaborate mode
-TYPST_PLAIN_ROOMS=1 .cache/bin/fake-gitlab &
+ZWF_PLAIN_ROOMS=1 .cache/bin/fake-gitlab &
 server=$!
 # stop the server however this script ends (Ctrl-C, Vite exiting, an error)
 trap 'kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT
@@ -26,7 +26,7 @@ done
 demo='http://127.0.0.1:5199'
 cat <<EOF
 
-Typst editor playground
+Zwiebelfisch playground
   Local          $demo/
   GitLab (fake)  $demo/?room=gitlab%3Ademo%2Freport%40main
   Collaborate    $demo/?room=playground-simple   (sign in with any name; a second user: a private window)

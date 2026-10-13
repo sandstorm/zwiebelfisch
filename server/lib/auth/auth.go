@@ -99,8 +99,8 @@ type session struct {
 }
 
 const (
-	sessionCookie = "typst_session"
-	loginCookie   = "typst_login"
+	sessionCookie = "zwf_session"
+	loginCookie   = "zwf_login"
 	// SessionLifetime is how long a sign-in lasts (or until the server restarts).
 	SessionLifetime = 7 * 24 * time.Hour
 	loginLifetime   = 10 * time.Minute

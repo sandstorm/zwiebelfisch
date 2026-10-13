@@ -3,7 +3,7 @@ package collab
 import (
 	"context"
 
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // Extension adds behaviour to rooms: GitLab rooms (package gitlab) load a branch into a room, commit it and

@@ -17,7 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/testutil"
+	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
 )
 
 // The built binary on real ports: the playground endpoints next to the collaboration server, sign-in at the
@@ -36,7 +36,7 @@ func TestPlaygroundBinary(t *testing.T) {
 
 	cmd := exec.Command(binary)
 	cmd.Dir = testutil.RepoRoot(t)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", port), fmt.Sprintf("DEMO_PORT=%d", demoPort), "TYPST_DEMO_DIST="+dist)
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", port), fmt.Sprintf("DEMO_PORT=%d", demoPort), "ZWF_DEMO_DIST="+dist)
 	var logs strings.Builder
 	cmd.Stderr = &logs
 	require.NoError(t, cmd.Start())
@@ -51,7 +51,7 @@ func TestPlaygroundBinary(t *testing.T) {
 	require.Equal(t, `{"project":"demo/report","room":"gitlab:demo/report@main"}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/playground", port)))
 	require.Contains(t, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/upstream?room=gitlab%%3Ademo%%2Freport%%40main", port)), "chapters/introduction.typ")
 	require.Equal(t, `{"autoCommit":false,"room":"gitlab:demo/report@other"}`, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/auto-commit?room=gitlab%%3Ademo%%2Freport%%40other", port)))
-	require.Equal(t, "Typst editor collaboration server", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", port)))
+	require.Equal(t, "Zwiebelfisch collaboration server", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", port)))
 	require.Equal(t, `{"plainRooms":false}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/api/info", port)))
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err)

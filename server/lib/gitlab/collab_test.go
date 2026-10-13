@@ -14,9 +14,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/store"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // A GitLab room in the real collaboration server: clients join over the Hocuspocus protocol (in-process,
@@ -48,8 +48,8 @@ func TestRoomInTheCollaborationServer(t *testing.T) {
 
 	a.send(msgTypeStateless, varString(`{"type":"gitlab:save","message":"Reword"}`))
 	b.eventually("everyone hears of the commit", func() bool { return len(b.stateless) == 1 })
-	require.Equal(t, message{Type: msgSaved, Sha: repo.head("main").sha, Author: "Typst editor"}, b.stateless[0])
-	require.Equal(t, "Reword\n\nCo-authored-by: Ann <typst-editor@localhost>", repo.head("main").message, "named by the awareness")
+	require.Equal(t, message{Type: msgSaved, Sha: repo.head("main").sha, Author: "Zwiebelfisch"}, b.stateless[0])
+	require.Equal(t, "Reword\n\nCo-authored-by: Ann <zwiebelfisch@localhost>", repo.head("main").message, "named by the awareness")
 
 	a.send(msgTypeStateless, varString(`{"type":"gitlab:save"}`))
 	a.eventually("only the saver hears there is nothing to commit", func() bool {
@@ -79,7 +79,7 @@ func TestRoomInTheCollaborationServer(t *testing.T) {
 	a.close()
 	b.close()
 	committed := func() bool {
-		return repo.head("main").message == "Edits by Ann: main.typ\n\nCo-authored-by: Ann <typst-editor@localhost>"
+		return repo.head("main").message == "Edits by Ann: main.typ\n\nCo-authored-by: Ann <zwiebelfisch@localhost>"
 	}
 	require.Eventually(t, committed, 5*time.Second, time.Millisecond, "committed by itself after everyone left")
 	require.Eventually(t, func() bool { x.mu.Lock(); defer x.mu.Unlock(); return len(x.open) == 0 }, 5*time.Second, time.Millisecond, "unloaded")

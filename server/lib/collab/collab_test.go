@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/store"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // The whole message flow in-process (the sandbox the tests run in cannot bind ports): clients are Go

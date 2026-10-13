@@ -15,6 +15,6 @@ src/engine/wasm/
 src/engine/fonts/
 .claude/worktrees/
 server/.data/
-# local secrets (e.g. TYPST_GITLAB_TOKEN for the collaboration server)
+# local secrets (e.g. ZWF_GITLAB_TOKEN for the collaboration server)
 .env
 mise.local.toml

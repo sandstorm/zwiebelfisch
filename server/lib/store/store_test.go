@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 func TestSaveLoadAcrossReopen(t *testing.T) {

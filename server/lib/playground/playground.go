@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"typst-editor/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 )
 
 const (
@@ -55,7 +55,7 @@ type Options struct {
 //   - POST /playground/outage?room=gitlab:<project>@<branch>[&on=false]: GitLab cannot be reached for that
 //     branch until called with on=false. Answers {branch, reachable}.
 //   - POST /playground/auto-commit?room=gitlab:<project>@<branch>[&on=true]: that room (open or not yet)
-//     never commits by itself, until called with on=true (the server's setting, TYPST_GITLAB_AUTO_COMMIT,
+//     never commits by itself, until called with on=true (the server's setting, ZWF_GITLAB_AUTO_COMMIT,
 //     which the other rooms keep). Answers {room, autoCommit}.
 func Handler(opts Options, next http.Handler) http.Handler {
 	return &endpoints{opts: opts, next: next}

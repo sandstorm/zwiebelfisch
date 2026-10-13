@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"typst-editor/server/lib/diff3"
+	"github.com/sandstorm/zwiebelfisch/server/lib/diff3"
 )
 
 // Merging texts: an upstream push merged into the room's edits (three-way, by lines), and the small edits

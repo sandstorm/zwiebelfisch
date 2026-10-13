@@ -1,4 +1,4 @@
-// Command typst-server is the collaboration server: `mise run server:dev`. It reads its settings from the
+// Command zwiebelfisch is the collaboration server: `mise run server:dev`. It reads its settings from the
 // environment (package config: GitLab rooms, plain rooms, the sign-in, the database) and serves the
 // Hocuspocus protocol on ws://ADDRESS:PORT (any path), next to the HTTP endpoints of package app. On
 // SIGINT/SIGTERM it stores every open room before exiting.
@@ -14,17 +14,17 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"typst-editor/server/lib/app"
-	"typst-editor/server/lib/auth"
-	"typst-editor/server/lib/config"
-	"typst-editor/server/lib/gitlab"
-	"typst-editor/server/lib/logging"
-	"typst-editor/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/app"
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
+	"github.com/sandstorm/zwiebelfisch/server/lib/config"
+	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/logging"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "typst-server:", err)
+		fmt.Fprintln(os.Stderr, "zwiebelfisch:", err)
 		os.Exit(1)
 	}
 }
@@ -71,7 +71,7 @@ func run() error {
 func signInWith(cfg config.Config, log zerolog.Logger) (*auth.Auth, error) {
 	a := cfg.Auth
 	if a.Issuer == "" || a.ClientID == "" || a.ClientSecret == "" {
-		return nil, errors.New("sign-in is not configured: set TYPST_AUTH_CLIENT_ID and TYPST_AUTH_CLIENT_SECRET (an OAuth application on the GitLab instance; another provider with TYPST_AUTH_ISSUER)")
+		return nil, errors.New("sign-in is not configured: set ZWF_AUTH_CLIENT_ID and ZWF_AUTH_CLIENT_SECRET (an OAuth application on the GitLab instance; another provider with ZWF_AUTH_ISSUER)")
 	}
 	o := auth.Options{
 		Provider: "oidc", Issuer: a.Issuer, ClientID: a.ClientID, ClientSecret: a.ClientSecret, RedirectURL: a.RedirectURL,

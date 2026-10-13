@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"typst-editor/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 )
 
 // accessTTL is how long a join or a file request may rely on an earlier answer.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/diff3"
+	"github.com/sandstorm/zwiebelfisch/server/lib/diff3"
 )
 
 // The fixtures are node-diff3 3.2.1's own results for random line sequences: the port must merge

@@ -28,8 +28,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // DefaultID is the provider id of GitLab rooms unless Options.ID says otherwise.
@@ -52,7 +52,7 @@ type Options struct {
 	// WebhookSecret is what GitLab sends as X-Gitlab-Token with push events ("": no webhook endpoint).
 	WebhookSecret string
 	// AuthorEmail is the email of an editor whose email is not known (in Co-authored-by trailers). Default
-	// typst-editor@localhost.
+	// zwiebelfisch@localhost.
 	AuthorEmail string
 	// AutoCommit is the time without edits after which a room commits its changes by itself (also
 	// LeaveDelay after the last user left); 0: never, only "Save to GitLab…". See ParseAutoCommit.
@@ -92,7 +92,7 @@ func New(opts Options) *Rooms {
 		opts.ID = DefaultID
 	}
 	if opts.AuthorEmail == "" {
-		opts.AuthorEmail = "typst-editor@localhost"
+		opts.AuthorEmail = "zwiebelfisch@localhost"
 	}
 	if opts.Client == nil {
 		opts.Client = &http.Client{Timeout: 30 * time.Second}
@@ -124,7 +124,7 @@ const LeaveDelay = 20 * time.Second
 // DefaultAutoCommit is the auto-commit time when nothing is configured.
 const DefaultAutoCommit = 10 * time.Minute
 
-// ParseAutoCommit reads the auto-commit setting (TYPST_GITLAB_AUTO_COMMIT): "off" (or "false", "0") is 0,
+// ParseAutoCommit reads the auto-commit setting (ZWF_GITLAB_AUTO_COMMIT): "off" (or "false", "0") is 0,
 // a number is minutes (fractions allowed), "" is DefaultAutoCommit.
 func ParseAutoCommit(value string) (time.Duration, error) {
 	text := strings.ToLower(strings.TrimSpace(value))
@@ -136,7 +136,7 @@ func ParseAutoCommit(value string) (time.Duration, error) {
 	}
 	minutes, err := strconv.ParseFloat(text, 64)
 	if err != nil || !(minutes > 0 && minutes <= 1e6) { // also NaN
-		return 0, fmt.Errorf("TYPST_GITLAB_AUTO_COMMIT: \"off\" or minutes, not %q", value)
+		return 0, fmt.Errorf("ZWF_GITLAB_AUTO_COMMIT: \"off\" or minutes, not %q", value)
 	}
 	return time.Duration(minutes * float64(time.Minute)), nil
 }

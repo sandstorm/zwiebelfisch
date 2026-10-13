@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 )
 
 // The fake as a GitLab client sees it: every request through Client (in-process, no port), against the

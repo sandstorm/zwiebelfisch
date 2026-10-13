@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/testutil"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 type origin struct{ name string }

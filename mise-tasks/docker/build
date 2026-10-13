@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Build the Docker image typst-editor-demo (Dockerfile): the built demo and the playground server (Go) with a fake GitLab; arguments go to docker build"
+#MISE description="Build the Docker image zwiebelfisch-demo (Dockerfile): the built demo and the playground server (Go) with a fake GitLab; arguments go to docker build"
 # Needs only Docker: the image installs the tools mise.toml pins and runs build:demo itself.
 set -euo pipefail
-exec docker build -t typst-editor-demo "$@" .
+exec docker build -t zwiebelfisch-demo "$@" .

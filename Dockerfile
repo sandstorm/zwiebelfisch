@@ -10,7 +10,7 @@
 # platform and Go cross-compiles, so a multi-platform build never runs under emulation. Stage `runtime` is distroless:
 # the binary, the built demo (dist/demo) and the fake repository's files (demo/examples/advanced).
 #
-# The server serves the demo from that folder (TYPST_DEMO_DIST, playground.StaticFiles), not embedded with go:embed:
+# The server serves the demo from that folder (ZWF_DEMO_DIST, playground.StaticFiles), not embedded with go:embed:
 # the folder is what build:demo leaves, and an embedding package would make every Go build need a built demo first.
 # Without a checkout the Documentation example saves nothing; the playground bar says so. See
 # docs/10_getting-started/01_getting-started.typ.
@@ -70,7 +70,7 @@ RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
 
-ENV TYPST_ADDRESS=0.0.0.0 TYPST_PLAIN_ROOMS=1 TYPST_DEMO_DIST=/app/dist/demo
+ENV ZWF_ADDRESS=0.0.0.0 ZWF_PLAIN_ROOMS=1 ZWF_DEMO_DIST=/app/dist/demo
 WORKDIR /app
 COPY --from=server /out/fake-gitlab /app/fake-gitlab
 COPY --from=build /app/dist/demo dist/demo

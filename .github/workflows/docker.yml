@@ -50,11 +50,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
           labels: |
-            org.opencontainers.image.title=Typst editor demo
-            org.opencontainers.image.description=The Typst editor demo, served by its collaboration server with an in-memory fake GitLab
+            org.opencontainers.image.title=Zwiebelfisch demo
+            org.opencontainers.image.description=The Zwiebelfisch demo, served by its collaboration server with an in-memory fake GitLab
           annotations: |
-            org.opencontainers.image.title=Typst editor demo
-            org.opencontainers.image.description=The Typst editor demo, served by its collaboration server with an in-memory fake GitLab
+            org.opencontainers.image.title=Zwiebelfisch demo
+            org.opencontainers.image.description=The Zwiebelfisch demo, served by its collaboration server with an in-memory fake GitLab
 
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

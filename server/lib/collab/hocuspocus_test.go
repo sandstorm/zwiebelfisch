@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/testutil"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
 )
 
 // The real client: @hocuspocus/provider 4.7 (what the widget runs) talks to the server through

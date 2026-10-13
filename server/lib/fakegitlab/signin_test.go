@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 )
 
 // The fake's sign-in as a relying party sees it (package auth runs the whole flow against it).

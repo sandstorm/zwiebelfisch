@@ -14,8 +14,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // room is one room backed by a branch: it loads the branch into the room's document, commits the room's
@@ -131,7 +131,7 @@ func (r *room) Stateless(p *collab.Peer, payload string) {
 }
 
 // parseSave reads a save (gitlab:save) by user: who saves (the user, else whom the client names) and the
-// commit message (default "Edit via Typst editor").
+// commit message (default "Edit via Zwiebelfisch").
 func parseSave(user collab.User, payload string) (who, text string, ok bool) {
 	var m clientMessage
 	if json.Unmarshal([]byte(payload), &m) != nil || m.Type != "gitlab:save" {
@@ -604,8 +604,8 @@ func failureMessage(err error) string {
 const (
 	// nobody commits when nobody is known to have edited (a stored room's edits, made before the server
 	// started), and saves for a client that names nobody
-	nobody               = "Typst editor"
-	defaultCommitMessage = "Edit via Typst editor"
+	nobody               = "Zwiebelfisch"
+	defaultCommitMessage = "Edit via Zwiebelfisch"
 	// changesDelay is the time between an edit and meta.changes telling it (edits within it are told together)
 	changesDelay = 500 * time.Millisecond
 	// saveAttempts is how often a save merges upstream and tries again when the branch keeps moving

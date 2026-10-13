@@ -13,9 +13,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/fakegitlab"
-	"typst-editor/server/lib/playground"
-	"typst-editor/server/lib/testutil"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/playground"
+	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
 )
 
 // The playground's dev-only endpoints, in-process: the fake GitLab, a recording stand-in for GitLab rooms'

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"typst-editor/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 )
 
 // The whole sign-in against the fake GitLab's OpenID Connect provider, in-process: requests are handler

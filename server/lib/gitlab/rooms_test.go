@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/ydoc"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
 // GitLab rooms against a repository in memory (fakeRepo), in a stand-in for the collaboration room
@@ -328,14 +328,14 @@ func TestSaving(t *testing.T) {
 		require.Equal(t, message{Type: msgUnchanged}, e.save(""))
 		e.edit(mainTyp, "First", "1st")
 		e.save("  ")
-		require.Equal(t, "Edit via Typst editor", e.repo.head("main").message)
+		require.Equal(t, "Edit via Zwiebelfisch", e.repo.head("main").message)
 	})
 
 	t.Run("names who saves: the user, else whom the client names, else the editor", func(t *testing.T) {
 		who, text, ok := parseSave(collab.User{Name: "Verified"}, `{"type":"gitlab:save","message":" Fix ","author":{"name":"Claimed"}}`)
 		require.Equal(t, []any{"Verified", "Fix", true}, []any{who, text, ok})
 		who, _, _ = parseSave(collab.User{}, `{"type":"gitlab:save"}`)
-		require.Equal(t, "Typst editor", who)
+		require.Equal(t, "Zwiebelfisch", who)
 		_, _, ok = parseSave(collab.User{}, `{"type":"other"}`)
 		require.False(t, ok)
 		_, _, ok = parseSave(collab.User{}, `not json`)
@@ -540,7 +540,7 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		require.Equal(t, ms(atTen), c.Since)
 		require.Equal(t, []string{"Ann"}, c.Editors)
 		e.save("")
-		require.Equal(t, "Edit via Typst editor\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
+		require.Equal(t, "Edit via Zwiebelfisch\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
 	})
 
 	t.Run("knows the editors of a stored room by name", func(t *testing.T) {
@@ -553,7 +553,7 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		again := setup(t, setupOptions{repo: first.repo, state: state})
 		require.Equal(t, []string{"Ann"}, again.changes().Editors)
 		again.save("")
-		require.Equal(t, "Edit via Typst editor\n\nCo-authored-by: Ann <typst-editor@localhost>", again.repo.head("main").message)
+		require.Equal(t, "Edit via Zwiebelfisch\n\nCo-authored-by: Ann <zwiebelfisch@localhost>", again.repo.head("main").message)
 	})
 }
 
@@ -695,7 +695,7 @@ func TestAutoCommit(t *testing.T) {
 		}
 		for _, value := range []string{"soon", "-1", "NaN"} {
 			_, err := ParseAutoCommit(value)
-			require.ErrorContains(t, err, "TYPST_GITLAB_AUTO_COMMIT", value)
+			require.ErrorContains(t, err, "ZWF_GITLAB_AUTO_COMMIT", value)
 		}
 	})
 }

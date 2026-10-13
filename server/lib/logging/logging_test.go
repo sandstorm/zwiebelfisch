@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"typst-editor/server/lib/logging"
+	"github.com/sandstorm/zwiebelfisch/server/lib/logging"
 )
 
 func TestJSONAtLevel(t *testing.T) {

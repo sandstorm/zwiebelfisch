@@ -33,7 +33,7 @@ import (
 
 const (
 	// ClientID and ClientSecret are the only application the fake knows (the server's).
-	ClientID     = "typst-editor"
+	ClientID     = "zwiebelfisch"
 	ClientSecret = "fake-client-secret"
 	keyID        = "fake-gitlab"
 )

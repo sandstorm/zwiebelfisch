@@ -31,7 +31,7 @@ describe('GitLabSourceControl', () => {
 
   it('commits as its author, busy until the server answers; tells the answer and the news', () => {
     const { sent, receive, sourceControl, told, changes } = setup();
-    expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Typst editor' });
+    expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Zwiebelfisch' });
     sourceControl.commit('Fix typo');
     expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo', author: { name: 'Ann' } });
     expect(sourceControl.state).toEqual({ busy: true });

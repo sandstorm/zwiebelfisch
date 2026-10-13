@@ -79,7 +79,7 @@ export interface CommitFailure {
 /** Client → server stateless messages. */
 export type ClientMessage = {
   type: 'gitlab:save';
-  /** Commit message (default 'Edit via Typst editor'). */
+  /** Commit message (default 'Edit via Zwiebelfisch'). */
   message?: string;
   /** Who saves, named in `gitlab:saved` when the server knows no name for the client (the commit's author is the server's bot). */
   author?: { name: string; email?: string };
@@ -110,7 +110,7 @@ export type ServerMessage =
   /** The save failed for another reason. */
   | { type: 'gitlab:error'; message: string };
 
-export const DEFAULT_COMMIT_MESSAGE = 'Edit via Typst editor';
+export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 
 /**
  * The reason the server refuses a client that is not signed in (Hocuspocus' PermissionDenied): the widget offers to

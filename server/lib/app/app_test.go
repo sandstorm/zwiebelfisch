@@ -15,12 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"typst-editor/server/lib/auth"
-	"typst-editor/server/lib/collab"
-	"typst-editor/server/lib/fakegitlab"
-	"typst-editor/server/lib/gitlab"
-	"typst-editor/server/lib/playground"
-	"typst-editor/server/lib/store"
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/playground"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 // The server as the commands put it together, against the fake GitLab (rooms and sign-in), in-process.
@@ -76,8 +76,8 @@ func signIn(t *testing.T, fake *fakegitlab.GitLab, s *Server, name string) *http
 			target = host + next.RequestURI()
 		}
 	}
-	require.Contains(t, jar, "typst_session")
-	return jar["typst_session"]
+	require.Contains(t, jar, "zwf_session")
+	return jar["zwf_session"]
 }
 
 func request(method, target string, session *http.Cookie) *http.Request {
@@ -233,7 +233,7 @@ func TestInfo(t *testing.T) {
 func TestRoutes(t *testing.T) {
 	fake, gl := fakeGitLab()
 	s := newServer(t, fake, Options{GitLab: gl})
-	require.Equal(t, "Typst editor collaboration server", text(t, get(t, s, request("GET", "/", nil))), "anything else: the WebSocket's probe answer")
+	require.Equal(t, "Zwiebelfisch collaboration server", text(t, get(t, s, request("GET", "/", nil))), "anything else: the WebSocket's probe answer")
 	require.Equal(t, 401, get(t, s, request("POST", "/gitlab/webhook", nil)).StatusCode, "the webhook, without its secret")
 	require.Equal(t, 302, get(t, s, request("GET", "/auth/login", nil)).StatusCode, "the sign-in")
 
