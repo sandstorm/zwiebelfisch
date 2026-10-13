@@ -1,5 +1,5 @@
 /* The search extension's styles: the "Find in files" panel (query field and options, scope, message, keys, result
-   tree).
+   tree) and the matches highlighted in the editors.
    See search in search.ts, which registers it. */
 .typst-search {
   display: flex;
@@ -166,3 +166,16 @@
   white-space: pre;
 }
 .typst-search__hit { border-radius: 2px; background: var(--te-highlight); color: var(--te-text); }
+
+/* The matches in the Visual and Source editors (VS Code's find match colors); the current one stronger and outlined.
+   A raw box with a match in it is outlined as a whole. */
+.typst-search__highlight {
+  --typst-search-match: light-dark(rgba(234, 92, 0, 0.25), rgba(234, 92, 0, 0.33));
+  border-radius: 2px;
+  background: var(--typst-search-match);
+}
+.typst-search__highlight--current {
+  --typst-search-match: light-dark(rgba(234, 92, 0, 0.45), rgba(234, 92, 0, 0.55));
+  outline: 1px solid rgba(234, 92, 0, 0.8);
+}
+.typst-search__highlight[contenteditable='false'] { background: none; outline: 2px solid var(--typst-search-match); outline-offset: 1px; }

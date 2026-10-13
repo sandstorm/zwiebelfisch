@@ -4,6 +4,7 @@ import { ProjectPath } from '../../../core/paths/paths';
 import type { WindowApi } from '../../../hosts/window/window';
 import type { SidePanel } from '../../../hosts/workbench/workbench';
 import type { FileMatches, SearchResults, SearchScope } from '../model/search-results';
+import type { MatchHighlights } from './match-highlights';
 import { type TextMatch, TextQuery } from '../model/text-query';
 import { type Choice, ScopePicker } from './scope-picker';
 
@@ -19,7 +20,7 @@ import { type Choice, ScopePicker } from './scope-picker';
  * Results follow the files' changes, redrawn at most every few milliseconds, while the panel is shown: a hidden panel
  * drops its results (nobody sees them go stale) and searches again when it is shown, keeping what was expanded. The
  * tree is one tab stop (↑ / ↓, Home / End, ← / → collapse and expand; ↓ from the field enters it); a click or Enter on
- * a match opens it.
+ * a match opens it. The editors highlight what the panel lists, the match row the tree is on emphasised.
  */
 export class SearchPanel {
   readonly #root: HTMLElement;
@@ -160,6 +161,7 @@ export class SearchPanel {
     this.#listener?.dispose();
     this.#results?.dispose();
     this.#listener = this.#results = null;
+    this.options.highlights.show(null, null);
   }
 
   #scheduleRender(): void {
@@ -180,9 +182,16 @@ export class SearchPanel {
     this.#tree.replaceChildren(...this.#rows.map((row) => row.element));
     const current = this.#rows.find((row) => row.key === this.#current) ?? this.#rows.find((row) => row.key === fileKey(this.#current)) ?? this.#rows[0];
     this.#current = current?.key ?? null;
+    this.#highlight();
     if (!current) return;
     current.element.tabIndex = 0;
     if (focused) current.element.focus();
+  }
+
+  /** Has the editors highlight the matches listed, the one of the current row emphasised. */
+  #highlight(): void {
+    const row = this.#rows.find((candidate) => candidate.key === this.#current);
+    this.options.highlights.show(this.#results, row?.match ? { path: row.path, match: row.match } : null);
   }
 
   /** What the search found, in words ("23 results in 4 files"); empty while there is no query. */
@@ -261,6 +270,7 @@ export class SearchPanel {
     for (const other of this.#rows) other.element.tabIndex = other === row ? 0 : -1;
     this.#current = row.key;
     row.element.focus();
+    this.#highlight();
   }
 
   #indexOf(target: EventTarget | null): number {
@@ -276,6 +286,8 @@ export interface SearchPanelOptions {
   readonly view: Pick<SidePanel, 'visible' | 'onDidChangeVisibility'>;
   /** The file shown in the editing area: the current file to search in. */
   readonly window: Pick<WindowApi, 'activeFile' | 'onDidChangeActiveFile'>;
+  /** Where the editors highlight the matches listed (`show`ed after every redraw). */
+  readonly highlights: Pick<MatchHighlights, 'show'>;
   /** Shows `match` of file `path` (a click or Enter on its row). */
   open(path: ProjectPath, match: TextMatch): void;
   /** What the panel shows while there is no query: the ways here and their keys ("Find in files", "⌘⇧F"). */

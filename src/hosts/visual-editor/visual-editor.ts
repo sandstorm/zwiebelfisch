@@ -114,8 +114,12 @@ export class VisualEditor {
     ];
   }
 
-  /** Selects what shows source range `range` (a caret if empty) and scrolls to it. */
+  /**
+   * Selects what shows source range `range` (a caret if empty) and scrolls to it. A range inside a raw box's code (not
+   * the whole box) is selected in that code, which opens for it.
+   */
   reveal({ from, to }: SourceRange): void {
+    if (this.revealInBox(from, to)) return;
     const { doc } = this.tiptap.state;
     const anchor = sourceToPos(doc, from);
     const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
@@ -151,6 +155,18 @@ export class VisualEditor {
     this.selectionChanged.dispose();
     this.toolbar.dispose();
     this.tiptap.destroy();
+  }
+
+  /** Opens the code of the raw box whose source holds `from..to` with that selected; whether there is one. */
+  private revealInBox(from: SourceOffset, to: SourceOffset): boolean {
+    const { doc } = this.tiptap.state;
+    const pos = sourceToPos(doc, from);
+    const src: unknown = doc.nodeAt(pos)?.attrs.src;
+    if (typeof src !== 'string' || !doc.nodeAt(pos)!.isAtom) return false;
+    const start = posToSource(doc, pos);
+    // a caret at the box's start is before the box; the whole box is selected as one
+    if (from < start || to > start + src.length || (from === start && (to === from || to === start + src.length))) return false;
+    return this.tiptap.commands.editRawBox(pos, from - start, to - start);
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */

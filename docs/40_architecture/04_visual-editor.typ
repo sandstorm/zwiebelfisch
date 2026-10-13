@@ -55,7 +55,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - When the renderer changes (after every compile), only boxes near the view (an `IntersectionObserver`, one viewport above and below) are drawn again; one further away, or in a hidden editor, is drawn again once it comes near.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
 - The picture is a link to where the box's Typst leads (`VisualEditorLinks`): hovered, it shows the hint of every link; with Mod held it shows as one (framed); Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
-- `editRawBox(pos, offset)` (a Tiptap command): focuses the code of the box at `pos`, the cursor at `offset`; for a box just inserted to be written in (Insert → "Inline math").
+- `editRawBox(pos, from, to?)` (a Tiptap command): focuses the code of the box at `pos`, the cursor at `from` or `from..to` selected; for a box just inserted to be written in (Insert → "Inline math"), and for `reveal` of a range inside a box's code (a search match), which selects it there rather than the whole box.
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
 
 == Toolbar <architecture-visual-editor-toolbar>

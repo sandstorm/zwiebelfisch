@@ -2,7 +2,7 @@
 // Tests for search-panel.ts with the real model over a project: the keys while there is no query; the result tree
 // (files, lines, the match marked, collapsed files); typing, the options, an invalid regular expression, too many
 // results; the keyboard and clicks; results following a file's change; the scopes (project, current file, folder);
-// a hidden panel dropping its results and searching again when shown.
+// a hidden panel dropping its results and searching again when shown; what it has the editors highlight.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -24,6 +24,8 @@ afterEach(() => {
 function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n', '/chapters/intro.typ': 'Say hello.\n', '/refs.bib': '@book{hello}', '/logo.png': new Uint8Array() }) {
   const project = new Project(path('/main.typ'), files);
   const opened: [ProjectPath, TextMatch][] = [];
+  /** What the panel last had the editors highlight: the files' match counts, the current match as `path:from`. */
+  let highlighted = { files: [] as string[], current: '' };
   const searches: SearchResults[] = [];
   const visibility = new EventEmitter<void>();
   const view = { visible: true, onDidChangeVisibility: visibility.event };
@@ -38,6 +40,11 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
     open: (file, match) => opened.push([file, match]),
     view,
     window,
+    highlights: {
+      show: (results, current) => {
+        highlighted = { files: (results?.files() ?? []).map((file) => `${file.path} ${file.matches.length}`), current: current ? `${current.path}:${current.match.from}` : '' };
+      },
+    },
     keys: [{ label: 'Find in files', key: 'Ctrl+Shift+F' }],
   });
   const root = document.querySelector<HTMLElement>('[data-testid=typst-search]')!;
@@ -66,6 +73,7 @@ function setup(files: ProjectFiles = { '/main.typ': 'Hello world\nhello again\n'
     },
     clearScope: () => root.querySelector<HTMLButtonElement>('button[aria-label="Search the whole project"]')!,
     opened,
+    highlighted: () => highlighted,
     input,
     rows,
     toggle,
@@ -131,6 +139,19 @@ describe('SearchPanel', () => {
     toggle('Use Regular Expression').click();
     await type('w.rld|again');
     expect(tree()).toEqual(['▾ main.typ (2)', '  1: Hello [world]', '  2: hello [again]']);
+  });
+
+  it('has the editors highlight what it lists, the match row the tree is on as the current one; nothing while hidden', async () => {
+    const { panel, rows, press, highlighted, setVisible } = setup();
+    panel.find({ query: 'hello' });
+    await vi.runAllTimersAsync();
+    expect(highlighted()).toEqual({ files: ['/main.typ 2', '/chapters/intro.typ 1', '/refs.bib 1'], current: '' });
+    rows()[0].focus();
+    press(rows()[0], 'ArrowDown');
+    press(rows()[1], 'ArrowDown');
+    expect(highlighted().current).toBe('/main.typ:12');
+    setVisible(false);
+    expect(highlighted()).toEqual({ files: [], current: '' });
   });
 
   it('says what is wrong with an invalid regular expression, and lists nothing', async () => {

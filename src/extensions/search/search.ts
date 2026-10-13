@@ -4,6 +4,7 @@ import { keyLabel } from '../../hosts/commands/commands';
 import type { ExtensionContext, SidePanel, TypstExtension } from '../../hosts/workbench/workbench';
 import { SearchResults } from './model/search-results';
 import css from './search.css?inline';
+import { MatchHighlights } from './workbench/match-highlights';
 import { type FindOptions, SearchPanel } from './workbench/search-panel';
 
 /**
@@ -14,7 +15,9 @@ import { type FindOptions, SearchPanel } from './workbench/search-panel';
  * editing area closes then.
  *
  * It searches the whole project, the current file (the one shown, as it changes) or a folder and its subfolders. While
- * shown it follows every change of the files; hidden, it drops its results and searches again when shown.
+ * shown it follows every change of the files, and the Visual and Source editors highlight every match it lists, the
+ * one its list is on emphasised; hidden, it drops its results (and the highlights) and searches again when shown. A
+ * match inside a raw box (math, code Visual does not model) opens in the box's code, selected there.
  *
  * The command `workbench.action.findInFiles` (⌘⇧F) shows the panel and searches. It takes VS Code's arguments
  * (`query`, `isRegex`, `isCaseSensitive`, `matchWholeWord`); without a query it starts from the selection of the shown
@@ -30,8 +33,9 @@ export function search(): TypstExtension {
     // search.findInFolder needs a folder: offered on the file panel's rows only, not in command search
     contributes: { commands: [{ command: FIND_IN_FILES, title: 'Find in files' }], keybindings: [{ command: FIND_IN_FILES, key: FIND_KEY }] },
     activate(context) {
-      const { project, languages, workbench, commands, subscriptions } = context;
+      const { project, languages, workbench, commands, visualEditor, sourceEditor, subscriptions } = context;
       const side = workbench.registerSidePanel('search', { label: 'Find in files', icon: magnifier(workbench.ownerDocument), order: 12 });
+      const highlights = new MatchHighlights(project);
       const panel = new SearchPanel(side.body, {
         search: (query, scope) => new SearchResults({ project, query, scope, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
         open: (path, match) => {
@@ -40,6 +44,7 @@ export function search(): TypstExtension {
         },
         view: side,
         window: context.window,
+        highlights,
         keys: [
           { label: 'Find in files', key: keyLabel(FIND_KEY) },
           { label: 'Search everywhere', key: 'Shift Shift' },
@@ -49,6 +54,9 @@ export function search(): TypstExtension {
         workbench.registerStyleSheet(css),
         side,
         panel,
+        highlights,
+        visualEditor.registerHighlights('search', highlights.visualHighlights),
+        sourceEditor.registerCodeMirrorExtension(highlights.sourceExtension),
         commands.registerCommand(FIND_IN_FILES, (options?: FindOptions) => findInFiles(context, side, panel, options)),
         commands.registerCommand(FIND_IN_FOLDER, (folder: ProjectPath) => {
           side.show(true);
