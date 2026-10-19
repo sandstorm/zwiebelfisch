@@ -23,7 +23,7 @@ async function holdBack(page: Page, url: string | RegExp, serve: (route: Route) 
 }
 
 const preview = (page: Page) => page.getByTestId('zwf-preview');
-const loader = (page: Page) => page.getByTestId('zwf-preview-loader');
+const loader = (page: Page) => page.getByTestId('zwf-preview-progress');
 /** What the preview loads shows in its pane only: the status bar has no progress entry for it. */
 const statusBarProgress = (page: Page) => page.getByTestId('zwf-progress');
 

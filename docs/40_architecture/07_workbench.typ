@@ -49,12 +49,12 @@ Nothing in the editing area waits for the engine.
   columns: (auto, 1fr),
   table.header[Arrived][Shown],
   [the JS], [the frame and the shown file's text, editable (`createEditor` is synchronous)],
-  [the worker, then the wasm (streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB"],
+  [the worker, then the wasm (streamed)], [the preview's loading note (`previewProgress`): "Loading the Typst compiler… 3.1 / 6.6 MB"],
   [the engine, compiling], ["Compiling…", then packages and fonts as they download],
   [the first pages], [the pages; raw boxes swap their code for their pictures],
 )
 
-- *The preview's progress* shows in its pane only; a compiler that cannot load or crashed becomes an error message.
+- *The preview's progress* shows in its pane only (`previewProgress`, a pane overlay); a compiler that cannot load or crashed becomes an error message.
 - *`ProgressLocation.EditingArea`* (ours, for `window.withProgress`) puts a note over the editing area, which is `inert` until the task settles (collaboration: "Connecting to the room…").
 
 == Extension API <architecture-workbench-api>

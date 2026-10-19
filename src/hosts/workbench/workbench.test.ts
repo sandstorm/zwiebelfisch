@@ -6,20 +6,18 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
-import type { PreviewOptions, PreviewProgress } from '../preview/preview';
 import { SOURCE_EDITOR } from '../source-editor/source-editor';
 import { VISUAL_EDITOR } from '../visual-editor/visual-editor';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
-/** The options the workbench gave the (mocked) preview made last (how it hears the preview's progress), and the main files it compiled. */
-const made = vi.hoisted(() => ({ preview: null as PreviewOptions | null, compiled: [] as string[] }));
+/** The main files the (mocked) preview compiled. */
+const made = vi.hoisted(() => ({ compiled: [] as string[] }));
 
 vi.mock('../preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
-    constructor(parent: HTMLElement, options: PreviewOptions) {
+    constructor(parent: HTMLElement) {
       parent.append(Object.assign(document.createElement('div'), { className: 'mock-preview' }));
-      made.preview = options;
     }
     readonly toolbarItems: unknown[] = [];
     update(_files: unknown, main: string) {
@@ -229,22 +227,8 @@ describe('WorkbenchHost', () => {
     expect(workbench.getMenuItems('other/menu')).toEqual([]);
   });
 
-  it('shows what the preview loads in the preview pane only, not in the status bar; a compiler that fails to load as an error', () => {
-    const { host } = setup();
-    const progress = (kind: PreviewProgress['kind'], title: string, detail: string | null = null): PreviewProgress => ({ kind, title, detail, fraction: null });
-    made.preview!.onDidChangeProgress!(progress('engine', 'Loading the Typst compiler…', '3.1 / 6.6 MB'));
-    made.preview!.onDidChangeProgress!(progress('packages', 'Downloading @preview/merman 0.4.0…'));
-    expect(host.querySelector('.zwf-editor__status-bar [data-testid=zwf-progress]')).toBeNull();
-    expect(host.querySelector('.zwf-editor__status-bar')!.textContent).not.toContain('Loading');
-    made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
-    made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
-    const errors = host.querySelectorAll('[data-testid=zwf-notifications] [role=alert]');
-    expect([...errors].map((error) => error.textContent)).toEqual([expect.stringContaining('The Typst compiler could not be loaded. HTTP 404')]);
-  });
-
   it('shows the text and takes edits while the preview still loads the compiler', () => {
     const { host, project } = setup();
-    made.preview!.onDidChangeProgress!({ kind: 'engine', title: 'Loading the Typst compiler…', detail: null, fraction: null });
     const content = host.querySelector<HTMLElement>('.zwf-editor__editor-area .cm-content')!;
     expect(content.textContent).toContain('= Main');
     const view = EditorView.findFromDOM(content)!;

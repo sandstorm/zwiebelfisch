@@ -1,0 +1,41 @@
+/* The loading note (loader.ts): a pane overlay over the empty pages until the first ones come, so nothing moves then. */
+.zwf-preview-progress {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--zwf-muted);
+  font: 13px/1.4 system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+.zwf-preview-progress[hidden] { display: none; }
+.zwf-preview-progress__title { color: var(--zwf-text-2); }
+.zwf-preview-progress--failed .zwf-preview-progress__title { color: var(--zwf-danger); font-weight: 600; }
+.zwf-preview-progress__bar {
+  position: relative;
+  overflow: hidden;
+  width: min(220px, 70%);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--zwf-border);
+}
+.zwf-preview-progress__bar[hidden] { display: none; }
+.zwf-preview-progress__fill { height: 100%; width: 0; background: var(--zwf-accent); transition: width 0.2s linear; }
+.zwf-preview-progress__bar--indeterminate > .zwf-preview-progress__fill {
+  width: 35%;
+  animation: zwf-preview-progress-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes zwf-preview-progress-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zwf-preview-progress__fill { transition: none; }
+  .zwf-preview-progress__bar--indeterminate > .zwf-preview-progress__fill { animation: none; width: 100%; opacity: 0.5; }
+}
+.zwf-preview-progress__detail { min-height: 1.4em; font-variant-numeric: tabular-nums; }

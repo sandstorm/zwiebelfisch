@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
 // Tests for preview.ts: the PDF export options registry, the view options, the renderers, clicks, page overlays
-// and boxesFor, the loader and restarting a crashed engine (the engine worker is replaced by a stub that answers what
+// and boxesFor, load events and pane overlays, and restarting a crashed engine (the engine worker is replaced by a stub that answers what
 // `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   Preview,
   type HtmlBundle,
   type PageClick,
+  type EngineCrash,
+  type LoadEvent,
   type PdfExportOption,
-  type PreviewProgress,
   type PreviewRenderer,
   type PreviewViewOption,
 } from './preview';
 import { type ElementLocation, PageIndex, Pt } from '../../core/typst-engine/typst-engine';
-import type { EngineRequest, LoadEvent } from './worker/protocol';
+import type { EngineRequest, WorkerLoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 
@@ -331,61 +332,52 @@ describe('Preview view options', () => {
   });
 });
 
-describe('Preview loader', () => {
+describe('Preview load events and pane overlays', () => {
   let preview: Preview;
   afterEach(() => {
     preview.dispose();
     engine.answer = () => null;
   });
 
-  it('shows the engine download, then "Compiling…", and goes once the first pages are there', async () => {
+  it("tells the worker's load events as they come, and a new engine starting after a crash", () => {
+    engine.workers = [];
+    preview = new Preview(document.createElement('div'));
+    const told: LoadEvent[] = [];
+    preview.onDidLoad((event) => told.push(event));
+    engine.tell({ kind: 'engine', loaded: 3_100_000, total: 6_600_000 } satisfies WorkerLoadEvent);
+    engine.tell({ kind: 'packages', specs: ['@preview/merman:0.4.0'] } satisfies WorkerLoadEvent);
+    engine.workers[0].onerror!({ message: 'unreachable', preventDefault: () => {} });
+    expect(told).toEqual([
+      { kind: 'engine', loaded: 3_100_000, total: 6_600_000 },
+      { kind: 'packages', specs: ['@preview/merman:0.4.0'] },
+      { kind: 'starting' },
+    ]);
+    expect(engine.workers).toHaveLength(2);
+  });
+
+  it('is empty until the first pages are rendered', async () => {
     const container = document.createElement('div');
-    const reported: (PreviewProgress | null)[] = [];
-    preview = new Preview(container, { onDidChangeProgress: (progress) => reported.push(progress) });
-    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
-    const status = loader.querySelector('[role="status"]')!;
-    const bar = loader.querySelector('[role="progressbar"]')!;
-    expect(loader.hidden).toBe(false);
-    expect(status.textContent).toBe('Loading the Typst compiler…');
-
-    engine.tell({ kind: 'engine', loaded: 3_100_000, total: 6_600_000 } satisfies LoadEvent);
-    expect(loader.textContent).toContain('3.1 / 6.6 MB');
-    expect(bar.getAttribute('aria-valuenow')).toBe('47');
-    expect(bar.getAttribute('aria-valuetext')).toBe('3.1 / 6.6 MB');
-
-    engine.tell({ kind: 'ready' } satisfies LoadEvent);
-    expect(status.textContent).toBe('Compiling…');
-    expect(bar.hasAttribute('aria-valuenow')).toBe(false);
-
+    preview = new Preview(container);
+    expect(preview.isEmpty).toBe(true);
+    const empty: boolean[] = [];
+    preview.onDidRender(() => empty.push(preview.isEmpty));
     const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
     engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
-    expect(loader.hidden).toBe(true);
-    expect(reported.map((progress) => progress?.kind ?? null)).toEqual(['engine', 'engine', 'compiling', null]);
+    await vi.waitFor(() => expect(empty).toEqual([false]));
   });
 
-  it('says so when the engine cannot be loaded', () => {
+  it('lays a pane overlay over the pages and a renderer, until disposed', () => {
     const container = document.createElement('div');
     preview = new Preview(container);
-    engine.tell({ kind: 'failed', message: 'HTTP 404' } satisfies LoadEvent);
-    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
-    expect(loader.textContent).toContain('The Typst compiler could not be loaded.');
-    expect(loader.textContent).toContain('HTTP 404');
-    expect(loader.querySelector<HTMLElement>('[role="progressbar"]')!.hidden).toBe(true);
-  });
-
-  it('shows a package download over the empty pane, but not once there are pages', async () => {
-    const container = document.createElement('div');
-    preview = new Preview(container);
-    const loader = container.querySelector<HTMLElement>('[data-testid="zwf-preview-loader"]')!;
-    engine.tell({ kind: 'ready' } satisfies LoadEvent);
-    engine.tell({ kind: 'packages', specs: ['@preview/merman:0.4.0'] } satisfies LoadEvent);
-    expect(loader.textContent).toContain('Downloading @preview/merman 0.4.0…');
-    const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
-    engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
-    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
-    await vi.waitFor(() => expect(loader.hidden).toBe(true));
+    const note = document.createElement('div');
+    const overlay = preview.registerPaneOverlay(note);
+    preview.registerRenderer({ id: 'html', label: 'HTML', output: 'html', create: () => ({ update() {}, dispose() {} }) });
+    preview.setActiveRenderer('html');
+    const scroller = container.querySelector('.zwf-preview__scroller')!;
+    expect([...scroller.children].map((child) => child.className || 'note')).toEqual(['zwf-preview', 'zwf-preview__renderer', 'note']);
+    overlay.dispose();
+    expect(note.isConnected).toBe(false);
   });
 });
 
@@ -401,7 +393,7 @@ describe('Preview after the engine crashed', () => {
   const pages = { type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } };
   const crash = { type: 'error', message: 'capacity overflow (at ecow-0.2.6/src/vec.rs:1227)', crashed: true };
 
-  /** A preview whose engine answers compiles with `answer(text of /main.typ, worker number)`; `reported`: its progress. */
+  /** A preview whose engine answers compiles with `answer(text of /main.typ, worker number)`; `crashes`: what it told. */
   function setup(answer: (text: unknown, worker: number) => object | null) {
     engine.workers = [];
     engine.answer = (body) => {
@@ -409,20 +401,20 @@ describe('Preview after the engine crashed', () => {
       return request.type === 'compile' ? answer(request.files['/main.typ'], engine.workers.length) : null;
     };
     const container = document.createElement('div');
-    const reported: (PreviewProgress | null)[] = [];
-    preview = new Preview(container, { onDidChangeProgress: (progress) => reported.push(progress) });
-    const failures = () => reported.filter((progress) => progress?.kind === 'failed').map((progress) => `${progress!.title} ${progress!.detail}`);
-    return { container, reported, failures };
+    preview = new Preview(container);
+    const crashes: EngineCrash[] = [];
+    preview.onDidCrash((crash) => crashes.push(crash));
+    return { container, crashes };
   }
 
   it('starts a new engine, sends it the files again and compiles the newest ones, and tells', async () => {
     const compiled: unknown[] = [];
-    const { container, failures } = setup((text, worker) => (compiled.push(text), worker === 1 ? crash : pages));
+    const { container, crashes } = setup((text, worker) => (compiled.push(text), worker === 1 ? crash : pages));
     preview.update({ '/main.typ': 'Hi', '/logo.png': new Uint8Array([1]) }, '/main.typ');
     await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
     expect(engine.workers.map((worker) => worker.terminated)).toEqual([true, false]);
     expect(compiled).toEqual(['Hi', 'Hi']);
-    expect(failures()).toEqual(['The Typst compiler crashed and was restarted. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)']);
+    expect(crashes).toEqual([{ message: crash.message, restarting: true }]);
   });
 
   it('sends the new engine every file, also the bytes the crashed one had', async () => {
@@ -458,13 +450,12 @@ describe('Preview after the engine crashed', () => {
   });
 
   it('stays off when the same files crash it again, until the next update', async () => {
-    const { container, failures } = setup((text) => (text === 'boom' ? crash : pages));
+    const { container, crashes } = setup((text) => (text === 'boom' ? crash : pages));
     preview.update({ '/main.typ': 'boom' }, '/main.typ');
-    await vi.waitFor(() => expect(failures()).toHaveLength(2));
+    await vi.waitFor(() => expect(crashes).toHaveLength(2));
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(engine.workers).toHaveLength(2);
-    expect(failures()[1]).toBe('The Typst compiler crashed again; it starts again with the next edit. capacity overflow (at ecow-0.2.6/src/vec.rs:1227)');
-    expect(container.querySelector('[data-testid="zwf-preview-loader"]')!.textContent).toContain('crashed again');
+    expect(crashes.map(({ restarting }) => restarting)).toEqual([true, false]);
 
     preview.update({ '/main.typ': 'fine' }, '/main.typ');
     await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());

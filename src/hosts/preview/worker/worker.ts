@@ -2,7 +2,7 @@ import { DEFAULT_FONTS, ENGINE_WASM_URL } from './engine-assets';
 import type { FileContent } from '../../../core/project/project';
 import type { CompileResult, HtmlFile, HtmlResult, Page } from '../../../core/typst-engine/typst-engine';
 import { HashedReceiver } from './hashed';
-import type { EncodedFiles, EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } from './protocol';
+import type { EncodedFiles, EngineRequest, EngineResponse, Init, WorkerLoadEvent, WorkerProgress } from './protocol';
 
 /**
  * The Typst engine in a Web Worker, as the preview talks to it: requests answered by id.
@@ -91,7 +91,7 @@ export class EngineWorker {
 
 export interface EngineWorkerListener {
   /** The worker told how loading goes. */
-  onDidLoad(event: LoadEvent): void;
+  onDidLoad(event: WorkerLoadEvent): void;
   /** The engine crashed (`message` says why) and its worker was stopped. */
   onDidCrash(message: string): void;
 }

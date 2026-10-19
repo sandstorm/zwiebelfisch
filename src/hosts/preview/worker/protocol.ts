@@ -3,6 +3,7 @@ import type { PageRect, CompileResult, ElementLocation, HtmlFile, HtmlResult, Pa
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { FileContent } from '../../../core/project/project';
 import type { FontFile } from './engine-assets';
+import type { LoadEvent } from '../preview';
 
 /**
  * First message to the worker: where the engine wasm and fonts are. The main thread
@@ -29,26 +30,14 @@ export type EngineRequest =
   /** A PDF of `main`, with `sources` replacing or adding text files for this export only. */
   | { id: number; type: 'pdf'; main: string; sources: Record<string, string> };
 
-/**
- * What the worker tells unasked while it loads: not an answer to a request (no id). The preview turns these into its
- * `PreviewProgress`.
- */
+/** What the worker tells unasked while it loads: not an answer to a request (no id). The preview passes it on as is. */
 export interface WorkerProgress {
   type: 'progress';
-  event: LoadEvent;
+  event: WorkerLoadEvent;
 }
 
-export type LoadEvent =
-  /** `loaded` bytes of the engine's wasm arrived, of `total` (null: unknown). */
-  | { kind: 'engine'; loaded: number; total: number | null }
-  /** The engine is ready for requests. */
-  | { kind: 'ready' }
-  /** The engine could not be loaded: every request fails. */
-  | { kind: 'failed'; message: string }
-  /** The packages (`@preview/name:version`) being downloaded now; empty: none any more. */
-  | { kind: 'packages'; specs: readonly string[] }
-  /** A font file is being downloaded (its name), or none any more (null). */
-  | { kind: 'font'; name: string | null };
+/** The load events the worker tells; the preview itself tells `starting`. */
+export type WorkerLoadEvent = Exclude<LoadEvent, { kind: 'starting' }>;
 
 export type EngineResponse =
   /** `memoryInUse`: the engine's `TypstEngine.memoryInUse` after the compile. */

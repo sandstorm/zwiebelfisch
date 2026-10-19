@@ -14,6 +14,10 @@ const revealed = vi.hoisted(() => [] as [string, number][]);
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    onDidLoad = () => ({ dispose() {} });
+    onDidCrash = () => ({ dispose() {} });
+    isEmpty = true;
+    registerPaneOverlay = () => ({ dispose() {} });
     update() {}
     reveal(path: string, { from }: { from: number }) {
       revealed.push([path, from]);

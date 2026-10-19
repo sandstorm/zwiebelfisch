@@ -66,6 +66,24 @@ export interface PreviewContributions {
   /** `engineMemory` changed: after a compile that made the engine grow, or the first of a new engine. */
   readonly onDidChangeEngineMemory: Event<void>;
   /**
+   * How loading the engine goes, as it happens (not repeated for a late listener: until told otherwise, the first
+   * engine is loading). For a loading note (preview-progress); nothing needs it to compile.
+   */
+  readonly onDidLoad: Event<LoadEvent>;
+  /** The engine crashed; the preview restarts it once per `update()` by itself. */
+  readonly onDidCrash: Event<EngineCrash>;
+  /**
+   * Whether the pane shows nothing of the document yet: no pages, or the active renderer got no output. It changes
+   * only before `onDidRender` and `onDidChangeRenderers`.
+   */
+  readonly isEmpty: boolean;
+  /**
+   * Lays `element` over the pane below the toolbar (on top of the pages or renderer), until disposed; the preview
+   * removes it then. The caller's CSS places it: the pane's scroll area is `position: relative`, so
+   * `position: absolute; inset: 0` covers it. Without any, the pane shows nothing while it loads.
+   */
+  registerPaneOverlay(element: HTMLElement): Disposable;
+  /**
    * Draws boxes over the pages as elements of class `className` (the caller's CSS styles them; the preview places
    * them in percent of their page, so they keep their place at any zoom), until disposed. The boxes set stay through
    * compiles: after every render they are drawn on the new pages, until `set` replaces them.
@@ -270,23 +288,24 @@ export interface RenderedSnippet {
 }
 
 /**
- * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
- * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded or crashed
- * (`failed`). The pane shows it while it has no pages; the workbench turns `failed` into an error message.
+ * How loading the engine goes (`PreviewContributions.onDidLoad`): a new engine starts after a crash (the first one
+ * loads from the start, untold), its wasm downloads (`loaded` of `total` bytes; null: unknown), it is ready or
+ * could not be loaded (then every compile fails), and packages or fonts download during a compile.
  */
-export interface PreviewProgress {
-  readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
-  /** What is going on, as people read it: "Loading the Typst compiler…", "Downloading @preview/merman 0.4.0…". */
-  readonly title: string;
-  /** How far, or why it failed: "3.1 / 6.6 MB"; null: nothing to add. */
-  readonly detail: string | null;
-  /** Done so far, from 0 to 1; null: unknown. */
-  readonly fraction: number | null;
-}
+export type LoadEvent =
+  | { kind: 'starting' }
+  | { kind: 'engine'; loaded: number; total: number | null }
+  | { kind: 'ready' }
+  | { kind: 'failed'; message: string }
+  /** The packages (`@preview/name:version`) downloading now; empty: none any more. */
+  | { kind: 'packages'; specs: readonly string[] }
+  /** A font file downloading (its name), or none any more (null). */
+  | { kind: 'font'; name: string | null };
 
-export interface PreviewOptions {
-  /** Called whenever what the preview waits for changes (null: nothing any more). */
-  onDidChangeProgress?(progress: PreviewProgress | null): void;
+/** The engine crashed (`message` says why); `restarting`: a new one starts now, else it stays off until the next `update()`. */
+export interface EngineCrash {
+  readonly message: string;
+  readonly restarting: boolean;
 }
 
 export { Preview } from './preview-impl';

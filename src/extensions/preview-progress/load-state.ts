@@ -1,11 +1,25 @@
-// See Preview in ../preview.ts and docs/40_architecture/06_preview.typ, "Concepts".
-import type { PreviewProgress } from '../preview';
-import type { LoadEvent } from '../worker/protocol';
+// See previewProgress in preview-progress.ts.
+import type { EngineCrash, LoadEvent } from '../../hosts/preview/preview';
+
+/**
+ * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
+ * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded or crashed
+ * (`failed`).
+ */
+export interface PreviewProgress {
+  readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
+  /** What is going on, as people read it: "Loading the Typst compiler…", "Downloading @preview/merman 0.4.0…". */
+  readonly title: string;
+  /** How far, or why it failed: "3.1 / 6.6 MB"; null: nothing to add. */
+  readonly detail: string | null;
+  /** Done so far, from 0 to 1; null: unknown. */
+  readonly fraction: number | null;
+}
 
 /**
  * The preview's loading, most important first: a failed or crashed engine, the engine's download, packages and fonts
  * downloading during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending. Made
- * from the worker's load events and what the preview tells, as one `PreviewProgress`; no DOM.
+ * from the preview's load and crash events, as one `PreviewProgress`; no DOM.
  */
 export class LoadState {
   #engine: Engine = { kind: 'loading', loaded: 0, total: null };
@@ -13,9 +27,12 @@ export class LoadState {
   #font: string | null = null;
   #compiled = false;
 
-  /** The worker told how loading goes. */
+  /** The preview told how loading goes. */
   apply(event: LoadEvent): void {
     switch (event.kind) {
+      case 'starting':
+        this.#engine = { kind: 'loading', loaded: 0, total: null };
+        break;
       case 'engine':
         if (this.#engine.kind === 'loading') this.#engine = { kind: 'loading', loaded: event.loaded, total: event.total };
         break;
@@ -35,15 +52,10 @@ export class LoadState {
   }
 
   /** The engine crashed; `restarting`: a new one is started, else it stays off. */
-  crashed(message: string, restarting: boolean): void {
+  crashed({ message, restarting }: EngineCrash): void {
     this.#engine = { kind: 'crashed', message, restarting };
     this.#packages = [];
     this.#font = null;
-  }
-
-  /** A new engine is loading (after a crash). */
-  started(): void {
-    this.#engine = { kind: 'loading', loaded: 0, total: null };
   }
 
   /** A compile answered (pages or errors): "Compiling…" is no longer shown. */

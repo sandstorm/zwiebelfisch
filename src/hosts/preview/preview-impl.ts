@@ -11,14 +11,13 @@ import { snippet } from './pages/snippet';
 import type { FileContent } from '../../core/project/project';
 import { EngineWorker } from './worker/worker';
 import { LatestOnly } from '../../core/latest-only/latest-only';
-import { LoadState } from './progress/load-state';
-import { Loader } from './progress/loader';
 import type {
+  EngineCrash,
+  LoadEvent,
   PdfExportOption,
   PreviewContext,
   PreviewContributions,
   PreviewEntry,
-  PreviewOptions,
   PreviewOutput,
   PreviewRenderer,
   PreviewRendererInfo,
@@ -44,16 +43,15 @@ import css from './preview.css?inline';
  * - PDF export options and view options
  * - other renderers than the pages (the HTML preview)
  * - page overlays: boxes drawn over the pages (the click outline, the selection shading)
+ * - pane overlays over the whole pane (the loading note), told by load and crash events
  *
  * Compiling never falls behind typing: files outdated before their turn are skipped. A crashed engine is restarted
  * with the newest files once per `update()`.
  */
 export class Preview implements PreviewContributions {
   private readonly engine: EngineWorker;
-  private readonly loading = new LoadState();
   /** Whether the engine was restarted after a crash since the last `update()`. */
   private restarted = false;
-  private readonly loader: Loader;
   private readonly pane: HTMLElement;
   private readonly toolbar: HTMLElement;
   private readonly scroller: HTMLElement;
@@ -96,6 +94,8 @@ export class Preview implements PreviewContributions {
   private readonly viewOptionsChanged = new EventEmitter<void>();
   private readonly engineMemoryChanged = new EventEmitter<void>();
   private readonly renderersChanged = new EventEmitter<void>();
+  private readonly loaded = new EventEmitter<LoadEvent>();
+  private readonly crashes = new EventEmitter<EngineCrash>();
   /** The engine's memory as its last compile answered. */
   private memoryInUse = 0;
   readonly onDidChangeViewOptions = this.viewOptionsChanged.event;
@@ -104,13 +104,12 @@ export class Preview implements PreviewContributions {
   readonly onDidClickPage = this.clicked.event;
   readonly onDidChangeEngineMemory = this.engineMemoryChanged.event;
   readonly onDidChangeRenderers = this.renderersChanged.event;
+  readonly onDidLoad = this.loaded.event;
+  readonly onDidCrash = this.crashes.event;
   /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  constructor(
-    container: HTMLElement,
-    private readonly options: PreviewOptions = {},
-  ) {
+  constructor(container: HTMLElement) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'zwf-preview-pane');
     this.toolbar = div(doc, 'zwf-preview__toolbar');
@@ -120,8 +119,7 @@ export class Preview implements PreviewContributions {
     this.pages.dataset.testid = 'zwf-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
     this.context = this.itemContext(doc);
-    this.loader = new Loader(doc);
-    this.scroller.append(this.pages, this.loader.element);
+    this.scroller.append(this.pages);
     this.pane.append(this.toolbar, this.scroller);
     container.append(this.pane);
 
@@ -135,13 +133,9 @@ export class Preview implements PreviewContributions {
     });
 
     this.engine = new EngineWorker({
-      onDidLoad: (event) => {
-        this.loading.apply(event);
-        this.progressChanged();
-      },
+      onDidLoad: (event) => this.loaded.fire(event),
       onDidCrash: (message) => this.crashed(message),
     });
-    this.progressChanged();
   }
 
   /**
@@ -211,6 +205,15 @@ export class Preview implements PreviewContributions {
 
   get engineMemory(): number {
     return this.memoryInUse;
+  }
+
+  get isEmpty(): boolean {
+    return this.active ? !this.active.shown : this.compiled.pages.length === 0;
+  }
+
+  registerPaneOverlay(element: HTMLElement): Disposable {
+    this.scroller.append(element);
+    return new Disposable(() => element.remove());
   }
 
   registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
@@ -300,6 +303,8 @@ export class Preview implements PreviewContributions {
     this.clicked.dispose();
     this.viewOptionsChanged.dispose();
     this.engineMemoryChanged.dispose();
+    this.loaded.dispose();
+    this.crashes.dispose();
     for (const { made } of [...this.items]) this.removeItem(made);
     this.engine.dispose();
     this.resizeObserver?.disconnect();
@@ -340,12 +345,12 @@ export class Preview implements PreviewContributions {
     this.active = null;
     if (renderer) {
       const container = div(this.pane.ownerDocument, 'zwf-preview__renderer');
-      this.scroller.insertBefore(container, this.loader.element);
+      // after the pages, under the pane overlays
+      this.pages.after(container);
       this.active = { renderer, container, view: renderer.create(container), shown: false };
     }
     this.pages.hidden = renderer !== null;
     this.showItems();
-    this.progressChanged();
     this.viewChanged();
     return true;
   }
@@ -388,7 +393,6 @@ export class Preview implements PreviewContributions {
       if (!quiet) this.rendered.fire();
     }
     this.pages.classList.toggle('zwf-preview--stale', failed);
-    this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
     if (!quiet && !superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
   }
@@ -408,7 +412,6 @@ export class Preview implements PreviewContributions {
       this.rendered.fire();
     }
     active.container.classList.toggle('zwf-preview--stale', failed);
-    this.progressChanged();
     if (!superseded()) this.diagnosed.fire(inProjectFiles(response.result.diagnostics));
   }
 
@@ -424,9 +427,8 @@ export class Preview implements PreviewContributions {
     return entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
   }
 
-  /** A compile answered: the engine is loaded, and its memory is what it says. */
+  /** A compile answered: its memory is what it says. */
   private answered(memoryInUse: number): void {
-    this.loading.compiled();
     if (memoryInUse === this.memoryInUse) return;
     this.memoryInUse = memoryInUse;
     this.engineMemoryChanged.fire();
@@ -443,27 +445,16 @@ export class Preview implements PreviewContributions {
   /** Starts the engine again and compiles the newest files, once per `update()`; after that, stays off until the next. */
   private crashed(message: string): void {
     const restart = !this.restarted;
-    this.loading.crashed(message, restart);
-    this.progressChanged();
+    this.crashes.fire({ message, restarting: restart });
     if (!restart) return;
     this.restarted = true;
     this.startEngine();
     if (this.latest) this.compiles.push(this.latest);
   }
 
-  /** Starts the engine unless it runs: the pane shows it loading. */
+  /** Starts the engine unless it runs, and tells it is loading. */
   private startEngine(): void {
-    if (!this.engine.start()) return;
-    this.loading.started();
-    this.progressChanged();
-  }
-
-  /** Shows what the preview waits for: in the pane while it has no pages, and to whoever listens. */
-  private progressChanged(): void {
-    const progress = this.loading.current();
-    const nothingShown = this.active ? !this.active.shown : this.compiled.pages.length === 0;
-    this.loader.show(nothingShown ? progress : null);
-    this.options.onDidChangeProgress?.(progress);
+    if (this.engine.start()) this.loaded.fire({ kind: 'starting' });
   }
 
   private async lookUp({ path, from }: Reveal, superseded: () => boolean): Promise<void> {

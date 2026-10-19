@@ -47,13 +47,13 @@ describe('LoadState', () => {
     state.apply({ kind: 'ready' });
     state.apply({ kind: 'packages', specs: ['@preview/merman:0.4.0'] });
     state.compiled();
-    state.crashed('capacity overflow', true);
+    state.crashed({ message: 'capacity overflow', restarting: true });
     expect(state.current()).toEqual({ kind: 'failed', title: 'The Typst compiler crashed and was restarted.', detail: 'capacity overflow', fraction: null });
-    state.started();
+    state.apply({ kind: 'starting' });
     expect(state.current()?.title).toBe('Loading the Typst compiler…');
     state.apply({ kind: 'ready' });
     expect(state.current()).toBeNull();
-    state.crashed('capacity overflow', false);
+    state.crashed({ message: 'capacity overflow', restarting: false });
     expect(state.current()).toMatchObject({ kind: 'failed', title: 'The Typst compiler crashed again; it starts again with the next edit.' });
   });
 });

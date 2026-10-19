@@ -7,6 +7,10 @@ import { hashForLocation, locationFromHash, openFileHash } from './open-file-has
 vi.mock('../src/hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    onDidLoad = () => ({ dispose() {} });
+    onDidCrash = () => ({ dispose() {} });
+    isEmpty = true;
+    registerPaneOverlay = () => ({ dispose() {} });
     update() {}
     reveal() {}
     snippet = async () => null;

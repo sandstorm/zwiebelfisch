@@ -165,6 +165,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"], [node, mark, text styles, toolbar menu, search],
   [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, shared CodeMirror extension, menu, command],
   [`slashCommands`], [`/` lists the Insert menu and the text styles; the hint "Type / for commands"], [completion, Tiptap decoration],
+  [`previewProgress`], [the preview's loading note over its empty pane ("Loading the Typst compiler… 3.1 / 6.6 MB", "Compiling…", downloads); a compiler that cannot load or crashed as an error message], [`registerPaneOverlay`, `onDidLoad`, `onDidCrash`, `isEmpty`],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source and is outlined], [preview toolbar, `reveal`, `createPageOverlay`, `boxesFor`, `onDidClickPage`],
   [`previewControls`], [zoom, page number (pages only); the switch "Pages | HTML" between the renderers, remembered per viewer; a View menu entry per view option], [preview toolbar, menu `view`, commands],
   [`previewHtml`], [the renderer `html`: Typst's HTML export page by page, following the cursor (@architecture-preview-renderers)], [renderer],

@@ -5,7 +5,7 @@ import type { HtmlFile, Page } from '../../../core/typst-engine/typst-engine';
 import { downloadWasm } from './download.worker';
 import { FileReceiver } from './files.worker';
 import { HashedSender } from './hashed';
-import type { Init, EngineRequest, EngineResponse, LoadEvent, WorkerProgress } from './protocol';
+import type { Init, EngineRequest, EngineResponse, WorkerLoadEvent, WorkerProgress } from './protocol';
 
 interface Session {
   engine: TypstEngine;
@@ -64,7 +64,7 @@ async function handle({ engine, files, pages, htmlFiles, packages }: Session, re
 }
 
 /** Tells the preview how loading goes (the main thread gets it while this thread still works). */
-function tell(event: LoadEvent): void {
+function tell(event: WorkerLoadEvent): void {
   self.postMessage({ type: 'progress', event } satisfies WorkerProgress);
 }
 

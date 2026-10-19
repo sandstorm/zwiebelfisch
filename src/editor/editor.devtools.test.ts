@@ -19,6 +19,10 @@ const engine = vi.hoisted(() => {
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    onDidLoad = () => ({ dispose() {} });
+    onDidCrash = () => ({ dispose() {} });
+    isEmpty = true;
+    registerPaneOverlay = () => ({ dispose() {} });
     get engineMemory() {
       return engine.memory;
     }

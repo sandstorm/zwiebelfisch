@@ -8,7 +8,7 @@ import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { User } from '../../core/user/user';
 import { CommandsHost } from '../commands/commands';
 import { LanguagesHost } from '../languages/languages';
-import { Preview, type PreviewProgress } from '../preview/preview';
+import { Preview } from '../preview/preview';
 import { ScmHost } from '../scm/scm';
 import { SourceEditorHost } from '../source-editor/source-editor';
 import { VisualEditorHost } from '../visual-editor/visual-editor';
@@ -98,7 +98,6 @@ export class WorkbenchHost implements Workbench {
   /** The editors' paste choices, and the command `editor.action.pasteAs`. */
   readonly #pasteAs = new PasteAs({ showQuickPick: (items, options) => this.window.showQuickPick(items, options) });
   readonly #preview: Preview;
-  #previewFailed = false;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   /** The commands the extensions declare (`contributes.commands`), for search everywhere. */
   #declaredCommands: readonly CommandContribution[] = [];
@@ -314,17 +313,7 @@ export class WorkbenchHost implements Workbench {
    */
   #createPreview(): Preview {
     const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
-    return new Preview(panel.body, { onDidChangeProgress: (progress) => this.#reportFailure(progress) });
-  }
-
-  /**
-   * A compiler that cannot be loaded or crashed, as an error message (once per failure). What the preview loads shows in
-   * its pane only (its loader).
-   */
-  #reportFailure(progress: PreviewProgress | null): void {
-    const failed = progress?.kind === 'failed';
-    if (failed && !this.#previewFailed) void this.window.showErrorMessage(`${progress.title} ${progress.detail ?? ''}`.trim());
-    this.#previewFailed = failed;
+    return new Preview(panel.body);
   }
 
   /**

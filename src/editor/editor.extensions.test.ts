@@ -48,6 +48,10 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
   return {
     ...(await importOriginal<object>()),
     Preview: class {
+      onDidLoad = () => ({ dispose() {} });
+      onDidCrash = () => ({ dispose() {} });
+      isEmpty = true;
+      registerPaneOverlay = () => ({ dispose() {} });
       readonly toolbarItems: unknown[] = [];
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];

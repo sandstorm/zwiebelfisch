@@ -14,6 +14,10 @@ import { createEditor, type Editor } from './editor';
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    onDidLoad = () => ({ dispose() {} });
+    onDidCrash = () => ({ dispose() {} });
+    isEmpty = true;
+    registerPaneOverlay = () => ({ dispose() {} });
     update() {}
     reveal() {}
     snippet = async () => null;

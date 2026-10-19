@@ -1,5 +1,5 @@
-/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, the dimming of a failed compile
-   and the loader. See Preview in preview.ts, whose styleSheet the workbench adds. */
+/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, and the dimming of a failed
+   compile. See Preview in preview.ts, whose styleSheet the workbench adds. */
 .zwf-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--zwf-preview-bg); }
 .zwf-preview__toolbar {
   display: flex;
@@ -57,44 +57,3 @@
 .zwf-editor[data-scheme='dark'] .zwf-preview__content image { filter: invert(1) hue-rotate(180deg); }
 .zwf-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .zwf-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
-/* The loader (progress/loader.ts): over the empty pages until the first ones come, so nothing moves then. */
-.zwf-preview__loader {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 16px;
-  color: var(--zwf-muted);
-  font: 13px/1.4 system-ui, sans-serif;
-  text-align: center;
-  pointer-events: none;
-}
-.zwf-preview__loader[hidden] { display: none; }
-.zwf-preview__loader-title { color: var(--zwf-text-2); }
-.zwf-preview__loader--failed .zwf-preview__loader-title { color: var(--zwf-danger); font-weight: 600; }
-.zwf-preview__loader-bar {
-  position: relative;
-  overflow: hidden;
-  width: min(220px, 70%);
-  height: 4px;
-  border-radius: 2px;
-  background: var(--zwf-border);
-}
-.zwf-preview__loader-bar[hidden] { display: none; }
-.zwf-preview__loader-fill { height: 100%; width: 0; background: var(--zwf-accent); transition: width 0.2s linear; }
-.zwf-preview__loader-bar--indeterminate > .zwf-preview__loader-fill {
-  width: 35%;
-  animation: zwf-preview-indeterminate 1.2s ease-in-out infinite;
-}
-@keyframes zwf-preview-indeterminate {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(300%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .zwf-preview__loader-fill { transition: none; }
-  .zwf-preview__loader-bar--indeterminate > .zwf-preview__loader-fill { animation: none; width: 100%; opacity: 0.5; }
-}
-.zwf-preview__loader-detail { min-height: 1.4em; font-variant-numeric: tabular-nums; }

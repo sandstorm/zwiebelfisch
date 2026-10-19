@@ -10,6 +10,10 @@ import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    onDidLoad = () => ({ dispose() {} });
+    onDidCrash = () => ({ dispose() {} });
+    isEmpty = true;
+    registerPaneOverlay = () => ({ dispose() {} });
     update() {}
     reveal() {}
     snippet = async () => null;
