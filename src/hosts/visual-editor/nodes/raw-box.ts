@@ -293,7 +293,7 @@ class RawBox implements NodeView {
       { key: 'ArrowUp', run: () => head().empty && doc().lineAt(head().head).number === 1 && this.leave(-1) },
       { key: 'ArrowDown', run: () => head().empty && doc().lineAt(head().head).number === doc().lines && this.leave(1) },
       { key: 'Escape', run: () => this.leave(1) },
-      // stays in the editor: a block's code indents, an inline box's ignores it (Escape, then Tab leaves; see tab-keys.ts)
+      // stays in the editor: a block's code indents, an inline box's ignores it (Escape, then Tab leaves with the built-in tab-keys)
       { key: 'Tab', run: (view) => inline || indentMore(view), shift: (view) => inline || indentLess(view) },
       { key: 'Enter', run: () => inline && this.leave(1) },
       { key: 'Backspace', run: () => doc().length === 0 && this.remove() },

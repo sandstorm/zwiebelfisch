@@ -125,38 +125,6 @@ describe('VisualEditor', () => {
   });
 });
 
-describe('Tab in the VisualEditor', () => {
-  /** Presses `name` (with Shift: `shift`) in `target`; returns whether something consumed it (the browser does nothing then). */
-  const press = (target: HTMLElement, name: string, shift = false) => !target.dispatchEvent(new KeyboardEvent('keydown', { key: name, shiftKey: shift, bubbles: true, cancelable: true }));
-
-  it('consumes Tab and Shift+Tab where no construct takes them, changing nothing', () => {
-    const source = 'Title\n\nSome text.\n';
-    const { doc, view, editable } = setup(source);
-    view.reveal(SourceRange.of({ from: source.indexOf('text'), to: source.indexOf('text') }));
-    expect(press(editable, 'Tab')).toBe(true);
-    expect(press(editable, 'Tab', true)).toBe(true);
-    expect(doc.text).toBe(source);
-    expect(view.selection().from).toBe(source.indexOf('text'));
-  });
-
-  it('lets the Tab or Shift+Tab right after Escape through to the browser, once', () => {
-    const { editable } = setup('Text\n');
-    press(editable, 'Escape');
-    expect(press(editable, 'Tab')).toBe(false);
-    expect(press(editable, 'Tab')).toBe(true);
-    press(editable, 'Escape');
-    press(editable, 'Shift');
-    expect(press(editable, 'Tab', true)).toBe(false);
-  });
-
-  it('consumes Tab again once another key came after Escape', () => {
-    const { editable } = setup('Text\n');
-    press(editable, 'Escape');
-    press(editable, 'ArrowLeft');
-    expect(press(editable, 'Tab')).toBe(true);
-  });
-});
-
 describe('VisualEditorHost.registerHighlights', () => {
   it('sets a provider\'s highlights when a view is made and again when they change for its document only', () => {
     const changed = new EventEmitter<TypstDocument>();

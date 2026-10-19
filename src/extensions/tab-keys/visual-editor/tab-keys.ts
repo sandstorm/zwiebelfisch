@@ -1,4 +1,4 @@
-// See VisualEditor in ./visual-editor-impl.ts.
+// The tab-keys extension's Tiptap extension; see tabKeys in ../tab-keys.ts.
 import { Extension } from '@tiptap/core';
 import { Plugin, type EditorState, type PluginView, type Transaction } from '@tiptap/pm/state';
 

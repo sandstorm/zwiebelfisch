@@ -10,6 +10,7 @@ import type { FileChange, FileContent, Project } from '../core/project/project';
 import { SourceOffset, type TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
 import { blockHandle as blockHandleExtension } from '../extensions/block-handle/block-handle';
+import { tabKeys } from '../extensions/tab-keys/tab-keys';
 import { figures } from '../extensions/figures/figures';
 import { headings } from '../extensions/headings/headings';
 import { lists } from '../extensions/lists/lists';
@@ -205,7 +206,7 @@ if (typeof URL.createObjectURL !== 'function') {
 
 /** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
 export function builtins(): VisualEditorContribution[] {
-  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension()];
+  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), tabKeys()];
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

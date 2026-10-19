@@ -97,16 +97,13 @@ describe('raw boxes', () => {
     expect(parent.querySelector('.zwf-visual__block-gap')).not.toBeNull();
   });
 
-  it('Tab indents a raw block\'s code and stays in an inline box; Escape, then Tab goes to the browser', () => {
+  it('Tab indents a raw block\'s code and stays in an inline box', () => {
     const { doc, box } = setup('#set text(size: 12pt)\n\nSee #highlight[here] now.\n');
     const block = box('.zwf-visual__raw-block');
     expect(key(block, 'Tab').defaultPrevented).toBe(true);
     expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
     const inline = box('.zwf-visual__raw-inline');
     expect(key(inline, 'Tab').defaultPrevented).toBe(true);
-    expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
-    key(block, 'Escape');
-    expect(key(block, 'Tab').defaultPrevented).toBe(false);
     expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
   });
 

@@ -16,7 +16,6 @@ import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
-import { TabKeys } from './tab-keys';
 import { textLinks } from './text-links';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
@@ -66,7 +65,6 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
-        TabKeys,
         BlockGaps,
         ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         clipboard(document, contributions.pasteEdits),
