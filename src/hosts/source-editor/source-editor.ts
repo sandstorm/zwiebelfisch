@@ -58,4 +58,4 @@ export interface SourceEditorOptions {
  */
 export const SOURCE_EDITOR = 'sourceEditor';
 
-export { SourceEditorHost, codeColors, SourceEditor } from './source-editor-impl';
+export { SourceEditorHost, SourceEditor } from './source-editor-impl';

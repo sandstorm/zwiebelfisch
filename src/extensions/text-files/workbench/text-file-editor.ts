@@ -4,10 +4,9 @@ import { indentWithTab } from '@codemirror/commands';
 import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
-import { codeColors } from '../../../hosts/source-editor/source-editor';
 
 /**
- * The text file `path` in CodeMirror (its basic setup and look, `codeColors`, as in the Source editor; no language):
+ * The text file `path` in CodeMirror (its basic setup, as in the Source editor; its look from `extensions`; no language):
  * the text is saved `SAVE_DELAY` ms after the last edit, and at once by `dispose`. `reload` shows the file as changed
  * elsewhere (another user, the host): while an edit of this editor waits to be saved it is ignored, since that save
  * replaces the whole file anyway (the last save wins); otherwise the text changes in place, cursor and the user's undo
@@ -38,7 +37,6 @@ export class TextFileEditor {
         basicSetup,
         // Tab and Shift+Tab indent and outdent the selected lines; Escape, then Tab moves the focus on (CodeMirror's)
         keymap.of([indentWithTab]),
-        codeColors,
         EditorView.lineWrapping,
         options.extensions ?? [],
         EditorView.contentAttributes.of({ 'aria-label': ProjectPath.displayName(options.path) }),

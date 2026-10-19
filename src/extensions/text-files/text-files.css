@@ -1,4 +1,4 @@
 /* The text-files extension's styles: the layout of a text file's editor, its title above. See text-files.ts, which
-   registers it; CodeMirror's look is the Source editor's (`codeColors`), light and dark. */
+   registers it; CodeMirror's look is the shared one (code-editing's `codeColors`), light and dark. */
 .zwf-text-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .zwf-text-files__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--zwf-border); font-size: 13px; font-weight: 600; color: var(--zwf-text); }

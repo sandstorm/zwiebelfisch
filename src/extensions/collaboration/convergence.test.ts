@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests that two users' edits in both editors converge (collaboration over in-process Y.Docs).
-import { undo as undoSource } from '@codemirror/commands';
+import { history, undo as undoSource } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -48,6 +48,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visual = new VisualEditor(visualParent, document, VisualEditorHost.from([visualPresence(presences, () => [document])]));
   const sourceEditors = new SourceEditorHost();
   sourceEditors.registerCodeMirrorExtension(sourcePresence(presences));
+  sourceEditors.registerCodeMirrorExtension(history());
   sourceEditors.registerCodeMirrorExtension(perUserUndo);
   const source = sourceEditors.createEditor(sourceParent, document);
   cleanup.push(() => {

@@ -46,7 +46,7 @@
   --zwf-note-text: light-dark(#6b5200, #e3b341);
   /* highlighted text (#highlight[..]): Typst's default fill in light, a dimmer yellow behind light text in dark */
   --zwf-highlight: light-dark(rgba(255, 253, 17, 0.63), rgba(250, 230, 60, 0.3));
-  /* syntax highlighting (hosts/source-editor/code-colors.ts); light: CodeMirror's default colors */
+  /* syntax highlighting (extensions/code-editing/code-colors.ts); light: CodeMirror's default colors */
   --zwf-syn-meta: light-dark(#404740, #8b949e);
   --zwf-syn-keyword: light-dark(#770088, #ff7b72);
   --zwf-syn-atom: light-dark(#221199, #79c0ff);

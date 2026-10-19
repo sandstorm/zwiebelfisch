@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for document-drops.ts: a project file, or files from the computer once uploaded, dropped on the Visual and on
 // the Source editor, at the drop position, their imports in the same undo step.
-import { undo } from '@codemirror/commands';
+import { history, undo } from '@codemirror/commands';
 import { EditorView as CodeMirrorView } from '@codemirror/view';
 import { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -109,6 +109,7 @@ describe('sourceEditorDrops', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument(text);
     const host = new SourceEditorHost();
+    host.registerCodeMirrorExtension(history());
     host.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, drops));
     host.createEditor(parent, doc);
     const view = CodeMirrorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;

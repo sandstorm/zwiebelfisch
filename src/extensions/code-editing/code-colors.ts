@@ -1,5 +1,5 @@
-// The parts of codeColors: CodeMirror's look in the widget's color scheme, light or dark. See codeColors in source-editor-impl.ts.
-import { HighlightStyle } from '@codemirror/language';
+// codeColors: CodeMirror's look in the widget's color scheme, light or dark. See codeEditing in code-editing.ts.
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
@@ -93,4 +93,11 @@ const follower = ViewPlugin.fromClass(
 );
 
 /** CodeMirror's light or dark theme, whichever the widget's color scheme around the editor is. */
-export const followColorScheme: Extension = [scheme.of([]), follower];
+const followColorScheme: Extension = [scheme.of([]), follower];
+
+/**
+ * CodeMirror's look in the widget, for every CodeMirror in it (Source editors, raw boxes, text files): CodeMirror's
+ * default highlight style with its colors from the widget's `--zwf-syn-*` tokens, and CodeMirror's light or dark theme
+ * (cursor, selection, gutters, panels, tooltips) following the widget's color scheme around the editor.
+ */
+export const codeColors: Extension = [syntaxHighlighting(highlightStyle), followColorScheme];

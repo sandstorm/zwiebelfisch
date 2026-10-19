@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-// Tests for codeColors (source-editor.ts, code-colors.ts).
+// Tests for codeColors (code-colors.ts).
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { highlightStyle } from './code-colors';
-import { codeColors } from './source-editor';
+import { codeColors, highlightStyle } from './code-colors';
 
 /** Lets the color check run (it waits a microtask: no dispatch while the view is being built). */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));

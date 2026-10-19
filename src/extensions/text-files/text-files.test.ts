@@ -7,6 +7,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project, type FileChange } from '../../core/project/project';
 import { SourceRange } from '../../core/typst-document/typst-document';
+import type { SourceEditorContributions } from '../../hosts/source-editor/source-editor';
 import type { WindowApi } from '../../hosts/window/window';
 import { WorkbenchHost } from '../../hosts/workbench/workbench';
 import { textFiles } from './text-files';
@@ -34,9 +35,10 @@ function setup(allowFileChange?: (change: FileChange) => boolean) {
   const project = new Project(path('/main.typ'), { '/main.typ': '#bibliography("refs.bib")\n', '/refs.bib': '@book{a}\n' });
   const workbench = new WorkbenchHost(host, project, { allowFileChange });
   let window!: WindowApi;
-  workbench.activate([textFiles(), { id: 'probe', activate: (context) => void (window = context.window) }]);
+  let sourceEditor!: SourceEditorContributions;
+  workbench.activate([textFiles(), { id: 'probe', activate: (context) => void ((window = context.window), (sourceEditor = context.sourceEditor)) }]);
   const view = () => EditorView.findFromDOM(host.querySelector<HTMLElement>('[data-view-type="textFiles.editor"] .cm-editor')!)!;
-  return { host, project, workbench, window, view };
+  return { host, project, workbench, window, sourceEditor, view };
 }
 
 describe('text files', () => {
@@ -66,11 +68,12 @@ describe('text files', () => {
     await vi.waitFor(() => expect(project.content(path('/refs.bib'))).toBe('% refs\n@book{a}\n@book{b}\n'));
   });
 
-  it("looks like the Source editor: CodeMirror's dark theme where the text around it is light", async () => {
-    const { host, workbench, view } = setup();
-    host.style.color = 'rgb(230, 237, 243)';
+  it('takes the shared CodeMirror extensions (the look), also those registered while it is open', () => {
+    const { workbench, sourceEditor, view } = setup();
     workbench.open(path('/refs.bib'));
-    await vi.waitFor(() => expect(view().state.facet(EditorView.darkTheme)).toBe(true));
+    expect(view().state.facet(EditorView.darkTheme)).toBe(false);
+    sourceEditor.registerSharedCodeMirrorExtension(EditorView.darkTheme.of(true));
+    expect(view().state.facet(EditorView.darkTheme)).toBe(true);
   });
 
   it('selects the range opened with (workbench.open with a selection), in a new editor and in the shown one', () => {

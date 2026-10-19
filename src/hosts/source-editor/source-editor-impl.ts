@@ -1,13 +1,9 @@
 // See SourceEditorContributions in source-editor.ts.
-import { basicSetup } from 'codemirror';
-import { indentWithTab } from '@codemirror/commands';
-import { syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension } from '@codemirror/state';
-import { Decoration, EditorView, ViewPlugin, keymap, type ViewUpdate } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { followColorScheme, highlightStyle } from './code-colors';
 import css from './source-editor.css?inline';
 import { type SourceEditorContributions, type SourceEditorContext, fromDocument, type SourceEditorOptions } from './source-editor';
 
@@ -61,13 +57,9 @@ export class SourceEditorHost implements SourceEditorContributions {
 }
 
 /**
- * CodeMirror's default look in the widget, for every CodeMirror in it (Source editors, raw boxes, other editors):
- * CodeMirror's default highlight style with its colors from the widget's `--zwf-syn-*` tokens, and CodeMirror's light
- * or dark theme (cursor, selection, gutters, panels, tooltips) following the widget's color scheme around the editor.
+ * The plain-Typst editor of one document: a bare CodeMirror (no keymap beyond CodeMirror's defaults, no history)
+ * with the contributions, its text and selection in sync with the document. Made by `SourceEditorHost.createEditor`.
  */
-export const codeColors: Extension = [syntaxHighlighting(highlightStyle), followColorScheme];
-
-/** The plain-Typst editor of one document. Made by `SourceEditorHost.createEditor`. */
 export class SourceEditor {
   private readonly view: EditorView;
   private readonly contributed = new Compartment();
@@ -79,12 +71,7 @@ export class SourceEditor {
       parent,
       doc: document.text,
       extensions: [
-        basicSetup,
-        // Tab and Shift+Tab indent and outdent the selected lines; Escape, then Tab moves the focus on (CodeMirror's)
-        keymap.of([indentWithTab]),
-        codeColors,
         this.contributed.of(contributions.extensionsFor(context)),
-        EditorView.lineWrapping,
         highlightField,
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {

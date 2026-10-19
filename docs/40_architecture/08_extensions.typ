@@ -133,6 +133,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
+  [`codeEditing`], [the Source editors' basic setup (line numbers, undo, brackets, search), Tab indenting, wrapped lines; the look of every CodeMirror (`codeColors`)], [source editor, shared CodeMirror extension],
   [`typstLanguage`], [Typst highlighting, the help sheet "Typst basics"; a dropped Typst file becomes `#include "…"`], [source editor, help, drop edit],
   [`imports`], [pasted Typst gets the imports it needs (the copied file's, else the known ones)], [paste edit],
   [`markdown`], [Markdown pasted as Typst (`typst.markdown`, a small lossy converter); first where the text is surely Markdown, else in the "Paste as" chip], [paste edit],

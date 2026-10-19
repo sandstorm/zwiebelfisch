@@ -26,6 +26,7 @@ import { images } from '../extensions/images/images';
 import { invisibles } from '../extensions/invisibles/invisibles';
 import { blockHandle } from '../extensions/block-handle/block-handle';
 import { tabKeys } from '../extensions/tab-keys/tab-keys';
+import { codeEditing } from '../extensions/code-editing/code-editing';
 import { figures } from '../extensions/figures/figures';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
@@ -243,6 +244,8 @@ export interface Editor {
  */
 function builtinExtensions(): Extension[] {
   return [
+    // first: its basic setup's keymaps go before the other extensions' CodeMirror keymaps, as when it was the host's
+    codeEditing(),
     typstLanguage(),
     imports(),
     markdown(),

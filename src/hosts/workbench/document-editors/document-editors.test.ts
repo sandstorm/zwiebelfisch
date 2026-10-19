@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for document-editors.ts, shown through the window's custom editors as the workbench does.
-import { undo } from '@codemirror/commands';
+import { history, undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
@@ -8,7 +8,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { type FileChange, Project } from '../../../core/project/project';
 import { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
-import { SOURCE_EDITOR } from '../../source-editor/source-editor';
+import { SOURCE_EDITOR, SourceEditorHost } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditorHost } from '../../visual-editor/visual-editor';
 import { type TextEditorSelectionChangeEvent, WindowHost } from '../../window/window';
 import { DocumentEditors } from './document-editors';
@@ -24,7 +24,10 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const area = host.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': 'Alpha\n', '/b.typ': 'Beta\n', '/logo.png': new Uint8Array([1]) });
-  const editors = new DocumentEditors(project, { visualEditor: VisualEditorHost.from([]), onSelection: (editor) => options.onSelection?.(editor.selection) });
+  // the Source editors with an undo history (the code-editing extension's basic setup has one)
+  const sourceEditors = new SourceEditorHost();
+  sourceEditors.registerCodeMirrorExtension(history());
+  const editors = new DocumentEditors(project, { visualEditor: VisualEditorHost.from([]), sourceEditors, onSelection: (editor) => options.onSelection?.(editor.selection) });
   const window = new WindowHost({
     exists: (at) => project.has(at),
     host,

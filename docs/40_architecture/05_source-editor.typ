@@ -4,7 +4,7 @@
 
 #unreviewed
 
-The plain Typst editor: #link("https://codemirror.net/")[CodeMirror] 6 bound to a `TypstDocument`, in `src/hosts/source-editor/`. It keeps only text and selection in sync with its document; highlighting, lint, links and other users' carets are contributions.
+The plain Typst editor: #link("https://codemirror.net/")[CodeMirror] 6 bound to a `TypstDocument`, in `src/hosts/source-editor/`. It is a bare CodeMirror that keeps only text and selection in sync with its document; the basic setup, the look, highlighting, lint, links and other users' carets are contributions.
 
 == SourceEditorHost <architecture-source-editor-host>
 
@@ -21,12 +21,13 @@ subscriptions.push(
   sourceEditor.registerCodeMirrorExtension((editor) => myLint(editor.document)),  // per editor
 );
 // your own CodeMirror, with the widget's look and the shared contributions:
-new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.createSharedCodeMirrorExtension()] });
+new EditorView({ parent, doc, extensions: [basicSetup, sourceEditor.createSharedCodeMirrorExtension()] });
 ```
 
 #table(
   columns: (auto, 1fr),
   table.header[Extension][Contribution],
+  [`codeEditing`], [`basicSetup`, `indentWithTab`, `lineWrapping`. Shared: `codeColors`.],
   [`typstLanguage`], [Typst highlighting and indentation (`codemirror-lang-typst`, without its linter).],
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
@@ -37,10 +38,10 @@ new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.
 - *Live:* a contribution reaches every editor, open ones included (they reconfigure a `Compartment`); disposing removes it from all. No feature tracks editors.
 - *Shared* contributions are for any text, never a language. They reach the Source editors, the raw boxes and the text files' editor. Raw boxes take Typst ones through `visualEditor.registerRawBoxCodeMirrorExtension`.
 - *Precedence* is CodeMirror's own (`Prec.highest` … `Prec.lowest`).
-- *`codeColors`* (exported by the entry) is the only look of every CodeMirror in the widget: the default highlight style colored by the `--zwf-syn-*` tokens, light or dark following the color scheme around the editor. No editor restyles on top of it.
+- *`codeColors`* (code-editing's, shared) is the only look of every CodeMirror in the widget: the default highlight style colored by the `--zwf-syn-*` tokens, light or dark following the color scheme around the editor. No editor restyles on top of it. Without code-editing: CodeMirror's default light look, no history, no keymap beyond CodeMirror's defaults.
 - *Sync:* the editor's own edits become `TextChange[]` with the editor as `origin`; changes of another origin arrive annotated `fromDocument.of({ origin })` and are not written back.
-- *Undo* is CodeMirror's history, and changes from elsewhere enter it. A contribution keeps edits out: `perUserUndo` reads `fromDocument` and drops other users' edits. No `Y.UndoManager`.
-- *Tab* indents, Shift+Tab outdents (`indentWithTab`); Escape, then Tab leaves the editor.
+- *Undo* is CodeMirror's history (code-editing's `basicSetup`), and changes from elsewhere enter it. A contribution keeps edits out: `perUserUndo` reads `fromDocument` and drops other users' edits. No `Y.UndoManager`.
+- *Tab* indents, Shift+Tab outdents (code-editing's `indentWithTab`); Escape, then Tab leaves the editor.
 - `SourceEditor` (`reveal`, `insert`, `selection`): see the d.ts.
 
 == Document links <architecture-source-editor-links>
