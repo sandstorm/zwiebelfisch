@@ -4,9 +4,8 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
 import css from './languages.css?inline';
-import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
 import { pasteExtension, type PasteOptions } from './paste-extension';
-import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpProvider, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit, LinkTargets, FollowableLink } from './languages';
+import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpProvider, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
 /**
  * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
@@ -30,26 +29,19 @@ export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences:
     .map((edit) => (plain && edit.insertText === plain.insertText ? plain : edit));
 }
 
-/**
- * The `Languages` of one widget. Each link remembers its provider, which resolves it on demand
- * (`resolveDocumentLink`). `targets` is what following a link does, in every editor that shows links.
- */
+/** The `Languages` of one widget. Each link remembers its provider, which resolves it on demand (`resolveDocumentLink`). */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
   readonly #helpProviders: { selector: DocumentSelector; provider: HelpProvider }[] = [];
-  /** The document `linkAt` was asked about last, and its links. */
-  #lastLinks: (TextDocument & { links: readonly DocumentLink[] }) | null = null;
   readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
   readonly #dropEditProviders: { selector: DocumentSelector; provider: DocumentDropEditProvider; priority: number }[] = [];
   readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
-  /** The CSS of links (their hint `.zwf-link-hint`, their look `zwf-link--mod`), for the workbench to put where the widget renders. */
+  /** The CSS of the editors' paste choice (`.zwf-paste-chip`), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
-
-  constructor(private readonly targets: LinkTargets) {}
 
   /**
    * Declares `languages` (the extensions' `contributes.languages`, the workbench's own). An ending is one language's:
@@ -196,50 +188,8 @@ export class LanguagesHost implements Languages {
     return '/';
   }
 
-  createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {
-    const actions = {
-      ...this.targets,
-      provideDocumentLinks: (document: TextDocument) => this.provideDocumentLinks(document),
-      resolveDocumentLink: (link: DocumentLink) => this.resolveDocumentLink(link),
-    };
-    return linkExtension(actions, languageId, path);
-  }
-
-  /**
-   * The primary link of `document`: the first, in text order, that leads somewhere. A provider makes its link the
-   * primary one on a range by its `priority` (overlapping links: the higher wins), so no link needs a mark. For what
-   * shows a text other than as text (a raw box's picture), to follow it as the editors follow links.
-   */
-  primaryLink(document: TextDocument): FollowableLink | null {
-    return primaryLink(this.provideDocumentLinks(document), this.#actions);
-  }
-
-  /**
-   * The link at `offset` of `document` (its range including both ends) that leads somewhere, or null: for an editor
-   * that shows the text other than as text (the Visual editor), asked as the pointer moves. The links of the last
-   * document asked about are kept until its text changes; each is resolved anew (a label may have come or gone).
-   */
-  linkAt(document: TextDocument, offset: SourceOffset): FollowableLink | null {
-    const last = this.#lastLinks;
-    const same = last && last.path === document.path && last.languageId === document.languageId && last.text === document.text;
-    const links = same ? last.links : this.provideDocumentLinks(document);
-    this.#lastLinks = { ...document, links };
-    const link = links.find(({ range }) => range.from <= offset && offset <= range.to);
-    return link ? followableLink(link, this.#actions) : null;
-  }
-
   #pasteEditProvidersOf(document: TextDocument): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
     return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId));
-  }
-
-  /** What a followed link needs from this host: resolving it, and where it leads (`targets`). */
-  get #actions(): Pick<LinkActions, 'resolveDocumentLink' | 'open' | 'executeCommand'> {
-    const { targets } = this;
-    return {
-      resolveDocumentLink: (link) => this.resolveDocumentLink(link),
-      open: (target, selection) => targets.open(target, selection),
-      executeCommand: (command, ...args) => targets.executeCommand(command, ...args),
-    };
   }
 }
 

@@ -6,7 +6,7 @@ import type { Editor } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type FollowableLink, type VisualEditorContribution } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type RawBoxPictureHost, type VisualEditorContribution } from '../visual-editor';
 
 function setup(text: string, contributions: readonly VisualEditorContribution[] = []) {
   const parent = document.createElement('div');
@@ -149,46 +149,18 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('Hello\n');
   });
 
-  it("pictures follow the box's link: hovered as a link (no title of their own), Mod+click; plain clicks still edit the code", async () => {
-    const { parent, linkOf, follow, hover, leave } = setupLinked(RAW);
+  it("picture extensions get each picture before the box listens to it: a stopped click keeps the box closed, a plain one edits", async () => {
+    const { parent, sources, disposed } = setupPictures(RAW);
     const picture = await shownPicture(parent);
-    picture.dispatchEvent(new MouseEvent('mouseenter'));
-    expect(linkOf).toHaveBeenLastCalledWith('#set text(size: 12pt)', expect.any(TypstDocument));
-    picture.dispatchEvent(new MouseEvent('mousemove', modifier));
-    expect(hover.mock.calls.map(([event, element]) => [event.type, element])).toEqual([
-      ['mouseenter', picture],
-      ['mousemove', picture],
-    ]);
-    expect(picture.hasAttribute('title')).toBe(false);
-    picture.dispatchEvent(new MouseEvent('mouseleave'));
-    expect(leave).toHaveBeenCalledTimes(1);
-    expect(linkOf).toHaveBeenCalledTimes(1); // once per visit
+    expect(sources()).toEqual(['#set text(size: 12pt)']);
     picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
-    expect(follow).toHaveBeenCalledTimes(1);
     expect(picture.hidden).toBe(false);
     picture.dispatchEvent(new MouseEvent('mousedown', { button: 0, cancelable: true }));
-    expect(follow).toHaveBeenCalledTimes(1);
     expect(picture.hidden).toBe(true);
-  });
-
-  it('Alt+Enter on a selected box follows its link', () => {
-    const { parent, follow } = setupLinked(RAW);
+    expect(disposed).not.toHaveBeenCalled();
     const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
-    tiptap.commands.setNodeSelection(0);
-    tiptap.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
-    expect(follow).toHaveBeenCalledTimes(1);
-    expect(parent.querySelector('.zwf-visual__code')).not.toBeNull();
-  });
-
-  it('pictures of boxes without a link only say nothing and edit the code', async () => {
-    const { parent, follow } = setupLinked(RAW, () => null);
-    const picture = await shownPicture(parent);
-    picture.dispatchEvent(new MouseEvent('mouseenter'));
-    picture.dispatchEvent(new MouseEvent('mousemove'));
-    expect(picture.hasAttribute('title')).toBe(false);
-    picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
-    expect(follow).not.toHaveBeenCalled();
-    expect(picture.hidden).toBe(true);
+    tiptap.commands.setContent('<p>Gone</p>');
+    expect(disposed).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -226,20 +198,24 @@ describe('rendered raw boxes', () => {
 
 const modifier = { ctrlKey: true, metaKey: true };
 
-/** Raw boxes drawn as a picture, each leading where `link` says (Ctrl or ⌘ held follows). */
-function setupLinked(text: string, link: (fake: Pick<FollowableLink, 'follow' | 'hover' | 'leave'>) => FollowableLink | null = (fake) => ({ isFollowEvent: (event) => event.ctrlKey, ...fake })) {
-  const follow = vi.fn();
-  const hover = vi.fn<FollowableLink['hover']>();
-  const leave = vi.fn<FollowableLink['leave']>();
-  const linkOf = vi.fn(() => link({ follow, hover, leave }));
-  const visualEditor = new VisualEditorHost({ linkOf, linkAt: () => null });
+/** Raw boxes drawn as a picture, with a picture extension that stops a click with Ctrl or ⌘ held. */
+function setupPictures(text: string) {
+  const pictures: RawBoxPictureHost[] = [];
+  const disposed = vi.fn();
+  const visualEditor = new VisualEditorHost();
   visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
+  visualEditor.registerRawBoxPictureExtension((box) => {
+    pictures.push(box);
+    box.picture.addEventListener('mousedown', (event) => {
+      if (event.ctrlKey) event.stopImmediatePropagation();
+    });
+    return new Disposable(disposed);
+  });
   const parent = document.body.appendChild(document.createElement('div'));
   new VisualEditor(parent, new TypstDocument(text), visualEditor);
-  return { parent, linkOf, follow, hover, leave };
+  return { parent, sources: () => pictures.map((box) => box.src()), disposed };
 }
 
-/** The first box's picture, once it shows. */
 async function shownPicture(parent: HTMLElement): Promise<HTMLImageElement> {
   const picture = parent.querySelector<HTMLImageElement>('.zwf-visual__rendering')!;
   await vi.waitFor(() => expect(picture.hidden).toBe(false));

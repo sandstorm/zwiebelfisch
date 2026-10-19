@@ -91,22 +91,20 @@ describe('text files', () => {
     expect(view().state.doc.toString()).toBe('@book{ä}\n');
   });
 
-  it('shows the document links of the providers for its language (by ending: a .bib is bibtex)', () => {
+  it('gives the shared CodeMirror extensions its language (by ending: a .bib is bibtex) and file', () => {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/refs.bib': '@book{a}\n' });
     const workbench = new WorkbenchHost(host, project);
-    const linkAt = (from: number, to: number) => ({ provideDocumentLinks: () => [{ range: SourceRange.of({ from, to }) }] });
+    const seen: string[] = [];
     workbench.activate([
       textFiles(),
       {
-        id: 'links',
-        activate: ({ languages, subscriptions }) =>
-          subscriptions.push(languages.registerDocumentLinkProvider({ language: 'bibtex' }, linkAt(1, 5)), languages.registerDocumentLinkProvider({ language: 'typst' }, linkAt(6, 7))),
+        id: 'shared',
+        activate: ({ sourceEditor, subscriptions }) => subscriptions.push(sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path()}`), []))),
       },
     ]);
     workbench.open(path('/refs.bib'));
-    const marked = [...host.querySelectorAll('[data-testid=zwf-text-file] .zwf-source__path')].map((mark) => mark.textContent);
-    expect(marked).toEqual(['book']);
+    expect(seen).toContain('bibtex /refs.bib');
   });
 
   it('a refused save is an error message', async () => {

@@ -68,13 +68,14 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
   [`registerHighlights(layer, provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
   [`registerRawBoxRenderer(provider, options?)`], [What raw boxes show instead of their code],
   [`registerRawBoxCodeMirrorExtension(editor => extension)`], [CodeMirror extensions for the code of every raw box],
+  [`registerRawBoxPictureExtension(box => disposable)`], [Takes part in every raw box's picture (`picture`, `editor`, `src()`); its listeners run before the box's, so stopping a `mousedown` keeps the box closed],
 )
 
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
 - *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`, and the position map (`sourceToPos`, `posToSource`) over any document of the editor, e.g. a transaction's. Toolbar items made per editor also get Tiptap's `editor`.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
-- *Links* (`VisualEditorLinks`, given by the workbench): a raw box's picture leads where its Typst's primary document link does (@architecture-source-editor-links); text leads to the link at its source offset. The host knows no links itself. Hover shows the hint, ⌘ the link look, ⌘-click or Alt+Enter follows, a plain click edits.
+- *Links* are the `documentLinks` extension's (@architecture-source-editor-links): a Tiptap extension for the text, a picture extension for raw boxes' pictures. The host knows no links.
 
 == Constructs <architecture-visual-editor-constructs>
 

@@ -43,10 +43,7 @@ function textFileEditor({ project, window, workspace, languages, sourceEditor }:
       const editor = new TextFileEditor(panel.element, {
         path,
         text: text(content),
-        extensions: [
-          languages.createDocumentLinksCodeMirrorExtension(languages.getLanguageId(path) ?? 'plaintext', () => path),
-          sourceEditor.createSharedCodeMirrorExtension(),
-        ],
+        extensions: sourceEditor.createSharedCodeMirrorExtension({ languageId: languages.getLanguageId(path) ?? 'plaintext', path: () => path }),
         save: (saved) =>
           void workspace.applyEdit({ kind: 'update', path, content: saved }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
       });

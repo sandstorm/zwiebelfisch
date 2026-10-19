@@ -66,7 +66,7 @@ export type {
   PreviewViewOption,
   ToolbarPlacement,
 } from './hosts/preview/preview';
-export { SOURCE_EDITOR, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
+export { SOURCE_EDITOR, type SharedCodeMirrorContext, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {
   ToolbarAction,
   Anchor,
@@ -75,6 +75,7 @@ export type {
   CompletionItemProvider,
   CompletionTrigger,
   RawBoxPicture,
+  RawBoxPictureHost,
   RawBoxRenderer,
   RawBoxRendererProvider,
   RawBoxTools,

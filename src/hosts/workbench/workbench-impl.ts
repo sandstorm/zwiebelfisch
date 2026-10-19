@@ -50,10 +50,7 @@ export class WorkbenchHost implements Workbench {
   readonly #tabs: EditorTabs;
   /** The window, for the widget's `activeFile`. */
   readonly window: WindowHost;
-  readonly #languages = new LanguagesHost({
-    open: (target, selection) => (typeof target === 'string' ? this.open(target, { selection }) : this.#openExternal(target)),
-    executeCommand: (id, ...args) => this.commands.executeCommand(id, ...args),
-  });
+  readonly #languages = new LanguagesHost();
   readonly #scm = new ScmHost();
   readonly #menus = new Menus();
   readonly #workspace: WorkspaceHost;
@@ -62,38 +59,24 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  /** Raw boxes' pictures follow the primary link of the box's Typst, the text the link under the pointer. */
-  readonly #visualEditor = new VisualEditorHost(
-    {
-      linkOf: (src, document) => {
-        const path = this.project.pathOf(document);
-        // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
-        return path ? this.#languages.primaryLink({ path, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` }) : null;
-      },
-      linkAt: (document, offset) => {
-        const path = this.project.pathOf(document);
-        return path ? this.#languages.linkAt({ path, languageId: 'typst', text: document.text }, offset) : null;
-      },
+  // copy and paste run the paste edit providers of Typst; a paste's choice is the workbench's (`#pasteAs`)
+  readonly #visualEditor = new VisualEditorHost({
+    openPasteChoice: (choice) => this.#pasteAs.openPasteChoice(choice),
+    closePasteChoice: (choice) => this.#pasteAs.closePasteChoice(choice),
+    pickPasteKind: (choice) => this.#pasteAs.pickPasteKind(choice),
+    prepareDocumentPaste: (document, copied, data) => {
+      const path = this.project.pathOf(document);
+      if (path) this.#languages.prepareDocumentPaste({ path, languageId: 'typst', text: document.text }, copied, data);
     },
-    // copy and paste run the paste edit providers of Typst; a paste's choice is the workbench's (`#pasteAs`)
-    {
-      openPasteChoice: (choice) => this.#pasteAs.openPasteChoice(choice),
-      closePasteChoice: (choice) => this.#pasteAs.closePasteChoice(choice),
-      pickPasteKind: (choice) => this.#pasteAs.pickPasteKind(choice),
-      prepareDocumentPaste: (document, copied, data) => {
-        const path = this.project.pathOf(document);
-        if (path) this.#languages.prepareDocumentPaste({ path, languageId: 'typst', text: document.text }, copied, data);
-      },
-      provideDocumentPasteEdits: (document, ranges, data) => {
-        const path = this.project.pathOf(document);
-        return path ? this.#languages.provideDocumentPasteEdits({ path, languageId: 'typst', text: document.text }, ranges, data) : [];
-      },
-      resolveDocumentPasteEdit: (edit, document, ranges, data) => {
-        const path = this.project.pathOf(document);
-        return path ? this.#languages.resolveDocumentPasteEdit(edit, { path, languageId: 'typst', text: document.text }, ranges, data) : edit;
-      },
+    provideDocumentPasteEdits: (document, ranges, data) => {
+      const path = this.project.pathOf(document);
+      return path ? this.#languages.provideDocumentPasteEdits({ path, languageId: 'typst', text: document.text }, ranges, data) : [];
     },
-  );
+    resolveDocumentPasteEdit: (edit, document, ranges, data) => {
+      const path = this.project.pathOf(document);
+      return path ? this.#languages.resolveDocumentPasteEdit(edit, { path, languageId: 'typst', text: document.text }, ranges, data) : edit;
+    },
+  });
   readonly #sourceEditors = new SourceEditorHost();
   /** The editors' paste choices, and the command `editor.action.pasteAs`. */
   readonly #pasteAs = new PasteAs({ showQuickPick: (items, options) => this.window.showQuickPick(items, options) });
@@ -221,11 +204,6 @@ export class WorkbenchHost implements Workbench {
     this.#tabs.update(this.window.customEditorChoices(path), this.#activeCustomEditorId);
     this.#placeFrame();
     this.#shown.fire(path);
-  }
-
-  /** Opens a link's web or mail address in a new tab, cut off from this page; any other scheme (`javascript:`) is ignored. */
-  #openExternal(url: URL): void {
-    if (EXTERNAL_SCHEMES.has(url.protocol)) this.host.ownerDocument.defaultView?.open(url.href, '_blank', 'noopener');
   }
 
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel {
@@ -379,9 +357,8 @@ export class WorkbenchHost implements Workbench {
   }
 
   /**
-   * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
-   * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
-   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too. A project
+   * The Typst files' language, `typst` (`.typ`). The raw boxes' code takes the shared CodeMirror extensions (as Typst
+   * in its file), as the Source editors do. A project
    * file (a row of the file panel) dropped into a Visual or Source editor becomes what the drop edit providers
    * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped; so does a file from the
    * computer, once uploaded (`#upload`): the providers know only project files.
@@ -391,14 +368,13 @@ export class WorkbenchHost implements Workbench {
    */
   #extendEditors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
-    const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
-    this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
     // a paste goes in as CodeMirror pastes it (the text as Typst) first
     const paste = { provider: this.#visualEditor.typstPasteEdits, preferences: ['typst'], choices: this.#pasteAs };
     this.#sourceEditors.registerCodeMirrorExtension(({ document }) => this.#languages.createDocumentPasteCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null, paste));
     this.commands.registerCommand('editor.action.pasteAs', (args?: { kind?: string }) => this.#pasteAs.pasteAs(args));
-    this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
-    this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());
+    this.#visualEditor.registerRawBoxCodeMirrorExtension(({ document }) =>
+      this.#sourceEditors.createSharedCodeMirrorExtension({ languageId: 'typst', path: () => this.project.pathOf(document) ?? null }),
+    );
     const drops: DocumentDrops = {
       edit: (document, offset, file) => {
         const path = this.project.pathOf(document);
@@ -492,6 +468,3 @@ const SEARCH_EVERYWHERE_ORDER = 15;
 /** Search everywhere's rail button: a field over a list. */
 const SEARCH_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="5" rx="1.5"/><path d="M4 4h4M3 9.5h10M3 12h7M3 14.5h8.5"/></svg>';
-
-/** The schemes of the external links the widget opens. */
-const EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);

@@ -27,7 +27,7 @@ const FIGURE = '#figure(\n  mermaid(read("../diagrams/workbench-layout.mmd"), wi
 function setup(text: string, pasteEdits: VisualEditorPasteEdits | null = null) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const host = new VisualEditorHost(null, pasteEdits);
+  const host = new VisualEditorHost(pasteEdits);
   strong.activate({ visualEditor: host, subscriptions: [] });
   const view = new VisualEditor(parent, doc, host);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;

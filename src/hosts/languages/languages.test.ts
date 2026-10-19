@@ -1,29 +1,13 @@
 // @vitest-environment jsdom
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the
-// help sheets by language; the drop edit of a dropped file; the paste edit providers and the order of paste edits.
-import { describe, expect, it, vi } from 'vitest';
+// through their provider; the declared languages by ending; the help sheets by language; the drop edit of a dropped
+// file; the paste edit providers and the order of paste edits.
+import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import { type DocumentLink, type DocumentLinkProvider, type FollowableLink, LanguagesHost, sortPasteEdits } from './languages';
-
-/** What `link`'s hint says when it is hovered (after the hover delay); it goes when the pointer leaves. */
-function hintOf(link: FollowableLink): string {
-  vi.useFakeTimers();
-  const page = globalThis.document;
-  const element = page.body.appendChild(page.createElement('span'));
-  link.hover(new MouseEvent('mousemove'), element);
-  vi.advanceTimersByTime(300);
-  const text = page.querySelector('.zwf-link-hint')?.textContent ?? '';
-  link.leave(new MouseEvent('mouseleave'));
-  vi.advanceTimersByTime(300);
-  element.remove();
-  vi.useRealTimers();
-  return text;
-}
+import { type DocumentLink, type DocumentLinkProvider, LanguagesHost, sortPasteEdits } from './languages';
 
 const document = { path: ProjectPath.of('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
-const targets = { open() {}, executeCommand: async () => undefined };
 
 /** Links at the given ranges, each with `tooltip: name`. */
 function provider(name: string, ranges: [number, number][], resolve?: DocumentLinkProvider['resolveDocumentLink']): DocumentLinkProvider {
@@ -37,7 +21,7 @@ const describeLinks = (links: readonly DocumentLink[]) => links.map(({ range, to
 
 describe('LanguagesHost', () => {
   it("merges the providers' links in text order; of overlapping ones the higher priority's wins (equal: registered first)", () => {
-    const links = new LanguagesHost(targets);
+    const links = new LanguagesHost();
     links.registerDocumentLinkProvider({}, provider('first', [[0, 4], [10, 14]]));
     links.registerDocumentLinkProvider({}, provider('second', [[2, 6], [5, 9]]));
     links.registerDocumentLinkProvider({}, provider('high', [[12, 13]]), { priority: 110 });
@@ -45,7 +29,7 @@ describe('LanguagesHost', () => {
   });
 
   it('asks only the providers whose selector matches the document: by language, any of a list, or all', () => {
-    const links = new LanguagesHost(targets);
+    const links = new LanguagesHost();
     links.registerDocumentLinkProvider({ language: 'typst' }, provider('typst', [[0, 1]]));
     links.registerDocumentLinkProvider({ language: 'json' }, provider('json', [[2, 3]]));
     links.registerDocumentLinkProvider([{ language: 'markdown' }, { language: 'json' }], provider('either', [[4, 5]]));
@@ -55,14 +39,14 @@ describe('LanguagesHost', () => {
   });
 
   it('stops asking a provider once its registration is disposed', () => {
-    const links = new LanguagesHost(targets);
+    const links = new LanguagesHost();
     const registration = links.registerDocumentLinkProvider({}, provider('only', [[0, 4]]));
     registration.dispose();
     expect(links.provideDocumentLinks(document)).toEqual([]);
   });
 
   it('resolves a link through the provider that gave it (again after resolving)', () => {
-    const links = new LanguagesHost(targets);
+    const links = new LanguagesHost();
     links.registerDocumentLinkProvider({}, provider('plain', [[0, 4]]));
     links.registerDocumentLinkProvider({}, provider('resolving', [[5, 9]], (link) => ({ ...link, target: ProjectPath.of('/a.typ') })));
     const [plain, resolving] = links.provideDocumentLinks(document);
@@ -72,60 +56,8 @@ describe('LanguagesHost', () => {
     expect(links.resolveDocumentLink(resolved).target).toBe(ProjectPath.of('/a.typ'));
   });
 
-  it('gives the primary link of a document: the first leading somewhere, hinted as the hover offers it, opening it', () => {
-    const open = vi.fn();
-    const links = new LanguagesHost({ ...targets, open });
-    const to = (file: string) => (link: DocumentLink) => ({ ...link, target: ProjectPath.of(file) });
-    links.registerDocumentLinkProvider({}, provider('nowhere', [[0, 4]]));
-    links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 5, to: 9 }) }], resolveDocumentLink: to('/flow.drawio.png') });
-    links.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
-    const primary = links.primaryLink(document)!;
-    expect(hintOf(primary)).toMatch(/^Open flow\.drawio\.png\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    expect(primary.isFollowEvent({ ctrlKey: true, metaKey: true } as MouseEvent)).toBe(true);
-    expect(primary.isFollowEvent({ ctrlKey: false, metaKey: false } as MouseEvent)).toBe(false);
-    primary.follow();
-    expect(open).toHaveBeenCalledWith(ProjectPath.of('/flow.drawio.png'), undefined);
-    const tooltipped = new LanguagesHost(targets);
-    tooltipped.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
-    expect(hintOf(tooltipped.primaryLink(document)!)).toMatch(/^Edit diagram\(/);
-    expect(new LanguagesHost(targets).primaryLink(document)).toBeNull();
-  });
-
-  it('gives the link at an offset (both ends included) that leads somewhere, resolved anew each time, following it to its selection', () => {
-    const open = vi.fn();
-    const links = new LanguagesHost({ ...targets, open });
-    let at = 3;
-    const provide = vi.fn(() => [{ range: SourceRange.of({ from: 5, to: 9 }) }, { range: SourceRange.of({ from: 10, to: 14 }) }]);
-    const resolve = vi.fn((link: DocumentLink) =>
-      link.range.from === 5 ? { ...link, target: ProjectPath.of('/ch2.typ'), selection: SourceRange.of({ from: at, to: at }), tooltip: 'Go to Figure · Setup' } : link,
-    );
-    links.registerDocumentLinkProvider({}, { provideDocumentLinks: provide, resolveDocumentLink: resolve });
-    expect(links.linkAt(document, SourceOffset.of(4))).toBeNull();
-    expect(links.linkAt(document, SourceOffset.of(12))).toBeNull(); // leads nowhere
-    const link = links.linkAt(document, SourceOffset.of(9))!;
-    expect(hintOf(link)).toMatch(/^Go to Figure · Setup\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    at = 7; // the label moved since
-    link.follow();
-    expect(open).toHaveBeenCalledWith(ProjectPath.of('/ch2.typ'), { from: 7, to: 7 });
-    expect(links.linkAt(document, SourceOffset.of(5))).not.toBeNull();
-    expect(provide).toHaveBeenCalledTimes(1); // the same text: its links are kept
-    links.linkAt({ ...document, text: 'aaaa bbbb cccc!' }, SourceOffset.of(5));
-    expect(provide).toHaveBeenCalledTimes(2);
-  });
-
-  it('hints a link to a URL by its address and opens it', () => {
-    const open = vi.fn();
-    const links = new LanguagesHost({ ...targets, open });
-    const url = new URL('https://typst.app/docs');
-    links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 0, to: 4 }), target: url }] });
-    const link = links.linkAt(document, SourceOffset.of(2))!;
-    expect(hintOf(link)).toMatch(/^Open https:\/\/typst\.app\/docs\(/);
-    link.follow();
-    expect(open).toHaveBeenCalledWith(url, undefined);
-  });
-
   it('names the language of a file by the longest declared ending, in any case; undefined without one', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     languages.declare([
       { id: 'generated', extensions: ['.gen.typ'] },
@@ -139,7 +71,7 @@ describe('LanguagesHost', () => {
   });
 
   it('gives the help sheets of the providers for a language (no language: every file), until disposed', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     const sheet = (title: string) => ({ provideHelp: () => ({ title, sections: [] }) });
     languages.registerHelpProvider({ language: 'typst' }, sheet('Typst'));
     const mermaid = languages.registerHelpProvider([{ language: 'mermaid' }], sheet('Mermaid'));
@@ -153,7 +85,7 @@ describe('LanguagesHost', () => {
   });
 
   it('makes a dropped file into the edit of the first provider by priority that gives one (equal: registered first), for the document\'s language', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     const drops = (name: string, ending: string) => ({
       provideDocumentDropEdits: (_document: unknown, _position: unknown, file: ProjectPath) => (file.endsWith(ending) ? { insertText: name } : null),
     });
@@ -170,7 +102,7 @@ describe('LanguagesHost', () => {
   });
 
   it('uploads a file dropped from the computer to the folder of the first provider by priority that names one, else to the top', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     const none = { provideDocumentDropEdits: () => null };
     languages.registerDocumentDropEditProvider({ language: 'typst' }, none, { priority: 110 });
     languages.registerDocumentDropEditProvider({ language: 'typst' }, { ...none, provideUploadFolder: (_document, file) => (file.endsWith('.png') ? '/img/' : undefined) });
@@ -179,7 +111,7 @@ describe('LanguagesHost', () => {
   });
 
   it('gives the paste edits of the providers of the language that read a type the clipboard has, of their declared kinds', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     const edit = (kind: string) => ({ kind, title: kind, insertText: kind });
     const offering = (...kinds: string[]) => ({ provideDocumentPasteEdits: () => kinds.map(edit) });
     languages.registerDocumentPasteEditProvider({ language: 'typst' }, offering('typst.markdown', 'typst.markdown.gfm', 'other'), { providedPasteEditKinds: ['typst.markdown'], pasteMimeTypes: ['text/*'] });
@@ -193,7 +125,7 @@ describe('LanguagesHost', () => {
   });
 
   it('resolves the paste edit that goes in by every provider of the language in order, each given the one before; drops edits that collide', () => {
-    const languages = new LanguagesHost(targets);
+    const languages = new LanguagesHost();
     const change = (from: number, to: number, insert: string) => ({ from: SourceOffset.of(from), to: SourceOffset.of(to), insert });
     const prepared: string[] = [];
     languages.registerDocumentPasteEditProvider(

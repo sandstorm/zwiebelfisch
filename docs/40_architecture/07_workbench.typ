@@ -17,7 +17,7 @@
   [`commands`], [commands by id, key bindings],
   [`window`], [messages, input box, quick pick, save dialog, `showContextMenu`, `withProgress`, search providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`],
   [`scm`], [source controls (a duplicate id throws)],
-  [`languages`], [document links, drop edits, paste edits, help providers, known imports by `DocumentSelector`; `getLanguageId`],
+  [`languages`], [document links (merged: `provideDocumentLinks`), drop edits, paste edits, help providers, known imports by `DocumentSelector`; `getLanguageId`],
   [`workspace`], [`applyEdit`, settings],
   [`workbench`], [`open`, side panels, editor frame, menus, style sheets, dropped files, `user`],
 )

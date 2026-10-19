@@ -1,20 +1,37 @@
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { Extension, ExtensionContext } from '../../hosts/workbench/workbench';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
+import css from './document-links.css?inline';
+import type { LinkActions } from './followable-link';
+import { linkExtension } from './source-editor/link-extension';
+import { pictureLink, textLinks } from './visual-editor/text-links';
 
 /**
- * The file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document links. A path resolves from the
- * file it is in. Its link opens an existing file, or says the file is missing and, for a Typst file, offers to create it.
+ * Document links in every editor: the links of every provider (`languages.registerDocumentLinkProvider`) shown and
+ * followed as VS Code's "Follow link" does, in the Source editors, the raw boxes' code and every CodeMirror that takes
+ * the shared extensions (the text files'), in the Visual editor's text (reference chips, link marks) and on raw boxes'
+ * pictures (their Typst's first link). Hovered, a link shows its hint; ⌘/Ctrl+click or Alt+Enter follows it: a project
+ * file opens (at the link's selection), a web or mail address in a new tab. Without it, no editor shows links.
  *
- * The command `documentLinks.createFile(path)` creates the file and opens it, or rejects saying why not.
+ * Its own provider: the file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`), resolved from the file
+ * they are in. Such a link opens an existing file, or says the file is missing and, for a Typst file, offers to create
+ * it: the command `documentLinks.createFile(path)` creates the file and opens it, or rejects saying why not.
  */
 export function documentLinks(): Extension {
   return {
     id: 'document-links',
-    activate({ project, commands, languages, workspace, workbench, subscriptions }) {
+    activate(context) {
+      const { project, commands, languages, workspace, workbench, sourceEditor, visualEditor, subscriptions } = context;
+      const actions = linkActions(context);
+      const pathOf = (document: TypstDocument) => () => project.pathOf(document) ?? null;
       subscriptions.push(
+        workbench.registerStyleSheet(css),
+        sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => linkExtension(actions, languageId, path)),
+        visualEditor.registerTiptapExtension((editor) => textLinks(editor, actions, pathOf(editor.document))),
+        visualEditor.registerRawBoxPictureExtension((box) => pictureLink(box, actions, pathOf(box.editor.document))),
         languages.registerDocumentLinkProvider({ language: 'typst' }, new FilePathLinks(project)),
         commands.registerCommand(CREATE_FILE, async (path: string) => {
           const target = ProjectPath.parse(path);
@@ -27,6 +44,24 @@ export function documentLinks(): Extension {
     },
   };
 }
+
+/** Where the links come from (every provider, merged), and where following one goes. */
+function linkActions({ languages, workbench, commands }: ExtensionContext): LinkActions {
+  return {
+    provideDocumentLinks: (document) => languages.provideDocumentLinks(document),
+    resolveDocumentLink: (link) => languages.resolveDocumentLink(link),
+    open: (target, selection) => (target instanceof URL ? openExternal(workbench.ownerDocument, target) : workbench.open(target, { selection })),
+    executeCommand: (command, ...args) => commands.executeCommand(command, ...args),
+  };
+}
+
+/** Opens a web or mail address in a new tab, cut off from this page; any other scheme (`javascript:`) is ignored. */
+function openExternal(doc: Document, url: URL): void {
+  if (EXTERNAL_SCHEMES.has(url.protocol)) doc.defaultView?.open(url.href, '_blank', 'noopener');
+}
+
+/** The schemes of the external links the widget opens. */
+const EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
 
 /** The file paths of a text as links; resolved, a link opens its file, or says it is missing (and offers to create a Typst file). */
 class FilePathLinks implements DocumentLinkProvider {

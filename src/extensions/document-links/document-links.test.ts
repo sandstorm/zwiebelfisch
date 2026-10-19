@@ -18,12 +18,15 @@ function setup() {
   let selector: DocumentSelector | null = null;
   const commands = new Map<string, (...args: unknown[]) => unknown>();
   const workspace = { applyEdit: vi.fn(async () => null as string | null) };
-  const workbench = { open: vi.fn() };
+  const ignored = () => new Disposable(() => {});
+  const workbench = { open: vi.fn(), registerStyleSheet: ignored };
   const context = {
     project,
     languages: {
       registerDocumentLinkProvider: (registeredFor: DocumentSelector, registered: DocumentLinkProvider) => ((selector = registeredFor), (provider = registered), new Disposable(() => {})),
     },
+    sourceEditor: { registerSharedCodeMirrorExtension: ignored },
+    visualEditor: { registerTiptapExtension: ignored, registerRawBoxPictureExtension: ignored },
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,
     workbench,

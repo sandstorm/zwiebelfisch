@@ -71,7 +71,7 @@ export class DocumentEditors {
     const editor =
       viewType === VISUAL_EDITOR
         ? new VisualEditor(element, document, this.#visualEditor)
-        : this.#sourceEditors.createEditor(element, document, { onSelection: selected });
+        : this.#sourceEditors.createEditor(element, document, { onSelection: selected, path: () => this.project.pathOf(document) ?? null });
     // disposed with the editor
     if (editor instanceof VisualEditor) editor.onDidChangeSelection(selected);
     owner.editors.set(viewType, { editor, panel });

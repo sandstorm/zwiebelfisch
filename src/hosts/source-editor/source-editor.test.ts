@@ -5,6 +5,7 @@ import { history, undo } from '@codemirror/commands';
 import { EditorState, StateEffect, StateField, Transaction, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
+import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { fromDocument, SourceEditorHost, type SourceEditorContext } from './source-editor';
 
@@ -142,15 +143,16 @@ describe('SourceEditorHost contributions', () => {
 });
 
 describe('shared CodeMirror extensions', () => {
+  const PLAIN = { languageId: 'plaintext', path: () => ProjectPath.of('/notes.txt') };
   const shared = EditorView.editorAttributes.of({ class: 'shared' });
   const isShared = (dom: Element) => dom.classList.contains('shared');
 
   it('apply to the Source editors and to other CodeMirrors that take them, before and after, until disposed', () => {
     const host = new SourceEditorHost();
     const { editor } = setup('text\n', host);
-    const other = new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension() });
+    const other = new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
     const registration = host.registerSharedCodeMirrorExtension(shared);
-    const later = new EditorView({ parent: document.body, doc: 'later', extensions: host.createSharedCodeMirrorExtension() });
+    const later = new EditorView({ parent: document.body, doc: 'later', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
     expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([true, true, true]);
     registration.dispose();
     expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([false, false, false]);
@@ -158,7 +160,17 @@ describe('shared CodeMirror extensions', () => {
 
   it('stop following the host once the other CodeMirror is destroyed', () => {
     const host = new SourceEditorHost();
-    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension() }).destroy();
+    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) }).destroy();
     expect(() => host.registerSharedCodeMirrorExtension(shared)).not.toThrow();
+  });
+
+  it('made per editor, know its text: a Source editor shows Typst in its file, another CodeMirror says what it shows', () => {
+    const host = new SourceEditorHost();
+    const seen: string[] = [];
+    host.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path() ?? 'nowhere'}`), []));
+    host.createEditor(document.body.appendChild(document.createElement('div')), new TypstDocument('text\n'), { path: () => ProjectPath.of('/main.typ') });
+    host.createEditor(document.body.appendChild(document.createElement('div')), new TypstDocument('text\n'));
+    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
+    expect(seen).toEqual(['typst /main.typ', 'typst nowhere', 'plaintext /notes.txt']);
   });
 });

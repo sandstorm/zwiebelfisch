@@ -138,7 +138,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`imports`], [pasted Typst gets the imports it needs (the copied file's, else the known ones)], [paste edit],
   [`markdown`], [Markdown pasted as Typst (`typst.markdown`, a small lossy converter); first where the text is surely Markdown, else in the "Paste as" chip], [paste edit],
   [`wordProcessors`], [HTML from Word, Google Docs, LibreOffice cleaned before the Visual editor reads it (lists, Office tags, empty paragraphs)], [Tiptap extension (`transformPastedHTML`)],
-  [`documentLinks`], [file paths in Typst text as links; `documentLinks.createFile`], [document links],
+  [`documentLinks`], [every provider's document links shown and followed in every editor (hover, ⌘-click, Alt+Enter); file paths in Typst text as links; `documentLinks.createFile`], [document links, shared CodeMirror extension, Tiptap extension, raw box pictures, style sheet],
   [`files`], [the file panel (Alt+1 / ⌃1) and its commands, "Set as main file" among them; the read-only fallback editor], [side panel, menus, custom editor, search],
   [`search`], [the side panel "Find in files": text or regex in the project, current file or a folder; Replace mode with one Undo; matches highlighted in both editors; "Find in folder…"], [side panel, commands, keys, menu, highlights, search],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
@@ -182,7 +182,8 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
 #table(
   columns: (auto, auto, auto),
   table.header[Contribution point][Provided by][Read by],
-  [document links], [`documentLinks`, `labels`, `markup`, `diagrams`, `mermaid`], [the Visual and Source editors, `textFiles`, `images`],
+  [document links], [`documentLinks`, `labels`, `markup`, `diagrams`, `mermaid`], [`documentLinks` (in every editor)],
+  [shared CodeMirror extensions], [`codeEditing`, `invisibles`, `documentLinks`], [the Source editors, raw boxes, `textFiles`],
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [known imports], [`mermaid`], [`imports`],
   [paste edit providers], [`markdown`, `imports`, `labels`], [the Visual and Source editors (the "Paste as" chip)],

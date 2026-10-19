@@ -16,11 +16,10 @@ import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
-import { textLinks } from './text-links';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContribution, PriorityOptions, Contributed, VisualEditorContext, RawBoxRendererProvider, VisualEditorLinks, VisualEditorPasteEdits, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContribution, PriorityOptions, Contributed, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, VisualEditorPasteEdits, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -63,10 +62,9 @@ export class VisualEditor {
     this.tiptap = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
         highlights,
         BlockGaps,
-        ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         clipboard(document, contributions.pasteEdits),
         ...choice.extensions,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
@@ -258,7 +256,7 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
- * with where its links lead (`links`; null: nowhere) and who takes part in copy and paste (`pasteEdits`; null: nobody).
+ * with who takes part in copy and paste (`pasteEdits`; null: nobody).
  * The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
@@ -273,16 +271,14 @@ export class VisualEditorHost implements VisualEditorContributions {
     toolbarItems: [] as ToolbarItem[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxCodeMirrorExtensions: [] as ((editor: VisualEditorContext) => Extension)[],
+    rawBoxPictureExtensions: [] as ((box: RawBoxPictureHost) => Disposable)[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  constructor(
-    readonly links: VisualEditorLinks | null = null,
-    readonly pasteEdits: VisualEditorPasteEdits | null = null,
-  ) {}
+  constructor(readonly pasteEdits: VisualEditorPasteEdits | null = null) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
@@ -328,6 +324,10 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
+  registerRawBoxPictureExtension(provider: (box: RawBoxPictureHost) => Disposable): Disposable {
+    return this.add(this.lists.rawBoxPictureExtensions, provider);
+  }
+
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
     return this.add(this.lists.textStyles, provider);
   }
@@ -344,6 +344,7 @@ export class VisualEditorHost implements VisualEditorContributions {
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
+      rawBoxPictureExtensions: [...lists.rawBoxPictureExtensions],
       textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
     };
@@ -359,12 +360,12 @@ export class VisualEditorHost implements VisualEditorContributions {
 }
 
 /** What the raw boxes of `editor` get from the contributions. */
-function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], links: VisualEditorLinks | null): RawBoxes {
+function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews']): RawBoxes {
   return {
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
     codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(editor)),
-    linkOf: (src) => links?.linkOf(src, editor.document) ?? null,
+    pictureExtensions: contributed.rawBoxPictureExtensions,
     nodeViews,
   };
 }

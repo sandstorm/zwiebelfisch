@@ -61,8 +61,15 @@ export interface VisualEditorContributions {
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
-  /** CodeMirror extensions for the code of every raw box of each editor (e.g. links on file paths). */
+  /** CodeMirror extensions for the code of every raw box of each editor (e.g. the shared ones of the Source editors). */
   registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable;
+  /**
+   * Takes part in the picture of every raw box a box renderer draws, in each editor (document links: hovered, the
+   * picture shows the box's link; Mod+click follows it): `provider` is called once per picture, before the box adds
+   * its own listeners to it, so the provider's run first; one that stops a `mousedown` (`stopImmediatePropagation`)
+   * keeps the box from opening. What it returns is disposed with the box.
+   */
+  registerRawBoxPictureExtension(provider: (box: RawBoxPictureHost) => Disposable): Disposable;
 }
 
 /**
@@ -152,6 +159,7 @@ export interface Contributed {
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxCodeMirrorExtensions: readonly ((editor: VisualEditorContext) => Extension)[];
+  readonly rawBoxPictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
@@ -235,16 +243,14 @@ export interface RawBoxTools {
   dispose(): void;
 }
 
-/**
- * Where the Visual editor's links lead, from the document links of its Typst (the workbench's `languages`): a box's
- * picture follows its primary link, the text (a reference chip, a link mark) the link under the pointer or at the
- * cursor, as a link in the Source editor does. The workbench gives it to the host.
- */
-export interface VisualEditorLinks {
-  /** The primary link of the box whose Typst is `src` (code: a figure's body, without `#`), in `document`; null: none. */
-  linkOf(src: string, document: TypstDocument): FollowableLink | null;
-  /** The link at `offset` of `document`'s text that leads somewhere; null: none. Asked as the pointer moves. */
-  linkAt(document: TypstDocument, offset: SourceOffset): FollowableLink | null;
+/** The picture of a raw box, as a picture extension (`registerRawBoxPictureExtension`) gets it. */
+export interface RawBoxPictureHost {
+  /** The picture (`<img>`) the box shows instead of its code. */
+  readonly picture: HTMLImageElement;
+  /** The editor the box is in. */
+  readonly editor: VisualEditorContext;
+  /** The box's Typst now (its node's `src`; a figure's body is code, without `#`). */
+  src(): string;
 }
 
 /**
@@ -263,20 +269,6 @@ export interface VisualEditorPasteEdits extends PasteChoices {
    * (of the text before the paste, overlapping neither the ranges nor each other).
    */
   resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
-}
-
-/** Where a link of the Visual editor leads. */
-export interface FollowableLink {
-  /** Whether a click with `event`'s modifiers follows it (⌘ on Mac, else Ctrl). */
-  isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
-  follow(): void;
-  /**
-   * The pointer moved (`event`) over it at `element`: it shows as links do in every editor, its hint ("Go to Figure ·
-   * Setup in ch2.typ (⌘+click or Alt+Enter)") and, while the modifier is held, the link look (`zwf-link--mod`).
-   */
-  hover(event: MouseEvent, element: Element): void;
-  /** The pointer (`event`) left it. */
-  leave(event: MouseEvent): void;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.

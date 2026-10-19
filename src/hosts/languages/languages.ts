@@ -1,4 +1,3 @@
-import type { Extension } from '@codemirror/state';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
@@ -7,8 +6,8 @@ import type { Command } from '../commands/commands';
 /**
  * The languages of texts (VS Code's `languages` namespace, the parts we use).
  *
- * Extensions register providers for a language, and the editors of a text in it use all of them:
- * - document links, shown and followed in every CodeMirror editor
+ * Extensions register providers for a language; whoever shows or edits a text in it asks all of them:
+ * - document links, merged across providers (`provideDocumentLinks`), for whoever shows them
  * - drop edits: what a project file dropped into a text becomes
  * - paste edits: other ways a paste can go in, and what else it changes
  * - help sheets, for the help panel
@@ -19,17 +18,18 @@ import type { Command } from '../commands/commands';
  */
 export interface Languages {
   /**
-   * Adds links to the documents `selector` matches until disposed: the Source editors, the Visual editor (its text,
-   * raw boxes' code and pictures) and the text files' editor show them (Mod+click, Alt+Enter, hover). The links of
-   * every matching provider are merged; where links overlap, the provider of the higher `priority` wins (default 100,
-   * higher first; equal: registration order).
+   * Adds links to the documents `selector` matches until disposed. The links of every matching provider are merged;
+   * where links overlap, the provider of the higher `priority` wins (default 100, higher first; equal: registration
+   * order).
    */
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
   /**
-   * Shows the links of a CodeMirror editor's text as the Source editors do, for an extension's own editor: the text is
-   * in `languageId`; `path` is the file it is in, now (null: none, no links).
+   * The links of `document` from every matching provider, merged (see `registerDocumentLinkProvider`), in text order
+   * (VS Code's `vscode.executeLinkProvider`). Each is resolved by `resolveDocumentLink`.
    */
-  createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension;
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  /** A link `provideDocumentLinks` gave (or this resolved), with what its provider fills in: target, tooltip, command. */
+  resolveDocumentLink(link: DocumentLink): DocumentLink;
   /**
    * Says what a project file dropped into the documents `selector` matches becomes, until disposed: the Visual and the
    * Source editor insert the edit of the provider of the highest `priority` (default 100, higher first; equal:
@@ -259,30 +259,6 @@ export interface DocumentDropEdit {
   readonly insertText: string;
   /** Other changes of the same document, in the coordinates of its text before the drop and before `position` (an import). */
   readonly additionalEdit?: readonly TextChange[];
-}
-
-/** What following a link does, in the editor that shows it: the workbench's side of links. */
-export interface LinkTargets {
-  /** Shows a link's target: a project file (at `selection`, if given), or an external URL in a new tab. */
-  open(target: ProjectPath | URL, selection?: SourceRange): void;
-  /** Runs a link's command (`commands.executeCommand`). */
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
-}
-
-/** A link as something other than a CodeMirror editor follows it (a raw box's picture, the Visual editor's text). */
-export interface FollowableLink {
-  /** Whether a click with `event`'s modifiers follows it, as on links in text (⌘ on Mac, else Ctrl). */
-  isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
-  /** Opens its target (resolved again: a label may have moved since). */
-  follow(): void;
-  /**
-   * The pointer moved (`event`) over it at `element` (a reference chip, a link's text, a picture): it shows as links in
-   * text do, the same hint after the same delay ("Edit diagram (⌘+click or Alt+Enter)", `.zwf-link-hint`) and,
-   * while the modifier is held, the link look (`zwf-link--mod` on `element`).
-   */
-  hover(event: MouseEvent, element: Element): void;
-  /** The pointer (`event`) left it: its hint goes (unless the pointer moves into it), and its link look. */
-  leave(event: MouseEvent): void;
 }
 
 export { sortPasteEdits, LanguagesHost } from './languages-impl';

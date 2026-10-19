@@ -409,22 +409,17 @@ describe('WorkbenchHost', () => {
     expect(workbench.isEditorFocused()).toBe(true);
   });
 
-  it("shows the links of the registered providers in the Source editors and raw boxes' code, with the path of their file", () => {
+  it("gives the shared CodeMirror extensions to the Source editors and raw boxes' code, as Typst in their file", () => {
     const seen: string[] = [];
-    const { host, workbench } = setup(({ languages, subscriptions }) =>
+    const { host, workbench } = setup(({ sourceEditor, subscriptions }) =>
       subscriptions.push(
-        languages.registerDocumentLinkProvider(
-          { language: 'typst' },
-          { provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: SourceRange.of({ from: 2, to: text.length - 1 }) }]) },
-        ),
+        sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path()}`), EditorView.editorAttributes.of({ class: 'shared' }))),
       ),
     );
-    expect(seen).toContain('/main.typ');
-    const marked = (root: Element) => [...root.querySelectorAll('.zwf-source__path')].map((mark) => mark.textContent).join('');
-    expect(marked(host.querySelector('[data-testid=zwf-source]')!)).toBe('Main');
+    expect(host.querySelector('[data-testid=zwf-source]')!.classList.contains('shared')).toBe(true);
     workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
-    // the box holds "= Main" without the line break
-    expect(marked(host.querySelector('.zwf-visual__raw-block')!)).toBe('Mai');
+    expect(host.querySelector('.zwf-visual__raw-block .cm-editor')!.classList.contains('shared')).toBe(true);
+    expect(new Set(seen)).toEqual(new Set(['typst /main.typ']));
   });
 });
 

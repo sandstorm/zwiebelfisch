@@ -20,7 +20,7 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
     closePasteChoice: (choice) => void (state.open = state.open === choice ? null : state.open),
     pickPasteKind: (choice) => void state.picked.push(choice),
   };
-  const languages = new LanguagesHost({ open() {}, executeCommand: async () => undefined });
+  const languages = new LanguagesHost();
   const pastedOf = (data: DataTransfer) => data.getData('text/plain');
   languages.registerDocumentPasteEditProvider(
     {},

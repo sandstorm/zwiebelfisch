@@ -1,25 +1,34 @@
-// See VisualEditorLinks in visual-editor.ts.
+// See documentLinks in ../document-links.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Plugin } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import type { SourceOffset, TypstDocument } from '../../core/typst-document/typst-document';
-import { posToSource } from '../prosemirror-typst/prosemirror-typst';
-import type { FollowableLink, VisualEditorLinks } from './visual-editor';
+import type { ProjectPath } from '../../../core/paths/paths';
+import type { SourceOffset } from '../../../core/typst-document/typst-document';
+import type { TextDocument } from '../../../hosts/languages/languages';
+import type { RawBoxPictureHost, VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { linkFinder, primaryLink, type FollowableLink, type LinkActions } from '../followable-link';
 
 /**
- * Follows the links in the text of `document`'s editor as the Source editor does: hovered, a link shows its hint (with
- * Mod held, the link look), and Mod+click on it or Alt+Enter at the cursor follows it. A plain click edits as ever.
- * Links are found at inline atoms (a reference chip) and inline elements (a link mark); boxes (`isBox`) follow their own.
+ * Follows the links in the text of `editor` as the Source editor does: hovered, a link shows its hint (with Mod held,
+ * the link look), and Mod+click on it or Alt+Enter at the cursor follows it. A plain click edits as ever. Links are
+ * found at inline atoms (a reference chip) and inline elements (a link mark); Alt+Enter on a selected box follows the
+ * primary link of its Typst (`boxLink`). `path` is the file the editor's document is, now (null: no links).
  */
-export function textLinks(document: TypstDocument, links: VisualEditorLinks, isBox: (node: Node) => boolean): Extension {
-  const linkAt = (offset: SourceOffset | null) => (offset === null ? null : links.linkAt(document, offset));
+export function textLinks(editor: VisualEditorContext, actions: LinkActions, path: () => ProjectPath | null): Extension {
+  const find = linkFinder(actions);
+  const linkAt = (offset: SourceOffset | null) => {
+    const file = path();
+    return offset === null || !file ? null : find({ path: file, languageId: 'typst', text: editor.document.text }, offset);
+  };
   /** The link under the pointer, and the element that shows it. */
   const linkUnder = (view: EditorView, event: MouseEvent) => {
     const under = elementUnder(view, event);
-    const link = under && linkAt(posToSource(view.state.doc, under.pos));
+    const link = under && linkAt(editor.posToSource(view.state.doc, under.pos));
     return link && under ? { link, element: under.element } : null;
   };
+  const isBox = (node: Node) => editor.isBox(node);
   return Extension.create({
     name: 'typstTextLinks',
     addProseMirrorPlugins() {
@@ -38,7 +47,9 @@ export function textLinks(document: TypstDocument, links: VisualEditorLinks, isB
             },
             handleKeyDown: (view, event) => {
               if (event.key !== 'Enter' || !event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return false;
-              const link = linkAt(offsetAtCursor(view, isBox));
+              const { selection } = view.state;
+              const box = selection instanceof NodeSelection && isBox(selection.node) ? selection.node.attrs.src : undefined;
+              const link = typeof box === 'string' ? boxLink(box, actions, path) : linkAt(offsetAtCursor(view, editor));
               link?.follow();
               return link !== null;
             },
@@ -47,6 +58,54 @@ export function textLinks(document: TypstDocument, links: VisualEditorLinks, isB
       ];
     },
   });
+}
+
+/**
+ * Makes the picture of a raw box lead where the box's Typst links to (`boxLink`), as a link in text: hovered, the hint
+ * of every link (the link asked once per visit: finding it takes a parse); Mod+click follows it, instead of opening
+ * the box.
+ */
+export function pictureLink({ picture, src }: RawBoxPictureHost, actions: LinkActions, path: () => ProjectPath | null): Disposable {
+  let link: FollowableLink | null = null;
+  const listeners: [string, (event: MouseEvent) => void][] = [
+    [
+      'mousedown',
+      (event) => {
+        const followed = event.button === 0 ? boxLink(src(), actions, path) : null;
+        if (!followed?.isFollowEvent(event)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        followed.follow();
+      },
+    ],
+    [
+      'mouseenter',
+      (event) => {
+        link = boxLink(src(), actions, path);
+        link?.hover(event, picture);
+      },
+    ],
+    ['mousemove', (event) => link?.hover(event, picture)],
+    [
+      'mouseleave',
+      (event) => {
+        link?.leave(event);
+        link = null;
+      },
+    ],
+  ];
+  for (const [type, listener] of listeners) picture.addEventListener(type, listener as EventListener);
+  return new Disposable(() => {
+    for (const [type, listener] of listeners) picture.removeEventListener(type, listener as EventListener);
+  });
+}
+
+/** The primary link of the box whose Typst is `src`, in the file at `path`; null: none, or no file. */
+function boxLink(src: string, actions: LinkActions, path: () => ProjectPath | null): FollowableLink | null {
+  const file = path();
+  // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
+  const document: TextDocument | null = file && { path: file, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` };
+  return document && primaryLink(document, actions);
 }
 
 /** The link under the pointer shows as one (`FollowableLink.hover`); a plain move elsewhere leaves it. */
@@ -103,8 +162,8 @@ function outermostIn(parent: globalThis.Node, target: EventTarget | null): Eleme
 }
 
 /** The source offset of the cursor, or of the selected inline atom (a reference chip); null for other selections and boxes. */
-function offsetAtCursor(view: EditorView, isBox: (node: Node) => boolean): SourceOffset | null {
+function offsetAtCursor(view: EditorView, editor: VisualEditorContext): SourceOffset | null {
   const { selection, doc } = view.state;
-  if (selection instanceof NodeSelection) return selection.node.isInline && !isBox(selection.node) ? posToSource(doc, selection.from) : null;
-  return selection.empty ? posToSource(doc, selection.head) : null;
+  if (selection instanceof NodeSelection) return selection.node.isInline && !editor.isBox(selection.node) ? editor.posToSource(doc, selection.from) : null;
+  return selection.empty ? editor.posToSource(doc, selection.head) : null;
 }

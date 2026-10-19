@@ -36,11 +36,6 @@
 /* Raw boxes showing their image or compiled snippet (code while focused) */
 .zwf-visual__raw--rendered { background: transparent; }
 .zwf-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
-/* A link under the pointer while Mod is held (zwf-link--mod, styled as every link by the languages host): a picture
-   framed (specific enough for pictures that boxes' tools frame), the pointer over what the elements set */
-.zwf-visual__raw--rendered .zwf-visual__rendering.zwf-link--mod { outline: 1px solid var(--zwf-accent); outline-offset: 2px; }
-.zwf-visual .zwf-link--mod,
-.zwf-visual .zwf-link--mod * { cursor: pointer; }
 /* A picture fades in where the code was (the first snippets after the first compile, or leaving the code), so boxes
    swapping their code for pictures at once do not flash. */
 .zwf-visual__raw--rendered .zwf-visual__rendering { animation: zwf-visual-fade-in 0.15s ease-out; }

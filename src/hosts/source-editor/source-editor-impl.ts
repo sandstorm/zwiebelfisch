@@ -5,16 +5,16 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import css from './source-editor.css?inline';
-import { type SourceEditorContributions, type SourceEditorContext, fromDocument, type SourceEditorOptions } from './source-editor';
+import { type SourceEditorContributions, type SourceEditorContext, type SharedCodeMirrorContext, fromDocument, type SourceEditorOptions } from './source-editor';
 
 /** The `SourceEditorContributions` of one widget, which makes its Source editors (`createEditor`) and applies the contributions to them. */
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];
-  private readonly shared: Extension[] = [];
+  private readonly shared: (Extension | ((editor: SharedCodeMirrorContext) => Extension))[] = [];
   private readonly changed = new EventEmitter<void>();
   /** How an editor gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
-    extensionsFor: (editor) => this.extensionsFor(editor),
+    extensionsFor: (editor, shared) => [this.sharedFor(shared), ...this.extensions.map((extension) => (typeof extension === 'function' ? extension(editor) : extension))],
     onDidChange: this.changed.event,
   };
   /** The CSS of the editors (a revealed range), for the workbench to put where the widget renders. */
@@ -24,17 +24,17 @@ export class SourceEditorHost implements SourceEditorContributions {
     return this.add(this.extensions, extension);
   }
 
-  registerSharedCodeMirrorExtension(extension: Extension): Disposable {
+  registerSharedCodeMirrorExtension(extension: Extension | ((editor: SharedCodeMirrorContext) => Extension)): Disposable {
     return this.add(this.shared, extension);
   }
 
-  createSharedCodeMirrorExtension(): Extension {
+  createSharedCodeMirrorExtension(editor: SharedCodeMirrorContext): Extension {
     const compartment = new Compartment();
     const follow = ViewPlugin.define((view) => {
-      const subscription = this.changed.event(() => view.dispatch({ effects: compartment.reconfigure([...this.shared]) }));
+      const subscription = this.changed.event(() => view.dispatch({ effects: compartment.reconfigure(this.sharedFor(editor)) }));
       return { destroy: () => subscription.dispose() };
     });
-    return [compartment.of([...this.shared]), follow];
+    return [compartment.of(this.sharedFor(editor)), follow];
   }
 
   /** A Source editor of `document` in `parent`, with every contribution registered now or later. */
@@ -42,8 +42,8 @@ export class SourceEditorHost implements SourceEditorContributions {
     return new SourceEditor(parent, document, options, this.contributions);
   }
 
-  private extensionsFor(editor: SourceEditorContext): Extension {
-    return [...this.shared, ...this.extensions.map((extension) => (typeof extension === 'function' ? extension(editor) : extension))];
+  private sharedFor(editor: SharedCodeMirrorContext): Extension {
+    return this.shared.map((extension) => (typeof extension === 'function' ? extension(editor) : extension));
   }
 
   private add<T>(list: T[], extension: T): Disposable {
@@ -67,11 +67,12 @@ export class SourceEditor {
 
   constructor(parent: HTMLElement, document: TypstDocument, options: SourceEditorOptions, contributions: Contributions) {
     const context: SourceEditorContext = { document };
+    const shared: SharedCodeMirrorContext = { languageId: 'typst', path: () => options.path?.() ?? null };
     this.view = new EditorView({
       parent,
       doc: document.text,
       extensions: [
-        this.contributed.of(contributions.extensionsFor(context)),
+        this.contributed.of(contributions.extensionsFor(context, shared)),
         highlightField,
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {
@@ -86,7 +87,7 @@ export class SourceEditor {
       document.onDidChange(({ contentChanges, origin }) => {
         if (origin !== this) this.view.dispatch({ changes: [...contentChanges], annotations: fromDocument.of({ origin }) });
       }),
-      contributions.onDidChange(() => this.view.dispatch({ effects: this.contributed.reconfigure(contributions.extensionsFor(context)) })),
+      contributions.onDidChange(() => this.view.dispatch({ effects: this.contributed.reconfigure(contributions.extensionsFor(context, shared)) })),
     ];
   }
 
@@ -126,7 +127,8 @@ export class SourceEditor {
 
 /** What an editor needs from its host: the contributed extensions for it, and word when they change. */
 interface Contributions {
-  extensionsFor(editor: SourceEditorContext): Extension;
+  /** The shared contributions (for `shared`) and the Source editors' own (for `editor`). */
+  extensionsFor(editor: SourceEditorContext, shared: SharedCodeMirrorContext): Extension;
   readonly onDidChange: Event<void>;
 }
 

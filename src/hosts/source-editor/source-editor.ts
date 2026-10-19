@@ -1,5 +1,6 @@
 import { Annotation, type Extension } from '@codemirror/state';
 import type { Disposable } from '../../core/disposable/disposable';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 
 /**
@@ -24,20 +25,31 @@ export interface SourceEditorContributions {
   /**
    * Adds a CodeMirror extension to every CodeMirror of the widget that shows text, not only Typst, the existing ones
    * included, until disposed: the Source editors, the raw boxes' code, and the editors that include
-   * `createSharedCodeMirrorExtension()` (the text files'). For what fits any text (shown whitespace), never a language.
+   * `createSharedCodeMirrorExtension(..)` (the text files'). The same value for all of them, or made per editor from
+   * the text it shows (`SharedCodeMirrorContext`: its language and file, e.g. for document links). For what fits any
+   * text in any language (shown whitespace, links), never one language's own.
    */
-  registerSharedCodeMirrorExtension(extension: Extension): Disposable;
+  registerSharedCodeMirrorExtension(extension: Extension | ((editor: SharedCodeMirrorContext) => Extension)): Disposable;
   /**
    * What a CodeMirror made elsewhere (an extension's own editor) includes to get the shared extensions
-   * (`registerSharedCodeMirrorExtension`), those registered now and later, until it is destroyed.
+   * (`registerSharedCodeMirrorExtension`), those registered now and later, until it is destroyed; `editor` says what
+   * text it shows.
    */
-  createSharedCodeMirrorExtension(): Extension;
+  createSharedCodeMirrorExtension(editor: SharedCodeMirrorContext): Extension;
 }
 
 /** What a contribution knows about the one Source editor it is applied to. */
 export interface SourceEditorContext {
   /** The document the editor edits. */
   readonly document: TypstDocument;
+}
+
+/** What a shared contribution knows about the one CodeMirror it is applied to: the text it shows. */
+export interface SharedCodeMirrorContext {
+  /** The text's language: `typst` (Source editors, raw boxes), `bibtex`, `plaintext`, … */
+  readonly languageId: string;
+  /** The project file the text is in, now (a file can be renamed); null: none. */
+  path(): ProjectPath | null;
 }
 
 /**
@@ -50,6 +62,8 @@ export const fromDocument = Annotation.define<{ readonly origin: unknown }>();
 export interface SourceEditorOptions {
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
+  /** The project file the document is, now, for the shared contributions (`SharedCodeMirrorContext.path`); default: none. */
+  path?(): ProjectPath | null;
 }
 
 /**

@@ -2,10 +2,10 @@
 // Tests for link-extension.ts: document links in a CodeMirror editor.
 import { describe, expect, it, vi } from 'vitest';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { ProjectPath } from '../../core/paths/paths';
-import type { DocumentLink } from './languages';
-import { linkExtension, linkInfo, type LinkActions } from './link-extension';
-import { SourceRange } from '../../core/typst-document/typst-document';
+import { ProjectPath } from '../../../core/paths/paths';
+import { SourceRange } from '../../../core/typst-document/typst-document';
+import type { LinkActions } from '../followable-link';
+import { linkExtension } from './link-extension';
 
 const path = ProjectPath.of;
 
@@ -104,54 +104,5 @@ describe('linkExtension', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     new EditorView({ parent, doc: TEXT, extensions: linkExtension(linked, 'typst', () => null) });
     expect(parent.querySelector('.zwf-source__path')).toBeNull();
-  });
-});
-
-describe('linkInfo (the hover)', () => {
-  const link: DocumentLink = { range: SourceRange.of({ from: 0, to: 1 }) };
-
-  const actions = () => ({ open: vi.fn(), executeCommand: vi.fn(async (): Promise<unknown> => undefined) });
-
-  it('offers to open the target', () => {
-    const { open, executeCommand } = actions();
-    const dom = linkInfo(document, { ...link, target: path('/template.typ') }, { open, executeCommand })!;
-    expect(dom.textContent).toMatch(/Open template\.typ/);
-    expect(dom.textContent).toMatch(/Ctrl\+click/);
-    dom.querySelector('button')!.click();
-    expect(open).toHaveBeenCalledWith(path('/template.typ'), undefined);
-  });
-
-  it('offers to go to a place in the target file, or to open a URL', () => {
-    const { open, executeCommand } = actions();
-    const selection = SourceRange.of({ from: 40, to: 40 });
-    const dom = linkInfo(document, { ...link, target: path('/ch2.typ'), selection, tooltip: 'Go to Figure · Setup in ch2.typ' }, { open, executeCommand })!;
-    expect(dom.querySelector('button')!.textContent).toBe('Go to Figure · Setup in ch2.typ');
-    dom.querySelector('button')!.click();
-    expect(open).toHaveBeenCalledWith(path('/ch2.typ'), selection);
-    const url = new URL('https://typst.app/');
-    linkInfo(document, { ...link, target: url }, { open, executeCommand })!.querySelector('button')!.click();
-    expect(open).toHaveBeenLastCalledWith(url, undefined);
-  });
-
-  it('offers to open the target as its tooltip says, if it has one', () => {
-    const dom = linkInfo(document, { ...link, target: path('/flow.drawio.png'), tooltip: 'Edit diagram' }, actions())!;
-    expect(dom.querySelector('button')!.textContent).toBe('Edit diagram');
-    expect(dom.textContent).toBe('Edit diagram(Ctrl+click or Alt+Enter)');
-  });
-
-  it("shows the tooltip and runs the command with its arguments, showing why it failed", async () => {
-    const { open, executeCommand } = actions();
-    executeCommand.mockRejectedValueOnce(new Error('This change is not allowed here.'));
-    const dom = linkInfo(document, { ...link, tooltip: 'missing.typ is not in the project', command: CREATE }, { open, executeCommand })!;
-    expect(dom.textContent).toContain('missing.typ is not in the project');
-    const create = dom.querySelector('button')!;
-    expect(create.textContent).toBe('Create missing.typ');
-    create.click();
-    expect(executeCommand).toHaveBeenCalledWith('test.create', '/missing.typ');
-    await vi.waitFor(() => expect(dom.textContent).toContain('This change is not allowed here.'));
-  });
-
-  it('is nothing for a link that offers nothing', () => {
-    expect(linkInfo(document, link, actions())).toBeNull();
   });
 });

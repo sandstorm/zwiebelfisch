@@ -1,4 +1,4 @@
-// See FollowableLink in languages.ts and linkExtension in link-extension.ts.
+// See documentLinks in document-links.ts.
 
 /** A link under the pointer, as `hoverLink` shows it. */
 export interface HoveredLink {
