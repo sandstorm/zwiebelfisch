@@ -72,7 +72,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 == Comments and tests <architecture-conventions-comments>
 
 - *One why comment per concept*: the doc comment of the main element of a module's entry. A file inside a module gets one only when it is a concept of its own (a value type, the worker, a deep class).
-- *A why comment gives context*: what problem it solves, how it fits with its neighbours, what it leaves to others, where to read more (`docs/…`). Usually under 20 lines, plain words, true for the code as it is now.
+- *A why comment says what it is*: the first line names it; then only what a caller needs: who uses it (a list when there are several) and what it guarantees, stated concretely. No rules of the wider system, no neighbours, no what it leaves to others, no `See docs/…`. Usually under 10 lines, plain words, true for the code as it is now. Example: `src/hosts/commands/commands.ts`.
 - *Every other file points to its why*: a top line `See <path>` or `See <Name> in <path>`. A test starts with `Tests for X`. `quality:top-comments` checks that the pointers exist.
 - *API doc comments* say what a parameter, result or member means. Never restate the code.
 - *No history, no backwards compatibility*: no "was …", "renamed from", no shims. Code and docs describe only what is.

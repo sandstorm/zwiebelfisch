@@ -1,18 +1,15 @@
 import { Disposable } from '../../core/disposable/disposable';
 
 /**
- * The widget's commands and key bindings (VS Code's `commands` namespace).
+ * commands and key bindings (VS Code's `commands` namespace).
  *
- * Extensions never import each other. A command is how one offers an action to the others: it registers a handler
- * under an id, and anyone who knows the id runs it, be it another extension, a menu entry or a key binding. The
- * handler may be sync or async. It is still called synchronously, so the user's gesture, the selection and the focus
- * are as they were when the command was asked for. Key bindings live here too: a bound key is handled on the widget's
- * root before any editor sees it. Extensions declare most of theirs (`contributes.keybindings`), so the key of a
- * command is known wherever the command is offered.
+ * A command is how one extension offers an action to the others: it registers a handler
+ * under an id, and anyone who knows the id runs it, so it's called from:
+ * - other extensions
+ * - menu entries
+ * - key bindings
  *
- * Showing commands to people is left to others: menus are the workbench's and the window's, and search everywhere
- * lists the commands extensions declare (`contributes.commands`); each shows a command's key
- * (`CommandsHost.keybindingLabel`). See docs/40_architecture/07_workbench.typ.
+ * Called synchronously, so f.e. selection and focus are guaranteed to not change between dispatching the command and the command's body.
  */
 export interface Commands {
   /**
