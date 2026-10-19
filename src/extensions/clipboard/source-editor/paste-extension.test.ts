@@ -1,19 +1,22 @@
 // @vitest-environment jsdom
-// Tests for paste-extension.ts: a paste into a CodeMirror editor through the editor's own and the registered paste
-// edit providers, and its choice of kinds (the "Paste as" chip).
+// Tests for paste-extension.ts: a paste into a CodeMirror editor through the registered paste edit providers, and its
+// choice of kinds (the "Paste as" chip).
 import { describe, expect, it } from 'vitest';
 import { history, undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
-import { ProjectPath } from '../../core/paths/paths';
-import { SourceRange } from '../../core/typst-document/typst-document';
-import { LanguagesHost, type PasteChoice, type PasteChoices } from './languages';
+import { ProjectPath } from '../../../core/paths/paths';
+import { SourceRange } from '../../../core/typst-document/typst-document';
+import { LanguagesHost } from '../../../hosts/languages/languages';
+import type { PasteChoice, PasteChoices } from '../paste-as';
+import { pasteExtension } from './paste-extension';
 
 /**
- * A CodeMirror editor of `text` with the paste extension: its own provider offers a paste as it is (`typst`) or
- * upper-cased (`text.plain`, standing in for escaped text); a registered one offers it reversed (`typst.reversed`),
- * placed by `yieldTo`, and one resolves every paste, adding `// pasted` at the top. `state.open`: the open choice.
+ * A CodeMirror editor of `text` with the paste extension (and `history`, unless `undoable` is false): a provider of
+ * priority 0 (as the clipboard's own) offers a paste as it is (`typst`) or upper-cased (`text.plain`, standing in for
+ * escaped text); one of the default priority offers it reversed (`typst.reversed`), placed by `yieldTo`, and one
+ * resolves every paste, adding `// pasted` at the top. `state.open`: the open choice.
  */
-function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst'] }: { yieldTo?: string[]; preferences?: string[] } = {}) {
+function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst'], undoable = true }: { yieldTo?: string[]; preferences?: string[]; undoable?: boolean } = {}) {
   const state = { open: null as PasteChoice | null, picked: [] as PasteChoice[] };
   const choices: PasteChoices = {
     openPasteChoice: (choice) => void (state.open = choice),
@@ -22,6 +25,16 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
   };
   const languages = new LanguagesHost();
   const pastedOf = (data: DataTransfer) => data.getData('text/plain');
+  languages.registerDocumentPasteEditProvider(
+    {},
+    {
+      provideDocumentPasteEdits: (_document, _ranges, data) => [
+        { kind: 'typst', title: 'Typst', insertText: pastedOf(data) },
+        { kind: 'text.plain', title: 'Plain text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
+      ],
+    },
+    { providedPasteEditKinds: ['typst', 'text.plain'], priority: 0 },
+  );
   languages.registerDocumentPasteEditProvider(
     {},
     { provideDocumentPasteEdits: (_document, _ranges, data) => [{ kind: 'typst.reversed', title: 'Reversed', insertText: [...pastedOf(data)].reverse().join(''), yieldTo }] },
@@ -35,17 +48,11 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
     },
     { providedPasteEditKinds: [] },
   );
-  const provider = {
-    provideDocumentPasteEdits: (_document: unknown, _ranges: unknown, data: DataTransfer) => [
-      { kind: 'typst', title: 'Typst', insertText: pastedOf(data) },
-      { kind: 'text.plain', title: 'Plain text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
-    ],
-  };
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new EditorView({
     parent,
     doc: text,
-    extensions: [history(), languages.createDocumentPasteCodeMirrorExtension('typst', () => ProjectPath.of('/main.typ'), { provider, preferences, choices })],
+    extensions: [undoable ? history() : [], pasteExtension(languages, 'typst', () => ProjectPath.of('/main.typ'), { preferences, choices })],
   });
   const paste = (pasted: string) => {
     const event = new Event('paste', { bubbles: true, cancelable: true });
@@ -118,5 +125,14 @@ describe('paste as (CodeMirror)', () => {
     expect(first.state.open?.kinds.map(({ kind }) => kind)).toEqual(['typst.reversed', 'typst', 'text.plain']);
     first.state.open!.change('typst');
     expect(first.text()).toBe('// pasted\nabText\n');
+  });
+
+  it('without an undo history, changing the kind leaves the paste as it went in (never pasted twice)', () => {
+    const { view, state, paste, text } = setup('Text\n', { undoable: false });
+    view.dispatch({ selection: { anchor: 4 } });
+    paste(' x');
+    expect(text()).toBe('// pasted\nText x\n');
+    state.open!.change('text.plain');
+    expect(text()).toBe('// pasted\nText x\n');
   });
 });

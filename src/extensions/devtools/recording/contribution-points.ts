@@ -111,6 +111,11 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const languages = [selector].flat().map((filter) => String(record(filter).language ?? '*'));
     return prioritized({ ...named(provider, 'document links'), details: [`language ${languages.join(', ')}`] }, record(options).priority);
   },
+  'languages.registerDocumentPasteEditProvider': ([selector, provider, metadata]) => {
+    const languages = [selector].flat().map((filter) => String(record(filter).language ?? '*'));
+    const { providedPasteEditKinds: kinds } = record(metadata);
+    return prioritized({ ...named(provider, 'paste edits'), details: [`language ${languages.join(', ')}`, `kinds ${Array.isArray(kinds) && kinds.length > 0 ? kinds.join(', ') : '(resolves)'}`] }, record(metadata).priority);
+  },
   'preview.registerToolbarItem': ([item, placement]) => {
     const { group, order, renderer } = record(placement);
     const place = String(group);

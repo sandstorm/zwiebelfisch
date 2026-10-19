@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
-// Tests for clipboard.ts: copy, cut and paste of a Visual editor in Typst.
+// Tests for clipboard.ts: copy, cut and paste of a Visual editor in Typst, and paste-as.ts: its "Paste as" chip.
 import { describe, expect, it } from 'vitest';
-import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { children } from '../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import type { PasteChoice } from '../languages/languages';
-import { VisualEditor, VisualEditorHost, type VisualEditorContribution, type VisualEditorPasteEdits } from './visual-editor';
+import { ProjectPath } from '../../../core/paths/paths';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { children } from '../../../core/typst-syntax/typst-syntax';
+import { LanguagesHost, type DocumentPasteEditProvider } from '../../../hosts/languages/languages';
+import { starterKitPart, type TypstMarkSpec } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { VisualEditor, VisualEditorHost, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import type { PasteChoice, PasteChoices } from '../paste-as';
+import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from '../pasted-typst';
+import { typstClipboard } from './clipboard';
+import { PASTE_BAR, pasteChip } from './paste-as';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
@@ -20,15 +25,26 @@ const strong = { id: 'strong', activate: ({ visualEditor, subscriptions }) => su
 
 const FIGURE = '#figure(\n  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),\n  caption: [The editor: …],\n)';
 
+/** Where no one looks at a paste's choice. */
+const UNSEEN: PasteChoices = { openPasteChoice: () => {}, closePasteChoice: () => {}, pickPasteKind: () => {} };
+
 /**
- * A Visual editor of `text`; `select` selects a source range (`reveal`), `paste`, `copy`, `cut` and `key` go to its
- * text. With `pasteEdits`, a paste's choice shows (the paste edit providers leave the text as it is).
+ * A Visual editor of `text` with the clipboard, as the clipboard extension sets it up (the paste edits of Typst
+ * registered); `select` selects a source range (`reveal`), `paste`, `copy`, `cut` and `key` go to its text. A paste's
+ * choice goes to `choices`; `provider` offers edits of `typst.loud`, or resolves them.
  */
-function setup(text: string, pasteEdits: VisualEditorPasteEdits | null = null) {
+function setup(text: string, choices: PasteChoices = UNSEEN, provider?: DocumentPasteEditProvider) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const host = new VisualEditorHost(pasteEdits);
+  const languages = new LanguagesHost();
+  languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA);
+  if (provider) languages.registerDocumentPasteEditProvider({ language: 'typst' }, provider, { providedPasteEditKinds: ['typst.loud'] });
+  const host = new VisualEditorHost();
   strong.activate({ visualEditor: host, subscriptions: [] });
+  const textOf = () => ({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: doc.text });
+  host.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf, choices }));
+  host.registerToolbarGroup(PASTE_BAR);
+  host.registerToolbarItem(pasteChip(choices));
   const view = new VisualEditor(parent, doc, host);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   const select = (from: number, to = from) => view.reveal(SourceRange.of({ from, to }));
@@ -147,13 +163,10 @@ const SOURCES: Record<string, string> = {
   'VS Code in Typst mode': `<meta charset="utf-8"><div style="color: #d4d4d4; font-family: Menlo, monospace; white-space: pre;"><div><span>#set text(lang: "de")</span></div></div>`,
 };
 
-/** No providers' paste edits, the open paste choice kept; `picked`: the choices the chip asked about. */
+/** The open paste choice kept; `picked`: the choices the chip asked about. */
 function choices() {
   const state = { open: null as PasteChoice | null, picked: [] as PasteChoice[] };
-  const edits: VisualEditorPasteEdits = {
-    prepareDocumentPaste: () => undefined,
-    provideDocumentPasteEdits: () => [],
-    resolveDocumentPasteEdit: (edit) => edit,
+  const edits: PasteChoices = {
     openPasteChoice: (choice) => void (state.open = choice),
     closePasteChoice: (choice) => void (state.open = state.open === choice ? null : state.open),
     pickPasteKind: (choice) => void state.picked.push(choice),
@@ -261,12 +274,10 @@ describe('paste as', () => {
 
   it("offers the providers' edits after the editor's own where they yield to them, each as the providers resolve it", () => {
     const { state, edits } = choices();
-    const provided: VisualEditorPasteEdits = {
-      ...edits,
+    const { doc, select, paste } = setup('Text\n', edits, {
       provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*', yieldTo: ['typst'] }],
       resolveDocumentPasteEdit: (edit) => ({ ...edit, insertText: `${edit.insertText}!` }),
-    };
-    const { doc, select, paste } = setup('Text\n', provided);
+    });
     select(4);
     paste({ 'text/plain': ' x' });
     expect(doc.text).toBe('Text x!\n');
@@ -277,8 +288,7 @@ describe('paste as', () => {
 
   it("pastes a provider's edit first where it yields to none", () => {
     const { state, edits } = choices();
-    const provided: VisualEditorPasteEdits = { ...edits, provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }] };
-    const { doc, select, paste } = setup('Text\n', provided);
+    const { doc, select, paste } = setup('Text\n', edits, { provideDocumentPasteEdits: () => [{ kind: 'typst.loud', title: 'Loud', insertText: ' *LOUD*' }] });
     select(4);
     paste({ 'text/plain': ' x' });
     expect(doc.text).toBe('Text *LOUD*\n');

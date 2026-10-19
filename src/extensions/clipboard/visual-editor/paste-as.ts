@@ -1,10 +1,10 @@
 // The "Paste as" chip of the Visual editor. See clipboard.ts.
-import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
+import type { Editor } from '@tiptap/core';
 import { closeHistory, undo } from '@tiptap/pm/history';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import type { PasteChoice, PasteChoices } from '../languages/languages';
-import type { Anchor, ToolbarControl, ToolbarGroup, ToolbarItem } from './visual-editor';
+import type { Anchor, ToolbarControl, ToolbarGroup, ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import type { PasteChoice, PasteChoices } from '../paste-as';
 
 /** A way a paste can go in: its kind and name, and its transaction from the state before it (in place of the selection). */
 export interface PasteAlternative {
@@ -23,19 +23,12 @@ export function pasteWith(view: EditorView, alternatives: readonly PasteAlternat
   pasteAs(view, alternatives, alternatives[0]);
 }
 
-/**
- * The paste choice of one editor, reported to `choices`, and its chip: the plugin, the toolbar's floating bar `paste`
- * (before every other bar) and its button. Without `choices`, none: a paste goes in as its first kind.
- *
- * @internal Extensions offer kinds in it through `languages.registerDocumentPasteEditProvider`.
- */
-export function pasteChoice(choices: PasteChoices | null): { extensions: AnyExtension[]; bars: ToolbarGroup[]; items: ToolbarItem[] } {
-  if (!choices) return { extensions: [], bars: [], items: [] };
-  return {
-    extensions: [Extension.create({ name: 'typstPasteAs', addProseMirrorPlugins: () => [choicePlugin(choices)] })],
-    bars: [{ kind: 'floating', id: 'paste', order: 1, label: 'Paste as', anchor: (editor) => anchorOf(editor) }],
-    items: [{ group: 'paste', create: ({ editor }) => chip(editor, choices) }],
-  };
+/** The toolbar's floating bar of the chip (`paste`): above a paste's end while its choice is open, before every other bar. */
+export const PASTE_BAR: ToolbarGroup = { kind: 'floating', id: 'paste', order: 1, label: 'Paste as', anchor: (editor) => anchorOf(editor) };
+
+/** The chip in `PASTE_BAR`: the kind the paste went in as ("Paste as: Typst ▾"); a click asks `choices` for another. */
+export function pasteChip(choices: PasteChoices): ToolbarItem {
+  return { group: PASTE_BAR.id, create: ({ editor }) => chip(editor, choices) };
 }
 
 /** The open choice: the pasted range and what it may go in as. */
@@ -59,7 +52,8 @@ function pasteAs(view: EditorView, alternatives: readonly PasteAlternative[], al
         const other = alternatives.find((each) => each.kind === kind);
         // only while open: undone, its last change is the paste
         if (key.getState(view.state)?.choice !== choice || !other || kind === choice.kind) return;
-        undo(view.state, view.dispatch);
+        // pasted again only where the undo took the paste back (no history, another change undone: none)
+        if (!undo(view.state, view.dispatch) || !view.state.doc.eq(state.doc)) return;
         pasteAs(view, alternatives, other);
         view.focus();
       },
@@ -70,8 +64,11 @@ function pasteAs(view: EditorView, alternatives: readonly PasteAlternative[], al
   view.dispatch(tr.scrollIntoView().setMeta('paste', true));
 }
 
-/** Keeps the open choice (mapped through changes) and tells `choices` when one opens or closes. */
-function choicePlugin(choices: PasteChoices): Plugin {
+/**
+ * The paste choice of one editor: keeps the open one (mapped through changes), tells `choices` when one opens or
+ * closes, and takes its keys (Mod+. asks, Escape closes). `pasteWith` opens one.
+ */
+export function pasteChoicePlugin(choices: PasteChoices): Plugin {
   return new Plugin<Pasted | null>({
     key,
     state: {

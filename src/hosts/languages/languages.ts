@@ -57,14 +57,27 @@ export interface Languages {
   /** The known imports of `languageId`, in registration order. */
   provideKnownImports(languageId: string): readonly KnownImport[];
   /**
-   * Takes part in every copy from and paste into the documents `selector` matches until disposed, in the Visual editor
-   * and the Source editors. A paste offers the edits of every provider of `metadata.providedPasteEditKinds` whose
-   * `pasteMimeTypes` the clipboard has, before the editor's own (Typst, code, plain text; HTML), as alternatives: it goes
-   * in as the first by `yieldTo`, the "Paste as" chip offers the others. Whichever goes in, every provider's
-   * `resolveDocumentPasteEdit` changes it first, in registration order; additional edits that overlap the pasted ranges
-   * or an earlier edit are dropped.
+   * Takes part in every copy from and paste into the documents `selector` matches until disposed, wherever an editor
+   * runs the providers (the clipboard extension: the Visual and the Source editors). A paste offers the edits of every
+   * provider of `metadata.providedPasteEditKinds` whose `pasteMimeTypes` the clipboard has, by the providers'
+   * `priority`, as alternatives: it goes in as the first by `yieldTo` (`sortPasteEdits`), the others may replace it.
+   * Whichever goes in, every provider's `resolveDocumentPasteEdit` changes it first, in the same order; additional
+   * edits that overlap the pasted ranges or an earlier edit are dropped.
    */
   registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata): Disposable;
+  /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
+  prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void;
+  /**
+   * The edits the providers give for a paste of the clipboard `dataTransfer` into `document` in place of `ranges` (VS
+   * Code's paste edit providers asked by the editor), by priority: of each provider that reads a type the clipboard
+   * has, the edits of the kinds it declared. Unsorted by `yieldTo` (see `sortPasteEdits`).
+   */
+  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
+  /**
+   * `edit` as it goes into `document` in place of `ranges`: as the providers resolve it, by priority, each given the
+   * edit the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
+   */
+  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
 }
 
 /** What a paste edit provider gives (VS Code's DocumentPasteProviderMetadata). */
@@ -73,6 +86,11 @@ export interface DocumentPasteProviderMetadata {
   readonly providedPasteEditKinds: readonly string[];
   /** The clipboard types it reads (`text/html`, `text/*`); default: any. */
   readonly pasteMimeTypes?: readonly string[];
+  /**
+   * Where its edits are offered and it resolves, among the providers (not VS Code's): higher first (default 100; equal:
+   * registration order). The clipboard extension's own (Typst, code, plain text) are 0: after the others'.
+   */
+  readonly priority?: number;
 }
 
 /**
@@ -97,9 +115,9 @@ export interface DocumentPasteEdit {
   /** Its name in the "Paste as" choice (`Markdown`). */
   readonly title: string;
   /**
-   * What it is, dot-separated from the general to the specific (VS Code's paste edit kinds). The editors' own: `typst`
-   * (the text as Typst), `typst.code` (a code block), `text.plain` (plain characters, escaped), `typst.html` (the HTML,
-   * read with the Visual editor's schema).
+   * What it is, dot-separated from the general to the specific (VS Code's paste edit kinds). The clipboard extension's:
+   * `typst` (the text as Typst), `typst.code` (a code block), `text.plain` (plain characters, escaped), `typst.html` (the
+   * HTML, read with the Visual editor's schema).
    */
   readonly kind: string;
   /** The text that goes in place of each pasted range. */
@@ -111,29 +129,6 @@ export interface DocumentPasteEdit {
   readonly additionalEdit?: readonly TextChange[];
   /** The kinds it gives way to: an edit of such a kind (or one below it: `typst` covers `typst.html`) goes before it. */
   readonly yieldTo?: readonly string[];
-}
-
-/**
- * A paste that went in as one of several kinds and may go in as another instead, until it closes (the next edit, the
- * selection moved away, Escape): what an editor's "Paste as" chip offers.
- */
-export interface PasteChoice {
-  /** The kinds it may go in as (`DocumentPasteEdit.kind`) with their names, first the one it first went in as. */
-  readonly kinds: readonly { readonly kind: string; readonly title: string }[];
-  /** The kind it went in as. */
-  readonly kind: string;
-  /** Puts it in as `kind` instead, in place of what it put in: undone in one step with the paste. */
-  change(kind: string): void;
-}
-
-/** Where the editors show their paste choices (the workbench's: a quick pick, and the command `editor.action.pasteAs`). */
-export interface PasteChoices {
-  /** `choice` opened: the paste just made may go in as another kind. */
-  openPasteChoice(choice: PasteChoice): void;
-  /** `choice` closed. */
-  closePasteChoice(choice: PasteChoice): void;
-  /** Asks which kind `choice` goes in as (its chip was clicked) and changes it to the one picked. */
-  pickPasteKind(choice: PasteChoice): void;
 }
 
 /** A name and the module it is imported from (`mermaid`, `@preview/merman:0.4.0`). */

@@ -1,6 +1,28 @@
-// See WorkbenchHost in ../workbench-impl.ts.
-import type { PasteChoice, PasteChoices } from '../../languages/languages';
-import type { WindowApi } from '../../window/window';
+// See clipboard in clipboard.ts.
+import type { WindowApi } from '../../hosts/window/window';
+
+/**
+ * A paste that went in as one of several kinds and may go in as another instead, until it closes (the next edit, the
+ * selection moved away, Escape): what an editor's "Paste as" chip offers.
+ */
+export interface PasteChoice {
+  /** The kinds it may go in as (`DocumentPasteEdit.kind`) with their names, first the one it first went in as. */
+  readonly kinds: readonly { readonly kind: string; readonly title: string }[];
+  /** The kind it went in as. */
+  readonly kind: string;
+  /** Puts it in as `kind` instead, in place of what it put in: undone in one step with the paste. */
+  change(kind: string): void;
+}
+
+/** Where the editors' chips report their paste choices (`PasteAs`: a quick pick, and the command `editor.action.pasteAs`). */
+export interface PasteChoices {
+  /** `choice` opened: the paste just made may go in as another kind. */
+  openPasteChoice(choice: PasteChoice): void;
+  /** `choice` closed. */
+  closePasteChoice(choice: PasteChoice): void;
+  /** Asks which kind `choice` goes in as (its chip was clicked) and changes it to the one picked. */
+  pickPasteKind(choice: PasteChoice): void;
+}
 
 /**
  * The paste choices of every editor (the Visual and Source editors' "Paste as" chips): which kind the open one goes in

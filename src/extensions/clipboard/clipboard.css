@@ -1,5 +1,5 @@
-/* The "Paste as" chip above a paste in a CodeMirror editor (paste-extension.ts), as the Visual editor's floating bar. See
-   LanguagesHost in languages-impl.ts, whose styleSheet the workbench adds. Colors come from the --zwf-* tokens. */
+/* The "Paste as" chip above a paste in a Source editor (source-editor/paste-extension.ts), as the Visual editor's
+   floating bar. See clipboard.ts. Colors come from the --zwf-* tokens. */
 .cm-tooltip:has(> .zwf-paste-chip) { border: 0; background: none; }
 .zwf-paste-chip {
   height: 26px;

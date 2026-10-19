@@ -1,8 +1,7 @@
 // Tests for paste-as.ts: the open paste choice, its quick pick and `editor.action.pasteAs`.
 import { describe, expect, it } from 'vitest';
-import type { PasteChoice } from '../../languages/languages';
-import type { QuickPickItem } from '../../window/window';
-import { PasteAs } from './paste-as';
+import type { QuickPickItem } from '../../hosts/window/window';
+import { PasteAs, type PasteChoice } from './paste-as';
 
 /** A choice of Typst and Text that went in as Typst; `changed`: the kinds asked for. */
 function choice(): PasteChoice & { changed: string[] } {

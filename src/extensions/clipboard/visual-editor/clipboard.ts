@@ -1,13 +1,20 @@
-// Copy and paste as Typst text. See VisualEditor in visual-editor-impl.ts.
+// Copy and paste of the Visual editor as Typst text. See clipboard in ../clipboard.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
-import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
-import { sortPasteEdits, type DocumentPasteEdit } from '../languages/languages';
-import { pasteWith, type PasteAlternative } from './paste-as';
-import { TYPST, typstPasteEdits } from './pasted-typst';
-import type { VisualEditorPasteEdits } from './visual-editor';
+import { SourceRange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
+import { sortPasteEdits, type DocumentPasteEdit, type Languages, type TextDocument } from '../../../hosts/languages/languages';
+import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import type { PasteChoices } from '../paste-as';
+import { TYPST } from '../pasted-typst';
+import { pasteChoicePlugin, pasteWith, type PasteAlternative } from './paste-as';
+
+/** Who a Visual editor's clipboard asks: the paste edit providers, of `document`'s text (null: none), and where a paste's choice shows. */
+export interface ClipboardServices {
+  readonly languages: Pick<Languages, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>;
+  readonly document: () => TextDocument | null;
+  readonly choices: PasteChoices;
+}
 
 /**
  * The Visual editor's clipboard, in Typst.
@@ -16,11 +23,12 @@ import type { VisualEditorPasteEdits } from './visual-editor';
  * where that reads as what is selected, else printed anew (part of a bold word: `*bo*`). ProseMirror's HTML goes along
  * for rich targets. A cut with nothing selected cuts the paragraph at the caret, as IntelliJ cuts the line.
  *
- * A paste goes in as one of the paste edits on offer (the providers' `pasteEdits`, the editor's own `typstPasteEdits`,
- * other HTML as the schema reads it), in place of the selection, in one step with its other changes to the text. Where
- * there are others, the "Paste as" chip lets the user switch (`pasteWith`).
+ * A paste goes in as one of the paste edits on offer (the providers', this extension's `TypstPasteEditProvider`
+ * among them; other HTML as the schema reads it), in place of the selection, in one step with its other changes to
+ * the text. Where there are others, the "Paste as" chip lets the user switch (`pasteWith`). No provider (a document
+ * out of the project): ProseMirror's own paste.
  */
-export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
+export function typstClipboard(document: TypstDocument, services: ClipboardServices): AnyExtension {
   return Extension.create({
     name: 'typstClipboard',
     priority: 1000,
@@ -28,6 +36,7 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
       // Mod+Shift+V was the last key pressed: the paste it starts is literal
       let literal = false;
       return [
+        pasteChoicePlugin(services.choices),
         new Plugin({
           // after ProseMirror's own copy (and a raw box's): its text is Typst
           view: (view) => {
@@ -35,7 +44,8 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
               const data = event.clipboardData;
               const copied = data?.getData('text/plain') ?? '';
               data?.setData(TYPST, copied);
-              if (data && copied !== '') pasteEdits?.prepareDocumentPaste(document, copied, data);
+              const text = services.document();
+              if (data && text && copied !== '') services.languages.prepareDocumentPaste(text, copied, data);
             };
             view.dom.addEventListener('copy', markTypst);
             view.dom.addEventListener('cut', markTypst);
@@ -65,7 +75,9 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
               const plain = literal;
               literal = false;
               if (!data || view.state.selection.$from.parent.type.spec.code) return false;
-              const edits = pasteEditsOf({ state: view.state, slice, data, document, pasteEdits }, plain);
+              const text = services.document();
+              if (!text) return false;
+              const edits = pasteEditsOf({ state: view.state, slice, data, document: text, languages: services.languages }, plain);
               if (edits.length === 0) return false;
               pasteWith(view, edits.map((edit) => alternative(edit, document)));
               return true;
@@ -77,23 +89,22 @@ export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPaste
   });
 }
 
-/** What a paste is made in: the editor's state, ProseMirror's reading of the clipboard (`slice`), the clipboard. */
+/** What a paste is made in: the editor's state, ProseMirror's reading of the clipboard (`slice`), the clipboard, the text. */
 interface PasteContext {
   readonly state: EditorState;
   readonly slice: Slice;
   readonly data: DataTransfer;
-  readonly document: TypstDocument;
-  readonly pasteEdits: VisualEditorPasteEdits | null;
+  readonly document: TextDocument;
+  readonly languages: ClipboardServices['languages'];
 }
 
 /**
  * The ways a paste can go in, the one it goes in as first (`sortPasteEdits`; after Mod+Shift+V, `literal`: as plain
- * characters): the providers' (as VS Code's, before the editor's: an edit not yielding to them goes in first), the
- * editor's own (Typst, code, plain text), the HTML as ProseMirror reads it with the schema's HTML rules (`slice`; not
- * with Typst a Visual editor copied, which the HTML lacks, nor `literal`); each as
+ * characters): the providers' by priority (Typst, code, plain text last), the HTML as ProseMirror reads it with the
+ * schema's HTML rules (`slice`; not with Typst a Visual editor copied, which the HTML lacks, nor `literal`); each as
  * the providers resolve it (asked now, while the clipboard can be read).
  */
-function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext, literal: boolean): DocumentPasteEdit[] {
+function pasteEditsOf({ state, slice, data, document, languages }: PasteContext, literal: boolean): DocumentPasteEdit[] {
   const ranges = [selectionSource(state)];
   const html = data.getData('text/html') && !data.getData(TYPST) && !literal;
   const printed = () => {
@@ -102,12 +113,8 @@ function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext
     const blocks = content.firstChild?.isInline ? Fragment.from(state.schema.nodes.paragraph.create(null, content)) : content;
     return serializeToTypst(state.schema.topNodeType.create({ trail: '' }, blocks));
   };
-  const offered = [
-    ...(pasteEdits?.provideDocumentPasteEdits(document, ranges, data) ?? []),
-    ...typstPasteEdits.provideDocumentPasteEdits(document, ranges, data),
-    ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : []),
-  ];
-  return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => pasteEdits?.resolveDocumentPasteEdit(edit, document, ranges, data) ?? edit);
+  const offered = [...languages.provideDocumentPasteEdits(document, ranges, data), ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : [])];
+  return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => languages.resolveDocumentPasteEdit(edit, document, ranges, data));
 }
 
 /** Pasting `edit` into `document`: its text read with the editor's specs, its additional edits made in the same step. */

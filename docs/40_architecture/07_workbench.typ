@@ -76,7 +76,7 @@ contributes: {
 - *Search everywhere runs `contributes.commands` without arguments*: declare only commands that work without any.
 - *`workbench.view.<id>`*, one per side panel: shows and focuses it, or hides it when shown and focused. Extensions declare its key (`files` Alt+1, `search` Alt+3; ⌃1 / ⌃3 on the Mac).
 - *`workbench.action.searchEverywhere(text?)`* opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
-- *`editor.action.pasteAs({ kind? })`* switches the last paste, while its chip shows, to `kind`, or asks.
+- *`editor.action.pasteAs({ kind? })`* (the `clipboard` extension's) switches the last paste, while its chip shows, to `kind`, or asks.
 
 === Menus <architecture-workbench-menus>
 
@@ -198,11 +198,11 @@ VS Code's `DocumentDropEditProvider`, for a file dropped into a Typst file. Retu
 
 === Copy and paste <architecture-workbench-paste>
 
-VS Code's `DocumentPasteEditProvider`: `prepareDocumentPaste` on copy, `provideDocumentPasteEdits` for alternatives (each of a `kind`, shown in a "Paste as" chip), `resolveDocumentPasteEdit` for whatever goes in.
+VS Code's `DocumentPasteEditProvider`: `prepareDocumentPaste` on copy, `provideDocumentPasteEdits` for alternatives (each of a `kind`, shown in a "Paste as" chip), `resolveDocumentPasteEdit` for whatever goes in. `languages` keeps the providers and answers the same three queries; the `clipboard` extension asks them in the Visual and Source editors. Without it, no provider takes part: the editors paste as ProseMirror and CodeMirror do.
 
-- *Kinds* are dot-separated (`typst` covers `typst.html`). The editors' own: `typst`, `typst.code`, `text.plain`, and the Visual editor's `typst.html`.
-- *Order* (`sortPasteEdits`): providers' edits first, then the editors'; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
-- *`resolveDocumentPasteEdit`* of every provider runs on the edit that goes in, in registration order, whatever its kind. Built-in: `imports`, `labels` (new names for clashing labels). Overlapping additional edits are dropped.
+- *Kinds* are dot-separated (`typst` covers `typst.html`). The `clipboard` extension's: `typst`, `typst.code`, `text.plain` (a provider of priority 0), and the Visual editor's `typst.html`.
+- *Order* (`sortPasteEdits`, a stateless helper of `languages`): the providers' edits by their metadata's `priority` (default 100, higher first; equal: registration order), so the clipboard's own come last; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
+- *`resolveDocumentPasteEdit`* of every provider runs on the edit that goes in, in the same order, whatever its kind. Built-in: `imports`, `labels` (new names for clashing labels). Overlapping additional edits are dropped.
 - *Only providers whose `pasteMimeTypes` the clipboard has are asked*, all at paste time: the clipboard can't be read later.
 
 === File decorations <architecture-workbench-decorations>

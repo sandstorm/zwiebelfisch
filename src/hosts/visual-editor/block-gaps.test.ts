@@ -92,13 +92,13 @@ describe('the caret between blocks', () => {
     expect(doc.text).toBe('#set par(justify: true)\n\nHello\n');
   });
 
-  it('a paste at a gap goes in there', () => {
+  it('a paste at a gap goes in there (without the clipboard extension: as ProseMirror pastes text, its characters escaped)', () => {
     const { doc, editable, leaveFirstBox } = setup();
     leaveFirstBox();
     const paste = new Event('paste', { bubbles: true, cancelable: true });
     Object.defineProperty(paste, 'clipboardData', { value: { getData: (type: string) => (type === 'text/plain' ? 'Pasted *text*' : ''), types: ['text/plain'], files: [] } });
     editable.dispatchEvent(paste);
-    expect(doc.text).toBe(SOURCE.replace('\n\n#set par', '\n\nPasted *text*\n\n#set par'));
+    expect(doc.text).toBe(SOURCE.replace('\n\n#set par', '\n\nPasted \\*text\\*\n\n#set par'));
   });
 
   it('a click into the space between two raw blocks puts the caret there', () => {

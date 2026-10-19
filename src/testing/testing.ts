@@ -10,6 +10,7 @@ import type { FileChange, FileContent, Project } from '../core/project/project';
 import { SourceOffset, type TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
 import { blockHandle as blockHandleExtension } from '../extensions/block-handle/block-handle';
+import { clipboard } from '../extensions/clipboard/clipboard';
 import { tabKeys } from '../extensions/tab-keys/tab-keys';
 import { undoRedo } from '../extensions/undo-redo/undo-redo';
 import { figures } from '../extensions/figures/figures';
@@ -23,7 +24,8 @@ import { tables } from '../extensions/tables/tables';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import type { Commands } from '../hosts/commands/commands';
-import type { Languages } from '../hosts/languages/languages';
+import { LanguagesHost } from '../hosts/languages/languages';
+import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualEditor, VisualEditorHost, type ContributionContext, type VisualEditorContribution } from '../hosts/visual-editor/visual-editor';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
@@ -142,8 +144,9 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * `contributions` activated in order, for their Visual-editor contributions, with an extension context made from
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
  * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
- * Registrations other than the Visual editor's (style sheets, commands, custom editors, search providers, link
- * providers, drop edit providers) are accepted and ignored.
+ * The languages are a real registry (the clipboard's paste edits take part in a paste); other registrations than the
+ * Visual editor's (style sheets, commands, custom editors, search providers, Source editor extensions) are accepted
+ * and ignored.
  */
 function activate(contributions: readonly VisualEditorContribution[], options: TestEditorOptions = {}): VisualEditorHost {
   const visualEditor = new VisualEditorHost();
@@ -169,13 +172,11 @@ function testContext(options: TestEditorOptions) {
       showErrorMessage: prompts.showErrorMessage,
     } satisfies Partial<WindowApi>,
     workspace: { applyEdit: options.applyEdit ?? added } satisfies Partial<Workspace>,
-    languages: testLanguages(),
+    // real: the clipboard's paste edit provider takes part in pastes
+    languages: new LanguagesHost(),
+    sourceEditor: { registerCodeMirrorExtension: ignored } satisfies Partial<SourceEditorContributions>,
     preview: testPreview(options),
   };
-}
-
-function testLanguages(): Pick<Languages, 'registerDocumentLinkProvider' | 'registerDocumentDropEditProvider'> {
-  return { registerDocumentLinkProvider: ignored, registerDocumentDropEditProvider: ignored };
 }
 
 /** A project holding the editor's document (whatever document it is) and `options.files`. */
@@ -207,7 +208,7 @@ if (typeof URL.createObjectURL !== 'function') {
 
 /** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
 export function builtins(): VisualEditorContribution[] {
-  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), tabKeys(), undoRedo()];
+  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), tabKeys(), undoRedo(), clipboard()];
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

@@ -24,21 +24,21 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
   - Transactions plugins append are written back in turn. Each starts from `document.text`, so a document that prints differently converges as well.
 - *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
 - *Reveal* focuses first, then selects. Until the selection moves, `selection()` returns the range asked for, so the preview follows to where was asked (a figure's label shows as the caret below the figure).
-- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame, highlights, completion lists, the clipboard, and block gaps (below). Every other construct and feature is a contribution, also:
+- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame, highlights, completion lists, the undo history, and block gaps (below). Every other construct and feature is a contribution, also:
   - *Block handle* (`blockHandle`): a grip beside the block under the pointer, as in Notion; dragging it does what ProseMirror does for a selected node, one undo step.
   - *Tab stays in the text* (`tabKeys`): in code (a text block whose spec has `code`) Tab and Shift+Tab indent and outdent the selected lines by two spaces, before lists and tables; elsewhere constructs take Tab first, a lowest-priority catch-all the rest. Escape, then Tab leaves, as in CodeMirror. Without it, a Tab no construct takes moves the focus (ProseMirror's default).
 - *Block gaps:* a caret before or after a box (a block style, figure, table, raw box or code block; not a list), as CKEditor 5's widget caret. Arrow keys go one level at a time; typing there makes a paragraph. It is a selection of its own (`BlockGap`) instead of ProseMirror's gap cursor; `reveal` of its source offset gives the gap again.
 
 == Clipboard <architecture-visual-editor-clipboard>
 
-The clipboard holds Typst, so text moves between the Visual editor, the Source editor and other editors as written.
+The `clipboard` extension (`src/extensions/clipboard/`) makes the clipboard hold Typst, so text moves between the Visual editor, the Source editor and other editors as written. Without it, ProseMirror's own copy and paste run: text goes in as characters (escaped when written back), HTML by the schema's rules; raw boxes keep their Typst through `data-src`.
 
 - *Copy, cut:* `text/plain` and `text/x-typst` hold the selection's Typst: its source as written where that reads as what is selected, else printed anew. `text/html` goes along for rich targets.
 - *Cut with nothing selected* cuts the block at the caret, as IntelliJ cuts the line.
 - *Paste:* Typst, plain text and code are read with the editor's specs (`parseTypst`) and replace the selection in one undo step. Code is what VS Code copies, or HTML whose text is all code (`pre`, `code`, monospace); code of another language becomes a code block of it.
 - *Other HTML* is read by the schema's HTML rules, printed as Typst and read back. Extensions may clean it first (`transformPastedHTML`: `wordProcessors`). Our own HTML is not read back. Raw boxes carry their Typst in it (`data-src`), so ProseMirror's own HTML clipboard keeps them.
 - *⌘⇧V* pastes plain characters, escaped. In raw boxes and code blocks the text goes in as is.
-- *Paste as:* a paste goes in as the first of its alternative edits (`sortPasteEdits`); with more than one, a chip above its end ("Paste as: Typst ▾", Mod+., `editor.action.pasteAs`) switches the kind, in one undo step.
+- *Paste as:* a paste goes in as the first of its alternative edits (`sortPasteEdits`); with more than one, a chip above its end ("Paste as: Typst ▾", Mod+., `editor.action.pasteAs`) switches the kind, in one undo step: the paste is undone, then the other kind pasted, only where the undo gave back the text before the paste (never pasted twice).
 - *Paste edit providers* (@architecture-workbench-paste) change the pasted Typst and the rest of the text in the paste's transaction.
 
 == Raw boxes <architecture-visual-editor-raw-boxes>

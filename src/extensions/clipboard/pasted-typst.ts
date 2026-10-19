@@ -1,14 +1,15 @@
-// The editors' own ways a paste of Typst can go in. See clipboard.ts.
-import type { DocumentPasteEdit, DocumentPasteEditProvider } from '../languages/languages';
-import { escapeTypst } from '../prosemirror-typst/prosemirror-typst';
+// The clipboard extension's own ways a paste of Typst can go in. See clipboard.ts.
+import type { DocumentPasteEdit, DocumentPasteEditProvider, DocumentPasteProviderMetadata } from '../../hosts/languages/languages';
+import { escapeTypst } from '../../hosts/prosemirror-typst/prosemirror-typst';
 
 /**
- * The ways a paste of text into Typst can go in, as the Visual and the Source editor offer them themselves: the
- * clipboard's text as Typst (`typst`); code of another language as a code block of it (`typst.code`, first); the text
- * as plain characters, escaped, a paragraph per line (`text.plain`, last). As Typst, it is the text `readTypst` reads,
- * first unless the clipboard has other HTML (a web page's), whose kind (`typst.html`) it yields to.
+ * The ways a paste of text into Typst can go in, as the Visual and the Source editor offer them: the clipboard's text
+ * as Typst (`typst`); code of another language as a code block of it (`typst.code`, first); the text as plain
+ * characters, escaped, a paragraph per line (`text.plain`, last). As Typst, it is the text `readTypst` reads, first
+ * unless the clipboard has other HTML (a web page's), whose kind (`typst.html`) it yields to. Registered as a paste
+ * edit provider of Typst (`TYPST_PASTE_METADATA`), after the other providers' edits.
  */
-class TypstPasteEditProvider implements DocumentPasteEditProvider {
+export class TypstPasteEditProvider implements DocumentPasteEditProvider {
   /** Reads the clipboard `data` alone. */
   provideDocumentPasteEdits(_document: unknown, _ranges: unknown, data: DataTransfer): DocumentPasteEdit[] {
     const text = lines(data.getData(TYPST) || data.getData('text/plain'));
@@ -22,8 +23,8 @@ class TypstPasteEditProvider implements DocumentPasteEditProvider {
   }
 }
 
-/** The editors' own paste edits of Typst. */
-export const typstPasteEdits = new TypstPasteEditProvider();
+/** What `TypstPasteEditProvider` gives and reads; priority 0: its edits after the other providers' (default 100). */
+export const TYPST_PASTE_METADATA: DocumentPasteProviderMetadata = { providedPasteEditKinds: ['typst', 'text.plain'], pasteMimeTypes: ['text/plain', 'text/x-typst'], priority: 0 };
 
 /**
  * The Typst source to paste from the clipboard `data`; null: nothing to read as Typst (HTML of a web page or a word

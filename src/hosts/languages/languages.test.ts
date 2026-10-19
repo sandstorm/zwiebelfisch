@@ -124,6 +124,24 @@ describe('LanguagesHost', () => {
     expect(kinds).toEqual(['typst.markdown', 'typst.markdown.gfm', 'typst.any']);
   });
 
+  it('asks the paste edit providers by priority (higher first, default 100; equal: registration order), offering and resolving', () => {
+    const languages = new LanguagesHost();
+    const resolved: string[] = [];
+    const provider = (kind: string) => ({
+      provideDocumentPasteEdits: () => [{ kind, title: kind, insertText: kind }],
+      resolveDocumentPasteEdit: () => void resolved.push(kind),
+    });
+    languages.registerDocumentPasteEditProvider({}, provider('typst'), { providedPasteEditKinds: ['typst'], priority: 0 });
+    languages.registerDocumentPasteEditProvider({}, provider('typst.a'), { providedPasteEditKinds: ['typst.a'] });
+    languages.registerDocumentPasteEditProvider({}, provider('typst.b'), { providedPasteEditKinds: ['typst.b'], priority: 200 });
+    languages.registerDocumentPasteEditProvider({}, provider('typst.c'), { providedPasteEditKinds: ['typst.c'] });
+    const data = { types: ['text/plain'] } as unknown as DataTransfer;
+    const ranges = [SourceRange.of({ from: 0, to: 0 })];
+    expect(languages.provideDocumentPasteEdits(document, ranges, data).map(({ kind }) => kind)).toEqual(['typst.b', 'typst.a', 'typst.c', 'typst']);
+    languages.resolveDocumentPasteEdit({ kind: 'typst', title: 'Typst', insertText: '' }, document, ranges, data);
+    expect(resolved).toEqual(['typst.b', 'typst.a', 'typst.c', 'typst']);
+  });
+
   it('resolves the paste edit that goes in by every provider of the language in order, each given the one before; drops edits that collide', () => {
     const languages = new LanguagesHost();
     const change = (from: number, to: number, insert: string) => ({ from: SourceOffset.of(from), to: SourceOffset.of(to), insert });

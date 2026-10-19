@@ -6,12 +6,8 @@ import { EditorState, NodeSelection, type Selection, TextSelection, type Transac
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import type { DocumentPasteEditProvider } from '../languages/languages';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { BlockGaps, caretAtSource } from './block-gaps';
-import { clipboard } from './clipboard';
-import { pasteChoice } from './paste-as';
-import { typstPasteEdits } from './pasted-typst';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -19,7 +15,7 @@ import { suggestions } from './suggestions/suggestions';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContribution, PriorityOptions, Contributed, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, VisualEditorPasteEdits, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContribution, PriorityOptions, Contributed, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -50,7 +46,6 @@ export class VisualEditor {
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualEditorHost) {
     const contributed = contributions.contributed();
-    const choice = pasteChoice(contributions.pasteEdits);
     const views = nodeViewSpecs(contributed.nodes);
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
@@ -65,8 +60,6 @@ export class VisualEditor {
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
         highlights,
         BlockGaps,
-        clipboard(document, contributions.pasteEdits),
-        ...choice.extensions,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
@@ -94,7 +87,7 @@ export class VisualEditor {
         plugins: this.tiptap.state.plugins,
       }),
     );
-    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: [...contributed.toolbarGroups, ...choice.bars], items: [...contributed.toolbarItems, ...choice.items], textStyles: contributed.textStyles });
+    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -255,13 +248,10 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
 }
 
 /**
- * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
- * with who takes part in copy and paste (`pasteEdits`; null: nobody).
+ * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`).
  * The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
-  /** The editor's own paste edits of Typst (Typst, code, plain text), for the Source editors to offer the same. */
-  readonly typstPasteEdits: DocumentPasteEditProvider = typstPasteEdits;
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
@@ -277,8 +267,6 @@ export class VisualEditorHost implements VisualEditorContributions {
   };
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
-
-  constructor(readonly pasteEdits: VisualEditorPasteEdits | null = null) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {

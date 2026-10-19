@@ -26,6 +26,7 @@ import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { invisibles } from '../extensions/invisibles/invisibles';
 import { blockHandle } from '../extensions/block-handle/block-handle';
+import { clipboard } from '../extensions/clipboard/clipboard';
 import { tabKeys } from '../extensions/tab-keys/tab-keys';
 import { undoRedo } from '../extensions/undo-redo/undo-redo';
 import { codeEditing } from '../extensions/code-editing/code-editing';
@@ -277,6 +278,7 @@ function builtinExtensions(): Extension[] {
     blockHandle(),
     tabKeys(),
     undoRedo(),
+    clipboard(),
     comments(),
     labels(),
     styles(),

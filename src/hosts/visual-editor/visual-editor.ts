@@ -5,7 +5,6 @@ import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import type { DocumentPasteEdit, PasteChoices } from '../languages/languages';
 import type { DocumentNodeSpec, TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 
 /**
@@ -253,24 +252,6 @@ export interface RawBoxPictureHost {
   src(): string;
 }
 
-/**
- * Who takes part in copy and paste of Typst in the Visual editor (the workbench's `languages`: the paste edit
- * providers of Typst): a copy or cut adds to the clipboard, a paste may go in as other kinds and what goes in may
- * change, and change the document elsewhere, in the paste's step; a paste that may go in as another kind shows its
- * choice there (the "Paste as" chip asks which). The workbench gives it to the host.
- */
-export interface VisualEditorPasteEdits extends PasteChoices {
-  /** On a copy or cut of `copied` (Typst) from `document`: adds what a paste will need to the clipboard `dataTransfer`. */
-  prepareDocumentPaste(document: TypstDocument, copied: string, dataTransfer: DataTransfer): void;
-  /** The providers' edits of a paste of the clipboard `dataTransfer` into `document` in place of `ranges`, besides the editor's own. */
-  provideDocumentPasteEdits(document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
-  /**
-   * `edit` as it goes in, as the providers resolve it: its text, and the other changes of the document's text it makes
-   * (of the text before the paste, overlapping neither the ranges nor each other).
-   */
-  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TypstDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
-}
-
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
@@ -318,8 +299,7 @@ export interface ToolbarControl {
  * floating bars, only the first (by `order`) with an anchor shows. The host's
  * own: `history` (for undo and redo, order 10), `text-style` (the text style menu, 20;
  * see `TextStyle`), the `insert` menu ("Insert", 50), the `selection` bar
- * (above a text selection, 10) and the `paste` bar (the "Paste as" chip above
- * a paste's end, 1). A menu without items is left out.
+ * (above a text selection, 10). A menu without items is left out.
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }

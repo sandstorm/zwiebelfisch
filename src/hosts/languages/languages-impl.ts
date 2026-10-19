@@ -1,13 +1,11 @@
 // See Languages in languages.ts.
-import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
-import css from './languages.css?inline';
-import { pasteExtension, type PasteOptions } from './paste-extension';
 import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpProvider, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
 /**
+ * A stateless helper for whoever applies paste edits (the clipboard extension), part of the contract's `yieldTo`:
  * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
  * their order; then each after those it yields to, else in the given order. An edit putting in the same text as one
  * before is left out; the plain text one (`text.plain`) takes the place of the first with its text, so a paste with
@@ -39,9 +37,6 @@ export class LanguagesHost implements Languages {
   readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
-
-  /** The CSS of the editors' paste choice (`.zwf-paste-chip`), for the workbench to put where the widget renders. */
-  readonly styleSheet: string = css;
 
   /**
    * Declares `languages` (the extensions' `contributes.languages`, the workbench's own). An ending is one language's:
@@ -84,15 +79,10 @@ export class LanguagesHost implements Languages {
     return add(this.#pasteEditProviders, { selector, provider, metadata });
   }
 
-  /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
   prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
     for (const { provider } of this.#pasteEditProvidersOf(document)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
   }
 
-  /**
-   * The edits the providers give for a paste of the clipboard `dataTransfer` into `document` in place of `ranges`, in
-   * registration order: of each provider that reads a type the clipboard has, the edits of the kinds it declared.
-   */
   provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit[] {
     const types = [...dataTransfer.types];
     const has = (mime: string) => mime === '*/*' || types.some((type) => type === mime || (mime.endsWith('/*') && type.startsWith(mime.slice(0, -1))));
@@ -103,10 +93,6 @@ export class LanguagesHost implements Languages {
     });
   }
 
-  /**
-   * `edit` as it goes into `document` in place of `ranges`: as the providers resolve it, in registration order, each
-   * given the edit the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
-   */
   resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit {
     const additionalEdit: TextChange[] = [];
     const taken: SourceRange[] = [...ranges];
@@ -126,16 +112,6 @@ export class LanguagesHost implements Languages {
       resolved = { ...next, additionalEdit: [...additionalEdit] };
     }
     return resolved;
-  }
-
-  /**
-   * Runs the paste edit providers of the text's language around a copy, cut or paste in a CodeMirror editor, as in the
-   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers). A
-   * paste goes in as the first of the edits of the registered providers and the editor's own; its choice offers the
-   * others (see `pasteExtension`).
-   */
-  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null, options: PasteOptions): Extension {
-    return pasteExtension(this, languageId, path, options);
   }
 
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
@@ -188,8 +164,10 @@ export class LanguagesHost implements Languages {
     return '/';
   }
 
+  /** The paste edit providers of `document`'s language, by priority (the sort is stable: equal ones in registration order). */
   #pasteEditProvidersOf(document: TextDocument): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
-    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId));
+    const priority = ({ metadata }: { metadata: DocumentPasteProviderMetadata }) => metadata.priority ?? DEFAULT_PRIORITY;
+    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).sort((a, b) => priority(b) - priority(a));
   }
 }
 
