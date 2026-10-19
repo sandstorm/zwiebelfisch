@@ -419,3 +419,17 @@ function applyLink(editor: Editor, href: string): void {
     chain.extendMarkRange('link').setLink({ href }).run();
   }
 }
+
+// -------------------------------------------------------------- line breaks
+
+const HardBreak = starterKitPart('typstHardBreak', { hardBreak: {} }).extend({
+  // `src`: the break as written (new: `\` and a newline)
+  addGlobalAttributes: () => [{ types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } }],
+});
+
+/** Typst's line break `\` (Tiptap's hard break, Shift+Enter): an inline atom printing its `src`. */
+export const HARD_BREAK: TypstNodeSpec = {
+  name: 'hardBreak',
+  tiptap: HardBreak,
+  typst: { parseTypst: { syntaxNodes: { Linebreak: { inline: (p, node) => p.schema.nodes.hardBreak.create({ src: p.text(node) }) } } } },
+};

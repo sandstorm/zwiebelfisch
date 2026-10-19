@@ -3,6 +3,7 @@
 // the Source editor, at the drop position, their imports in the same undo step.
 import { history, undo } from '@codemirror/commands';
 import { EditorView as CodeMirrorView } from '@codemirror/view';
+import type { Editor } from '@tiptap/core';
 import { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -55,7 +56,7 @@ describe('visualEditorDrops', () => {
     host.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
     new VisualEditor(parent, doc, host);
     const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
-    return { doc, editable, undo: () => parent.querySelector<HTMLButtonElement>('button[aria-label="Undo"]')!.click() };
+    return { doc, editable, undo: () => (editable as HTMLElement & { editor: Editor }).editor.commands.undo() };
   }
 
   it('accepts a project file on dragover, then inserts its edit after the block it was dropped on, the import in the same undo step', () => {

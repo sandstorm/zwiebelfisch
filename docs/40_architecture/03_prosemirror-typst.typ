@@ -15,7 +15,7 @@ Turns Typst text into the Visual editor's #link("https://prosemirror.net/")[Pros
 
 == Specs and grammar <architecture-prosemirror-typst-specs>
 
-The framework knows only paragraphs, text, line breaks, escapes, shorthands and raw Typst. Every other construct is a spec:
+The framework knows only paragraphs, text, escapes, shorthands and raw Typst (a line break `\` without `markup`: a raw inline box). Every other construct is a spec:
 
 #table(
   columns: (auto, 1fr),

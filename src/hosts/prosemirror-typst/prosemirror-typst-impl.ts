@@ -191,15 +191,14 @@ export function typstChanges(tr: Transaction, source: string = serializeToTypst(
   return changes;
 }
 
-/** The base: paragraphs, text, line breaks (`\`), history. */
+/** The base: paragraphs, text, history. */
 function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {} });
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, undoRedo: {} });
 }
 
 /** The minimum schema's own nodes, as the grammar sees them. */
 const BASE_NODES: readonly DocumentNodeSpec[] = [
   { name: 'paragraph', typst: { labelled: true } },
-  { name: 'hardBreak' },
   { name: 'rawBlock', typst: { labelled: true } },
   { name: 'rawInline' },
 ];

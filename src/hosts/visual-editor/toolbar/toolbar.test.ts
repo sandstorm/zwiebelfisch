@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for toolbar.ts, with the host's own items (undo, redo) and an item defined here. The built-in extensions'
+// Tests for toolbar.ts, with items defined here. The built-in extensions'
 // items are tested together in editor/editor.toolbar.test.ts.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -79,18 +79,6 @@ describe('Visual editor toolbar', () => {
     button('Bold').click();
     expect(doc.text).toBe('*Hello world*\n');
     expect(button('Bold').getAttribute('aria-pressed')).toBe('true');
-  });
-
-  it('undo and redo revert and reapply the last edit', () => {
-    const { doc, view, button } = setup('Hello world\n');
-    expect(button('Undo').disabled).toBe(true);
-    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
-    button('Bold').click();
-    expect(button('Undo').disabled).toBe(false);
-    button('Undo').click();
-    expect(doc.text).toBe('Hello world\n');
-    button('Redo').click();
-    expect(doc.text).toBe('*Hello world*\n');
   });
 
   it('keeps the editor focused: mousedown on a button does not steal focus', () => {

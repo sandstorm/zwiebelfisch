@@ -51,4 +51,15 @@ describe('markup in a Visual editor', () => {
     press(editable, 'S', true);
     expect(doc.text).toBe('Hello #strike[world]\n');
   });
+
+  it('reads a line break `\\` as a line break, and Shift+Enter writes one', () => {
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('One \\\ntwo\n');
+    const view = createVisualEditor(parent, doc);
+    expect(parent.querySelector('.zwf-visual p br')).not.toBeNull();
+    view.reveal(SourceRange.of({ from: doc.text.length - 1, to: doc.text.length - 1 }));
+    const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
+    editable.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, shiftKey: true, bubbles: true, cancelable: true }));
+    expect(doc.text).toBe('One \\\ntwo\\\n\n');
+  });
 });

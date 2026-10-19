@@ -303,14 +303,13 @@ function commonIndent(lines: readonly string[]): string {
 }
 
 /** Syntax the framework itself shows as text; any inline syntax a spec models counts as prose too. */
-const TEXT = new Set(['Text', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak']);
+const TEXT = new Set(['Text', 'Escape', 'Shorthand', 'SmartQuote']);
 
-/** The framework's own inline syntax: text, line breaks, escapes and shorthands. */
+/** The framework's own inline syntax: text, newlines, escapes and shorthands. */
 const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: readonly Mark[]) => Node> = {
   Text: (p, src, marks) => p.schema.text(src, marks),
   SmartQuote: (p, src, marks) => p.schema.text(src, marks),
   Space: (p, src, marks) => (src.includes('\n') ? p.schema.nodes.softBreak.create({ src }) : p.schema.text(src, marks)),
-  Linebreak: (p, src) => p.schema.nodes.hardBreak.create({ src }),
   Escape: (p, src, marks) => p.sourceText(src, decodeEscape(src), marks),
   Shorthand: (p, src, marks) => (src in SHORTHANDS ? p.sourceText(src, SHORTHANDS[src], marks) : p.raw(src, marks)),
 };

@@ -329,7 +329,7 @@ export interface ToolbarControl {
  * button there ("Insert ▾", its icon following the selection), or a bar
  * floating in the text above its anchor. The row is sorted by `order`; of the
  * floating bars, only the first (by `order`) with an anchor shows. The host's
- * own: `history` (undo/redo, order 10), `text-style` (the text style menu, 20;
+ * own: `history` (for undo and redo, order 10), `text-style` (the text style menu, 20;
  * see `TextStyle`), the `insert` menu ("Insert", 50), the `selection` bar
  * (above a text selection, 10) and the `paste` bar (the "Paste as" chip above
  * a paste's end, 1). A menu without items is left out.

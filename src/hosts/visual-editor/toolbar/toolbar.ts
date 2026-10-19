@@ -9,7 +9,7 @@ import { keyLabel } from '../../commands/commands';
 import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyle, type TextStyleProvider, type VisualEditorContext } from '../visual-editor';
 
 /**
- * The Visual editor's formatting toolbar: a row of groups and menus sorted by `order` (the host's own: undo/redo, the
+ * The Visual editor's formatting toolbar: a row of groups and menus sorted by `order` (the host's own: `history`, the
  * text style menu, "Insert"), and bars floating above their anchor in the text (the "Selection" bar above a text
  * selection), of which only the first with an anchor shows.
  *
@@ -48,7 +48,7 @@ export class Toolbar {
     const textStyleMenu: ToolbarItem[] = textStyles.length > 0 ? [{ group: 'text-style', create: (toolbar) => new TextStyleMenu(doc, tiptap, toolbar, textStyles) }] : [];
     // a menu in a floating bar is one of the bar's items, at its `order`
     const barMenus: ToolbarItem[] = all.flatMap((group) => (group.kind === 'menu' && group.bar ? [{ group: group.bar, order: group.order, create: () => this.menu(group) }] : []));
-    const entries = this.entries([...HOST_ITEMS, ...textStyleMenu, ...items, ...barMenus], context);
+    const entries = this.entries([...textStyleMenu, ...items, ...barMenus], context);
     this.entriesByGroup = entries;
     const sorted = (kinds: ToolbarGroup['kind'][]) => [...all].filter((group) => kinds.includes(group.kind)).sort((a, b) => a.order - b.order);
     for (const group of sorted(['group', 'menu'])) if (!(group.kind === 'menu' && group.bar)) this.rowGroup(group, entries.get(group.id) ?? []);
@@ -184,7 +184,7 @@ export class Toolbar {
   }
 }
 
-/** The host's own places: undo/redo first, the text style menu, the "Insert" menu, the bar above a text selection. */
+/** The host's own places: `history` (undo, redo) first, the text style menu, the "Insert" menu, the bar above a text selection. */
 const HOST_GROUPS: ToolbarGroup[] = [
   { kind: 'group', id: 'history', order: 10 },
   { kind: 'group', id: 'text-style', order: 20 },
@@ -193,8 +193,6 @@ const HOST_GROUPS: ToolbarGroup[] = [
 ];
 
 const ICONS = {
-  undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
-  redo: svg('<path d="m15 15 5-5-5-5"/><path d="M20 10H9a5 5 0 0 0 0 10h3"/>'),
   insert: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
@@ -215,11 +213,6 @@ function selectionCoords(editor: Editor): Anchor {
     return null; // no layout (e.g. not attached)
   }
 }
-
-const HOST_ITEMS: ToolbarItem[] = [
-  { group: 'history', action: { label: 'Undo', shortcut: 'Mod+Z', icon: ICONS.undo, run: (c) => c.undo() } },
-  { group: 'history', action: { label: 'Redo', shortcut: 'Mod+Shift+Z', icon: ICONS.redo, run: (c) => c.redo() } },
-];
 
 /** What a group holds: buttons, controls (a menu in a floating bar is one), and the actions of a menu that change. */
 type Entry = ToolbarAction | ToolbarControl | { provideActions(): readonly ToolbarAction[] };

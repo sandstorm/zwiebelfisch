@@ -107,7 +107,7 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
 
 == Toolbar <architecture-visual-editor-toolbar>
 
-- *The host's own groups:* `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar. Empty groups are left out.
+- *The host's own groups:* `history` (10; its Undo / Redo buttons are `undoRedo`'s, the history itself the host's), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar. Empty groups are left out.
 - *Buttons* are `ToolbarAction`s: a Tiptap chain command, dry-run to disable the button. They never take the focus from the text.
 - *Menus in a bar:* a menu with `bar` sits among that bar's items; `provideActions` builds its items each time it opens.
 

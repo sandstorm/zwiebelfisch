@@ -1,14 +1,14 @@
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './markup.css?inline';
 import {
-  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, HIGHLIGHT, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS, STRIKE,
+  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, HARD_BREAK, HIGHLIGHT, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS, STRIKE,
   UNDERLINE,
 } from './visual-editor/visual-editor';
 import { urlLinks } from './workbench/url-links';
 
 /**
  * The basic Typst markup in the Visual editor: strong, emphasis, underline, strike, highlight, links, inline code,
- * code blocks and block quotes.
+ * code blocks, block quotes and line breaks (`\`, Shift+Enter).
  *
  * Each comes with its button in the bar above a selection or in the Insert menu. Web and mail addresses are document
  * links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new tab.
@@ -31,6 +31,7 @@ export function markup(): Extension {
         visualEditor.registerMark(CODE),
         visualEditor.registerNode(CODE_BLOCK),
         visualEditor.registerNode(BLOCKQUOTE),
+        visualEditor.registerNode(HARD_BREAK),
         // in the bar above a selection, their only place
         ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.underline, MARK_ACTIONS.strike, MARK_ACTIONS.highlight, MARK_ACTIONS.code].map(
           (action, i) => visualEditor.registerToolbarItem({ group: 'selection', order: 10 + 5 * i, action }),
