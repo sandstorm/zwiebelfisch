@@ -2,7 +2,7 @@
 import type { PageRect, CompileResult, ElementLocation, HtmlFile, HtmlResult, Page, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { FileContent } from '../../../core/project/project';
-import type { FontFile } from '../../../core/engine-assets/engine-assets';
+import type { FontFile } from './engine-assets';
 
 /**
  * First message to the worker: where the engine wasm and fonts are. The main thread

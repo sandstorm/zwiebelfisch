@@ -236,7 +236,7 @@ export interface LazyFont {
 
 /**
  * Instantiates the engine from the wasm module (URL, bytes or response). The engine embeds no fonts: add them
- * with `addLazyFont` (the default fonts: `DEFAULT_FONTS`, see core/engine-assets) or `addFont`.
+ * with `addLazyFont` (the preview's default fonts: `DEFAULT_FONTS` in hosts/preview/worker/engine-assets) or `addFont`.
  */
 export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<TypstEngine> {
   const { memory } = await init({ module_or_path: wasm });

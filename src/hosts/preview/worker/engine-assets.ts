@@ -1,6 +1,6 @@
-import type { FontInfo } from '../typst-engine/typst-engine';
-import fontIndex from '../typst-engine/fonts.gen/index.json';
-import wasmUrl from '../typst-engine/wasm.gen/typst_engine_bg.wasm?url&no-inline';
+import type { FontInfo } from '../../../core/typst-engine/typst-engine';
+import fontIndex from '../../../core/typst-engine/fonts.gen/index.json';
+import wasmUrl from '../../../core/typst-engine/wasm.gen/typst_engine_bg.wasm?url&no-inline';
 
 /**
  * URL of the engine's wasm binary, for `createEngine` (the preview hands it to its worker).
@@ -18,7 +18,7 @@ export interface FontFile {
   readonly faces: readonly FontInfo[];
 }
 
-const fontUrls = import.meta.glob<string>('../typst-engine/fonts.gen/*.{otf,ttf}', {
+const fontUrls = import.meta.glob<string>('../../../core/typst-engine/fonts.gen/*.{otf,ttf}', {
   query: '?url&no-inline',
   import: 'default',
   eager: true,
@@ -30,5 +30,5 @@ const fontUrls = import.meta.glob<string>('../typst-engine/fonts.gen/*.{otf,ttf}
  * the index; the bundler emits one file each and inlines the index (16 KB).
  */
 export const DEFAULT_FONTS: readonly FontFile[] = Object.entries(fontIndex as Record<string, FontInfo[]>).map(
-  ([name, faces]) => ({ name, url: fontUrls[`../typst-engine/fonts.gen/${name}`], faces }),
+  ([name, faces]) => ({ name, url: fontUrls[`../../../core/typst-engine/fonts.gen/${name}`], faces }),
 );

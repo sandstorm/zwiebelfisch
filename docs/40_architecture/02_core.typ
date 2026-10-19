@@ -54,10 +54,9 @@ Two branded strings: free at runtime, usable as keys, unchanged through `postMes
 
 == The Typst engine <architecture-core-engine>
 
-The Typst compiler, SVG, PDF and HTML export and hit-testing: Rust (`crates/typst-engine`) compiled to wasm. The preview runs it in a worker (@architecture-preview).
+The Typst compiler, SVG, PDF and HTML export and hit-testing: Rust (`crates/typst-engine`) compiled to wasm. The preview runs it in a worker and hands it the wasm URL and the default fonts (@architecture-preview).
 
 - `typst-engine`: `createEngine(wasm)` returns the engine; its members: see the d.ts.
-- `engine-assets`: the wasm URL and `DEFAULT_FONTS` for the main thread, apart so the worker bundle does not copy them.
 - `typst-packages`: `withPackages(engine, fetchPackage?, onDidChangeDownloads?)` compiles, downloads missing `@preview` packages, compiles again.
 - *Units:* UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`). A diagnostic's path is a `ProjectPath`, or `null` without location or in a package.
 - *Memory:* after every `compile`, `compileHtml` and `exportPdf` the engine evicts the memoized results the last 10 did not use, as `typst watch` does. `memoryInUse` tells the wasm memory's bytes (it never shrinks; the most is `ENGINE_MEMORY_LIMIT`, 4 GiB); the devtools show it (@configuration-embedding-devtools).

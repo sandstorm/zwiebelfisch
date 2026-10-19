@@ -1,4 +1,4 @@
-import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../../core/engine-assets/engine-assets';
+import { DEFAULT_FONTS, ENGINE_WASM_URL } from './engine-assets';
 import type { FileContent } from '../../../core/project/project';
 import type { CompileResult, HtmlFile, HtmlResult, Page } from '../../../core/typst-engine/typst-engine';
 import { HashedReceiver } from './hashed';
