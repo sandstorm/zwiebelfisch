@@ -207,9 +207,9 @@ type Engine = { bare: Awaited<ReturnType<typeof createEngine>>; packages: Packag
 /** An engine with the default fonts that finds drafting 0.2.2 (the test fixture) as a package. */
 async function engineWithDrafting(): Promise<Engine> {
   const engineDir = new URL('../../../core/typst-engine/', import.meta.url);
-  const fontDir = new URL('fonts/', engineDir);
+  const fontDir = new URL('fonts.gen/', engineDir);
   const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
-  const bare = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir)));
+  const bare = await createEngine(readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineDir)));
   for (const [name, faces] of Object.entries(fontIndex)) bare.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
   const drafting = new Uint8Array(readFileSync(new URL('../model/fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
   return { bare, packages: withPackages(bare, async () => drafting) };

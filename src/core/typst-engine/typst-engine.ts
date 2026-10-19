@@ -1,6 +1,6 @@
 import { ProjectPath } from '../paths/paths';
 import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
-import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm/typst_engine';
+import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm.gen/typst_engine';
 
 /**
  * The Typst compiler, SVG renderer, PDF and HTML export and preview hit-testing (Rust → wasm).

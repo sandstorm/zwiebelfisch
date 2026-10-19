@@ -72,6 +72,6 @@ describe('entry-imports', () => {
   });
 
   it('ignores generated and data files', () => {
-    expect(lint('src/hosts/preview/preview.ts', "import url from '../../core/typst-engine/wasm/typst_engine_bg.wasm?url';")).toEqual([]);
+    expect(lint('src/hosts/preview/preview.ts', "import url from '../../core/typst-engine/wasm.gen/typst_engine_bg.wasm?url';")).toEqual([]);
   });
 });

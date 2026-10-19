@@ -67,7 +67,7 @@ The Typst compiler, SVG, PDF and HTML export and hit-testing: Rust (`crates/typs
 
 Typst needs every face's `FontInfo` before a compile, but a face's data only when the layout uses it. So fonts load lazily: 5 files instead of 17 on the first render of the simple example (2.7 MB instead of 9.7 MB).
 
-- *Font index:* `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`), computed by the engine's own wasm.
+- *Font index:* `mise run build:fonts` copies the 17 default font files and writes `fonts.gen/index.json` (file name → `FontInfo[]`), computed by the engine's own wasm.
 - `addLazyFont({ name, faces, load })`: the faces go into the font book; the first use of one calls `load()` synchronously, inside the compile. In the worker that is a synchronous `XMLHttpRequest`.
 - *A file that cannot be loaded:* Typst falls back to another font and the compile reports a warning without location.
 - *Project fonts:* a project file ending in `.ttf`, `.otf`, `.ttc` or `.otc` is a font too, as on typst.app. Whoever hands the engine the project's files hands it its fonts.

@@ -30,8 +30,8 @@ describe('typeStarterTable', () => {
     expect(typst).toContain('("Item", "Value"),\n    ("First", "1"),\n    ("Second", "2"),');
     expect(typst).toContain('text(weight: "bold", "Item")');
 
-    const engine = await createEngine(readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url)));
-    engine.addFont(readFileSync(new URL('../../../core/typst-engine/fonts/LibertinusSerif-Regular.otf', import.meta.url)));
+    const engine = await createEngine(readFileSync(new URL('../../../core/typst-engine/wasm.gen/typst_engine_bg.wasm', import.meta.url)));
+    engine.addFont(readFileSync(new URL('../../../core/typst-engine/fonts.gen/LibertinusSerif-Regular.otf', import.meta.url)));
     engine.setSource('/data/table.ic.gen.typ', typst);
     const { source, text } = figure('= Results\n', '/data/table.ic');
     engine.setSource('/main.typ', `${text}\n${source}\n`);

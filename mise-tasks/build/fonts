@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-//MISE description="Copy the default fonts (Typst's typst-assets set) into src/core/typst-engine/fonts and write their index (index.json)"
+//MISE description="Copy the default fonts (Typst's typst-assets set) into src/core/typst-engine/fonts.gen and write their index (index.json)"
 //MISE depends=["build:engine"]
-//MISE sources=["crates/typst-engine/Cargo.lock", "src/core/typst-engine/wasm/typst_engine_bg.wasm", "mise-tasks/build/fonts"]
-//MISE outputs=["src/core/typst-engine/fonts/LibertinusSerif-Regular.otf", "src/core/typst-engine/fonts/index.json"]
+//MISE sources=["crates/typst-engine/Cargo.lock", "src/core/typst-engine/wasm.gen/typst_engine_bg.wasm", "mise-tasks/build/fonts"]
+//MISE outputs=["src/core/typst-engine/fonts.gen/LibertinusSerif-Regular.otf", "src/core/typst-engine/fonts.gen/index.json"]
 // The fonts come from the typst-assets crate that Cargo.lock pins, so they are exactly the ones the Typst CLI of the
 // same version embeds. The .pfb files next to them are PDF base-14 substitutes that typst-assets does not expose as
 // fonts. The index lists every face's FontInfo, computed by the engine itself, so the engine knows the fonts before
@@ -10,9 +10,9 @@
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import init, { describeFont } from '../../src/core/typst-engine/wasm/typst_engine.js';
+import init, { describeFont } from '../../src/core/typst-engine/wasm.gen/typst_engine.js';
 
-const TARGET = 'src/core/typst-engine/fonts';
+const TARGET = 'src/core/typst-engine/fonts.gen';
 
 const metadata = JSON.parse(
   execFileSync(
@@ -28,7 +28,7 @@ const names = readdirSync(source).filter((name) => /\.(otf|ttf)$/.test(name)).so
 
 rmSync(TARGET, { recursive: true, force: true });
 mkdirSync(TARGET, { recursive: true });
-await init({ module_or_path: readFileSync('src/core/typst-engine/wasm/typst_engine_bg.wasm') });
+await init({ module_or_path: readFileSync('src/core/typst-engine/wasm.gen/typst_engine_bg.wasm') });
 const index = {};
 let bytes = 0;
 for (const name of names) {

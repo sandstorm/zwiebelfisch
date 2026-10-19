@@ -7,7 +7,7 @@
 //   outside the module only the entry may be imported.
 // - Inside a module everything is open: layer and concept subfolders (`model/`, `visual-editor/`, `nodes/`, …)
 //   have no entry files of their own, and files import each other directly.
-// - Only TypeScript and CSS sources count. Generated or data files (wasm/, fonts/, fixtures/) are not
+// - Only TypeScript and CSS sources count. Generated or data files (wasm.gen/, fonts.gen/, fixtures/) are not
 //   modules with an interface.
 // - The few exceptions are the rule's `exceptions` option, listed in eslint.config.js.
 //

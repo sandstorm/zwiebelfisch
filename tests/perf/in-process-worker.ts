@@ -89,8 +89,8 @@ async function start(): Promise<Session> {
       },
     });
   };
-  const engine = await createEngine(readFileSync(join(engineDir, 'wasm/typst_engine_bg.wasm')));
-  const fonts: Record<string, FontInfo[]> = JSON.parse(readFileSync(join(engineDir, 'fonts/index.json'), 'utf8'));
+  const engine = await createEngine(readFileSync(join(engineDir, 'wasm.gen/typst_engine_bg.wasm')));
+  const fonts: Record<string, FontInfo[]> = JSON.parse(readFileSync(join(engineDir, 'fonts.gen/index.json'), 'utf8'));
   for (const [name, faces] of Object.entries(fonts)) {
     engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(join(engineDir, 'fonts', name))) });
   }

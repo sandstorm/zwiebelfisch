@@ -13,7 +13,7 @@ import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { previewGuides } from './preview-guides';
 
 const engineFiles = new URL('../../core/typst-engine/', import.meta.url);
-const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts/index.json', engineFiles), 'utf8'));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts.gen/index.json', engineFiles), 'utf8'));
 /** merman, which the docs' template imports, as the e2e tests cache it (too big for a fixture). */
 const merman = new URL('../../../.cache/typst-packages/merman-0.4.0.tar.gz', import.meta.url);
 
@@ -54,8 +54,8 @@ describe('previewGuides', () => {
 describe('the view options compiled', () => {
   let engine: TypstEngine;
   beforeAll(async () => {
-    engine = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineFiles)));
-    for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts/${name}`, engineFiles))) });
+    engine = await createEngine(readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineFiles)));
+    for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts.gen/${name}`, engineFiles))) });
   });
 
   /** Compiles `main` as `/main.typ` with the options `on`; none: the main file itself, as an export does. */

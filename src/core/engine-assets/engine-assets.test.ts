@@ -5,7 +5,7 @@ import { DEFAULT_FONTS } from './engine-assets';
 
 describe('DEFAULT_FONTS', () => {
   it('has every bundled font file, by URL, with its faces', () => {
-    const files = readdirSync(new URL('../typst-engine/fonts/', import.meta.url)).filter((name) => /\.(otf|ttf)$/.test(name));
+    const files = readdirSync(new URL('../typst-engine/fonts.gen/', import.meta.url)).filter((name) => /\.(otf|ttf)$/.test(name));
     expect(DEFAULT_FONTS.map(({ url }) => url.split('/').pop()?.replace(/\?.*$/, '')).sort()).toEqual(files.sort());
     const regular = DEFAULT_FONTS.find(({ url }) => url.includes('LibertinusSerif-Regular.otf'));
     expect(regular?.faces).toEqual([

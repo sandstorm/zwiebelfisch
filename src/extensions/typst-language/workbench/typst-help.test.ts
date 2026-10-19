@@ -7,15 +7,15 @@ import { withPackages } from '../../../core/typst-packages/typst-packages';
 import { TYPST_HELP } from './typst-help';
 
 const engineFiles = new URL('../../../core/typst-engine/', import.meta.url);
-const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts/index.json', engineFiles), 'utf8'));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts.gen/index.json', engineFiles), 'utf8'));
 const merman = new URL('../../../../.cache/typst-packages/merman-0.4.0.tar.gz', import.meta.url);
 /** A PNG of one pixel. */
 const PIXEL = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (char) => char.charCodeAt(0));
 
 let engine: TypstEngine;
 beforeAll(async () => {
-  engine = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineFiles)));
-  for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts/${name}`, engineFiles))) });
+  engine = await createEngine(readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineFiles)));
+  for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts.gen/${name}`, engineFiles))) });
   // the files the rows name
   engine.setBinary('/image.png', PIXEL);
   engine.setSource('/template.typ', '#let conf = 1');

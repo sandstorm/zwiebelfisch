@@ -3,10 +3,10 @@
 import { readFileSync } from 'node:fs';
 import { expect, it, vi } from 'vitest';
 import { type FontInfo, TypstEngineCrash, createEngine } from './typst-engine';
-import init from './wasm/typst_engine';
+import init from './wasm.gen/typst_engine';
 
-const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('./fonts/', import.meta.url);
+const wasm = readFileSync(new URL('./wasm.gen/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('./fonts.gen/', import.meta.url);
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
 
 it('keeps its memory while a document is edited and compiled again and again', async () => {

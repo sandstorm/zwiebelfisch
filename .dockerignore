@@ -8,8 +8,8 @@ dist
 .idea
 test-results
 playwright-report
-src/core/typst-engine/wasm
-src/core/typst-engine/fonts
+src/core/typst-engine/wasm.gen
+src/core/typst-engine/fonts.gen
 server/.data
 .env
 mise.local.toml

@@ -16,8 +16,8 @@ import {
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import { withPackages } from '../typst-packages/typst-packages';
 
-const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('./fonts/', import.meta.url);
+const wasm = readFileSync(new URL('./wasm.gen/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('./fonts.gen/', import.meta.url);
 /** The default fonts' index (`mise run build:fonts`): file name → faces. */
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
 const fontFile = (name: string) => new Uint8Array(readFileSync(new URL(name, fontDir)));

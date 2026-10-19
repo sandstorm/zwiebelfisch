@@ -9,8 +9,8 @@ const [entries, inTheDocument] = BIBTEX_HELP.sections;
 
 describe('the BibTeX help sheet', () => {
   it('its entries make a bibliography the document cites as shown', async () => {
-    const engine = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineFiles)));
-    engine.addFont(readFileSync(new URL('fonts/LibertinusSerif-Regular.otf', engineFiles)));
+    const engine = await createEngine(readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineFiles)));
+    engine.addFont(readFileSync(new URL('fonts.gen/LibertinusSerif-Regular.otf', engineFiles)));
     const entry = entries.rows.filter((row) => row.snippet.startsWith('@')).map((row) => row.snippet);
     engine.setSource('/refs.bib', entry.join('\n\n'));
     const [bibliography, ...citations] = inTheDocument.rows.map((row) => row.snippet);

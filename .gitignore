@@ -7,8 +7,8 @@ playwright-report/
 .DS_Store
 .cache/
 target/
-src/core/typst-engine/wasm/
-src/core/typst-engine/fonts/
+src/core/typst-engine/wasm.gen/
+src/core/typst-engine/fonts.gen/
 # leftovers from before the src/ restructure (engine output used to live in src/engine);
 # kept so old checkouts don't see 20 MB of wasm as untracked. Delete src/engine/ and these lines.
 src/engine/wasm/
@@ -18,3 +18,4 @@ server/.data/
 # local secrets (e.g. ZWF_GITLAB_TOKEN for the collaboration server)
 .env
 mise.local.toml
+.vitest/json/output.json

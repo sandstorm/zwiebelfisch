@@ -1,7 +1,7 @@
 # What every job that builds needs, as a developer's checkout has it: the tools mise.toml pins, the JS dependencies,
 # and the engine (Rust → wasm) with its fonts. The workflows then run the same mise tasks a developer runs.
 #
-# The engine takes minutes to compile, so its output (src/core/typst-engine/wasm, …/fonts) is cached under a key of
+# The engine takes minutes to compile, so its output (src/core/typst-engine/wasm.gen, …/fonts.gen) is cached under a key of
 # everything it is built from; on a hit, cargo never runs. On a miss, cargo's registry and target folder come from the
 # cache of the last build with the same Cargo.lock (or any before it), so only what changed compiles.
 name: Setup
@@ -28,8 +28,8 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
-          src/core/typst-engine/wasm
-          src/core/typst-engine/fonts
+          src/core/typst-engine/wasm.gen
+          src/core/typst-engine/fonts.gen
         key: engine-${{ runner.os }}-${{ hashFiles('crates/typst-engine/src/**', 'crates/typst-engine/Cargo.toml', 'crates/typst-engine/Cargo.lock', 'mise.toml', 'mise-tasks/build/engine', 'mise-tasks/build/fonts') }}
 
     - name: Restore cargo's registry and build folder
@@ -53,7 +53,7 @@ runs:
         # mise skips a task whose outputs are newer than its sources; a restored cache keeps the files' old times,
         # older than this checkout's, so they are marked as just built (wasm first: it is a source of the fonts)
         if [[ "${{ steps.engine.outputs.cache-hit }}" == true ]]; then
-          touch src/core/typst-engine/wasm/*
-          touch src/core/typst-engine/fonts/*
+          touch src/core/typst-engine/wasm.gen/*
+          touch src/core/typst-engine/fonts.gen/*
         fi
         mise run build:fonts

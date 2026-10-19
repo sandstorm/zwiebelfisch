@@ -4,8 +4,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { type FontInfo, type TypstEngine, createEngine } from '../typst-engine/typst-engine';
 import { withPackages } from './typst-packages';
 
-const wasm = readFileSync(new URL('../typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('../typst-engine/fonts/', import.meta.url);
+const wasm = readFileSync(new URL('../typst-engine/wasm.gen/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('../typst-engine/fonts.gen/', import.meta.url);
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
 
 /** An engine with the default fonts, each loaded when a compile first uses it. */

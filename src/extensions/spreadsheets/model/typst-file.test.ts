@@ -193,8 +193,8 @@ describe('spreadsheetTypst', () => {
   });
 
   it('writes Typst that compiles: tables, fills, values and names', async () => {
-    const wasm = readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
-    const fontDir = new URL('../../../core/typst-engine/fonts/', import.meta.url);
+    const wasm = readFileSync(new URL('../../../core/typst-engine/wasm.gen/typst_engine_bg.wasm', import.meta.url));
+    const fontDir = new URL('../../../core/typst-engine/fonts.gen/', import.meta.url);
     const engine = await createEngine(wasm);
     for (const name of ['LibertinusSerif-Regular.otf', 'LibertinusSerif-Bold.otf']) {
       engine.addFont(readFileSync(new URL(name, fontDir)));

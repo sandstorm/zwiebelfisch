@@ -14,8 +14,8 @@ import { Project } from '../src/core/project/project';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
 const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
-const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
-const fontDir = new URL('fonts/', engineDir);
+const wasm = readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineDir));
+const fontDir = new URL('fonts.gen/', engineDir);
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
 
 /** An engine with the default fonts, each loaded when a compile first uses it; `loaded` lists the files loaded. */

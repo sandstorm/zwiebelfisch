@@ -8,13 +8,13 @@ import { MERMAN } from '../model/mermaid-figure';
 import { MERMAID_HELP } from './mermaid-help';
 
 const engineFiles = new URL('../../../core/typst-engine/', import.meta.url);
-const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts/index.json', engineFiles), 'utf8'));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts.gen/index.json', engineFiles), 'utf8'));
 const merman = new URL(`../../../../.cache/typst-packages/${MERMAN.slice('@preview/'.length).replace(':', '-')}.tar.gz`, import.meta.url);
 
 /** The errors of drawing Mermaid `diagram` with merman. */
 async function errors(diagram: string): Promise<string[]> {
-  const engine = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineFiles)));
-  for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts/${name}`, engineFiles))) });
+  const engine = await createEngine(readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineFiles)));
+  for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts.gen/${name}`, engineFiles))) });
   engine.setSource('/main.typ', `#import "${MERMAN}": mermaid\n#mermaid(${JSON.stringify(diagram)})\n`);
   const packages = withPackages(engine, async () => new Uint8Array(readFileSync(merman)));
   return (await packages.compile('/main.typ')).diagnostics.map((diagnostic) => diagnostic.message);

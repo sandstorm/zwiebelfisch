@@ -47,7 +47,7 @@ describe('downloadWasm', () => {
   });
 
   it('gives a response the engine instantiates from (streaming), counting every byte', async () => {
-    const wasm = new Uint8Array(readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url)));
+    const wasm = new Uint8Array(readFileSync(new URL('../../../core/typst-engine/wasm.gen/typst_engine_bg.wasm', import.meta.url)));
     const chunks = Array.from({ length: Math.ceil(wasm.length / 65536) }, (_, i) => wasm.subarray(i * 65536, (i + 1) * 65536));
     let last: [number, number | null] = [0, null];
     const response = downloadWasm('/e.wasm', (loaded, total) => (last = [loaded, total]), serve(chunks, { 'Content-Length': String(wasm.length) }));

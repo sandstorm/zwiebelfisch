@@ -43,8 +43,8 @@ describe('the spreadsheet help sheet', () => {
   });
 
   it('its Typst compiles against the Typst file of a spreadsheet', async () => {
-    const engine = await createEngine(readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url)));
-    engine.addFont(readFileSync(new URL('../../../core/typst-engine/fonts/LibertinusSerif-Regular.otf', import.meta.url)));
+    const engine = await createEngine(readFileSync(new URL('../../../core/typst-engine/wasm.gen/typst_engine_bg.wasm', import.meta.url)));
+    engine.addFont(readFileSync(new URL('../../../core/typst-engine/fonts.gen/LibertinusSerif-Regular.otf', import.meta.url)));
     engine.setSource('/table.ic.gen.typ', spreadsheetTypst(workbook(), 'table.ic'));
     engine.setSource('/main.typ', `${inTheDocument.rows.map((row) => row.snippet).join('\n\n')}\n`);
     expect(engine.compile('/main.typ').diagnostics).toEqual([]);
