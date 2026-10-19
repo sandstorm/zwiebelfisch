@@ -1,17 +1,17 @@
 // The engine worker's own thread: answers the preview's requests. See EngineWorker in worker.ts.
 import { createEngine, type TypstEngine, TypstEngineCrash } from '../../../core/typst-engine/typst-engine';
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
-import { downloadWasm } from './download';
-import { FileReceiver } from './project-files';
-import { PageSender } from './page-svgs';
-import { HtmlFileSender } from './html-files';
+import type { HtmlFile, Page } from '../../../core/typst-engine/typst-engine';
+import { downloadWasm } from './download.worker';
+import { FileReceiver } from './files.worker';
+import { HashedSender } from './hashed';
 import type { Init, EngineRequest, EngineResponse, LoadEvent, WorkerProgress } from './protocol';
 
 interface Session {
   engine: TypstEngine;
   files: FileReceiver;
-  pages: PageSender;
-  htmlFiles: HtmlFileSender;
+  pages: HashedSender<Page, 'svg'>;
+  htmlFiles: HashedSender<HtmlFile, 'data'>;
   packages: PackageEngine;
 }
 
@@ -25,7 +25,7 @@ self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
     session = createEngine(wasm).then((engine) => {
       for (const { name, url, faces } of request.fonts) engine.addLazyFont({ name, faces, load: () => loadFont(name, url) });
       tell({ kind: 'ready' });
-      return { engine, files: new FileReceiver(engine), pages: new PageSender(), htmlFiles: new HtmlFileSender(), packages: withPackages(engine, undefined, (specs) => tell({ kind: 'packages', specs })) };
+      return { engine, files: new FileReceiver(engine), pages: new HashedSender<Page, 'svg'>('svg'), htmlFiles: new HashedSender<HtmlFile, 'data'>('data'), packages: withPackages(engine, undefined, (specs) => tell({ kind: 'packages', specs })) };
     });
     session.catch((error: unknown) => tell({ kind: 'failed', message: error instanceof Error ? error.message : String(error) }));
     return;

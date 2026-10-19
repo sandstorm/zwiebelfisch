@@ -45,7 +45,7 @@ preview.registerPdfExportOption({
 
 == Rules <architecture-preview-rules>
 
-- *Only changes cross the worker boundary:* `FileSender` sends each `Uint8Array` once, `PageSender` a page's SVG only when its hash changed. `PageList` renders SVG only for pages near the view.
+- *Only changes cross the worker boundary:* `FileSender` sends each `Uint8Array` once, `HashedSender` a page's SVG or an HTML file's data only when its hash changed. `PageList` renders SVG only for pages near the view.
 - *Never behind typing* (`LatestOnly`): one run in flight, newer values replace waiting ones; compiles at most every 150 ms, reveals every 80 ms. Diagnostics fire only when no newer `update()` waits; `exportPdf` and `snippet` wait for running compiles.
 - *A failed compile* keeps the last good pages, dimmed.
 - *A crashed engine* (`TypstEngineCrash`) is restarted once with the newest files; crashing again before the next `update()`, it stays off until then, so a document that crashes Typst does not loop.

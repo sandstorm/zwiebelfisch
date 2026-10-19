@@ -23,6 +23,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *A module* is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `editor/`, `editor-element/` or `testing/`. From outside, import only its *entry file*.
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
+- *`*.worker.ts` runs only in a Web Worker*; files without the suffix run on the main thread or in both.
 - *No re-exports*, except `src/index.ts`. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`).
 - *Folders are named after a concept*, never `utils/`, `impl/`, `helpers/`.
 - *No cycles between modules*.

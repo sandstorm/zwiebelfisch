@@ -1,9 +1,7 @@
 // The messages between the preview and the engine worker. See EngineWorker in worker.ts.
-import type { PageRect, CompileResult, ElementLocation, HtmlResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
+import type { PageRect, CompileResult, ElementLocation, HtmlFile, HtmlResult, Page, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
-import type { EncodedFiles } from './project-files';
-import type { EncodedPage } from './page-svgs';
-import type { EncodedHtmlFile } from './html-files';
+import type { FileContent } from '../../../core/project/project';
 import type { FontFile } from '../../../core/engine-assets/engine-assets';
 
 /**
@@ -54,8 +52,8 @@ export type LoadEvent =
 
 export type EngineResponse =
   /** `memoryInUse`: the engine's `TypstEngine.memoryInUse` after the compile. */
-  | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: EncodedPage[] }; memoryInUse: number }
-  | { id: number; type: 'html'; result: Omit<HtmlResult, 'files'> & { files: EncodedHtmlFile[] }; memoryInUse: number }
+  | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: Hashed<Page, 'svg'>[] }; memoryInUse: number }
+  | { id: number; type: 'html'; result: Omit<HtmlResult, 'files'> & { files: Hashed<HtmlFile, 'data'>[] }; memoryInUse: number }
   | { id: number; type: 'elements'; elements: ElementLocation[] }
   | { id: number; type: 'click'; jump: SourceJump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
@@ -63,3 +61,12 @@ export type EngineResponse =
   | { id: number; type: 'pdf'; result: PdfResult }
   /** The request failed; `crashed`: the engine crashed (`TypstEngineCrash`), and this worker answers no request any more. */
   | { id: number; type: 'error'; message: string; crashed: boolean };
+
+/**
+ * The file map of a compile request. `null` stands for the same bytes as in
+ * the previous request, so images are not copied to the worker per keystroke.
+ */
+export type EncodedFiles = Record<string, FileContent | null>;
+
+/** An item of an answer (a page, an HTML file); its `K` null: the same as the item with this hash the answer before. */
+export type Hashed<T, K extends keyof T> = Omit<T, K> & { [P in K]: T[P] | null };

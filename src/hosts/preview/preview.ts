@@ -9,7 +9,7 @@ import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
 import type { FileContent } from '../../core/project/project';
 import { EngineWorker } from './worker/worker';
-import { LatestOnly } from './latest-only';
+import { LatestOnly } from '../../core/latest-only/latest-only';
 import { LoadState } from './progress/load-state';
 import { Loader } from './progress/loader';
 import css from './preview.css?inline';

@@ -1,10 +1,8 @@
 import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../../core/project/project';
-import type { CompileResult, HtmlResult } from '../../../core/typst-engine/typst-engine';
-import { FileSender } from './project-files';
-import { PageReceiver } from './page-svgs';
-import { HtmlFileReceiver } from './html-files';
-import type { EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } from './protocol';
+import type { CompileResult, HtmlFile, HtmlResult, Page } from '../../../core/typst-engine/typst-engine';
+import { HashedReceiver } from './hashed';
+import type { EncodedFiles, EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } from './protocol';
 
 /**
  * The Typst engine in a Web Worker, as the preview talks to it: requests answered by id.
@@ -18,8 +16,8 @@ export class EngineWorker {
   private readonly pending = new Map<number, (answer: EngineAnswer) => void>();
   private nextId = 0;
   private sender = new FileSender();
-  private readonly receiver = new PageReceiver();
-  private readonly htmlReceiver = new HtmlFileReceiver();
+  private readonly pages = new HashedReceiver<Page, 'svg'>('svg');
+  private readonly htmlFiles = new HashedReceiver<HtmlFile, 'data'>('data');
 
   /** Starts the worker; `listener` hears how loading goes and when the engine crashed. */
   constructor(private readonly listener: EngineWorkerListener) {
@@ -71,8 +69,8 @@ export class EngineWorker {
   }
 
   private decode(message: EngineResponse): EngineAnswer {
-    if (message.type === 'compile') return { ...message, result: { ...message.result, pages: this.receiver.decode(message.result.pages) } };
-    if (message.type === 'html') return { ...message, result: { ...message.result, files: this.htmlReceiver.decode(message.result.files) } };
+    if (message.type === 'compile') return { ...message, result: { ...message.result, pages: this.pages.decode(message.result.pages) } };
+    if (message.type === 'html') return { ...message, result: { ...message.result, files: this.htmlFiles.decode(message.result.files) } };
     return message;
   }
 
@@ -110,3 +108,23 @@ export type EngineAnswer =
   | Exclude<EngineResponse, { type: 'compile' | 'html' }>
   | { id: number; type: 'compile'; result: CompileResult; memoryInUse: number }
   | { id: number; type: 'html'; result: HtmlResult; memoryInUse: number };
+
+/** Main-thread side of a request's file map (`EncodedFiles`): remembers which bytes the worker already has. */
+export class FileSender {
+  private sent = new Map<string, Uint8Array>();
+
+  encode(files: Record<string, FileContent>): EncodedFiles {
+    const sent = new Map<string, Uint8Array>();
+    const encoded: EncodedFiles = {};
+    for (const [path, content] of Object.entries(files)) {
+      if (typeof content === 'string') {
+        encoded[path] = content;
+        continue;
+      }
+      encoded[path] = this.sent.get(path) === content ? null : content;
+      sent.set(path, content);
+    }
+    this.sent = sent;
+    return encoded;
+  }
+}

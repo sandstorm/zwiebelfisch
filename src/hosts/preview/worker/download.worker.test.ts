@@ -1,8 +1,8 @@
-// Tests for download.ts.
+// Tests for download.worker.ts.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createEngine } from '../../../core/typst-engine/typst-engine';
-import { downloadWasm } from './download';
+import { downloadWasm } from './download.worker';
 
 /** A fetch answering with `chunks` as the body and `headers`. */
 function serve(chunks: Uint8Array[], headers: Record<string, string> = {}, status = 200): typeof fetch {
