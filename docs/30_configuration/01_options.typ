@@ -4,19 +4,32 @@
 
 #unreviewed
 
-The _options_ are the object `createEditor(host, options)` takes. They hold three parts; the settings are one of them.
+`createEditor(host, options)` and `<zwiebelfisch-editor>` take one options object. Only its `settings` can change later, with `editor.updateSettings`. `files` and `source` are the starting content; from then on it changes through the user's edits and `editor.files`.
+
+== Options <configuration-options-editor>
+
+All optional (type `EditorOptions`). On `<zwiebelfisch-editor>`, set the `options` property before the element connects (@configuration-embedding-element).
 
 #table(
   columns: 3,
-  [Part], [What], [Change later],
-  [Content], [`files`, `source`, `mainFile`], [`editor.files`, `editor.source`; the user: edits, "Set as main file"],
-  [Settings], [Values by id `<section>.<key>`, each declared by its feature's extension (@configuration-options-settings)], [`editor.updateSettings`; the user: quick open (`:`)],
-  [Wiring], [`extensions`, `user`, `allowFileChange`, `viewType`], [No: fixed at creation],
+  [Option], [Type (default)], [Meaning],
+  [`files`], [`{ [path]: string | Uint8Array }` (`{}`)], [Every file by absolute path (@configuration-embedding-files): Typst as `string`, images and data as `Uint8Array`.],
+  [`mainFile`], [`{ path, locked? }` (`{ path: '/main.typ' }`)], [The compiled file. It cannot be renamed or deleted. Users can make another `.typ` file the main one, for this page only; a collaboration room shares it (not a GitLab room). `locked: true` keeps it fixed, also against the room.],
+  [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[mainFile.path]`.],
+  [`viewType`], [`'visualEditor'` (default), `'sourceEditor'`], [The editor Typst files open in, until the user picks the other tab.],
+  [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them (on a collaboration server: the name signed in there). `color` is their cursor color.],
+  [`settings`], [`{ [id]: value }` (`{}`)], [The settings, by id (@configuration-options-settings). The only option that can change later (@configuration-options-setting).],
+  [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
+  [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],
 )
 
-As in Monaco: `updateSettings` ≈ `updateOptions`, `files` ≈ models, `extensions` ≈ `overrideServices`.
+Configured elsewhere:
 
-== Setting values <configuration-options-setting>
+- Collaboration: the connection passed to `collaboration(…)` (@configuration-collaboration-server-connections).
+- The server and its GitLab: environment variables (@configuration-collaboration-server-running, @configuration-gitlab-integration).
+- Colors: CSS custom properties (@configuration-embedding-theming).
+
+== Changing settings <configuration-options-setting>
 
 ```ts
 const editor = createEditor(host, { settings: { 'files.panel': 'show' } });
@@ -33,7 +46,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
 - Unknown ids and values of the wrong type are ignored with a console warning.
 - An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-settings).
 
-== Settings <configuration-options-settings>
+=== All settings <configuration-options-settings>
 
 #table(
   columns: 3,
@@ -49,7 +62,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
   [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail (@configuration-embedding-devtools).],
 )
 
-=== PDF export options <configuration-options-pdf>
+== PDF export options <configuration-options-pdf>
 
 `editor.exportPdf(options)` and the command `pdfExport.export` take export options by id. The "Download PDF" popover shows each as a checkbox.
 
@@ -58,29 +71,6 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
   [Option], [Values (default)], [Effect],
   [`comments.include`], [`true`, `false` (`false`)], [Keep the margin notes. `false`: the final version, without notes.],
 )
-
-== Editor options <configuration-options-editor>
-
-`createEditor(host, options)` takes `EditorOptions`, all optional. On `<zwiebelfisch-editor>`, set the `options` property before the element connects (@configuration-embedding-element).
-
-#table(
-  columns: 3,
-  [Option], [Type (default)], [Meaning],
-  [`files`], [`{ [path]: string | Uint8Array }` (`{}`)], [Every file by absolute path (@configuration-embedding-files): Typst as `string`, images and data as `Uint8Array`.],
-  [`mainFile`], [`{ path, locked? }` (`{ path: '/main.typ' }`)], [The compiled file. It cannot be renamed or deleted. Users can make another `.typ` file the main one, for this page only; a collaboration room shares it (not a GitLab room). `locked: true` keeps it fixed, also against the room.],
-  [`source`], [`string`], [The main file's text, for single-file hosts. Wins over `files[mainFile.path]`.],
-  [`viewType`], [`'visualEditor'` (default), `'sourceEditor'`], [The editor Typst files open in, until the user picks the other tab.],
-  [`user`], [`{ name, color? }` (`'Anonymous'`)], [Who signs comments and commits, as collaborators see them (on a collaboration server: the name signed in there). `color` is their cursor color.],
-  [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@configuration-options-settings); later `editor.updateSettings`.],
-  [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [A veto on every create, rename, delete and upload, e.g. to refuse image uploads.],
-  [`extensions(builtinExtensions)`], [`(builtinExtensions) => extensions` (the built-ins)], [Add, leave out or replace extensions (@configuration-embedding-extensions).],
-)
-
-Configured elsewhere:
-
-- Collaboration: the connection passed to `collaboration(…)` (@configuration-collaboration-server-connections).
-- The server and its GitLab: environment variables (@configuration-collaboration-server-running, @configuration-gitlab-integration).
-- Colors: CSS custom properties (@configuration-embedding-theming).
 
 == Example <configuration-options-example>
 
