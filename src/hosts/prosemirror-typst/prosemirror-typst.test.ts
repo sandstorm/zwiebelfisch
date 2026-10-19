@@ -1,8 +1,10 @@
+// @vitest-environment jsdom
 // Tests for hosts/prosemirror-typst: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
 // here. The built-in extensions' specs are tested together in editor/editor.prosemirror-typst.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import { EditorState } from '@tiptap/pm/state';
+import { AllSelection, EditorState } from '@tiptap/pm/state';
+import { EditorView } from '@tiptap/pm/view';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
 import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './prosemirror-typst';
@@ -102,5 +104,15 @@ describe('Typst ↔ ProseMirror conversion framework', () => {
     expect(sourceToPos(doc, SourceOffset.of(source.indexOf('*')))).toBe(bold);
     expect(posToSource(doc, bold)).toBe(source.indexOf('important'));
     expect(sourceToPos(doc, SourceOffset.of(source.lastIndexOf('*')))).toBe(after(doc, 'important'));
+  });
+
+  it("keeps raw blocks and raw inlines through ProseMirror's default HTML clipboard", () => {
+    const source = '#set text(lang: "de")\n\nSome #emph[x] text, $x^2$.';
+    const copied = new EditorView(null, { state: EditorState.create({ doc: parseTypstWith(source, minimum) }) });
+    const html = copied.serializeForClipboard(copied.state.doc.slice(0, copied.state.doc.content.size)).dom.innerHTML;
+    const pasted = new EditorView(null, { state: EditorState.create({ doc: parseTypstWith('', minimum) }) });
+    pasted.dispatch(pasted.state.tr.setSelection(new AllSelection(pasted.state.doc)));
+    expect(pasted.pasteHTML(html, new Event('paste') as ClipboardEvent)).toBe(true);
+    expect(serializeToTypst(pasted.state.doc)).toBe(source);
   });
 });

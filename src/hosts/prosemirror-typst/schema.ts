@@ -30,9 +30,16 @@ export const TypstDocument = Document.extend({
   },
 });
 
+/** `src` carried as `data-src` in HTML, so ProseMirror's default HTML clipboard keeps a raw box's Typst. */
+const sourceInHTML = {
+  default: '',
+  parseHTML: (element: HTMLElement) => element.getAttribute('data-src') ?? '',
+  renderHTML: (attrs: Record<string, unknown>) => ({ 'data-src': attrs.src }),
+};
+
 /**
  * Block-level Typst no spec models (`#set`, `#let`, display math, …), kept
- * verbatim and editable as code in a raw box.
+ * verbatim and editable as code in a raw box. In HTML a `<pre data-src>`, read before a code block's `<pre>`.
  */
 export const RawBlock = Node.create({
   name: 'rawBlock',
@@ -40,16 +47,20 @@ export const RawBlock = Node.create({
   atom: true,
   selectable: true,
   addAttributes() {
-    return { src: { default: '', rendered: false }, sep: { default: null, rendered: false } };
+    return { src: sourceInHTML, sep: { default: null, rendered: false } };
   },
-  renderHTML({ node }) {
-    return ['pre', { class: 'zwf-visual__raw-block' }, node.attrs.src];
+  parseHTML() {
+    return [{ tag: 'pre[data-src]', priority: 60 }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['pre', { ...HTMLAttributes, class: 'zwf-visual__raw-block' }, node.attrs.src];
   },
 });
 
 /**
  * Inline Typst no spec models (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code.
  * `code`: `src` is written in code, without `#` (a table cell that is an expression, like `ms(18)`).
+ * In HTML a `<code data-src>` (`data-code` when `code`), read before the code mark's `<code>`.
  */
 export const RawInline = Node.create({
   name: 'rawInline',
@@ -57,10 +68,20 @@ export const RawInline = Node.create({
   inline: true,
   atom: true,
   addAttributes() {
-    return { src: { default: '', rendered: false }, code: { default: false, rendered: false } };
+    return {
+      src: sourceInHTML,
+      code: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.hasAttribute('data-code'),
+        renderHTML: (attrs: Record<string, unknown>) => (attrs.code ? { 'data-code': '' } : {}),
+      },
+    };
   },
-  renderHTML({ node }) {
-    return ['code', { class: 'zwf-visual__raw-inline' }, node.attrs.src];
+  parseHTML() {
+    return [{ tag: 'code[data-src]', priority: 60 }];
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    return ['code', { ...HTMLAttributes, class: 'zwf-visual__raw-inline' }, node.attrs.src];
   },
 });
 
