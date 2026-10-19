@@ -1,4 +1,4 @@
-// See VisualEditor in ../visual-editor.ts.
+// See VisualEditor in ../visual-editor-impl.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';

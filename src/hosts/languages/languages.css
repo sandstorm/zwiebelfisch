@@ -1,4 +1,4 @@
-/* Links in every editor: their hint and their look. See LanguagesHost in languages.ts, whose styleSheet the workbench
+/* Links in every editor: their hint and their look. See LanguagesHost in languages-impl.ts, whose styleSheet the workbench
    adds, and link-hover.ts. Colors come from the --zwf-* tokens. */
 /* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered; a CodeMirror
    editor owns its text's DOM, so it carries the class and the hovered mark shows it */

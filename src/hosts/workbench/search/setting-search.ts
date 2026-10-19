@@ -1,5 +1,5 @@
 // The settings in search everywhere: switch a boolean, pick one of an enum's values. See WorkbenchHost in
-// ../workbench.ts.
+// ../workbench-impl.ts.
 import type { QuickPickItem, SearchItem, SearchProvider, WindowApi } from '../../window/window';
 import type { ConfigurationProperty } from '../../workspace/workspace';
 

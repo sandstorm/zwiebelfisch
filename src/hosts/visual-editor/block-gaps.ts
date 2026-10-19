@@ -1,4 +1,4 @@
-// The caret between blocks. See VisualEditor in visual-editor.ts.
+// The caret between blocks. See VisualEditor in visual-editor-impl.ts.
 import { Extension, type Editor } from '@tiptap/core';
 import { Slice, type Node, type ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, Selection, TextSelection, type EditorState } from '@tiptap/pm/state';

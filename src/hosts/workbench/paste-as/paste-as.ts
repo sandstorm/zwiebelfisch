@@ -1,4 +1,4 @@
-// See WorkbenchHost in ../workbench.ts.
+// See WorkbenchHost in ../workbench-impl.ts.
 import type { PasteChoice, PasteChoices } from '../../languages/languages';
 import type { WindowApi } from '../../window/window';
 

@@ -1,4 +1,4 @@
-// See VisualEditor in ./visual-editor.ts.
+// See VisualEditor in ./visual-editor-impl.ts.
 import { Extension } from '@tiptap/core';
 import { Plugin, type EditorState, type PluginView, type Transaction } from '@tiptap/pm/state';
 

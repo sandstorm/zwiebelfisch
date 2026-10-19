@@ -1,4 +1,4 @@
-// Copy and paste as Typst text. See VisualEditor in visual-editor.ts.
+// Copy and paste as Typst text. See VisualEditor in visual-editor-impl.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';

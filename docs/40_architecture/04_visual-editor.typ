@@ -4,7 +4,7 @@
 
 #unreviewed
 
-The word-processor editor: a #link("https://tiptap.dev/")[Tiptap] 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-editor/`. It models a Typst construct only when an extension contributes it; *anything else shows as raw Typst in a box*. Why it is built so: the module comment of `visual-editor.ts`.
+The word-processor editor: a #link("https://tiptap.dev/")[Tiptap] 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-editor/`. It models a Typst construct only when an extension contributes it; *anything else shows as raw Typst in a box*. Why it is built so: the doc comment of `VisualEditor` in `visual-editor-impl.ts`.
 
 == VisualEditor <architecture-visual-editor-class>
 

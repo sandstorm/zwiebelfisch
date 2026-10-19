@@ -1,4 +1,4 @@
-// See WorkbenchHost in ../workbench.ts and docs/40_architecture/07_workbench.typ, "Concepts".
+// See WorkbenchHost in ../workbench-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 import { div, restoreSideBarState, SideBar, type PanelCommands, type Side } from './side-bar';

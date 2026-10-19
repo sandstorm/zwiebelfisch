@@ -24,7 +24,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
 - *`*.worker.ts` runs only in a Web Worker*; files without the suffix run on the main thread or in both.
-- *No re-exports*, except `src/index.ts`. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`).
+- *No re-exports*, except `src/index.ts` and a host entry's re-export of its implementation. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`).
 - *Folders are named after a concept*, never `utils/`, `impl/`, `helpers/`.
 - *No cycles between modules*.
 
@@ -43,6 +43,8 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 - *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
 - *Hosts keep only mechanism.* Ask for every host member: mechanism, or one feature's policy? Policy is an extension.
+- *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its only re-export, at the bottom, is the implementation others construct.
+- *`<name>-impl.ts` is the implementation*, starting with `See <Contract> in <name>.ts`.
 - *Extensions never depend on each other*: not through imports, services, commands or schema names. A host offers a generic contribution point instead, and the consumer reads every contribution. Another extension's schema names are read only as data (`figureBody`) and always guarded (`schema.nodes.x`, `editor.can()`).
 
 == Extension API <architecture-conventions-api>

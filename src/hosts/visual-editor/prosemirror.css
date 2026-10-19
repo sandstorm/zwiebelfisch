@@ -1,5 +1,5 @@
 /* ProseMirror core styles (prosemirror-view/style/prosemirror.css, MIT), vendored so they also reach a shadow root;
-   Tiptap's own CSS injection is disabled. See VisualEditorHost in visual-editor.ts, whose styleSheet holds them. */
+   Tiptap's own CSS injection is disabled. See VisualEditorHost in visual-editor-impl.ts, whose styleSheet holds them. */
 .ProseMirror {
   position: relative;
 }

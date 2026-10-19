@@ -1,4 +1,4 @@
-// The handle beside a block, to drag it elsewhere. See VisualEditor in visual-editor.ts.
+// The handle beside a block, to drag it elsewhere. See VisualEditor in visual-editor-impl.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState, type PluginView } from '@tiptap/pm/state';

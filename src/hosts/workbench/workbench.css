@@ -1,5 +1,5 @@
 /* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
-   editors' panels, the editor/title menu) and the status bar. See WorkbenchHost in workbench.ts, which puts it in
+   editors' panels, the editor/title menu) and the status bar. See WorkbenchHost in workbench-impl.ts, which puts it in
    first, after the tokens and the frame of editor.css. */
 .zwf-editor__side {
   grid-row: 1;

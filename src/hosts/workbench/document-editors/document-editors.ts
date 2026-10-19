@@ -1,4 +1,4 @@
-// See WorkbenchHost in ../workbench.ts and docs/40_architecture/07_workbench.typ, "Concepts".
+// See WorkbenchHost in ../workbench-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TextChange, TypstDocument } from '../../../core/typst-document/typst-document';

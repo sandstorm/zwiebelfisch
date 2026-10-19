@@ -1,4 +1,4 @@
-// The parts of codeColors: CodeMirror's look in the widget's color scheme, light or dark. See codeColors in source-editor.ts.
+// The parts of codeColors: CodeMirror's look in the widget's color scheme, light or dark. See codeColors in source-editor-impl.ts.
 import { HighlightStyle } from '@codemirror/language';
 import { Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
