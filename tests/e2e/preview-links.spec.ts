@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 async function sectionPage(page: Page): Promise<string> {
   await openFile(page, TARGET.path);
   await selectText(visual(page).locator('p', { hasText: TARGET.words }).first(), TARGET.words);
-  const shaded = preview(page).locator('.zwf-preview__page', { has: page.locator('.zwf-preview__selection') });
+  const shaded = preview(page).locator('.zwf-preview__page', { has: page.locator('.zwf-preview-sync__selection') });
   await expect(shaded).toHaveCount(1);
   return (await shaded.getAttribute('data-number'))!;
 }

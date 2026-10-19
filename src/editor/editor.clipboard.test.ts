@@ -16,10 +16,11 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   Preview: class {
     update() {}
     reveal() {}
-    setSelectionHighlight() {}
     snippet = async () => null;
     onDidRender = () => ({ dispose() {} });
     onDidClickPage = () => ({ dispose() {} });
+    createPageOverlay = () => ({ set() {}, dispose() {} });
+    boxesFor = async () => [];
     onDidChangeDiagnostics = () => ({ dispose() {} });
     registerToolbarItem = () => ({ dispose() {} });
     registerPdfExportOption = () => ({ dispose() {} });

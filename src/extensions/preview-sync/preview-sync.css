@@ -1,5 +1,6 @@
-/* The preview-sync extension's styles: the "Follow cursor" switch in the preview toolbar.
-   See preview-sync.ts, which registers it; colors from the widget's --zwf-* tokens. */
+/* The preview-sync extension's styles: the "Follow cursor" switch in the preview toolbar, and its page overlays (the
+   outline of a click, the shading of the selection). See preview-sync.ts, which registers it; colors from the
+   widget's --zwf-* tokens. */
 /* "Follow cursor": an on/off switch (track and thumb), not a plain button (as specific as the toolbar's button rule) */
 button.zwf-preview-sync__follow {
   display: inline-flex;
@@ -33,3 +34,22 @@ button.zwf-preview-sync__follow {
 .zwf-preview-sync__follow[aria-checked='true'] > .zwf-preview-sync__switch { background: var(--zwf-accent); }
 .zwf-preview-sync__follow[aria-checked='true'] > .zwf-preview-sync__switch::after { transform: translateX(12px); }
 .zwf-preview-sync__follow:focus-visible { outline: 2px solid var(--zwf-accent); outline-offset: 1px; border-radius: 4px; }
+/* Page overlays (the preview places them in percent of their page) */
+.zwf-preview-sync__click {
+  position: absolute;
+  margin: -2px;
+  padding: 2px;
+  border-radius: 3px;
+  background: var(--zwf-jump);
+  outline: 1px solid var(--zwf-accent);
+  pointer-events: none;
+}
+/* the selection: a plain translucent fill, as a text selection (no outline: that marks a click) */
+.zwf-preview-sync__selection {
+  position: absolute;
+  margin: -1px;
+  padding: 1px;
+  border-radius: 2px;
+  background: var(--zwf-selection-highlight);
+  pointer-events: none;
+}

@@ -38,4 +38,14 @@ describe('OverlayLayer', () => {
     layer.redraw();
     expect(marks()).toEqual([{ page: '3', left: '0%', width: '10%' }]);
   });
+
+  it('removes its boxes when disposed, and draws nothing after', () => {
+    const { layer, marks } = setup();
+    layer.set([{ page: PageIndex.of(0), x: Pt.of(0), y: Pt.of(0), w: Pt.of(20), h: Pt.of(10) }]);
+    layer.dispose();
+    expect(marks()).toEqual([]);
+    layer.set([{ page: PageIndex.of(0), x: Pt.of(0), y: Pt.of(0), w: Pt.of(20), h: Pt.of(10) }]);
+    layer.redraw();
+    expect(marks()).toEqual([]);
+  });
 });

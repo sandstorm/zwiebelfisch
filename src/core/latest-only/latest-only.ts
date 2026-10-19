@@ -1,7 +1,7 @@
 /**
  * A queue that runs an async task per pushed value, one at a time, keeping only the newest value pushed meanwhile.
  *
- * Used by the preview for its compiles, reveals and highlights, so they never fall behind typing.
+ * Used by the preview for its compiles and reveals, so they never fall behind typing.
  *
  * Guarantees: the first value pushed while idle starts synchronously; a value is dropped only when a newer one was
  * pushed before its turn; the running task can ask whether a newer value waits; runs start at least `interval` ms

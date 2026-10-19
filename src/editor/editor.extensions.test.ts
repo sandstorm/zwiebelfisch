@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
-import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engine';
+import { type PageRect, type TypstDiagnostic, PageIndex, Pt } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
@@ -25,14 +25,16 @@ interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
   pdfOptions: PdfExportOption[];
   revealed: [string, SourceRange][];
-  /** How often the click outline was removed. */
-  cleared: number;
-  /** Every `setSelectionHighlight(path, ranges)` (the text left out). */
-  shaded: [string, readonly SourceRange[]][];
+  /** Every `boxesFor(path, ranges)` (the text left out). */
+  lookedUp: [string, readonly SourceRange[]][];
   /** What `setViewOptionValues` got last. */
   viewValues: Readonly<Record<string, boolean>>;
   compiled(diagnostics: TypstDiagnostic[]): void;
   click(click: PageClick): void;
+  /** A successful compile was shown (`onDidRender`). */
+  render(): void;
+  /** The boxes of the page overlay of class `className` (none: no such overlay); `boxesFor` answers a box per range. */
+  drawn(className: string): readonly PageRect[];
 }
 const previews: FakePreview[] = [];
 
@@ -49,8 +51,9 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly toolbarItems: unknown[] = [];
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
-      cleared = 0;
-      readonly shaded: unknown[] = [];
+      readonly lookedUp: unknown[] = [];
+      readonly #overlays = new Map<string, readonly unknown[]>();
+      readonly #renders = new EventEmitter<void>();
       readonly #diagnostics = new EventEmitter<readonly TypstDiagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
@@ -64,18 +67,26 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       click(click: PageClick) {
         this.#clicks.fire(click);
       }
-      update() {}
-      clearClickHighlight() {
-        this.cleared++;
+      render() {
+        this.#renders.fire();
       }
+      drawn(className: string) {
+        return this.#overlays.get(className) ?? [];
+      }
+      update() {}
       reveal(...args: unknown[]) {
         this.revealed.push(args);
       }
-      setSelectionHighlight(path: string, ranges: unknown[]) {
-        this.shaded.push([path, ranges]);
+      createPageOverlay(className: string) {
+        this.#overlays.set(className, []);
+        return { set: (boxes: unknown[]) => this.#overlays.set(className, boxes), dispose: () => this.#overlays.delete(className) };
+      }
+      async boxesFor(path: string, ranges: { from: number; to: number }[]) {
+        this.lookedUp.push([path, ranges]);
+        return ranges.map(({ from, to }) => ({ page: 0, x: from, y: 0, w: to - from, h: 1 }));
       }
       snippet = async () => null;
-      onDidRender = () => new Disposable(() => {});
+      onDidRender = this.#renders.event;
       exportPdf = exportPdf;
       readonly #placements = new Map<unknown, string>();
       // in toolbar order: by group, then order (the built-ins use neither `navigation` nor equal places)
@@ -501,76 +512,90 @@ describe('the built-in extensions', () => {
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
-    preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) });
+    preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10), boxes: [] });
     expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
   });
 
-  it("removes a click's outline in the preview with the next edit (any view) or once the selection moves away", () => {
+  it("outlines a click in the preview until the next edit (any view), the next render or once the selection moves away", () => {
     const { editor, preview, source } = setup({ source: '= Hi\n\nText more\n' });
-    const click = { path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) };
+    const boxes = [{ page: PageIndex.of(0), x: Pt.of(6), y: Pt.of(0), w: Pt.of(4), h: Pt.of(1) }];
+    const click = { path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10), boxes };
+    const outline = () => preview.drawn('zwf-preview-sync__click');
     preview.click(click);
+    expect(outline()).toEqual(boxes);
     // selecting the clicked range (also again, as a focus may) keeps it
     source().dispatch({ selection: { anchor: 6, head: 10 } });
-    expect(preview.cleared).toBe(0);
+    expect(outline()).toEqual(boxes);
     source().dispatch({ selection: { anchor: 2 } });
-    expect(preview.cleared).toBe(1);
-    // once gone, nothing is removed again
-    source().dispatch({ selection: { anchor: 3 } });
-    expect(preview.cleared).toBe(1);
+    expect(outline()).toEqual([]);
 
     preview.click(click);
-    expect(preview.cleared).toBe(1);
     source().dispatch({ changes: { from: 0, to: 0, insert: '!' }, selection: { anchor: 7, head: 11 } });
-    expect(preview.cleared).toBe(2);
+    expect(outline()).toEqual([]);
 
     // an edit from elsewhere (another editor, the API) too
     preview.click(click);
     editor.files = { '/main.typ': '= Hi\n\nOther\n' };
-    expect(preview.cleared).toBe(3);
+    expect(outline()).toEqual([]);
+
+    preview.click({ ...click, from: SourceOffset.of(6), to: SourceOffset.of(11) });
+    expect(outline()).toEqual(boxes);
+    preview.render();
+    expect(outline()).toEqual([]);
   });
 
-  it('shades the selection of the shown file in the preview (Source or Visual editor) once it rests, and clears it when collapsed', () => {
+  it('shades the selection of the shown file in the preview (Source or Visual editor) once it rests, and clears it when collapsed', async () => {
     vi.useFakeTimers();
     try {
       const { preview, source } = setup({ source: '= Hi\n\nText more\n', settings: { 'previewSync.followCursor': false } });
-      // a drag: only where it rests is shaded
+      const shading = () => preview.drawn('zwf-preview-sync__selection').map(({ x, w }) => [x, x + w]);
+      // a drag: only where it rests is looked up
       source().dispatch({ selection: { anchor: 6, head: 8 } });
       source().dispatch({ selection: { anchor: 6, head: 10 } });
-      expect(preview.shaded).toEqual([]);
-      vi.advanceTimersByTime(100);
-      expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 10 }]]]);
+      expect(preview.lookedUp).toEqual([]);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(preview.lookedUp).toEqual([['/main.typ', [{ from: 6, to: 10 }]]]);
+      expect(shading()).toEqual([[6, 10]]);
+      // new pages: looked up again at once
+      preview.render();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(preview.lookedUp).toHaveLength(2);
+      expect(shading()).toEqual([[6, 10]]);
       source().dispatch({ selection: { anchor: 7 } });
-      expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
+      expect(shading()).toEqual([]);
       // the Visual editor: its selection in the source
       const { preview: visual, host } = setup({ viewType: VISUAL_EDITOR, source: 'Hello world.\n' });
       const tiptap = (host.querySelector('.ProseMirror') as HTMLElement & { editor: { commands: { setTextSelection(range: { from: number; to: number }): void } } }).editor;
       tiptap.commands.setTextSelection({ from: 7, to: 12 });
-      vi.advanceTimersByTime(100);
-      expect(visual.shaded.at(-1)).toEqual(['/main.typ', [{ from: 6, to: 11 }]]);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(visual.lookedUp.at(-1)).toEqual(['/main.typ', [{ from: 6, to: 11 }]]);
       tiptap.commands.setTextSelection({ from: 3, to: 3 });
-      expect(visual.shaded.at(-1)).toEqual(['/main.typ', []]);
+      expect(visual.drawn('zwf-preview-sync__selection')).toEqual([]);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("does not shade what a click in the preview selected (its outline marks it), nor anything while previewSync.highlightSelection is off", () => {
+  it("does not shade what a click in the preview selected (its outline marks it), nor anything while previewSync.highlightSelection is off", async () => {
     vi.useFakeTimers();
     try {
       const { editor, preview, source } = setup({ source: '= Hi\n\nText more\n' });
-      preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) });
-      vi.advanceTimersByTime(100);
-      expect(preview.shaded).toEqual([]);
+      const shading = () => preview.drawn('zwf-preview-sync__selection').map(({ x, w }) => [x, x + w]);
+      const boxes = [{ page: PageIndex.of(0), x: Pt.of(6), y: Pt.of(0), w: Pt.of(4), h: Pt.of(1) }];
+      preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10), boxes });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(preview.lookedUp).toEqual([]);
       // moved on: the outline goes, the new selection is shaded
       source().dispatch({ selection: { anchor: 6, head: 15 } });
-      vi.advanceTimersByTime(100);
-      expect(preview.cleared).toBe(1);
-      expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 15 }]]]);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(preview.drawn('zwf-preview-sync__click')).toEqual([]);
+      expect(shading()).toEqual([[6, 15]]);
       editor.updateSettings({ 'previewSync.highlightSelection': false });
-      expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
+      expect(shading()).toEqual([]);
       source().dispatch({ selection: { anchor: 0, head: 4 } });
-      vi.advanceTimersByTime(100);
-      expect(preview.shaded).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(preview.lookedUp).toHaveLength(1);
+      expect(shading()).toEqual([]);
     } finally {
       vi.useRealTimers();
     }

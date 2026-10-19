@@ -1,6 +1,5 @@
-/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, the outline of a click, the
-   shading of highlighted source ranges, the dimming of a failed compile and the loader. See Preview in preview.ts,
-   whose styleSheet the workbench adds. */
+/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, the dimming of a failed compile
+   and the loader. See Preview in preview.ts, whose styleSheet the workbench adds. */
 .zwf-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--zwf-preview-bg); }
 .zwf-preview__toolbar {
   display: flex;
@@ -52,28 +51,10 @@
 }
 .zwf-preview__content svg { display: block; width: 100%; height: auto; }
 /* Dark mode: the pages inverted, as dark-mode PDF readers do (white text on black, hues kept, pictures
-   turned back); the overlays (highlights) are outside the content and keep their colors. */
+   turned back); page overlays (createPageOverlay) are outside the content and keep their colors. */
 .zwf-editor[data-scheme='dark'] .zwf-preview__page { background: black; }
 .zwf-editor[data-scheme='dark'] .zwf-preview__content,
 .zwf-editor[data-scheme='dark'] .zwf-preview__content image { filter: invert(1) hue-rotate(180deg); }
-.zwf-preview__highlight {
-  position: absolute;
-  margin: -2px;
-  padding: 2px;
-  border-radius: 3px;
-  background: var(--zwf-jump);
-  outline: 1px solid var(--zwf-accent);
-  pointer-events: none;
-}
-/* setSelectionHighlight: a plain translucent fill, as a text selection (no outline: that marks a click) */
-.zwf-preview__selection {
-  position: absolute;
-  margin: -1px;
-  padding: 1px;
-  border-radius: 2px;
-  background: var(--zwf-selection-highlight);
-  pointer-events: none;
-}
 .zwf-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .zwf-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 /* The loader (progress/loader.ts): over the empty pages until the first ones come, so nothing moves then. */

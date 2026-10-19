@@ -1,11 +1,11 @@
 // End-to-end tests (Playwright, against the demo build): the selection of the Source and Visual editors shaded in the
-// preview (preview-sync's `previewSync.highlightSelection`, the preview's `setSelectionHighlight`).
+// preview (preview-sync's `previewSync.highlightSelection`, its page overlay).
 import { expect, type Page } from '@playwright/test';
 import { test, clickGlyph } from './fixtures';
 import { compiled, visual } from './visual-helpers';
 
 const preview = (page: Page) => page.getByTestId('zwf-preview');
-const shading = (page: Page) => preview(page).locator('.zwf-preview__selection');
+const shading = (page: Page) => preview(page).locator('.zwf-preview-sync__selection');
 
 /** Selects the line of the main file holding `text` in the Source editor (a short line: Home / End stop at wraps). */
 async function selectLine(page: Page, text: string) {
@@ -43,13 +43,13 @@ test('shades the text selected in the Visual editor, and nothing once the select
 test('a click in the preview is outlined, not shaded too; selecting elsewhere shades that instead', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   await clickGlyph(preview(page).locator('.zwf-preview__page svg use').first());
-  await expect(preview(page).locator('.zwf-preview__highlight').first()).toBeVisible();
+  await expect(preview(page).locator('.zwf-preview-sync__click').first()).toBeVisible();
   // give the shading its delay: it must stay away
   await page.waitForTimeout(300);
   await expect(shading(page)).toHaveCount(0);
 
   // the heading's line with its `= `: more than the click selected
   await selectLine(page, '= Typst in five minutes');
-  await expect(preview(page).locator('.zwf-preview__highlight')).toHaveCount(0);
+  await expect(preview(page).locator('.zwf-preview-sync__click')).toHaveCount(0);
   await expect(shading(page).first()).toBeVisible();
 });

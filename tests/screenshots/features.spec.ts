@@ -82,7 +82,7 @@ test('bidirectional-navigation', async ({ page }) => {
   await hideFiles(page);
   // the heading clicked in the preview, highlighted there, and selected in the Visual editor
   await clickFirstGlyph(page);
-  const highlights = page.getByTestId('zwf-preview').locator('.zwf-preview__highlight');
+  const highlights = page.getByTestId('zwf-preview').locator('.zwf-preview-sync__click');
   await expect(highlights.first()).toBeVisible();
   await shoot(page, 'bidirectional-navigation', [visual(page).locator('h1').first(), highlights], { padding: 24 });
 });

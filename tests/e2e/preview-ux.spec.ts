@@ -56,7 +56,7 @@ test('clicking keeps working when zoomed in', async ({ page }) => {
 test('highlights the clicked text in the preview', async ({ page }) => {
   await clickGlyph(pages(page).locator('svg use').first());
   // every place the clicked text is drawn: the heading, and its entry in the demo's outline
-  const highlights = pages(page).first().locator('.zwf-preview__highlight');
+  const highlights = pages(page).first().locator('.zwf-preview-sync__click');
   await expect(highlights.first()).toBeVisible();
   const boxes = await highlights.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect));
   // the glyph's origin, not its bounding box: Firefox reports a size-less <use> as large as the page
@@ -75,7 +75,7 @@ test('highlights the clicked text in the preview', async ({ page }) => {
 
 test("a double click's highlights go with the next edit or once the selection moves, in either editor", async ({ page }) => {
   // the heading's outline, the first of its highlights (its entry in the demo's outline has one, too)
-  const outline = pages(page).first().locator('.zwf-preview__highlight');
+  const outline = pages(page).first().locator('.zwf-preview-sync__click');
   const jump = page.getByTestId('zwf-source').locator('.zwf-source__jump');
   const heading = pages(page).locator('svg use').first();
 

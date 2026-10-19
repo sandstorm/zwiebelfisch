@@ -2,24 +2,28 @@
 import type { PageRect } from '../../../core/typst-engine/typst-engine';
 import { percentOfPage } from './geometry';
 import type { PageList } from './page-list';
+import type { PageOverlay } from '../preview';
 
 /**
  * Boxes (in points) drawn over the pages as elements of one class. They are children of the page
  * elements, placed in percent of the page, so they stay in place at any zoom and through lazy
  * rendering; `redraw` puts them on the pages again after the pages were rendered anew.
  *
- * @internal The preview's click and selection highlights; extensions set them through `preview.setSelectionHighlight` and `clearClickHighlight`.
+ * What `preview.createPageOverlay` returns; `onDispose` lets the preview stop redrawing it.
  */
-export class OverlayLayer {
+export class OverlayLayer implements PageOverlay {
   private boxes: readonly PageRect[] = [];
   private elements: HTMLElement[] = [];
+  private disposed = false;
 
   constructor(
     private readonly pages: PageList,
     private readonly className: string,
+    private readonly onDispose: () => void = () => {},
   ) {}
 
   set(boxes: readonly PageRect[]): void {
+    if (this.disposed) return;
     this.boxes = boxes;
     this.redraw();
   }
@@ -30,6 +34,13 @@ export class OverlayLayer {
       const hit = this.pages.at(box.page);
       if (hit) this.elements.push(overlay(hit.element, this.className, percentOfPage(box, hit.page)));
     }
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.boxes = [];
+    this.clear();
+    this.onDispose();
   }
 
   private clear(): void {

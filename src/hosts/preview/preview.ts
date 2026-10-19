@@ -2,7 +2,7 @@ import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
-import type { ElementLocation, HtmlFile, TypstDiagnostic, PageIndex, PdfEntry, PdfResult, Pt } from '../../core/typst-engine/typst-engine';
+import type { ElementLocation, HtmlFile, TypstDiagnostic, PageIndex, PageRect, PdfEntry, PdfResult, Pt } from '../../core/typst-engine/typst-engine';
 
 /**
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
@@ -53,12 +53,10 @@ export interface PreviewContributions {
    */
   reveal(path: ProjectPath, range: SourceRange): void;
   /**
-   * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
-   * until the next click, a compile or `clearClickHighlight`; package files are outlined but not reported).
+   * Someone clicked something in the preview that has a source location in a project file (clicks on package files
+   * are not reported). Nothing is marked: the boxes it gives are for a `createPageOverlay`.
    */
   readonly onDidClickPage: Event<PageClick>;
-  /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
-  clearClickHighlight(): void;
   /**
    * The bytes of memory the engine (its wasm, in the worker) held after the last compile; 0 before the first. It
    * grows and never shrinks, up to 4 GiB, where the engine crashes and the preview starts a new one. For looking at
@@ -68,12 +66,17 @@ export interface PreviewContributions {
   /** `engineMemory` changed: after a compile that made the engine grow, or the first of a new engine. */
   readonly onDidChangeEngineMemory: Event<void>;
   /**
-   * Shades where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), in the
-   * selection color; replaces the ranges set before, an empty list clears them. Drawn once a compile of `text` is
-   * shown, nothing while the pages show other text; after every later compile the boxes are looked up anew. Cheap to
-   * call on every selection change: only the newest ranges are looked up.
+   * Draws boxes over the pages as elements of class `className` (the caller's CSS styles them; the preview places
+   * them in percent of their page, so they keep their place at any zoom), until disposed. The boxes set stay through
+   * compiles: after every render they are drawn on the new pages, until `set` replaces them.
    */
-  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void;
+  createPageOverlay(className: string): PageOverlay;
+  /**
+   * Where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), on the pages,
+   * once the compiles of the files given before ran. Empty when they draw nothing or the pages show other text than
+   * `text` (it was edited since, or the document has errors).
+   */
+  boxesFor(path: ProjectPath, ranges: readonly SourceRange[], text: string): Promise<readonly PageRect[]>;
   /**
    * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
    * nothing or `text` is not what was compiled last.
@@ -182,6 +185,16 @@ export interface PreviewContext {
 /** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
 export interface PageClick extends SourceRange {
   readonly path: ProjectPath;
+  /** Where the clicked source is drawn: one box per line and page; empty for what is not text. */
+  readonly boxes: readonly PageRect[];
+}
+
+/** Boxes drawn over the preview's pages (`PreviewContributions.createPageOverlay`), as elements of one class. */
+export interface PageOverlay {
+  /** Draws `boxes` (in pt) instead of the ones set before; an empty list clears them. */
+  set(boxes: readonly PageRect[]): void;
+  /** Removes the boxes; the overlay draws nothing any more. */
+  dispose(): void;
 }
 
 /**

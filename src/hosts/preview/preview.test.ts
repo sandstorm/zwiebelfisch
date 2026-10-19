@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tests for preview.ts: the PDF export options registry, the view options, the renderers, the click outline, the selection
-// shading, the loader and restarting a crashed engine (the engine worker is replaced by a stub that answers what
+// Tests for preview.ts: the PDF export options registry, the view options, the renderers, clicks, page overlays
+// and boxesFor, the loader and restarting a crashed engine (the engine worker is replaced by a stub that answers what
 // `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -12,7 +12,7 @@ import {
   type PreviewRenderer,
   type PreviewViewOption,
 } from './preview';
-import type { ElementLocation } from '../../core/typst-engine/typst-engine';
+import { type ElementLocation, PageIndex, Pt } from '../../core/typst-engine/typst-engine';
 import type { EngineRequest, LoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -105,14 +105,14 @@ describe('Preview.update', () => {
   });
 });
 
-describe('Preview click outline', () => {
+describe('Preview clicks', () => {
   let preview: Preview;
   afterEach(() => {
     preview.dispose();
     engine.answer = () => null;
   });
 
-  it('outlines the clicked text and reports its source, until clearClickHighlight', async () => {
+  it('reports the source of the clicked text and where it is drawn, marking nothing', async () => {
     const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
     const boxes = [{ page: 0, x: 10, y: 10, w: 20, h: 10 }];
     engine.answer = (request) => {
@@ -124,19 +124,17 @@ describe('Preview click outline', () => {
     preview = new Preview(container);
     const clicks: PageClick[] = [];
     preview.onDidClickPage((click) => clicks.push(click));
-    const outlines = () => container.querySelectorAll('.zwf-preview__highlight').length;
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
     await vi.waitFor(() => expect(container.querySelector('.zwf-preview__page')).not.toBeNull());
+    const before = container.querySelector('.zwf-preview__page')!.childElementCount;
 
     container.querySelector('.zwf-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await vi.waitFor(() => expect(outlines()).toBe(1));
-    expect(clicks).toEqual([{ path: '/main.typ', from: 0, to: 2 }]);
-    preview.clearClickHighlight();
-    expect(outlines()).toBe(0);
+    await vi.waitFor(() => expect(clicks).toEqual([{ path: '/main.typ', from: 0, to: 2, boxes }]));
+    expect(container.querySelector('.zwf-preview__page')!.childElementCount).toBe(before);
   });
 });
 
-describe('Preview.setSelectionHighlight', () => {
+describe('Preview page overlays and boxesFor', () => {
   let preview: Preview;
   afterEach(() => {
     preview.dispose();
@@ -146,59 +144,59 @@ describe('Preview.setSelectionHighlight', () => {
   function setup() {
     const page = (hash: string) => ({ hash, width: 100, height: 100, svg: '<svg></svg>' });
     const asked: SourceRange[][] = [];
+    let compiles = 0;
     engine.answer = (body) => {
       const request = body as EngineRequest;
-      if (request.type === 'compile') return { type: 'compile', result: { pages: [page(String(asked.length))], diagnostics: [], missingPackages: [] } };
+      if (request.type === 'compile') return { type: 'compile', result: { pages: [page(String(compiles++))], diagnostics: [], missingPackages: [] } };
       if (request.type === 'boxes') {
         asked.push(request.ranges);
         return { type: 'boxes', boxes: request.ranges.map(({ from, to }) => ({ page: 0, x: from, y: 0, w: to - from, h: 10 })) };
       }
-      if (request.type === 'click') return { type: 'click', jump: { kind: 'source', path: '/main.typ', offset: 1, from: 0, to: 2, boxes: [{ page: 0, x: 0, y: 0, w: 5, h: 5 }] } };
       return null;
     };
     const container = document.createElement('div');
     preview = new Preview(container);
-    const shaded = () => [...container.querySelectorAll<HTMLElement>('.zwf-preview__selection')].map((box) => [box.style.left, box.style.width]);
-    const outlined = () => container.querySelectorAll('.zwf-preview__highlight').length;
-    return { container, asked, shaded, outlined };
+    const drawn = (className: string) => [...container.querySelectorAll<HTMLElement>(`.${className}`)].map((box) => [box.style.left, box.style.width]);
+    return { container, asked, drawn };
   }
   const path = ProjectPath.of('/main.typ');
   const range = (from: number, to: number) => SourceRange.of({ from, to });
+  const box = (x: number, w: number) => ({ page: PageIndex.of(0), x: Pt.of(x), y: Pt.of(0), w: Pt.of(w), h: Pt.of(10) });
 
-  it('shades the boxes of the ranges once their text is compiled, and clears them with an empty list', async () => {
-    const { shaded } = setup();
-    preview.update({ '/main.typ': 'Hello world' }, '/main.typ');
-    preview.setSelectionHighlight(path, [range(0, 5), range(6, 11)], 'Hello world');
-    await vi.waitFor(() => expect(shaded()).toEqual([['0%', '5%'], ['6%', '5%']]));
-    preview.setSelectionHighlight(path, [], '');
-    expect(shaded()).toEqual([]);
-  });
-
-  it('shades nothing while the pages show other text, and looks the boxes up again after every compile', async () => {
-    const { shaded, asked } = setup();
+  it('draws the boxes of each overlay as elements of its class, on the new pages after every render, until disposed', async () => {
+    const { drawn } = setup();
+    let renders = 0;
+    preview.onDidRender(() => renders++);
+    const a = preview.createPageOverlay('a');
+    const b = preview.createPageOverlay('b');
     preview.update({ '/main.typ': 'Hello' }, '/main.typ');
-    preview.setSelectionHighlight(path, [range(0, 2)], 'Hello world');
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(asked).toEqual([]);
-    expect(shaded()).toEqual([]);
-    preview.update({ '/main.typ': 'Hello world' }, '/main.typ');
-    await vi.waitFor(() => expect(shaded()).toEqual([['0%', '2%']]));
-    expect(asked).toHaveLength(1);
-    preview.update({ '/main.typ': 'Hello world' }, '/main.typ');
-    await vi.waitFor(() => expect(asked).toHaveLength(2));
-    expect(shaded()).toEqual([['0%', '2%']]);
+    await vi.waitFor(() => expect(renders).toBe(1));
+    a.set([box(10, 20)]);
+    b.set([box(0, 5)]);
+    expect(drawn('a')).toEqual([['10%', '20%']]);
+    expect(drawn('b')).toEqual([['0%', '5%']]);
+    preview.update({ '/main.typ': 'Hello!' }, '/main.typ');
+    await vi.waitFor(() => expect(renders).toBe(2));
+    expect(drawn('a')).toEqual([['10%', '20%']]);
+    a.set([]);
+    expect(drawn('a')).toEqual([]);
+    b.dispose();
+    expect(drawn('b')).toEqual([]);
+    b.set([box(0, 5)]);
+    preview.update({ '/main.typ': 'Hello!!' }, '/main.typ');
+    await vi.waitFor(() => expect(renders).toBe(3));
+    expect(drawn('b')).toEqual([]);
   });
 
-  it('keeps the shading apart from the outline of a click', async () => {
-    const { container, shaded, outlined } = setup();
+  it('answers the boxes of ranges once their text is compiled, none while the pages show other text', async () => {
+    const { asked } = setup();
+    preview.update({ '/main.typ': 'Hello' }, '/main.typ');
+    expect(await preview.boxesFor(path, [range(0, 2)], 'Hello world')).toEqual([]);
+    expect(asked).toEqual([]);
     preview.update({ '/main.typ': 'Hello world' }, '/main.typ');
-    preview.setSelectionHighlight(path, [range(6, 11)], 'Hello world');
-    await vi.waitFor(() => expect(shaded()).toHaveLength(1));
-    container.querySelector('.zwf-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await vi.waitFor(() => expect(outlined()).toBe(1));
-    expect(shaded()).toHaveLength(1);
-    preview.clearClickHighlight();
-    expect(shaded()).toHaveLength(1);
+    expect(await preview.boxesFor(path, [range(0, 5), range(6, 11)], 'Hello world')).toEqual([box(0, 5), box(6, 5)]);
+    expect(await preview.boxesFor(path, [], 'Hello world')).toEqual([]);
+    expect(asked).toHaveLength(1);
   });
 });
 

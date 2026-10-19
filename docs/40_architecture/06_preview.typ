@@ -20,9 +20,10 @@
   [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (switch: `previewControls`)],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports.], [`comments`],
   [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only (pages, or also HTML).], [`previewGuides`, `comments`],
+  [`createPageOverlay(className)`], [Boxes drawn over the pages as elements of the caller's class, `set(boxes)`, drawn again after every render; the boxes come from `boxesFor(path, ranges, text)` or a `PageClick`.], [`previewSync` (click outline, selection shading)],
 )
 
-The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage`, `clearClickHighlight()`, `setSelectionHighlight(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
+The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage` (source range and boxes; nothing marked), `boxesFor(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
 
 ```ts
 const pageNumber: PreviewToolbarItem = (preview) => {   // ownerDocument, zoom(), setZoom, scale(), visiblePage()
@@ -50,8 +51,8 @@ preview.registerPdfExportOption({
 - *Never behind typing* (`LatestOnly`): one run in flight, newer values replace waiting ones; compiles at most every 150 ms, reveals every 80 ms. Diagnostics fire only when no newer `update()` waits; `exportPdf` and `snippet` wait for running compiles.
 - *A failed compile* keeps the last good pages, dimmed.
 - *A crashed engine* (`TypstEngineCrash`) is restarted once with the newest files; crashing again before the next `update()`, it stays off until then, so a document that crashes Typst does not loop.
-- *Overlays* are in pt, placed in percent, so they survive zoom. Shading waits until the compiled text is the `text` given, and is looked up again after every compile.
-- *A range's boxes* (shading, `snippet`): what its source drew, plus everything inside an element whose call lies wholly in it (a `figure` of a package's picture); never a page's header, footer or background. Raw boxes' pictures are snippets, so they show what view options draw.
+- *Overlays* are in pt, placed in percent, so they survive zoom; the host only draws them, what to mark and when is the extension's. `boxesFor` waits for running compiles and answers none unless the compiled text is the `text` given.
+- *A range's boxes* (`boxesFor`, `snippet`): what its source drew, plus everything inside an element whose call lies wholly in it (a `figure` of a package's picture); never a page's header, footer or background. Raw boxes' pictures are snippets, so they show what view options draw.
 - Loading state (`PreviewProgress`) is shown only by the pane: @architecture-workbench-loading.
 
 == Renderers <architecture-preview-renderers>

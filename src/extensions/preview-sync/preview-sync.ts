@@ -1,7 +1,8 @@
 import { Disposable } from '../../core/disposable/disposable';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { PreviewContributions } from '../../hosts/preview/preview';
+import type { PageRect } from '../../core/typst-engine/typst-engine';
+import type { PageOverlay, PreviewContributions } from '../../hosts/preview/preview';
 import type { Memento, Extension } from '../../hosts/workbench/workbench';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
@@ -14,7 +15,8 @@ import css from './preview-sync.css?inline';
  * - Shading: while `previewSync.highlightSelection` is on (the default), the text selected in the shown file is shaded
  *   in the preview, a moment after the selection settles.
  * - Click: a click on text in the preview opens its file with that range selected (files outside the project are
- *   ignored). The click stays outlined until the next edit or until the selection moves away.
+ *   ignored). The click stays outlined until the next edit, the next render or until the selection moves away.
+ * Both are page overlays of its own (`preview.createPageOverlay`), styled by preview-sync.css.
  */
 export function previewSync(): Extension {
   return {
@@ -23,21 +25,13 @@ export function previewSync(): Extension {
     activate({ project, globalState, window, workspace, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       let following = configuredFollow(workspace, globalState);
-      // The outline of a click in the preview marks what the click selected, while that is what the user looks at:
-      // it goes with the first edit (in any editor) or once the selection moves elsewhere, as the Source editor's own
-      // reveal highlight does; otherwise it would stay behind on outdated text.
-      let clicked: SourceRange | null = null;
-      const clearClick = () => {
-        if (!clicked) return;
-        clicked = null;
-        preview.clearClickHighlight();
-      };
-      const highlight = new SelectionShading(preview, () => {
+      const outline = new ClickOutline(preview.createPageOverlay('zwf-preview-sync__click'));
+      const highlight = new SelectionShading(preview, preview.createPageOverlay('zwf-preview-sync__selection'), () => {
         const editor = window.activeTextEditor;
         const path = editor && project.pathOf(editor.document);
         if (!editor || !path || !workspace.getConfiguration('previewSync').get<boolean>('highlightSelection')) return null;
         // what a click selected is outlined already
-        if (isEmpty(editor.selection) || (clicked && sameRange(editor.selection, clicked))) return null;
+        if (isEmpty(editor.selection) || outline.marks(editor.selection)) return null;
         return { path, ranges: [editor.selection], text: editor.document.text };
       });
       const revealSelection = () => {
@@ -54,6 +48,7 @@ export function previewSync(): Extension {
       let toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
       subscriptions.push(
         new Disposable(() => toggle.dispose()),
+        outline,
         highlight,
         workspace.onDidChangeConfiguration((event) => {
           if (event.affectsConfiguration('previewSync.highlightSelection')) highlight.update();
@@ -64,20 +59,25 @@ export function previewSync(): Extension {
         }),
         // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden editor)
         window.onDidChangeTextEditorSelection(({ textEditor }) => {
-          if (clicked && !sameRange(textEditor.selection, clicked)) clearClick();
+          if (!outline.marks(textEditor.selection)) outline.clear();
           if (textEditor === window.activeTextEditor) highlight.update();
           if (following && textEditor === window.activeTextEditor && workbench.isEditorFocused()) revealSelection();
         }),
         preview.onDidClickPage((click) => {
           if (!project.document(click.path)) return;
           // opening selects the click's source: that selection is the click's, not a move away from it
-          clicked = null;
+          outline.clear();
           workbench.open(click.path, { selection: click });
-          clicked = window.activeTextEditor?.selection ?? null;
+          outline.show(window.activeTextEditor?.selection ?? null, click.boxes);
           highlight.update();
         }),
+        // new pages: the outline marks what was drawn before, the shading is looked up on them
+        preview.onDidRender(() => {
+          outline.clear();
+          highlight.refresh();
+        }),
         window.onDidChangeActiveFile(() => highlight.update()),
-        project.onDidChangeFile(clearClick),
+        project.onDidChangeFile(() => outline.clear()),
       );
     },
   };
@@ -113,40 +113,81 @@ function configuredFollow(workspace: Workspace, globalState: Memento): boolean {
 const FOLLOW_KEY = 'followCursor';
 
 /**
- * The selection shaded in the preview: `update()` shades `shading()` `HIGHLIGHT_DELAY_MS` later (asked again then);
- * when it is null, the shading goes at once, so a collapsed selection leaves nothing behind.
+ * The outline of a click in the preview, on `overlay`: it marks what the click selected while that is what the user
+ * looks at, so it goes with the first edit (in any editor), a render or once the selection moves elsewhere, as the
+ * Source editor's own reveal highlight does; otherwise it would stay behind on outdated text.
+ */
+class ClickOutline {
+  /** The selection the click made; null: none (or nothing outlined). */
+  private clicked: SourceRange | null = null;
+
+  constructor(private readonly overlay: PageOverlay) {}
+
+  /** Outlines `boxes`, of the click that selected `selection`. */
+  show(selection: SourceRange | null, boxes: readonly PageRect[]): void {
+    this.clicked = selection;
+    this.overlay.set(boxes);
+  }
+
+  /** Whether `range` is what the click selected (the outline marks it). */
+  marks(range: SourceRange): boolean {
+    return this.clicked !== null && sameRange(range, this.clicked);
+  }
+
+  clear(): void {
+    this.clicked = null;
+    this.overlay.set([]);
+  }
+
+  dispose(): void {
+    this.overlay.dispose();
+  }
+}
+
+/**
+ * The selection shaded in the preview, on `overlay`: `update()` shades `shading()` `HIGHLIGHT_DELAY_MS` later (asked
+ * again then); when it is null, the shading goes at once, so a collapsed selection leaves nothing behind. `refresh()`
+ * looks it up now (new pages). Only the newest lookup is drawn; until it answers, the boxes before stay.
  */
 class SelectionShading {
   private timer: ReturnType<typeof setTimeout> | undefined;
-  /** The file shaded now. */
-  private shaded: ProjectPath | null = null;
+  /** Counts the lookups and clears: an answer is drawn only while nothing came after it. */
+  private generation = 0;
 
   constructor(
     private readonly preview: PreviewContributions,
+    private readonly overlay: PageOverlay,
     private readonly shading: () => Shading | null,
   ) {}
 
   update(): void {
     clearTimeout(this.timer);
-    if (this.shading()) this.timer = setTimeout(() => this.show(), HIGHLIGHT_DELAY_MS);
+    if (this.shading()) this.timer = setTimeout(() => void this.show(), HIGHLIGHT_DELAY_MS);
     else this.clear();
+  }
+
+  refresh(): void {
+    clearTimeout(this.timer);
+    void this.show();
   }
 
   dispose(): void {
     clearTimeout(this.timer);
-    this.clear();
+    this.generation++;
+    this.overlay.dispose();
   }
 
-  private show(): void {
+  private async show(): Promise<void> {
     const next = this.shading();
     if (!next) return this.clear();
-    this.preview.setSelectionHighlight(next.path, next.ranges, next.text);
-    this.shaded = next.path;
+    const generation = ++this.generation;
+    const boxes = await this.preview.boxesFor(next.path, next.ranges, next.text);
+    if (generation === this.generation) this.overlay.set(boxes);
   }
 
   private clear(): void {
-    if (this.shaded) this.preview.setSelectionHighlight(this.shaded, [], '');
-    this.shaded = null;
+    this.generation++;
+    this.overlay.set([]);
   }
 }
 

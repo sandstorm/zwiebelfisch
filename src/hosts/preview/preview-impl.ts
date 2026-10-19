@@ -3,7 +3,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { TypstDiagnostic, Page, PageIndex, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, Page, PageIndex, PageRect, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -26,6 +26,7 @@ import type {
   PreviewToolbarItem,
   PreviewViewOption,
   PageClick,
+  PageOverlay,
   RenderedSnippet,
   ToolbarItemElements,
   ToolbarPlacement,
@@ -42,6 +43,7 @@ import css from './preview.css?inline';
  * - toolbar items (zoom, page number, "Follow cursor", "Download PDF")
  * - PDF export options and view options
  * - other renderers than the pages (the HTML preview)
+ * - page overlays: boxes drawn over the pages (the click outline, the selection shading)
  *
  * Compiling never falls behind typing: files outdated before their turn are skipped. A crashed engine is restarted
  * with the newest files once per `update()`.
@@ -59,7 +61,6 @@ export class Preview implements PreviewContributions {
   private readonly list: PageList;
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
-  private readonly highlights: LatestOnly<Highlight>;
   private readonly resizeObserver: ResizeObserver | null;
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
@@ -83,11 +84,8 @@ export class Preview implements PreviewContributions {
   private viewOptionValues: Readonly<Record<string, boolean>> = {};
   /** What `update()` gave last, compiled again when the view options change; null before the first update. */
   private latest: Compile | null = null;
-  /** Outlines the clicked text, until the next click, successful compile or `clearClickHighlight`. */
-  private readonly clickHighlight: OverlayLayer;
-  /** Shades the ranges of `setSelectionHighlight`, looked up again after every successful compile. */
-  private readonly selectionHighlight: OverlayLayer;
-  private selection: Highlight | null = null;
+  /** The overlays of `createPageOverlay` not disposed yet, drawn again after every render. */
+  private readonly overlays = new Set<OverlayLayer>();
   private zoom: Zoom = 'fit';
   private frame = 0;
   /** The files and pages of the last successful compilation. */
@@ -121,8 +119,6 @@ export class Preview implements PreviewContributions {
     this.pages = div(doc, 'zwf-preview');
     this.pages.dataset.testid = 'zwf-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
-    this.clickHighlight = new OverlayLayer(this.list, 'zwf-preview__highlight');
-    this.selectionHighlight = new OverlayLayer(this.list, 'zwf-preview__selection');
     this.context = this.itemContext(doc);
     this.loader = new Loader(doc);
     this.scroller.append(this.pages, this.loader.element);
@@ -137,7 +133,6 @@ export class Preview implements PreviewContributions {
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
     });
-    this.highlights = new LatestOnly((highlight, superseded) => this.shade(highlight, superseded));
 
     this.engine = new EngineWorker({
       onDidLoad: (event) => {
@@ -170,14 +165,17 @@ export class Preview implements PreviewContributions {
     this.reveals.push(this.revealed);
   }
 
-  clearClickHighlight(): void {
-    this.clickHighlight.set([]);
+  createPageOverlay(className: string): PageOverlay {
+    const layer = new OverlayLayer(this.list, className, () => this.overlays.delete(layer));
+    this.overlays.add(layer);
+    return layer;
   }
 
-  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void {
-    this.selection = ranges.length === 0 ? null : { path, ranges, text };
-    if (this.selection) this.highlights.push(this.selection);
-    else this.selectionHighlight.set([]);
+  async boxesFor(path: ProjectPath, ranges: readonly SourceRange[], text: string): Promise<readonly PageRect[]> {
+    await this.compiles.idle();
+    if (ranges.length === 0 || this.compiled.files[path] !== text) return [];
+    const response = await this.engine.request({ type: 'boxes', path, ranges: [...ranges] });
+    return response.type === 'boxes' ? response.boxes : [];
   }
 
   /**
@@ -383,13 +381,10 @@ export class Preview implements PreviewContributions {
     // Keep showing the last good pages while the document has errors, dimmed as stale.
     const failed = pages.length === 0;
     if (!failed) {
-      this.clickHighlight.set([]);
       this.list.render(pages);
-      // the boxes of the text before until those of the new text are known (no flicker while typing)
-      this.selectionHighlight.redraw();
+      for (const layer of this.overlays) layer.redraw();
       this.scheduleStatus();
       this.compiled = { files, pages };
-      if (this.selection) this.highlights.push(this.selection);
       if (!quiet) this.rendered.fire();
     }
     this.pages.classList.toggle('zwf-preview--stale', failed);
@@ -484,16 +479,6 @@ export class Preview implements PreviewContributions {
     this.follow(response.positions[0]);
   }
 
-  /** Shades where `highlight` is drawn, once the compiles of what was given before ran; nothing if other text is shown. */
-  private async shade(highlight: Highlight, superseded: () => boolean): Promise<void> {
-    await this.compiles.idle();
-    const compiled = this.compiled.files[highlight.path];
-    const response = compiled === highlight.text ? await this.engine.request({ type: 'boxes', path: highlight.path, ranges: [...highlight.ranges] }) : null;
-    // a newer highlight (or none) was set meanwhile
-    if (superseded() || this.selection !== highlight) return;
-    this.selectionHighlight.set(response?.type === 'boxes' ? response.boxes : []);
-  }
-
   private setZoom(zoom: Zoom): void {
     const before = this.scroller.scrollTop / (this.scroller.scrollHeight || 1);
     this.zoom = zoom;
@@ -524,12 +509,10 @@ export class Preview implements PreviewContributions {
     const { x, y } = pointOnPage(hit.page, measure(hit.element), Px.of(event.clientX), Px.of(event.clientY));
     const response = await this.engine.request({ type: 'click', page: hit.index, x, y });
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
-    // where the clicked source node is drawn (every line/page)
-    this.clickHighlight.set(response.jump.boxes);
-    const { from, to } = response.jump;
+    const { from, to, boxes } = response.jump;
     const path = ProjectPath.parse(response.jump.path);
     // a view option's drawing (an outline) is in no project file
-    if (path && path !== VIEW_ENTRY) this.clicked.fire({ path, from, to });
+    if (path && path !== VIEW_ENTRY) this.clicked.fire({ path, from, to, boxes });
   }
 
   /** Scrolls to where the cursor's text is drawn, if that is off-screen; nothing is drawn there. */
@@ -566,7 +549,6 @@ type ActiveRenderer = { renderer: PreviewRenderer; container: HTMLElement; view:
 /** The built-in renderer: the pages, as SVG. */
 const PAGES: PreviewRendererInfo = { id: 'pages', label: 'Pages' };
 type Reveal = { path: ProjectPath; from: SourceOffset };
-type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
 
 /** The file the preview compiles while a view option is on: their prelude, then the main file included. */
 const VIEW_ENTRY = '/.zwf-preview-view.typ';
