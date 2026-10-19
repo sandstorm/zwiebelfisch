@@ -9,7 +9,6 @@ import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } f
 import type { DocumentPasteEditProvider } from '../languages/languages';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { BlockGaps, caretAtSource } from './block-gaps';
-import { BlockHandle } from './block-handle';
 import { clipboard } from './clipboard';
 import { pasteChoice } from './paste-as';
 import { typstPasteEdits } from './pasted-typst';
@@ -68,7 +67,6 @@ export class VisualEditor {
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
         TabKeys,
-        BlockHandle,
         BlockGaps,
         ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         clipboard(document, contributions.pasteEdits),

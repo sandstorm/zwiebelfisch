@@ -9,6 +9,7 @@ import { ProjectPath } from '../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../core/project/project';
 import { SourceOffset, type TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
+import { blockHandle as blockHandleExtension } from '../extensions/block-handle/block-handle';
 import { figures } from '../extensions/figures/figures';
 import { headings } from '../extensions/headings/headings';
 import { lists } from '../extensions/lists/lists';
@@ -204,7 +205,7 @@ if (typeof URL.createObjectURL !== 'function') {
 
 /** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
 export function builtins(): VisualEditorContribution[] {
-  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment()];
+  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension()];
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */
@@ -228,9 +229,9 @@ export function opened(button: HTMLButtonElement): HTMLButtonElement {
 }
 
 /**
- * The grip the Visual editor shows beside the block at document position `pos` of `view` (block-handle.ts), as the
- * pointer moving beside the block shows it. jsdom has no layout: for that move, each node's DOM is laid out by its
- * positions (its top 10px per position, as tall as its size), the pointer at the block's top.
+ * The grip the Visual editor shows beside the block at document position `pos` of `view` (the built-in
+ * `block-handle`), as the pointer moving beside the block shows it. jsdom has no layout: for that move, each node's
+ * DOM is laid out by its positions (its top 10px per position, as tall as its size), the pointer at the block's top.
  */
 export function blockHandle(view: EditorView, pos: number): HTMLElement {
   const laidOut = new Map<unknown, DOMRect>();
@@ -246,7 +247,7 @@ export function blockHandle(view: EditorView, pos: number): HTMLElement {
   } finally {
     rects.mockRestore();
   }
-  return view.dom.parentElement!.querySelector<HTMLElement>('.zwf-visual__block-handle')!;
+  return view.dom.parentElement!.querySelector<HTMLElement>('.zwf-block-handle')!;
 }
 
 /**

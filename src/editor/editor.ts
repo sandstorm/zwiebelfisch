@@ -24,6 +24,7 @@ import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { invisibles } from '../extensions/invisibles/invisibles';
+import { blockHandle } from '../extensions/block-handle/block-handle';
 import { figures } from '../extensions/figures/figures';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
@@ -267,6 +268,7 @@ function builtinExtensions(): Extension[] {
     pageLayout(),
     lists(),
     alignment(),
+    blockHandle(),
     comments(),
     labels(),
     styles(),

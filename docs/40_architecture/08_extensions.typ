@@ -156,6 +156,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`figures`], [`#figure(..)` around any `figureBody` node], [nodes, search],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
   [`lists`, `pageLayout`, `outline`, `alignment`], [bulleted, numbered and task lists; page breaks, horizontal rules; `#outline(..)` as a box, "Table of contents"; `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
+  [`blockHandle`], [the grip beside the block under the pointer (drag to move, click to select); the drop cursor], [Tiptap extension],
   [`comments`], [margin notes with threads in cards; PDF option `comments.include`, view option `comments.show`], [node, mark, command, PDF and view option, search],
   [`labels`], [`LabelIndex`, reference chips, label tags, the `@` list; pasted labels renamed], [nodes, toolbar, completion, search, links, paste edit],
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"], [node, mark, text styles, toolbar menu, search],

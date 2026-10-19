@@ -191,9 +191,9 @@ export function typstChanges(tr: Transaction, source: string = serializeToTypst(
   return changes;
 }
 
-/** The base: paragraphs, text, line breaks (`\`), history, the drop cursor. */
+/** The base: paragraphs, text, line breaks (`\`), history. */
 function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--zwf-accent)', width: 2 } });
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {} });
 }
 
 /** The minimum schema's own nodes, as the grammar sees them. */

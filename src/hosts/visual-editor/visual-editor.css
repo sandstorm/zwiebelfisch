@@ -61,24 +61,6 @@
    toolbar whatever its own z-index. */
 .zwf-visual__body { flex: 1 0 auto; display: flex; position: relative; isolation: isolate; }
 .zwf-visual__body > .zwf-visual { min-width: 0; }
-/* The handle beside the block under the pointer (block-handle.ts): in the text's left padding, aligned with the
-   block's first line; dragged to move the block, clicked to select it */
-.zwf-visual__block-handle {
-  position: absolute;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 24px;
-  border-radius: 4px;
-  color: var(--zwf-faint);
-  cursor: grab;
-  user-select: none;
-}
-.zwf-visual__block-handle:hover { background: var(--zwf-hover); color: var(--zwf-text-2); }
-.zwf-visual__block-handle:active { cursor: grabbing; }
-.zwf-visual__block-handle[hidden] { display: none; }
 /* The caret between blocks (block-gaps.ts): a blinking line across the content's width, halfway into the margin
    above (blocks keep 0.7em below them); takes no room, so the text does not move */
 .zwf-visual__block-gap { position: relative; height: 0; pointer-events: none; }

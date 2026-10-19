@@ -1,0 +1,18 @@
+/* The block-handle extension's styles: the grip beside the block under the pointer, in the text's left padding,
+   aligned with the block's first line. See block-handle.ts, which registers it. */
+.zwf-block-handle {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--zwf-faint);
+  cursor: grab;
+  user-select: none;
+}
+.zwf-block-handle:hover { background: var(--zwf-hover); color: var(--zwf-text-2); }
+.zwf-block-handle:active { cursor: grabbing; }
+.zwf-block-handle[hidden] { display: none; }

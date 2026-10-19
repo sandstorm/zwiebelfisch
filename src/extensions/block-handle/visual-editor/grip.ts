@@ -1,22 +1,22 @@
-// The handle beside a block, to drag it elsewhere. See VisualEditor in visual-editor-impl.ts.
+// The block handle's Tiptap extension: the grip beside a block, to drag it elsewhere, and the drop cursor. See ../block-handle.ts.
 import { Extension } from '@tiptap/core';
+import { dropCursor } from '@tiptap/pm/dropcursor';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState, type PluginView } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 
 /**
  * A grip (six dots) in the left margin beside the block under the pointer, as in Notion: dragging it moves the block,
- * clicking it selects the block. A block is a top-level one or a list item, at any depth.
+ * clicking it selects the block. A block is a top-level one or a list item, at any depth. With it the drop cursor:
+ * a line in the accent colour where what is dragged lands.
  *
  * A move is one undo step and keeps the block's Typst verbatim. The grip hides while typing, in a read-only editor, and
  * when the pointer leaves the text and the grip.
- *
- * @internal The Visual editor's own block grip; extensions do not reach it.
  */
 export const BlockHandle = Extension.create({
-  name: 'typstBlockHandle',
+  name: 'blockHandle',
   addProseMirrorPlugins() {
-    return [new Plugin({ view: (view) => new Grip(view) })];
+    return [new Plugin({ view: (view) => new Grip(view) }), dropCursor({ color: 'var(--zwf-accent)', width: 2 })];
   },
 });
 
@@ -27,7 +27,7 @@ interface Block {
   readonly list: number | null;
 }
 
-/** The grip's size and its gap to the block's left edge (px; as visual-editor.css): it sits in the text column's left padding. */
+/** The grip's size and its gap to the block's left edge (px; as block-handle.css): it sits in the text column's left padding. */
 const WIDTH = 18;
 const HEIGHT = 24;
 const GAP = 6;
@@ -41,7 +41,7 @@ class Grip implements PluginView {
   constructor(private readonly view: EditorView) {
     const doc = view.dom.ownerDocument;
     this.dom = doc.createElement('div');
-    this.dom.className = 'zwf-visual__block-handle';
+    this.dom.className = 'zwf-block-handle';
     this.dom.draggable = true;
     this.dom.hidden = true;
     this.dom.title = 'Drag to move, click to select';
