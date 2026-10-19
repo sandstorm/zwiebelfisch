@@ -12,6 +12,8 @@ import { fuzzyMatch } from './fuzzy';
  * come (a progress line meanwhile). Items a provider did not match itself are matched fuzzily against their label, else
  * their description. Groups follow the providers' `order`. Picking an item closes the search, gives the focus back and
  * runs the item's `accept` right then (still in the user's gesture).
+ *
+ * @internal Extensions add to it through `window.registerSearchProvider`.
  */
 export class SearchEverywhere {
   readonly #providers = new Set<SearchProvider>();

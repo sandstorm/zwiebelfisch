@@ -26,6 +26,8 @@ export function pasteWith(view: EditorView, alternatives: readonly PasteAlternat
 /**
  * The paste choice of one editor, reported to `choices`, and its chip: the plugin, the toolbar's floating bar `paste`
  * (before every other bar) and its button. Without `choices`, none: a paste goes in as its first kind.
+ *
+ * @internal Extensions offer kinds in it through `languages.registerDocumentPasteEditProvider`.
  */
 export function pasteChoice(choices: PasteChoices | null): { extensions: AnyExtension[]; bars: ToolbarGroup[]; items: ToolbarItem[] } {
   if (!choices) return { extensions: [], bars: [], items: [] };

@@ -8,6 +8,8 @@ import type { ToolbarControl } from '../visual-editor';
  * Choosing an item, Escape or a click elsewhere closes it; arrow keys move between the items. The items are asked for
  * each time the menu opens, so they follow what it holds now; a menu without items hides. The trigger shows `icon()` as
  * of the last `refresh()` (e.g. the current alignment).
+ *
+ * @internal Extensions get one through `visualEditor.registerToolbarGroup` (`kind: 'menu'`).
  */
 export class ToolbarMenu implements ToolbarControl {
   readonly element: HTMLElement;

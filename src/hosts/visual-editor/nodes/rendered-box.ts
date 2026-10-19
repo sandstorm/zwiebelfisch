@@ -12,6 +12,8 @@ import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-ed
  * it. Until the renderer has a picture the box shows its code, and a new picture is decoded before it replaces what was
  * shown, so the box never shows a blank picture. Only boxes near the view (one viewport above and below) are redrawn
  * when the renderer changes; the others once they come near.
+ *
+ * @internal Extensions draw it through `visualEditor.registerRawBoxRenderer`.
  */
 export class RenderedBox {
   /** The `<img>` shown instead of the code (the box's tools may move it, e.g. into a frame). */

@@ -11,6 +11,8 @@ import { FOLLOW_HINT, hoverLink, isMod } from './link-hover';
  * e.g. "Create chapter.typ"), and the link look while the modifier is held.
  * `languageId`: the text's language; `path`: the file the text is in, now (a file can be renamed); null: the text has
  * no links.
+ *
+ * @internal Extensions get it through `languages.createDocumentLinksCodeMirrorExtension`, with links from `registerDocumentLinkProvider`.
  */
 export function linkExtension(actions: LinkActions, languageId: string, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(

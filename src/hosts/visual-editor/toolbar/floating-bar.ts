@@ -7,6 +7,8 @@ import type { Anchor } from '../visual-editor';
  *
  * It sits in `container` (the scrolling text column), so it scrolls with the text, centred over the anchor and kept
  * inside the container. Mouse presses on it keep the focus and the selection in the text.
+ *
+ * @internal Extensions get one through `visualEditor.registerToolbarGroup` (`kind: 'floating'`).
  */
 export class FloatingBar {
   readonly element: HTMLElement;

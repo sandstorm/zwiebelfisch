@@ -18,6 +18,8 @@ import { RenderedBox } from './rendered-box';
  * A raw box holds Typst the Visual editor does not model, or a node whose spec asks for a code box (an image call, an
  * outline). It is edited as code in a nested CodeMirror, so no Typst is lost or rewritten. Contributions add the code's
  * language and links, a picture instead of the code (box renderers), a title and tools.
+ *
+ * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxCodeMirrorExtension` and a node spec's `tools`.
  */
 export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });

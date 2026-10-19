@@ -6,6 +6,8 @@ import type { StatusBarPlacement } from '../window';
  * The items extensions put into the status bar (`window.registerStatusBarItem`), in two sides, as in VS Code: the
  * `left` ones from its start, the `right` ones at its end; within a side the higher `priority` further left (default
  * 0), equal priorities in registration order. The bar is hidden while it has no item.
+ *
+ * @internal Extensions add to it through `window.registerStatusBarItem`.
  */
 export class StatusBar {
   readonly #bar: HTMLElement;

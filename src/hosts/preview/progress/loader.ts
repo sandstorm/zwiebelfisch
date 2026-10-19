@@ -6,6 +6,8 @@ import type { PreviewProgress } from '../preview';
  * Shows a `PreviewProgress` over the (empty) pages: its title as a status (announced when the phase changes, not per
  * byte), a progress bar (determinate with `fraction`, else indeterminate; none for a failure) and the detail.
  * Laid over the pane, so it never moves anything.
+ *
+ * @internal The preview pane's own loading note; extensions do not reach it.
  */
 export class Loader {
   readonly element: HTMLElement;

@@ -10,6 +10,8 @@ import type { EditorView } from '@tiptap/pm/view';
  *
  * A move is one undo step and keeps the block's Typst verbatim. The grip hides while typing, in a read-only editor, and
  * when the pointer leaves the text and the grip.
+ *
+ * @internal The Visual editor's own block grip; extensions do not reach it.
  */
 export const BlockHandle = Extension.create({
   name: 'typstBlockHandle',

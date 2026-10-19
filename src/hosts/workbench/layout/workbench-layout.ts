@@ -11,6 +11,8 @@ import { div, restoreSideBarState, SideBar, type PanelCommands, type Side } from
  *
  * While the widget is narrower than 720px the left side's panel lies over the editing area and closes on Escape, a
  * click outside, or `dismiss()` (e.g. after a file was chosen in it).
+ *
+ * @internal Extensions fill it through `workbench.registerSidePanel` and `window.registerStatusBarItem`.
  */
 export class WorkbenchLayout {
   readonly editor: HTMLElement;

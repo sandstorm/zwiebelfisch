@@ -7,6 +7,8 @@ import type { PageList } from './page-list';
  * Boxes (in points) drawn over the pages as elements of one class. They are children of the page
  * elements, placed in percent of the page, so they stay in place at any zoom and through lazy
  * rendering; `redraw` puts them on the pages again after the pages were rendered anew.
+ *
+ * @internal The preview's click and selection highlights; extensions set them through `preview.setSelectionHighlight` and `clearClickHighlight`.
  */
 export class OverlayLayer {
   private boxes: readonly PageRect[] = [];

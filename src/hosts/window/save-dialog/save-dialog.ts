@@ -5,6 +5,8 @@ import type { InputBoxOptions, SaveDialogOptions } from '../window';
 /**
  * Asks for the path of a new file with `ask` (an input box), as `options` say, refusing paths `exists` has. Resolves
  * to the path, or undefined when cancelled. VS Code's `window.showSaveDialog`, without a file system dialog.
+ *
+ * @internal Extensions use it through `window.showSaveDialog`.
  */
 export async function showSaveDialog(
   ask: (options: InputBoxOptions) => Promise<string | undefined>,

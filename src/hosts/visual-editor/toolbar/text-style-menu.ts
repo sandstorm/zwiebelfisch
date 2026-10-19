@@ -9,6 +9,8 @@ import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext 
  *
  * It shows the selection's style, marks toggles ✓ where they are on, disables what cannot apply, and follows the
  * providers as they change (headings, custom styles).
+ *
+ * @internal Extensions add to it through `visualEditor.registerTextStyleProvider`.
  */
 export class TextStyleMenu implements ToolbarControl {
   readonly element: HTMLSelectElement;

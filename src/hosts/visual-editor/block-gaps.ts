@@ -19,6 +19,8 @@ import { posToSource, sourceToPos } from '../prosemirror-typst/prosemirror-typst
  *
  * The gap is a selection of its own (`BlockGap`), mapped through every change; a caret revealed at its source offset is
  * the gap again. It replaces ProseMirror's gap cursor.
+ *
+ * @internal The Visual editor's own caret beside boxes; extensions do not reach it.
  */
 export const BlockGaps = Extension.create({
   name: 'typstBlockGaps',

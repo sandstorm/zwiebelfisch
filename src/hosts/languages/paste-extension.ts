@@ -25,6 +25,8 @@ export interface PasteOptions {
  * providers). Where there are other edits, its choice opens (`options.choices`): a chip above its end ("Paste as:
  * Typst ▾") whose click (or Mod+.) asks which kind; changing it undoes the paste and pastes that edit, so one undo
  * still takes all back. It closes on the next edit, a selection outside the pasted text, or Escape.
+ *
+ * @internal Extensions offer kinds in its chip through `languages.registerDocumentPasteEditProvider`.
  */
 export function pasteExtension(
   host: Pick<LanguagesHost, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>,

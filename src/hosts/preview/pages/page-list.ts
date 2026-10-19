@@ -11,6 +11,8 @@ import { measure, Px } from './geometry';
  *
  * Page elements may hold overlays (the click highlight) next to the SVG;
  * they are positioned in percent of the page.
+ *
+ * @internal The preview's own pages; extensions show other views through `preview.registerRenderer`.
  */
 export class PageList {
   private readonly entries: Entry[] = [];

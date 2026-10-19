@@ -6,6 +6,8 @@ import type { StatusBar } from '../status-bar/status-bar';
 /**
  * What `window.withProgress` shows: each running task where its `location` says, until it settles. A status bar entry
  * (`ProgressLocation.Window`), or a note over the editing area that holds input back (`ProgressLocation.EditingArea`).
+ *
+ * @internal Extensions use it through `window.withProgress`.
  */
 export class ProgressIndicators {
   /** The notes of the tasks running over the editing area, oldest first: it is inert while there is one. */

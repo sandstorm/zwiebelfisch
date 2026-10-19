@@ -11,6 +11,8 @@ import type { SidePanel, SidePanelOptions } from '../workbench';
  * whose owner asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for
  * the moment only, and Escape, a click outside or `dismiss()` close the panel. Each panel's command
  * `workbench.view.<id>` picks it from the keyboard; its rail button's tooltip names the key.
+ *
+ * @internal Extensions add panels through `workbench.registerSidePanel`.
  */
 export class SideBar {
   readonly element: HTMLElement;

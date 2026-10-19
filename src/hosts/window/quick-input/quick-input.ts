@@ -7,6 +7,8 @@ import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOpti
  * anchor and kept inside the widget (above the anchor where there is no room below): the anchor is what the user last
  * pressed or typed in (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS
  * Code's). Escape or a mouse press elsewhere cancels; closing gives the focus back to where it was (an editor's caret, too).
+ *
+ * @internal Extensions use it through `window.showQuickPick` and `window.showInputBox`.
  */
 export class QuickInput {
   #trigger: Element | null = null;

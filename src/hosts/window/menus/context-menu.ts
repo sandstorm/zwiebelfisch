@@ -8,6 +8,8 @@ import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../win
  * viewport. The first entry gets the focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press
  * elsewhere closes the menu and gives the focus back to the element that had it; a chosen entry's command runs after
  * that (a failing one is logged: it tells the user itself). A menu without entries is not shown.
+ *
+ * @internal Extensions use it through `window.showContextMenu`, with entries from `workbench.registerMenuItem`.
  */
 export class ContextMenu {
   #open: MenuList | null = null;

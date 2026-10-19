@@ -15,6 +15,8 @@ import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type Toolbar
  *
  * Contributions fill them with items. Buttons reflect the selection (pressed, disabled, hidden) after every
  * transaction, focus and blur, and never take the focus away from the text.
+ *
+ * @internal Extensions fill it through `visualEditor.registerToolbarGroup` and `registerToolbarItem`.
  */
 export class Toolbar {
   private readonly root: HTMLElement;

@@ -6,6 +6,8 @@ import type { MessageItem, MessageSeverity } from '../window';
  * is a small box with its text, a button per item and a close button, stacked at the bottom right, newest last. Not
  * modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
  * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
+ *
+ * @internal Extensions use it through `window.showInformationMessage`, `showWarningMessage` and `showErrorMessage`.
  */
 export class Notifications {
   readonly #area: HTMLElement;

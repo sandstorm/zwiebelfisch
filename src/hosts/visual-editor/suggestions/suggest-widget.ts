@@ -7,6 +7,8 @@ import type { CompletionItem } from '../visual-editor';
  * arrow keys move it, Enter or Tab accept it, a click accepts the clicked one, the mouse pointer chooses what it
  * points at. The editor keeps the focus; its element (`input`) names the chosen option (`aria-activedescendant`)
  * while the list shows.
+ *
+ * @internal Extensions fill it through `visualEditor.registerCompletionItemProvider`.
  */
 export class SuggestWidget {
   readonly element: HTMLElement;

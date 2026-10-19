@@ -7,6 +7,8 @@ import type { Menus } from '../menus/menus';
  * a Typst file), the shown one selected, and at its end the editor/title menu and "View" (`EditorTitleMenu`). The tabs
  * show while the file has several editors, the bar while it has tabs or buttons. Choosing another tab asks for the
  * file in that editor (`onDidChoose`).
+ *
+ * @internal Extensions add tabs through `window.registerCustomEditorProvider`.
  */
 export class EditorTabs {
   readonly #element: HTMLElement;
