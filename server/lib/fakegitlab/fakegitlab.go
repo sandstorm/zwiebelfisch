@@ -1,17 +1,15 @@
 // Package fakegitlab is an in-memory GitLab for tests and the demo playground: one project, its branches,
-// commits with full snapshots, its members and protected branches, and a sign-in (signin.go).
+// commits with full snapshots, its members and protected branches, and a sign-in.
 //
-// GitLab rooms are tested without network, ports or secrets. GitLab answers the REST endpoints (API v4) a
-// GitLab client calls for one project (the project, branches, tree, files, blobs, commits with actions; see
-// api.go) as an http.Handler, and Client serves them in-process. A test also plays GitLab's other users and
-// failures: Push as a colleague, a push racing the next commit, a failing commit, unreachable branches; and
-// who may do what: SetAccess (a member's role), Protect (who may push to a branch). Everyone who signs in is
-// a Developer unless told otherwise.
+// GitLab answers, as an http.Handler, the REST endpoints (API v4) a GitLab client calls for one project;
+// Client serves them in-process, without network, ports or secrets. A test also plays GitLab's other users
+// and failures:
+//   - a colleague's push (Push, PushBeforeNextCommit)
+//   - a failing commit, an unreachable branch (FailNextCommit, SetUnreachable)
+//   - who may do what (SetAccess, Protect)
 //
-// Commits follow GitLab's Commits API where a client could notice: start_branch / start_sha / force decide
-// the parent and whether an existing branch may be overwritten, last_commit_id is checked per file, and
-// without author_name the token's user (the bot) is the author. The message is kept as sent (Co-authored-by
-// trailers included). See docs/40_architecture/09_server.typ.
+// Everyone who signs in is a Developer unless told otherwise. Commits follow GitLab's Commits API where a
+// client could notice.
 package fakegitlab
 
 import (

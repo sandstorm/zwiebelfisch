@@ -22,16 +22,13 @@ import (
 // changes (on a save, or by itself when nobody edited for a while or the last user left) and merges
 // upstream pushes into it.
 //
-// The document holds the .typ files (files), the other files (assets) and the commit they are based on
-// (meta, see protocol.go). Everyone in the room sees that state: what is not committed yet and by whom
-// (changes), a conflict with upstream (conflict, until a merge succeeds) and a failed commit
-// (commitFailure, until the next commit or merge). Everything the room knows lives in the document, so a
-// room stored and loaded again continues where it was; only the count of edits per editor starts over.
+// Everyone in the room sees in the document:
+//   - what is not committed yet and by whom (changes)
+//   - a conflict with upstream (conflict, until a merge succeeds)
+//   - a failed commit (commitFailure, until the next commit or merge)
 //
-// Every change of the document but the room's own is an edit by someone; a commit names the editors as
-// co-authors (its author is the bot the repository credentials belong to). Operations (save, pull, commit
-// by itself) run one after another; repository calls run outside the room's goroutine, so clients keep
-// editing meanwhile, and the document is read and written through the host (collab.Room.Do).
+// A room stored and loaded again continues where it was; only the count of edits per editor starts over.
+// Save, pull and commit run one at a time, and clients keep editing while they talk to the repository.
 type room struct {
 	x       *Rooms
 	host    host

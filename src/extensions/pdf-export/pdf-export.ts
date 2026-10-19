@@ -8,16 +8,13 @@ import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
 
 /**
- * The project's PDF: the command `pdfExport.export` for hosts, and "Download PDF" in the preview's toolbar for users.
+ * The project's PDF, used by:
+ * - hosts, through the command `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>`
+ * - users, through "Download PDF" in the preview's toolbar (while the setting `pdfExport.download` is on, the default)
  *
- * `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>` gives the PDF as the project is now, with the
- * export options set by id (the others at their default). It rejects with the errors, or for an unknown option. While
- * the setting `pdfExport.download` is on (the default), the toolbar has "Download PDF": a popover with a checkbox per
- * export option (remembered for this viewer), or, without options, the download at once.
- *
- * The preview host compiles the PDF and keeps the export options that other extensions register (comments: include
- * them or not). How they are offered, and whether there is a button at all, is decided here.
- * See docs/40_architecture/06_preview.typ, "Contribution points".
+ * The PDF is the project as it is now, with the export options set by id and the others at their default. A document
+ * with errors gives no PDF: the command rejects with the errors, also for an unknown option. The toolbar's popover has
+ * a checkbox per export option, remembered for this viewer.
  */
 export function pdfExport(): Extension {
   return {

@@ -11,20 +11,12 @@ import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContribut
 import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 /**
- * `drafting` margin notes in the Visual editor. A margin note call (as
- * `noteCallSyntax` defines it) belongs in running text:
+ * `drafting` margin notes in the Visual editor, in running text:
+ * - `marginNote`: a point note, `#margin-note(..)[note]`, an inline atom shown as a small marker
+ * - `noteRange`: a range note, `#margin-note(..)[text][note]`, a mark over the (editable) text, shown highlighted
  *
- * - `marginNote`: a point note, `#margin-note(..)[note]`, an inline atom shown
- *   as a small marker (a box: a remote caret inside outlines it).
- * - `noteRange`: a range note, `#margin-note(..)[text][note]`, a mark over the
- *   (editable) text, shown highlighted.
- *
- * Both keep `head` (the source before the first `[`, as written) and `note`
- * (the note's markup), printed by `margin-note-syntax`; `noteRange` also has
- * an unprinted `id`, the note's number in its textblock, so equal neighbouring
- * notes stay two marks (`excludes: ''`, so notes nest). Other `margin-note`
- * calls stay raw. A note's thread is shown and edited in its floating card
- * (`note-cards/`), which also adds the marker after a range note's text.
+ * Both keep `head` (the source before the first `[`, as written) and `note` (the note's markup). Other `margin-note`
+ * calls stay raw.
  */
 export function marginNotes(options: MarginNotesOptions): VisualEditorContribution {
   return {

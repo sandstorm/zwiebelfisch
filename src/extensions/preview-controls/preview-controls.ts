@@ -6,15 +6,13 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import css from './preview-controls.css?inline';
 
 /**
- * Zoom buttons and "page n / total" in the preview's toolbar, and a switch between the preview's renderers ("Pages |
- * HTML"); the preview's view options in the View menu.
+ * The preview's controls:
+ * - a switch between its renderers ("Pages | HTML") in the toolbar
+ * - zoom buttons and "page n / total" in the toolbar, shown with the pages only
+ * - an entry per view option in the View menu (menu `view`, group `preview`)
  *
- * The preview host keeps the mechanism (the zoom, which page is shown, the renderers and view options other extensions
- * register) and offers it to toolbar items. Which controls a widget shows is decided here, so a host can leave them out
- * or replace them. Zoom and page number are the pages' and hidden with another renderer. The renderer chosen last is
- * remembered per viewer, also one registered after this extension. Every view option gets an entry in the View menu at
- * the top right of the editing area (menu `view`, group `preview`, below what the editors contribute there); which are
- * on is remembered per viewer. See docs/40_architecture/06_preview.typ.
+ * The renderer chosen last and which view options are on are remembered per viewer, also for renderers and options
+ * registered after this extension.
  */
 export function previewControls(): Extension {
   return {

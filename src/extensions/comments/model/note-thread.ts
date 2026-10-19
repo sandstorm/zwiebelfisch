@@ -3,38 +3,18 @@ import { escapeText, safeNote } from './margin-note-syntax';
 /**
  * The messages of `note`, oldest first: [] for an empty note, one anonymous message for a note that is no thread.
  *
- * A margin note's body as a thread of messages, the one place that knows the
- * format (plain drafting, no helper code):
+ * A margin note's body as a thread of messages, the one place that knows the format (plain drafting, no helper code):
  *
- *   #margin-note[text][- *Anna* (2026-10-10): Is this right?]
  *   #margin-note[text][- *Anna* (2026-10-10): Is this right?
  *   - *Bob* (2026-10-11): Yes.\
  *     Checked with finance.]
- *   #margin-note[text][
- *     - *Anna* (2026-10-10): Is this right?
- *     - *Bob* (2026-10-11): Yes.
- *   ]
  *
- * One list item per message, `*<name>* (<YYYY-MM-DD>): <text>`, oldest first.
- * The text of such a message is plain text, escaped; a line break is `\` at the
- * end of the line, continued one indentation step (2 spaces) deeper than the
- * marker, a blank line a paragraph break. A thread's first item may lack the
- * name and date (a note that was written by hand before its first reply);
- * that message is markup, shown and edited as written.
+ * One list item per message, `*<name>* (<YYYY-MM-DD>): <text>`, oldest first; the text is plain text, escaped, a line
+ * break `\` at the end of the line. A first item without name and date (a note written by hand) is markup, shown and
+ * edited as written. Any other body is one anonymous message, rewritten only when a reply is added.
  *
- * Typst continues an item on lines indented deeper than its marker's column,
- * which is unknown for an item right after the note's `[` (inline). So a
- * first message of several lines is written in the block form (`\n  - …\n`),
- * and the items after an inline first one start their line (column 0).
- *
- * Any other body (plain text, list items without name and date) is one
- * anonymous message: the whole note, markup. It is never rewritten unless a
- * reply is added, which turns it into the thread's first item.
- *
- * The functions take and return the note's markup (between the call's
- * brackets) and change only what they must: a reply is only an insertion
- * after the last item (so concurrent replies merge into two items), an edit
- * replaces one message's text.
+ * The functions take and return the note's markup and change only what they must: a reply is only an insertion after
+ * the last item (so concurrent replies merge into two items), an edit replaces one message's text.
  */
 export function readThread(note: string): NoteMessage[] {
   const items = threadItems(note);

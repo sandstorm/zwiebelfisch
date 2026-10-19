@@ -15,26 +15,12 @@ const BLOCK_CONTAINER = 'blockContainer';
 
 /**
  * Text alignment in the Visual editor, as Typst writes it:
+ * - an `alignment` block is `#align(args)[blocks]` around editable blocks; only the horizontal part of `args` is edited
+ * - a paragraph's `justify` (`true` / `false`, `null` when unset) is `#par(justify: ..)[text]` around that one paragraph
+ * - `#set align(..)` and `#set par(justify: ..)` in raw blocks set the default for the blocks after them
  *
- * - an `alignment` block is `#align(args)[blocks]`: it holds editable blocks
- *   (paragraphs, headings, lists, …); `args` is the literal alignment as
- *   written (`center`, `top + center`). Only its horizontal part is edited.
- * - a paragraph's `justify` (`true` / `false`, `null` when unset) is
- *   `#par(justify: ..)[text]` around that one paragraph.
- * - `#set align(..)` and `#set par(justify: ..)` in raw blocks set the
- *   default for the blocks after them (in the same container).
- *
- * Blocks are wrapped where they stand in the document, an alignment block or
- * a node type of the group `blockContainer` (whose content is any blocks: a
- * table cell); paragraphs of an item (whose spec makes a `container` of
- * them: a list item) are not justified on their own.
- *
- * The Visual editor shows every textblock's effective alignment (CSS `text-align`), and
- * `textAlignAt` tells the toolbar which one the selection has. The commands
- * change the source as little as possible, in one transaction: an alignment
- * equal to the surrounding one removes the wrapper instead of adding one; a
- * partly selected alignment block is split; justification is per paragraph.
- * Shortcuts: Mod-Shift-L / E / R / J.
+ * Every textblock shows its effective alignment; `textAlignAt` tells the toolbar the selection's. Each command is one
+ * transaction that changes the source as little as possible. Shortcuts: Mod-Shift-L / E / R / J.
  */
 export const TextAlign = Node.create({
   name: 'alignment',

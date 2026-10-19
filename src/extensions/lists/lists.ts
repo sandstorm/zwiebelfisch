@@ -5,11 +5,8 @@ import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lis
 
 /**
  * Bulleted, numbered and task lists in the Visual editor, with their toolbar buttons.
- *
- * A task item is a bullet item in Typst (`- [ ] todo`), so all lists live in one extension and share a toolbar group.
- * Task lists get a higher Tiptap priority, so their parse rule claims those items before bullet lists do. Typst draws
- * the boxes only with the Universe package cheq: an edit that adds a task item also adds cheq's import and show rule
- * if they are missing (model/checklist-preamble.ts). See docs/40_architecture/08_extensions.typ.
+ * An edit that adds a task item (`- [ ] todo`) also adds the import and show rule of the package cheq if they are
+ * missing, since Typst draws the boxes only with it.
  */
 export function lists(): Extension {
   return {

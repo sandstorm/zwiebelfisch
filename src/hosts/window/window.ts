@@ -17,17 +17,12 @@ import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
 
 /**
- * The widget's window (VS Code's `window` namespace): how features talk to the user, and the places they fill.
+ * The window (VS Code's `window` namespace): how extensions talk to the user, and the places they fill.
  *
- * When every feature asks and tells the same way, they all look and behave alike, and none draws popovers of its own.
- * So the window offers messages, input boxes, quick picks, a save dialog, context menus of contributed entries and
- * progress. The places a feature fills are the status bar, the editing area (custom editors; the Visual and Source
- * editors are two of them), file decorations and search everywhere. The window also tells which file and which Typst
- * editor the user works in.
- *
- * Each part is a module in a subfolder (notifications/, quick-input/, save-dialog/, menus/, progress/, search/,
- * status-bar/, custom-editors/, file-decorations/). WindowHost puts them where the workbench's frame says. Which file
- * the editing area shows and which entries a menu has stay the workbench's. See docs/40_architecture/07_workbench.typ.
+ * Extensions use it to:
+ * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
+ * - fill places: the status bar, the editing area (custom editors), file decorations, search everywhere
+ * - follow which file and which Typst editor the user works in
  */
 export interface WindowApi {
   /**

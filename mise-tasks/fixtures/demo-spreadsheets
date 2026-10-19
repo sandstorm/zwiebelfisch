@@ -2,9 +2,8 @@
 //MISE description="Write the demo examples' spreadsheets (simple: data/budget.ic, advanced: data/compile-times.ic) and their Typst files (.ic.gen.typ)"
 //MISE sources=["mise-tasks/fixtures/demo-spreadsheets", "src/extensions/spreadsheets/model/typst-file.ts"]
 //MISE outputs=["demo/examples/simple/data/budget.ic", "demo/examples/simple/data/budget.ic.gen.typ", "demo/examples/advanced/data/compile-times.ic", "demo/examples/advanced/data/compile-times.ic.gen.typ"]
-// The demo opens .ic files in IronCalc's workbook UI; this builds them with IronCalc's engine, so the example
-// files are reproducible instead of binaries nobody can regenerate. Their Typst files are what the widget writes on
-// every edit (spreadsheetTypst), so the examples compile before anyone opened a spreadsheet.
+// Built with IronCalc's engine, so the example files can be regenerated. The Typst files are what the widget writes
+// on every edit, so the examples compile before anyone opened a spreadsheet.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import init, { Model } from '@ironcalc/wasm';
 import { spreadsheetTypst, typstPath } from '../../src/extensions/spreadsheets/model/typst-file.ts';

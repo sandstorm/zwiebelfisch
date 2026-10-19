@@ -8,11 +8,10 @@ import { typstPath } from '../model/typst-file';
 import type { NewWorkbook } from '../workbench/workbook';
 
 /**
- * "Insert spreadsheet": asks for the new spreadsheet's name (`window.showSaveDialog`, proposing a free
- * `data/table.ic` next to the document), creates it with the starter table and its Typst file (both through
- * `workspace.applyEdit`, so the document compiles at once), inserts `#figure(sheets.Sheet1, caption: [ ])` after the
- * cursor's block with the import it needs (`calculateSheetFigure`; one undo step), and opens the spreadsheet: the starter values
- * are placeholders, so filling them in is next. `newWorkbook` makes the spreadsheet (IronCalc, loaded on demand).
+ * "Insert spreadsheet" in the Insert menu: asks for the new spreadsheet's name (proposing a free `data/table.ic` next
+ * to the document), creates it with the starter table and its Typst file, so the document compiles at once, inserts
+ * `#figure(sheets.Sheet1, caption: [ ])` after the cursor's block with the import it needs (one undo step), and opens
+ * the spreadsheet. `newWorkbook` makes the spreadsheet.
  */
 export function insertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): ToolbarItem {
   return {

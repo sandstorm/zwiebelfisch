@@ -6,9 +6,8 @@ import { untarGz } from './tar';
  * Lets documents compiled by `engine` import packages, fetched on first use
  * with `fetchPackage` (default: from packages.typst.org, cached); `onDidChangeDownloads` hears which are on the way.
  *
- * The engine compiles synchronously and cannot wait for a download. So it reports the packages it misses; this
- * wrapper downloads them, adds their files and compiles again. A package that fails is reported as a diagnostic and
- * not tried again. The preview's worker wraps its engine with it. See docs/40_architecture/02_core.typ.
+ * Used by the preview's worker. A compile that misses packages downloads them, adds their files and compiles again;
+ * a package that fails is reported as a diagnostic and not tried again.
  */
 export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage, onDidChangeDownloads?: DownloadsListener): PackageEngine {
   const failed = new Map<string, string>();

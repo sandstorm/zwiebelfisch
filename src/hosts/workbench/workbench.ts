@@ -29,20 +29,10 @@ import { DocumentEditors } from './document-editors/document-editors';
 import css from './workbench.css?inline';
 
 /**
- * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
- * Hosts write their own the same way and give them to `createEditor({ extensions })`.
+ * A feature of the widget (VS Code's extension), given to `createEditor({ extensions })`, built-in or a host page's own.
  *
- * The workbench is the widget's frame, and it knows no feature by name. Every feature is an extension: it registers
- * what it adds (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at
- * activation, and all of it is disposed with the widget. So adding a feature means adding it to a list, not editing
- * the frame. Extensions never depend on each other; what one offers another goes through a generic contribution point
- * of a host.
- *
- * The API follows VS Code. Its namespaces (`commands`, `window`, `scm`, `languages`, `workspace`) are hosts of their
- * own; `workbench` is only the frame; the editors and the preview are hosts with contribution points (`visualEditor`,
- * `sourceEditor`, `preview`). Even the Visual and Source editors are custom editors, registered by the workbench
- * before any extension, so the editing area treats every file alike. See docs/40_architecture/07_workbench.typ and
- * docs/40_architecture/08_extensions.typ.
+ * Each is activated once, in list order, after every extension's `contributes` is known and before any editor exists.
+ * What it pushes into `context.subscriptions` is disposed with the widget.
  */
 export interface Extension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */

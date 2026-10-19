@@ -13,27 +13,16 @@ import { AccountStatus } from './workbench/account';
 import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
 /**
- * Real-time editing of the project with others, over Yjs, as the workbench's `user`. Not a built-in: the host adds it
- * with its connection (`extensions: (builtinExtensions) => [...builtinExtensions, collaboration({ url, room })]`).
+ * Real-time editing of the project with others, over Yjs. Not a built-in: the host adds it with its connection
+ * (`extensions: (builtinExtensions) => [...builtinExtensions, collaboration({ url, room })]`).
  *
- * Most widgets never collaborate, so this entry stays small. The Yjs side (Collaboration in model/model.ts) is a chunk
- * of its own that CollaborationLink loads on demand; nothing outside model/ imports it other than as a type.
- * Sharing works on the documents, not the editors: each Typst file's text is bound to a Y.Text, and the editors keep
- * following their TypstDocument; outside GitLab rooms, the main file is the room's too. The other users' places come
- * back as `Presences`, which the extension draws itself through the hosts' generic contribution points: CodeMirror
- * extensions in the Source editors (source-editor/, which also keeps other users' edits out of the undo history),
- * highlights, decorations and raw box code in the Visual editors (visual-editor/), file decorations in the workbench
- * (workbench/).
+ * Shows the other users, each in their color:
+ * - carets and selections in the Source and Visual editors
+ * - file decorations in the workbench
  *
- * Until the room's text is in the project, the editing area shows "Connecting to the room…" and takes no input. In a
- * room backed by a GitLab branch, the branch is a source control, and the browser warns before the last user leaves
- * changes nobody commits.
- *
- * A server lets in only people signed in there (a session cookie; the widget holds no token): the status bar shows
- * the account ("Sign in", or the name with "Sign out" in its menu), and a room the user may not join yet for that
- * offers to sign in, which leaves the page for the server's sign-in and comes back. See
- * docs/20_features/12_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and
- * docs/40_architecture/09_server.typ.
+ * Until the room's text is in the project, the editing area takes no input. Other users' edits never enter the local
+ * undo history. With a server, only signed-in users join: the status bar shows the account and offers signing in. A
+ * room backed by a GitLab branch is a source control, and the browser warns before leaving changes nobody commits.
  */
 export function collaboration(options: CollaborationOptions): Extension {
   const server = 'url' in options;

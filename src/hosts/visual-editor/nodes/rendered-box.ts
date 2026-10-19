@@ -6,21 +6,12 @@ import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-editor';
 
 /**
- * The rendered face of a raw box: its renderer's picture, shown instead of
- * the code while the box does not have focus. Clicking the picture activates
- * the box; it leads where the box links to, as a link in text does: hovered,
- * it shows the link's hint and, while the modifier is held, the link look
- * (`FollowableLink.hover`), and Mod+click follows it. Until the renderer has a picture (the
- * preview's first compile), the box shows its code; a picture is decoded
- * before it replaces the code or the picture before it, so the box never shows
- * a blank picture in between.
+ * The rendered face of a raw box: its renderer's picture, shown instead of the code while the box does not have focus.
  *
- * Owns the `<img>`, the switching between it and the code, and the refreshes:
- * whenever the renderer reports a change and, for renderers that follow
- * edits, whenever the node changes. A renderer's change reaches only boxes
- * near the view (an `IntersectionObserver`, one viewport above and below): a
- * box further away, or in a hidden editor, is drawn again once it comes near.
- * The renderer changes after every compile, and a long document has many boxes.
+ * Clicking the picture activates the box. Hovered, it shows the box's link as a link in text does, and Mod+click follows
+ * it. Until the renderer has a picture the box shows its code, and a new picture is decoded before it replaces what was
+ * shown, so the box never shows a blank picture. Only boxes near the view (one viewport above and below) are redrawn
+ * when the renderer changes; the others once they come near.
  */
 export class RenderedBox {
   /** The `<img>` shown instead of the code (the box's tools may move it, e.g. into a frame). */

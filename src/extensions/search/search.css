@@ -1,6 +1,4 @@
-/* The search extension's styles: the "Find in files" panel (mode switch, query field and options, replace field,
-   scope, message, outcome of a replace, keys, result tree with the replace preview) and the matches highlighted in
-   the editors.
+/* The search extension's styles: the "Find in files" panel and the matches highlighted in the editors.
    See search in search.ts, which registers it. */
 .zwf-search {
   display: flex;

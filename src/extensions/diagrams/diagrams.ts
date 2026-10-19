@@ -12,19 +12,14 @@ import { newDiagram } from './workbench/new-diagram';
 
 /**
  * Diagrams in Typst documents, drawn in diagrams.net. A diagram is a `.drawio.png`: a PNG with the diagram's XML
- * inside, so Typst shows it as an image (`#image("flow.drawio.png")`) and diagrams.net edits it again.
+ * inside, so Typst shows it as an image (`#image("flow.drawio.png")`) and diagrams.net edits it again. Adds:
+ * - the editor of diagrams: diagrams.net from the setting `diagrams.editorUrl`, saving every change; offline, it offers
+ *   the picture instead
+ * - "New diagram…" in the menu `file/newFile` and "Insert diagram" in the Visual editor's Insert menu
+ * - a diagram dropped into the text becomes a figure
+ * - "Edit diagram" links on diagram paths, so ⌘/Ctrl+click opens the diagram
  *
- * All of it goes through the hosts' generic contribution points. The custom editor `diagrams.editor` (priority 110,
- * over the images' editor of PNGs) embeds diagrams.net from the setting `diagrams.editorUrl` in an iframe, light or
- * dark as the widget, and saves every change (debounced; what is pending when the file is closed). Offline, an error
- * message offers the picture instead. "New diagram…" is in the menu `file/newFile`, "Insert diagram" in the Visual
- * editor's Insert menu (a new diagram as a figure); a diagram dragged from the file panel into the text becomes the same
- * figure (a drop edit provider, priority 110, over the images' `#image(..)`). The paths of the project's diagrams in Typst are document links
- * "Edit diagram" (priority 110, over the plain file links), so ⌘/Ctrl+click on a box's picture or on the path opens
- * the diagram.
- *
- * The embed protocol (EmbedSession in model/) is pure state, so it is tested without an iframe; DiagramEditor in
- * workbench/ only carries messages. See docs/20_features/07_drawio-diagrams.typ.
+ * Each of these wins over what the images extension and plain file links do with the same file (priority 110).
  */
 export function diagrams(): Extension {
   return {

@@ -2,13 +2,10 @@
 import type { ProjectFiles } from '../src';
 
 /**
- * The demo's example projects. Each one is a folder whose files become the
- * project's files: `examples/<name>/main.typ` → `/main.typ`,
- * `examples/<name>/chapters/a.typ` → `/chapters/a.typ`. Typst files are text,
- * everything else (images, Mermaid diagrams, spreadsheets) is passed as bytes. "Documentation"
- * is this project's own docs/ (its Typst files, Mermaid diagrams, images, fonts and the HTML pages' style sheet, so
- * site.typ shows the docs site in the HTML preview): on the dev server and in vite preview its edits are saved there
- * (docs-files/), in a static build nowhere.
+ * The demo's example projects, each a folder whose files become the project's files (`examples/<name>/main.typ` →
+ * `/main.typ`): Typst files as text, everything else (images, Mermaid diagrams, spreadsheets) as bytes.
+ * "Documentation" is this project's own docs/: on the dev server and in vite preview its edits are saved there, in a
+ * static build nowhere.
  */
 export const EXAMPLES = [
   { name: 'simple', label: 'Simple', folder: './examples/simple' },

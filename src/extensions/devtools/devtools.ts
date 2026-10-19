@@ -9,23 +9,15 @@ import { DevtoolsPanel, type DevtoolsTab } from './workbench/devtools-panel';
 import type { ShownDocument } from './workbench/document-tab';
 
 /**
- * `extensions` with their contributions recorded, followed by the devtools extension, whose right side panel shows
- * what the widget is made of while it runs. Always there: createEditor gives it the whole list (built-ins and the
- * host's), last. The setting `devtools.enabled` (default true) shows or removes the panel and its rail button.
+ * `extensions` with their contributions recorded, followed by the devtools extension: a right side panel that shows
+ * what the widget is made of while it runs. createEditor gives it the whole extension list, last. The panel shows:
+ * - the Typst engine's memory and how it grew
+ * - the shown file's ProseMirror document, each node with its source range
+ * - every contribution, by extension or by contribution point
+ * - the events as they fire, with their values
  *
- * On top, the Typst engine's memory (the preview's `engineMemory`: it only grows, up to 4 GB, where the engine
- * crashes) and how it grew. Below, three tabs: the shown file's ProseMirror document, each node with its source range
- * (what the Typst ↔ ProseMirror conversion made of the file); every contribution in its point's terms, by extension or
- * by point; and the events as they fire, with their values in full.
- *
- * Contributions and memory are recorded from activation on, also while the panel is hidden or switched off: they
- * cannot be asked for later. Events are many and cost a formatted value each, so they are logged only while the panel
- * is shown (`SidePanel.visible`), all of them; the log stays as it was while the panel is hidden.
- *
- * It uses only what any extension gets, so it sees what an outside extension sees. That is why it wraps the list: an
- * extension sees only its own context, so the others' contributions are recorded by wrapping their `activate`
- * (ContributionLog in recording/contributions.ts), not by a listing in the hosts. See docs/30_configuration/02_embedding.typ,
- * "Devtools".
+ * The setting `devtools.enabled` (default true) shows or removes the panel. Contributions and memory are recorded from
+ * activation on, also while the panel is hidden; events only while it is shown.
  */
 export function devtools(extensions: readonly Extension[]): Extension[] {
   const contributions = new ContributionLog();

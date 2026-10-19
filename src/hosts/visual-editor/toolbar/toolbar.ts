@@ -1,4 +1,4 @@
-// See VisualEditor in ../visual-editor.ts and docs/40_architecture/04_visual-editor.typ, "Toolbar".
+// See VisualEditor in ../visual-editor.ts.
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';
@@ -9,16 +9,12 @@ import { keyLabel } from '../../commands/commands';
 import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyle, type TextStyleProvider, type VisualEditorContext } from '../visual-editor';
 
 /**
- * The Visual editor's formatting toolbar: a row of groups and menus sorted by
- * their `order` (the host's own: undo/redo first, the text style menu once
- * any provider contributes to it, the "Insert" menu), and
- * bars floating in the text column (they scroll with the text) above their
- * anchor while the text or the bar has focus — the host's "Selection" bar
- * above a text selection; of the floating bars, only the first with an anchor
- * shows (a bar without a visible button does not); a menu may sit in a bar (Styles ▾ in the selection bar).
- * Contributions fill them with items. Buttons reflect the
- * selection (pressed, disabled, hidden) after every transaction, focus and blur, and never take
- * the focus away from the text. Groups without items are left out.
+ * The Visual editor's formatting toolbar: a row of groups and menus sorted by `order` (the host's own: undo/redo, the
+ * text style menu, "Insert"), and bars floating above their anchor in the text (the "Selection" bar above a text
+ * selection), of which only the first with an anchor shows.
+ *
+ * Contributions fill them with items. Buttons reflect the selection (pressed, disabled, hidden) after every
+ * transaction, focus and blur, and never take the focus away from the text.
  */
 export class Toolbar {
   private readonly root: HTMLElement;

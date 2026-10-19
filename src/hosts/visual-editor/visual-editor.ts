@@ -24,19 +24,15 @@ import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
 
 /**
- * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar.
+ * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
+ * workbench's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
  *
- * People who do not want to write markup still edit the same text as everyone else. The editor shows its
- * `TypstDocument` through the Typst ↔ ProseMirror conversion (`../prosemirror-typst`). A visual edit becomes one
- * minimal text change on the document. A change from elsewhere is parsed again and applied as the smallest
- * replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code, never
- * rewritten, or shown as a picture.
+ * A visual edit becomes one minimal text change on its `TypstDocument`. A change from elsewhere is applied as the
+ * smallest replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code,
+ * never rewritten, or shown as a picture.
  *
- * The editor keeps only the mechanism: paragraphs, text, raw boxes, the clipboard (in Typst), the toolbar's frame,
- * highlights, completion lists, the blocks' drag handle (`block-handle.ts`), the caret between blocks (`block-gaps.ts`) and Tab staying in the text (`tab-keys.ts`; Escape, then Tab leaves). Every other construct (headings, tables, labels, comments, …) and feature is contributed through
- * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
- * editors for `*.typ`, next to the Source editor; the workbench's `DocumentEditors` makes it.
- * See docs/40_architecture/04_visual-editor.typ.
+ * Every construct beyond paragraphs, text and raw boxes (headings, tables, labels, comments, …) is contributed through
+ * `VisualEditorHost`.
  */
 export class VisualEditor {
   /** The text column below the toolbar (with what floats in it): what scrolls as the document's content. */

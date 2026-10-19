@@ -2,9 +2,9 @@
  * The Y.Doc map of the shared Typst files: path → Y.Text (written by the collaboration extension's SharedProject; the
  * server reads and merges them in GitLab rooms).
  *
- * What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the stateless messages of
- * GitLab-backed rooms, and the URL of a room's file. The widget's side; the server's (Go) is
- * server/lib/gitlab/protocol.go, and a change here is a change there. See docs/40_architecture/09_server.typ.
+ * This file is the widget's side of what it and the collaboration server agree on: the maps of a room's Y.Doc, the
+ * messages of GitLab-backed rooms and the URL of a room's file. The server's side is server/lib/gitlab/protocol.go;
+ * a change here is a change there.
  */
 export const FILES_MAP = 'files';
 

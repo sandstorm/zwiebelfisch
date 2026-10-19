@@ -1,19 +1,11 @@
 // Package collab is the collaboration server: it speaks the Hocuspocus protocol to the widget's
 // HocuspocusProvider and keeps one Yjs document per room (= project).
 //
-// People who edit one project together need its document in one place. A client opens a room by name
-// (Authenticate decides, from the connection's upgrade request: who signed in); the server syncs the room's document with it, relays every change and
-// presence (awareness) update to the room's other clients, and stores the document (debounced, and when
-// the last client leaves, after which the room is unloaded). It does not look inside a room; an Extension
-// does (GitLab rooms, package gitlab): it opens a room, gets its clients' stateless messages, and decides
-// when a room the last client left may unload.
+// A client opens a room by name if Authenticate lets it. The server syncs the room's document with it,
+// relays every change and presence update to the room's other clients, and stores the document (debounced,
+// and when the last client leaves, after which the room unloads). An Extension decides what a room is.
 //
-// Each room runs on its own goroutine, which owns its document: everything that touches a room (a client's
-// message, joining, leaving, storing) is a function queued to it, so rooms need no locks and see events in
-// order. Connections are read on their own goroutines and written by a writer goroutine each, so a slow
-// client never blocks a room.
-//
-// The wire format is in frame.go; the document and its sync protocol in package ydoc.
+// A room sees its events in order, and a slow client never blocks a room.
 package collab
 
 import (

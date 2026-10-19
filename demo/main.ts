@@ -1,15 +1,18 @@
-// The demo playground: the widget on one page, to try it out, for the e2e tests, and to write these docs in.
+// The demo playground: the widget on one page, used
+// - to try it out
+// - by the e2e tests
+// - to write these docs in
 //
-// Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
-// `?example=simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
-// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`, which signs people in at its fake
-// GitLab: the widget's status bar has "Sign in"), and `&user=<name>` (Local mode). Without `room`
-// (Local mode, the default and what the static e2e build uses) it never talks to a server. The shown file and the cursor's line are the URL's fragment (open-file-hash.ts, an
-// extension of the demo's own). The playground bar above the editor switches all of this (playground-bar.ts).
+// Its whole state is the URL, so a reload, a second window or a shared link shows the same:
+// - `?example=simple|advanced|docs`
+// - `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>` (GitLab mode, a fake GitLab) on the
+//   local playground server (`mise run demo`); without `room` (Local mode) it never talks to a server
+// - `&user=<name>`: the name in Local mode
+// - the fragment: the shown file and the cursor's line
 //
-// The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview
-// (docs-files/plugin.ts). The static site (GitHub Pages, static-site.ts) opens that example, saves nothing and offers
-// Local mode only. See docs/10_getting-started/01_getting-started.typ, "The demo".
+// The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview.
+// The static site (GitHub Pages) saves nothing and offers Local mode only.
+
 import { collaboration, createEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';

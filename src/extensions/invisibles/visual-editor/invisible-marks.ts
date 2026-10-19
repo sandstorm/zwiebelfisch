@@ -6,13 +6,12 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 
 /**
- * Marks for the invisible characters of every paragraph (any textblock) while `shown()`: a space, a non-breaking
- * space and a tab get a class (inline decorations; CSS draws the mark over the character), a line break a widget
- * before it, the paragraph's end a widget after its text, a newline written in the source (shown as a space) the
- * space's class, unless it follows a line break (Typst drops it there). They are decorations only: the document and what is copied stay as they are.
+ * Marks for the invisible characters of every paragraph (any textblock) while `shown()`: a space, a non-breaking space
+ * and a tab get a class (CSS draws the mark over the character), a line break a widget before it, the paragraph's end
+ * a widget after its text. A newline written in the source (shown as a space) is marked as a space, unless it follows
+ * a line break (Typst drops it there). The document and what is copied stay as they are.
  *
- * Turned on, all paragraphs are marked once; after that an edit marks anew only the paragraphs it touched, the other
- * marks follow the edit (ProseMirror's mapping), so typing costs the same in a long document as in a short one.
+ * An edit marks anew only the paragraphs it touched, so typing costs the same in a long document as in a short one.
  */
 export function invisibleMarks(state: InvisiblesState): Extension {
   return Extension.create({

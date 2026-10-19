@@ -19,14 +19,13 @@ import { SharedProject } from './shared-project';
 
 /**
  * The lazily loaded side of collaboration for one widget: one Y.Doc per project, from a Hocuspocus server or from the
- * host. No DOM, no editor library.
+ * host. No DOM, no editor library. It shares:
+ * - each Typst file's text (SharedProject)
+ * - the main file (SharedMainFile), except in a GitLab-backed room, where it stays each user's own
+ * - the users' places (RemoteCursors)
+ * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch (GitLabSourceControl)
  *
- * SharedProject keeps a Y.Text per Typst file and binds each document to it (TextBinding). The editors never sync on
- * their own; they keep following their TypstDocument. SharedMainFile keeps everyone on the same main file. RemoteCursors
- * carries the users' places over awareness. In a room backed by a GitLab branch (the server put a `baseSha` into the
- * Y.Doc's `meta` map), SharedAssets shares the other files too, GitLabSourceControl commits to the branch, and the main
- * file stays each user's own. The widget reaches all this through CollaborationLink
- * (../collaboration-link.ts). See docs/30_configuration/03_collaboration-server.typ.
+ * Used through CollaborationLink in ../collaboration-link.ts.
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;

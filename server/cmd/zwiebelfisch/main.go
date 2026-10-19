@@ -1,7 +1,10 @@
-// Command zwiebelfisch is the collaboration server: `mise run server:dev`. It reads its settings from the
-// environment (package config: GitLab rooms, plain rooms, the sign-in, the database) and serves the
-// Hocuspocus protocol on ws://ADDRESS:PORT (any path), next to the HTTP endpoints of package app. On
-// SIGINT/SIGTERM it stores every open room before exiting.
+// Command zwiebelfisch is the collaboration server (`mise run server:dev`).
+//
+// It reads its settings from the environment (package config) and serves on ADDRESS:PORT:
+//   - the Hocuspocus protocol (a WebSocket on any path)
+//   - the HTTP endpoints of package app
+//
+// On SIGINT/SIGTERM it stores every open room before exiting.
 package main
 
 import (

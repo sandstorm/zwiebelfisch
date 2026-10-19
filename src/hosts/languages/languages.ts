@@ -8,23 +8,17 @@ import { followableLink, linkExtension, primaryLink, type LinkActions } from './
 import { pasteExtension, type PasteOptions } from './paste-extension';
 
 /**
- * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
- * links, what a project file dropped into a text becomes, the language of a file, help sheets, and the modules names
- * come from.
+ * The languages of texts (VS Code's `languages` namespace, the parts we use).
  *
- * Finding links is a feature's policy: which paths count, what a missing file offers. Showing and following links is
- * the same in every editor. So extensions register link providers, and every CodeMirror editor (the Source editor,
- * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
- * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
- * imports: an extension says where the names of its constructs come from, whoever adds imports reads them. And drops:
- * a file dragged from the file panel (or from the desktop, once the workbench uploaded it) into a Typst editor becomes
- * what an extension makes of it (a spreadsheet: its figure and import), the editors only insert it. And copy and
- * paste: an extension offers other ways a paste can go in (Markdown as Typst) or changes what goes in (a label already
- * taken gets a new name) and what else it changes (the imports the text needs); the editors do the paste, in one undo
- * step, and offer the other ways.
+ * Extensions register providers for a language, and the editors of a text in it use all of them:
+ * - document links, shown and followed in every CodeMirror editor
+ * - drop edits: what a project file dropped into a text becomes
+ * - paste edits: other ways a paste can go in, and what else it changes
+ * - help sheets, for the help panel
+ * - known imports: the modules the names of a construct come from
  *
- * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
- * declare which file endings are which language (`contributes.languages`). See docs/40_architecture/07_workbench.typ.
+ * The host knows no language itself: whoever hands a text over says its language (`languageId`), and extensions declare
+ * which file endings are which language (`contributes.languages`).
  */
 export interface Languages {
   /**

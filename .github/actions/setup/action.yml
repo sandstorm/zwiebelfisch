@@ -1,9 +1,8 @@
 # What every job that builds needs, as a developer's checkout has it: the tools mise.toml pins, the JS dependencies,
 # and the engine (Rust → wasm) with its fonts. The workflows then run the same mise tasks a developer runs.
 #
-# The engine takes minutes to compile, so its output (src/core/typst-engine/wasm.gen, …/fonts.gen) is cached under a key of
-# everything it is built from; on a hit, cargo never runs. On a miss, cargo's registry and target folder come from the
-# cache of the last build with the same Cargo.lock (or any before it), so only what changed compiles.
+# The engine's output is cached under a key of everything it is built from, so an unchanged engine is never compiled
+# again, and after a change only what changed compiles.
 name: Setup
 description: Pinned tools (mise), JS dependencies (pnpm) and the built engine
 inputs:

@@ -10,23 +10,15 @@ import { TYPST, typstPasteEdits } from './pasted-typst';
 import type { VisualEditorPasteEdits } from './visual-editor';
 
 /**
- * The clipboard in Typst. Copy and cut put the selection's Typst source on the clipboard as text (`text/plain`, and
- * `text/x-typst` saying it is Typst): byte for byte where that source reads as what is selected, else the selection
- * printed anew (part of a bold word: `*bo*`); text within code (a code block's lines) is that text, without fences. A cut with nothing selected cuts the paragraph at the caret, as IntelliJ
- * cuts the line: a list item or quote that is only that paragraph goes along (`caretBlock`). ProseMirror's HTML goes along for rich targets (a mail, a word
- * processor); a Visual editor reads the Typst instead, as the HTML leaves out what is never rendered (a raw box's
- * source).
+ * The Visual editor's clipboard, in Typst.
  *
- * A paste goes in as one of the paste edits the clipboard offers (`pasteEditsOf`): the paste edit providers' (`pasteEdits`;
- * Markdown as Typst), the editor's own (`typstPasteEdits`: pasted Typst, plain text, and code, VS Code's or HTML that is code only, another language
- * than Typst as a code block of it; the text as plain characters, escaped, a paragraph per line, first after
- * Mod+Shift+V), other HTML (a web page, a word processor) as ProseMirror reads it with the schema's HTML rules, printed
- * as Typst; each as the providers resolve it (a copy gave them the
- * clipboard): its Typst read with the editor's specs, in place of the selection, as one step with its other changes of
- * the document's text: a paragraph's inline content into the text there, blocks as blocks (what no spec models: raw
- * boxes). Where there are others, the "Paste as" chip lets the user change it (`pasteWith`). Text into code (a code
- * block) goes in as it is (ProseMirror's). Its priority puts its text serializer before Tiptap's.
- * See docs/40_architecture/04_visual-editor.typ.
+ * Copy and cut put the selection's Typst on the clipboard (`text/plain`, and `text/x-typst`): its source byte for byte
+ * where that reads as what is selected, else printed anew (part of a bold word: `*bo*`). ProseMirror's HTML goes along
+ * for rich targets. A cut with nothing selected cuts the paragraph at the caret, as IntelliJ cuts the line.
+ *
+ * A paste goes in as one of the paste edits on offer (the providers' `pasteEdits`, the editor's own `typstPasteEdits`,
+ * other HTML as the schema reads it), in place of the selection, in one step with its other changes to the text. Where
+ * there are others, the "Paste as" chip lets the user switch (`pasteWith`).
  */
 export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
   return Extension.create({

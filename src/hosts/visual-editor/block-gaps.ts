@@ -8,30 +8,17 @@ import type { SourceOffset } from '../../core/typst-document/typst-document';
 import { posToSource, sourceToPos } from '../prosemirror-typst/prosemirror-typst';
 
 /**
- * Block gaps: a caret before or after a block that has no text of its own to put it in, or only code, as CKEditor 5
- * offers beside its widgets. With it one can go explicitly behind a block style, a figure, a table, a raw box or a code
- * block, and sees whether the caret is inside the block or after it.
+ * A caret between blocks, as CKEditor 5 offers beside its widgets: before or after a box (a block that is no text block,
+ * like a block style, a figure, a table, a raw box, or a code block), so one can go behind it and see whether the caret
+ * is inside the block or after it. Only where a paragraph may go, never inside a list item.
  *
- * A gap is a place between two sibling blocks where at least one is a box (a block that is not a text block: a
- * container like a block style, a figure, a table, or an atom like a raw box or an image; or a code block, whose
- * text takes Enter as a line break), and before the first or after the last block of the document or a container,
- * beside a box. Only where a paragraph may go, and never inside a list item. A list is no box: between paragraphs,
- * headings and lists there is none, and the arrows go from text to list item as ProseMirror moves them.
- *
- * - Arrow keys go one stop at a time: from the end of the text in a box onto the gap after it (with nothing after
- *   the text in between), from there into the next block or the gap after the box around; backwards the same.
- *   They come before a code block's own (Tiptap's ArrowDown at its end makes a paragraph after it).
- *   Leaving a raw box's code lands in the gap beside it (`blockGapAt`).
+ * - Arrow keys stop at each gap; leaving a raw box's code lands in the gap beside it.
  * - At a gap, typing, Enter or a paste start a new paragraph there; Backspace selects the box before (a second one
- *   deletes it), Delete the box after; beside text (a code block's) they go to its edge.
+ *   deletes it), Delete the box after.
  * - A click into the space between such blocks, or below the last one, puts the caret there.
- * - It is drawn as a blinking line across the width of the content, in the accent colour.
  *
- * The gap is a selection of its own (`BlockGap`, JSON type `blockGap`), mapped through every change: it stays in
- * its gap while it is one, else goes to the nearest text. Its source offset lies between the two blocks'
- * sources; a caret revealed there is the gap again (`caretAtSource`).
- * It replaces ProseMirror's gap cursor, which knows no gap beside a box ending in text (two block styles ending
- * in code blocks).
+ * The gap is a selection of its own (`BlockGap`), mapped through every change; a caret revealed at its source offset is
+ * the gap again. It replaces ProseMirror's gap cursor.
  */
 export const BlockGaps = Extension.create({
   name: 'typstBlockGaps',

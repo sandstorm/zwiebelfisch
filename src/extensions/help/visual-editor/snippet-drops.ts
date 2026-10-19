@@ -4,9 +4,8 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { insertTypst } from '../../../hosts/visual-editor/visual-editor';
 
 /**
- * Takes a help row dropped on a Visual editor: its Typst (drag type `TYPST_SNIPPET_TYPE`) is read as Typst and
- * inserted where it was dropped (`insertTypst`: inline content into the text, blocks after the block there), as the
- * file panel's images are. Other drops are left to the others (the row's `text/plain` would land as plain text).
+ * Takes a help row dropped on a Visual editor: its Typst (drag type `TYPST_SNIPPET_TYPE`) is read as Typst and inserted
+ * where it was dropped (inline content into the text, blocks after the block there). Other drops it leaves alone.
  */
 export function snippetDrops(): Extension {
   return Extension.create({

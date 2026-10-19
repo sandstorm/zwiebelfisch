@@ -1,17 +1,7 @@
-// The package's public API, and the only file that re-exports.
-//
-// A page uses createEditor or <zwiebelfisch-editor> (registered on import). An outside extension needs only the types it
-// implements or declares: everything else it reaches through its ExtensionContext, typed without importing. So this
-// file exports, beside the two entries:
-// - the types of each host's contribution points (workbench, commands, window, scm, languages, workspace, preview, the
-//   Source and Visual editors). The Visual editor's node and mark specs come with the plain functions that read Typst
-//   calls, so an outside extension can add a Typst construct as the built-ins do (experimental).
-// - Disposable, EventEmitter and the value types (ProjectPath, FileContent, SourceOffset, SourceRange, PageIndex, Pt),
-//   made where values come in, e.g. to `open` a file at a range; what a preview renderer gets (HtmlFile, ElementLocation,
-//   HTML_ELEMENT_ATTRIBUTE).
-// - VISUAL_EDITOR and SOURCE_EDITOR, to open a file in one of the Typst editors or tell which one is shown.
-// - The optional extension collaboration, which a host adds with its connection.
-// See docs/30_configuration/02_embedding.typ and docs/40_architecture/08_extensions.typ.
+// The package's public API, and the only file that re-exports. Used by:
+// - pages, through createEditor or <zwiebelfisch-editor> (registered on import)
+// - outside extensions, which import only the types they implement or declare; everything else they reach through
+//   their ExtensionContext
 import { defineEditorElement } from './editor-element/editor-element';
 
 export { createEditor, type Editor, type EditorOptions } from './editor/editor';

@@ -8,18 +8,12 @@ import { FILES_MAP } from '../../../core/room-protocol/room-protocol';
 import { TextBinding } from './text-binding';
 
 /**
- * Shares the Typst files of a `Project` through a Y.Doc: one `Y.Text` per
- * `.typ` file in the map `files` (path → text). Every document of the project
- * is bound to its Y.Text (`TextBinding`), so text edits flow both
- * ways on their own; this class keeps the *set* of files in step: files
- * created, renamed or deleted on either side.
+ * Shares the Typst files of a `Project` through a Y.Doc: one `Y.Text` per `.typ` file in the map `files` (path → text).
+ * Every document is bound to its Y.Text, so text edits flow both ways; files created, renamed or deleted on either side
+ * reach the other one.
  *
- * Joining: the shared files win. Local Typst files the Y.Doc does not have
- * yet are added to it, so the first client seeds the room. The Y.Doc should
- * be synced with the server before (else two seeds race; the loser's
- * documents then adopt the winner's text). Other files are SharedAssets'
- * (GitLab-backed rooms only). A rename is a new Y.Text under the new path (the old one is
- * deleted); the other clients see it as a rename.
+ * Joining: the shared files win; local Typst files the Y.Doc does not have yet are added, so the first client seeds the
+ * room. Sync the Y.Doc with the server before, else two seeds race (the loser's documents then adopt the winner's text).
  */
 export class SharedProject {
   private readonly files: Y.Map<Y.Text>;

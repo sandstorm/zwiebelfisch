@@ -1,12 +1,11 @@
-//! An in-memory Typst [`World`]: files and fonts are pushed in from JS. No
-//! fonts are embedded, which keeps the wasm small; the JS side loads them as
-//! separate assets, either right away or lazily: Typst's font book needs every
-//! face's [`FontInfo`] up front, but a face's data only when a document uses
-//! it, so a lazy font's file is loaded by [`World::font`] on first use.
-//! Font files among the project's files (`.ttf`, `.otf`, `.ttc`, `.otc`) are
-//! fonts too, as on typst.app: described when set, dropped when removed.
-//! Packages are pushed in as files; the world only remembers which ones a
-//! compilation asked for but did not have.
+//! An in-memory Typst [`World`]: files and fonts are pushed in from JS.
+//!
+//! - A font is pushed in with its data, or lazily: then [`World::font`] loads
+//!   its data on first use.
+//! - Font files among the project's files (`.ttf`, `.otf`, `.ttc`, `.otc`) are
+//!   fonts too: described when set, dropped when removed.
+//! - Packages are pushed in as files; the world remembers which ones a
+//!   compilation asked for but did not have.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Mutex, OnceLock};

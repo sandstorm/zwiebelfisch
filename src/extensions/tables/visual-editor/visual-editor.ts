@@ -26,15 +26,9 @@ const Tables = Extension.create({
 });
 
 /**
- * `#table(columns: <int or array>, ..named, cells)` whose `columns` comes before the
- * cells and whose positional arguments are cells filling whole rows (the
- * first row may be a `table.header(..)` of header cells), as Tiptap's MIT
- * table extensions (not resizable); cells hold blocks, segmented like the
- * document. A cell written as an expression (`ms(18)`) holds one paragraph
- * with one raw inline box whose `code` attribute is set. Other `table.*`
- * elements, other expressions and comments keep the table raw. `layout` is the
- * source around the cells and how its rows are written (see the model's
- * `TableLayout`).
+ * `#table(columns: <int or array>, ..named, cells)` as an editable table: `columns` before the cells, positional
+ * arguments that fill whole rows, the first row optionally a `table.header(..)`. Cells hold blocks; a cell written as
+ * an expression (`ms(18)`) holds a raw box. Other `table.*` elements, other expressions and comments keep the table raw.
  */
 export const TABLE: TypstNodeSpec = {
   name: 'table',

@@ -8,14 +8,12 @@ import type { TextQuery } from './text-query';
 /**
  * One replace of "Find in files" (a match, a file's matches or all of them) and its undo, one step across all files.
  *
- * Each match is checked first to still be a match where it was found (`TextQuery.replacement`); one whose text
- * changed meanwhile is skipped and counted. A Typst file gets its replacements as exact edits in one change (one
- * event, one shared transaction: comment anchors, cursors and the others' edits elsewhere stay), a text file a new
- * content through `applyEdit` (the host may refuse it).
+ * A match whose text changed since it was found is skipped and counted. A Typst file gets its replacements as one
+ * change of exact edits, so comment anchors, cursors and others' edits elsewhere stay; a text file gets a new content
+ * through `applyEdit`, which the host may refuse.
  *
- * Undo puts back what was replaced where the replacement still is: in a Typst file each replacement follows the
- * file's later edits (anyone's), and one that was edited into is left as it is; a text file is restored only while
- * it has the content the replace gave it. Until `undo` or `dispose` it listens to the Typst files it changed.
+ * Undo puts back what was replaced where the replacement still is: a replacement in a Typst file that was edited
+ * into since stays; a text file is restored only while it has the content the replace gave it.
  */
 export class Replacement {
   /** How many matches were replaced, and in how many files. */

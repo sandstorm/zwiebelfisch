@@ -5,11 +5,10 @@ import { ProjectPath } from '../paths/paths';
  * The create changes for uploaded files: each at the top of the project under its name (`/` and `\` replaced by
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
  *
- * Files from the computer (picked or dropped) enter the project here, so every feature names and reads them the same
- * way: a file name becomes a ProjectPath at the top of the project, and the kind decides text or bytes. Uploads that
- * go into a text (files dropped into a Typst editor, pasted images) take the place `uploadTarget` finds. Used by the
- * workbench (files dropped into the Typst editors), the file panel (extensions/files) and image uploads
- * (extensions/images); applying the changes is theirs. See docs/40_architecture/02_core.typ.
+ * Files picked or dropped from the computer enter the project here, used by:
+ * - the workbench, for files dropped into the Typst editors
+ * - the file panel (extensions/files)
+ * - image uploads (extensions/images)
  */
 export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(

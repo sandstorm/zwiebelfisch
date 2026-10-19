@@ -10,11 +10,9 @@ import { EventsTab } from './events-tab';
 import { MemoryLine } from './memory-line';
 
 /**
- * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown, `changed()` the one shown,
- * `changed('memory')` the line about the engine's memory.
- *
- * The engine's memory in a line on top, then three tabs (the document of the shown file, the contributions, the
- * events), each drawn by its own `Tab`. It draws what it is given; the extension wires it to its context.
+ * The panel in `body`: the engine's memory in a line on top, then three tabs (the shown file's document, the
+ * contributions, the events). `changed(tab)` redraws that tab (once per frame) if it is the one shown, `changed()` the
+ * one shown, `changed('memory')` the memory line.
  */
 export class DevtoolsPanel {
   #tab: DevtoolsTab = 'document';

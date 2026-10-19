@@ -15,12 +15,9 @@ const TaskLists = Extension.create({
 });
 
 /**
- * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
- * task item, the box hidden syntax; consecutive ones form a task list.
- * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
- * rule and clickable checkboxes are Tiptap's). Their Tiptap priority is higher
- * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first. An edit adding a task
- * item brings cheq's import and show rule along.
+ * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph, no nesting) is a task item, its box hidden
+ * syntax; consecutive ones form a task list. The `[ ] ` input rule and clickable checkboxes are Tiptap's. An edit adding
+ * a task item brings cheq's import and show rule along.
  */
 export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',

@@ -5,10 +5,9 @@ import type { ProjectPath } from '../../core/paths/paths';
 /**
  * The places the project can be committed to (VS Code's `scm` namespace), e.g. the GitLab branch behind a room.
  *
- * Committing and showing commits are two features. The collaboration extension knows how to commit to GitLab; the
- * source-control extension shows what is not committed and asks for the message. They never know each other, so
- * both meet here: one registers a `SourceControl`, the other lists every registered one. The host only keeps the
- * list and tells when it changes. See docs/40_architecture/07_workbench.typ.
+ * Used by:
+ * - extensions that can commit: they register a `SourceControl` (collaboration, for GitLab)
+ * - extensions that show source controls: they list the registered ones and hear when that changes (source-control)
  */
 export interface Scm {
   /**

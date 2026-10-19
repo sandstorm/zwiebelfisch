@@ -5,17 +5,13 @@ import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm.gen/
 /**
  * The Typst compiler, SVG renderer, PDF and HTML export and preview hit-testing (Rust → wasm).
  *
- * The typed TypeScript side of the wasm built from crates/typst-engine. The preview runs it in a worker and hands it
- * the project's files; it keeps the last compiled document, so clicks and cursors can be mapped between source and
- * pages. Paths are project paths like `/main.typ`, or package paths like `@preview/name:0.1.0/lib.typ`. Offsets are
- * UTF-16 code units, pages are 0-based, and coordinates are points from the page's top-left.
+ * The preview runs it in a worker and hands it the project's files; it keeps the last compiled document, so clicks
+ * and cursors can be mapped between source and pages. Paths are project paths like `/main.typ`, or package paths like
+ * `@preview/name:0.1.0/lib.typ`. Offsets are UTF-16 code units, pages are 0-based, and coordinates are points from
+ * the page's top-left.
  *
- * A bug in Typst or in the engine (a panic) or memory running out stops the wasm in the middle of a call, and what it
- * left half done makes every later call fail: from then on, every call throws the `TypstEngineCrash` of the first. Only
- * a new wasm instance (a new worker) compiles again.
- *
- * Left to others: the URLs of the wasm and the default fonts (core/engine-assets, so the worker bundle does not copy
- * them) and downloading packages (core/typst-packages). See docs/40_architecture/02_core.typ, "The Typst engine".
+ * After a panic (a bug in Typst or the engine) or running out of memory, every later call throws the
+ * `TypstEngineCrash` of the first. Only a new instance (a new worker) compiles again.
  */
 export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */

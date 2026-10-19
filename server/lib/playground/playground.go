@@ -1,10 +1,12 @@
-// Package playground is the demo playground's server side (`mise run demo`, the Docker image): GitLab rooms
-// without a real GitLab. A fakegitlab.GitLab holds the project and signs people in (its sign-in page is
-// served here), and dev-only HTTP endpoints let the demo's playground bar simulate a colleague's push or a
-// GitLab outage (and the tests switch a room's auto-commit). The package also reads the demo's repository
-// from disk (ReadProjectFiles) and serves the built demo without Vite (StaticFiles).
+// Package playground is the demo playground's server side: GitLab rooms without a real GitLab. Used only by
+// server/cmd/fake-gitlab, never in a real deployment.
 //
-// Never part of a real deployment: only server/cmd/fake-gitlab uses it. See docs/40_architecture/11_development.typ.
+// A fakegitlab.GitLab holds the project and signs people in, and dev-only HTTP endpoints let
+//   - the demo's playground bar simulate a colleague's push or a GitLab outage
+//   - the tests switch a room's auto-commit
+//
+// It also reads the demo's repository from disk (ReadProjectFiles) and serves the built demo without Vite
+// (StaticFiles).
 package playground
 
 import (

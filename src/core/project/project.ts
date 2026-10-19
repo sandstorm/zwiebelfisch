@@ -8,11 +8,12 @@ import { ProjectPath } from '../paths/paths';
  * (images, data) are kept as given. The main file (the one compiled) always exists and cannot be renamed or deleted;
  * `setMain` makes another `.typ` file the main one, unless the host locked it (`mainLocked`).
  *
- * The one place that knows which files a project has and which changes to them are allowed (`check`, `apply`). Many
- * parts derive something from the files: editors, indexes, collaboration, the preview. They all subscribe to
- * `onDidChangeFile`, which reports `apply`, `replace` and every text edit, so nobody has to be told by hand. Sharing
- * the files with others is the collaboration extension's; what another file is (an image, a font) is decided by
- * whoever reads it. See docs/40_architecture/02_core.typ, "Project".
+ * `onDidChangeFile` reports every change: `apply`, `replace` and every text edit. Everything derived from the files
+ * subscribes to it:
+ * - editors
+ * - indexes
+ * - collaboration
+ * - the preview
  */
 export class Project {
   private readonly entries = new Map<ProjectPath, Entry>();

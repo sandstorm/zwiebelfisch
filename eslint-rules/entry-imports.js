@@ -1,17 +1,14 @@
 // ESLint rule `local/entry-imports`: a module under src/ is entered only through its entry file.
 //
-// The layout (docs/40_architecture/10_conventions.typ):
-// - The modules are the folders `core/<name>/`, `hosts/<name>/`, `extensions/<name>/` and the top-level folders
-//   `editor/`, `editor-element/`, `testing/`. `core/`, `hosts/` and `extensions/` only group modules.
-// - A module's entry file is named like it, `x/x.ts` (a stylesheet may be `x/x.css`), and lives inside it. From
-//   outside the module only the entry may be imported.
-// - Inside a module everything is open: layer and concept subfolders (`model/`, `visual-editor/`, `nodes/`, …)
-//   have no entry files of their own, and files import each other directly.
-// - Only TypeScript and CSS sources count. Generated or data files (wasm.gen/, fonts.gen/, fixtures/) are not
-//   modules with an interface.
-// - The few exceptions are the rule's `exceptions` option, listed in eslint.config.js.
+// - A module is a folder directly under src/, or one level deeper in a grouping folder (the `groupingFolders`
+//   option: `core/`, `hosts/`, `extensions/`).
+// - Its entry file is named like it, `x/x.ts` (a stylesheet may be `x/x.css`). From outside the module only the entry
+//   may be imported; inside it everything is open.
+// - Only TypeScript and CSS files count.
+// - The exceptions are the `exceptions` option.
 //
 // Which paths are checked: see imports.js.
+
 import path from 'node:path';
 import { importVisitors } from './imports.js';
 

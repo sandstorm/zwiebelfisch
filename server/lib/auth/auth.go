@@ -1,24 +1,17 @@
-// Package auth signs people in with an OpenID Connect provider (by default the GitLab instance, which is
-// one) and tells the rest of the server who sent a request: Identify, from the session cookie.
-//
-// Rooms need to know who joins them (GitLab rooms check the user's access to the project), and people have
-// an account at the provider already. Auth is a relying party, a confidential client: authorization code
-// flow with PKCE, state (also in a cookie, so a sign-in finishes only in the browser that began it) and
-// nonce, the ID token verified against the provider's published keys. It answers
+// Package auth signs people in with an OpenID Connect provider (by default the GitLab instance) and tells
+// the rest of the server who sent a request: Identify, from the session cookie. It answers
 //
 //	GET  /auth/login?return=<url>[&login_hint=<name>]  to the provider; afterwards back to <url> (this host only)
 //	GET  /auth/callback                                the provider's redirect: starts the session
 //	POST /auth/logout                                  ends it
 //	GET  /api/me                                       the Identity, or 401
 //
-// Nothing secret is stored: sessions, with the user's tokens, live in this process's memory only (decided:
-// no user tokens on disk). A restart signs everyone out. Keeping the identity alone in the database would
-// keep sessions whose tokens are gone, for the price of a table and its expiry; not worth it.
-//
-// The cookie holds a random session id: httpOnly, SameSite=Lax (other sites' pages cannot send it, a
-// WebSocket included), Secure except on a loopback host (http://localhost while developing). A request
-// whose Origin is another host is never identified, so the WebSocket needs no origin list of its own; the
-// app's page and the server must be on the same host (ports may differ).
+// Guarantees:
+//   - A sign-in finishes only in the browser that began it.
+//   - Sessions, with the user's tokens, live in this process's memory only: nothing secret is stored, and a
+//     restart signs everyone out.
+//   - A request whose Origin is another host is never identified, a WebSocket included: the app's page and
+//     the server must be on the same host (ports may differ).
 package auth
 
 import (

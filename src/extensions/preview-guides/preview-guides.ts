@@ -2,22 +2,13 @@ import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/previe
 import type { Extension } from '../../hosts/workbench/workbench';
 
 /**
- * Page guides, box outlines and block spacing in the preview: three view options (in the View menu), off by default.
+ * Three view options of the preview, off by default:
+ * - "Page guides": the borders of the text area, the header, the footer and the column gutters (as LaTeX's showframe)
+ * - "Box outlines": every block and box outlined, and every `v(…)` shaded
+ * - "Block spacing": the gap between two blocks or paragraphs shaded (slower: it marks every block)
  *
- * "Page guides" draws the borders of the text area, the header and the footer (and the column gutters), as
- * LaTeX's showframe does. The guides go into the page background; a document that sets
- * a background of its own keeps it, and the guides move to the foreground (one sets both: no guides). "Box outlines"
- * outlines every block and box (headings, figures, lists, equations, `#block`, `#box`) by set rules, so what a
- * document sets itself wins. Typst draws the outline around the inset, widened by the outset; the inset is not drawn on
- * its own. It also shades every `v(…)` as Typst laid it out (`1fr` too). "Block spacing" shades the gap between two
- * blocks or paragraphs, where the one's spacing below and the other's above collapsed into one; it costs a lot more
- * (markers at every block and paragraph), so it is an option of its own. Markers that take no space find the spacing.
- * docs/40_architecture/06_preview.typ ("View options") says why and what is left out (`h`, the spacing between list
- * items and table rows).
- *
- * All are Typst run before the main file in the preview only (`PreviewViewOption`); the documents and their PDFs
- * stay as they are. The colors are mid-tones, readable on the inverted pages of the dark mode too. The pictures of
- * raw boxes are cut from the preview's pages, so they show the guides, outlines and bands as well.
+ * They change the preview only; the documents and their PDFs stay as they are. A document's own page background
+ * and set rules win over them.
  */
 export function previewGuides(): Extension {
   return {

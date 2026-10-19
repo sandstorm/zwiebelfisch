@@ -16,11 +16,8 @@ import { RenderedBox } from './rendered-box';
  * The node views of raw boxes in `tiptap`, with what `boxes` contribute to them.
  *
  * A raw box holds Typst the Visual editor does not model, or a node whose spec asks for a code box (an image call, an
- * outline). It is edited as code in a nested CodeMirror, so no Typst is lost or rewritten when the editor cannot
- * show it as text. The box itself knows no language and no pictures: contributions add the code's language and
- * links, a picture instead of the code (box renderers, `rendered-box.ts`), a title and tools. The picture follows
- * the box's primary document link. How a box behaves is told at `RawBox` below. See
- * docs/40_architecture/04_visual-editor.typ, "Raw boxes".
+ * outline). It is edited as code in a nested CodeMirror, so no Typst is lost or rewritten. Contributions add the code's
+ * language and links, a picture instead of the code (box renderers), a title and tools.
  */
 export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });

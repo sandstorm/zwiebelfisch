@@ -6,12 +6,11 @@ import { imageWidthCss, withImageWidth } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 
 /**
- * What an image box offers besides its code: a frame around the rendered
- * picture showing the image's width, with drag handles to change it. Double-clicking the picture shows the code. (The bar
- * above a selected image is image-bar.ts.)
+ * The resize frame of an image box: a frame around the rendered picture showing the image's width, with drag handles
+ * to change it. Double-clicking the picture shows the code.
  *
- * A drag changes the width live in the editor and writes `width: NN%` once, on
- * release: one undo step that rewrites only that argument (`resizeImage`).
+ * A drag changes the width live and writes `width: NN%` once, on release: one undo step that rewrites only that
+ * argument.
  */
 export class ImageTools implements RawBoxTools {
   private readonly frame: HTMLElement | null = null;

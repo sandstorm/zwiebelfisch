@@ -46,20 +46,13 @@ import widgetStyles from './editor.css?inline';
 /**
  * Mounts the editor widget into `host`: the editors and the live preview of a project of Typst files.
  *
- * The widget is a Project in the workbench (hosts/workbench) with the built-in extensions (`builtinExtensions()`, or
- * the list `extensions` makes from them) and the host's settings. The workbench and the hosts are only mechanism; every
- * feature (the file panel, the preview following the cursor, errors, PDF export, …) is one of those extensions. The
- * devtools wrap the final list, so they record every extension's contributions, the host's too.
+ * Used by host pages and by `<zwiebelfisch-editor>`. The host gives and gets every file through one map (`files`,
+ * `onDidChangeFiles`); `source` is a shortcut for the main file's text, and `mainFile` says which file that is.
+ * Features are configured by the settings their extensions declare (`settings: { 'pdfExport.download': false }`).
+ * The returned handle's events fire once the widget shows the change.
  *
- * A Typst document is a project of files, and the main file is one of them. So the host gives and gets every file
- * through one map (`files`, `onDidChangeFiles`); `source` is only a shortcut for the main file's text, and `mainFile`
- * says which file that is. What the widget tells the host are events on the returned handle (VS Code's shape:
- * `onDid…` subscribes, the result unsubscribes). What a feature lets
- * the host configure is a setting its extension declares (`settings: { 'pdfExport.download': false }`), so the
- * options stay the same when features come and go. `<zwiebelfisch-editor>` wraps this function as a custom element.
- *
- * Styles go into the root node `host` is attached to: `document.head`, or the shadow root `host` lives in. Attach
- * `host` before calling this. See docs/30_configuration/02_embedding.typ, "createEditor".
+ * Styles go into the root node `host` is attached to (`document.head`, or the shadow root `host` lives in), so
+ * attach `host` before calling this.
  */
 export function createEditor(host: HTMLElement, options: EditorOptions): Editor {
   const main = ProjectPath.of(options.mainFile?.path ?? '/main.typ');

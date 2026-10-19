@@ -13,21 +13,19 @@ import { unchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
 /**
- * The schema of `nodes` and `marks`: the minimum schema plus the specs' Tiptap extensions, with their grammar
- * attached. Tests use it; the Visual editor uses `documentExtensions` and `attachGrammar`.
+ * Conversion between Typst text and the Visual editor's ProseMirror document; this function makes its schema (the
+ * minimum schema plus the Tiptap extensions of the specs `nodes` and `marks`, their grammar attached).
  *
- * This module converts between Typst text and the Visual editor's ProseMirror document, so that an edit changes only
- * the source of what it touched. Every node remembers the source it came from. `parseTypst` reads text into a
- * document; `serializeToTypst` writes it back, where untouched nodes print their source byte for byte and only edited
- * ones are printed anew. So `serializeToTypst(parseTypst(text)) === text` for any text. `sourceToPos` and
- * `posToSource` map between source offsets and document positions, down to the character. `applyTypstChanges` turns
- * the shown document into a fresh parse with the smallest replacement; `typstChanges`, the other way,
- * turns a transaction into the text changes it makes.
+ * Used by:
+ * - the Visual editor (`documentExtensions`, `attachGrammar`)
+ * - tests (`createSchema`)
  *
- * The framework knows only paragraphs, text, breaks and raw Typst (the minimum schema). Every other construct is a
- * spec (`DocumentNodeSpec`, `TypstMarkSpec`) that an extension contributes to the Visual editor: which syntax it
- * reads, how an edited node is written. Syntax no spec takes stays raw Typst (`rawBlock`, `rawInline`), kept verbatim.
- * Plain ProseMirror: no view, tested without a DOM. See docs/40_architecture/03_prosemirror-typst.typ.
+ * Guarantees:
+ * - `serializeToTypst(parseTypst(text)) === text` for any text: untouched nodes print their source byte for byte
+ * - an edit changes only the source of what it touched (`typstChanges`); a fresh parse is applied as the smallest
+ *   replacement (`applyTypstChanges`)
+ * - `sourceToPos` and `posToSource` map between source offsets and document positions, down to the character
+ * - syntax no spec takes stays raw Typst, kept verbatim
  */
 export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
   const schema = getSchema(documentExtensions(nodes, marks));

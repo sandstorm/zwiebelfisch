@@ -6,9 +6,8 @@ import (
 	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
-// Extension adds behaviour to rooms: GitLab rooms (package gitlab) load a branch into a room, commit it and
-// merge upstream pushes. The server keeps the mechanism (connections, sync, storing, unloading); the
-// extension decides what a room is.
+// Extension decides what a room is. GitLab rooms (package gitlab) are one: they load a branch into a room,
+// commit it and merge upstream pushes.
 type Extension interface {
 	// Open is called on the room's goroutine once its document is loaded from the store, before anyone
 	// joins, so it may take its time (e.g. load the room from elsewhere). doc may be used during Open only;

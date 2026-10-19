@@ -8,10 +8,9 @@ import type { Menus } from './menus';
 
 /**
  * A button per entry of `editor/title` whose `when` holds, in the menus' order, with its icon and title; then "View",
- * which pops up the menu `view` below it (`window.showContextMenu`) while that has entries: the one place for how
- * the editors and the preview show things, whoever contributes them. Shown again on `update` (the tab or the file
- * changed) and whenever either menu's entries change. Pressing a button keeps the focus where it is: the commands act
- * on the editor's selection. A failing command is logged; it tells the user itself.
+ * which pops up the menu `view` below it while that has entries (how the editors and the preview show things). Shown
+ * again on `update` (the tab or the file changed) and whenever either menu's entries change. Pressing a button keeps
+ * the focus where it is, so the commands act on the editor's selection. A failing command is logged.
  */
 export class EditorTitleMenu {
   readonly element: HTMLElement;

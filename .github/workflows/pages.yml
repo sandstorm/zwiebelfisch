@@ -1,11 +1,9 @@
-# The documentation as a GitHub Pages site, https://<owner>.github.io/<repo>/: the HTML pages (mise run docs:html) at
-# the top, the book as zwiebelfisch.pdf next to them, and the demo, built as a static site, under demo/. Published on every
-# push to main and by hand (Actions → Pages → Run workflow).
+# The documentation as a GitHub Pages site, https://<owner>.github.io/<repo>/: the HTML pages at the top, the book as
+# zwiebelfisch.pdf next to them, and the demo, built as a static site, under demo/. Published on every push to main
+# and by hand (Actions → Pages → Run workflow).
 #
-# The demo there is the static site (vite --mode static, demo/static-site.ts): it opens the Documentation example, this
-# book, editable in the page without a server (the engine is WebAssembly; @preview packages come from
-# packages.typst.org) and saves nothing; a banner says so. Collaborate and GitLab need the playground server (mise run
-# demo, or the Docker image) and are shown unavailable. The docs pages link to it ("Try it" in their header).
+# The demo there opens the Documentation example, editable in the page without a server, and saves nothing; a banner
+# says so. Collaborate and GitLab are shown unavailable.
 name: Pages
 
 on:

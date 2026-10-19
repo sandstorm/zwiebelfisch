@@ -9,16 +9,10 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
  * `from` / `to` look at a part only.
  *
- * Knowledge of Typst syntax that several extensions need, read from the Lezer syntax tree of codemirror-lang-typst
- * (`syntaxTree`, parsed once for all who read the same text): which files a text names, the order Typst reads the
- * project's files in (`neighbours`), the change that imports a name (`calculateImportChange`), the names imports bind
- * (`importedNames`), and small helpers to read calls and strings (`calleeName`, `namedArgument`, …), as the
- * Typst ↔ ProseMirror specs do.
- *
- * It lives in core because extensions never import each other, and this is about Typst, not about one feature. It
- * stops at syntax: where a path leads and what following it does is the document-links extension's, showing links is
- * the languages host's (`registerDocumentLinkProvider`), and applying a change is the caller's.
- * See docs/40_architecture/02_core.typ, "Typst syntax".
+ * This file is the Typst syntax that several extensions and the Typst ↔ ProseMirror specs need, read from the Lezer
+ * tree of codemirror-lang-typst (`syntaxTree`): the files a text names, the order Typst reads the project's files in
+ * (`neighbours`), the change that imports a name (`calculateImportChange`; returned, not applied), the names imports
+ * bind (`importedNames`) and helpers to read calls and strings (`calleeName`, `namedArgument`, …).
  */
 export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
   const found: PathInSource[] = [];

@@ -8,11 +8,9 @@ import { posToSource } from '../prosemirror-typst/prosemirror-typst';
 import type { FollowableLink, VisualEditorLinks } from './visual-editor';
 
 /**
- * Follows the links in the text of `document`'s editor as the Source editor does: hovered, one shows as every link
- * (`FollowableLink.hover`: its hint, with Mod held the link look), and Mod+click on it or Alt+Enter at the cursor
- * follows it. A plain click edits as ever. The link at a place is `links.linkAt` at the source offset of what is
- * there: an inline atom (a reference chip) or the text of an inline element (a link mark). Boxes (`isBox`) follow
- * their own links.
+ * Follows the links in the text of `document`'s editor as the Source editor does: hovered, a link shows its hint (with
+ * Mod held, the link look), and Mod+click on it or Alt+Enter at the cursor follows it. A plain click edits as ever.
+ * Links are found at inline atoms (a reference chip) and inline elements (a link mark); boxes (`isBox`) follow their own.
  */
 export function textLinks(document: TypstDocument, links: VisualEditorLinks, isBox: (node: Node) => boolean): Extension {
   const linkAt = (offset: SourceOffset | null) => (offset === null ? null : links.linkAt(document, offset));

@@ -7,19 +7,14 @@ import css from './invisibles.css?inline';
 import { invisibleMarks } from './visual-editor/invisible-marks';
 
 /**
- * Invisible characters, shown on demand, as word processors' "Show formatting marks" and VS Code's "Render
- * Whitespace": in the Visual editor · for a space, ° for a non-breaking space (Typst `~`), → for a tab, ↵ for a line
- * break (`\`) and ¶ at the end of each paragraph; in every CodeMirror (Source editors, raw boxes, text files)
- * CodeMirror's own `highlightWhitespace`.
+ * Invisible characters, shown on demand ("Show formatting marks", VS Code's "Render Whitespace").
+ * - in the Visual editor: · for a space, ° for a non-breaking space (`~`), → for a tab, ↵ for a line break (`\`), ¶ at
+ *   the end of each paragraph
+ * - in every CodeMirror (Source editors, raw boxes, text files): CodeMirror's `highlightWhitespace`
  *
- * The marks are decorations drawn by CSS: never part of the text, not selectable, not copied. The Visual editor's are
- * worked out once when they are turned on, then only for the paragraphs an edit touches (`invisibleMarks`); CodeMirror
- * draws its marks for the lines in view. The CodeMirrors get them through the Source editor host's shared extensions,
- * registered while the marks are on.
- *
- * They start as the setting `invisibles.show` says, else as this viewer chose last (`globalState`), else off. The
- * command `invisibles.toggle` turns them on or off, from search everywhere or "Invisible characters" in the View menu
- * (menu `view`, group `editor`, checked while they are shown).
+ * The marks are never part of the text: not selectable, not copied. They start as the setting `invisibles.show` says,
+ * else as this viewer chose last, else off. The command `invisibles.toggle` (also "Invisible characters" in the View
+ * menu) turns them on or off.
  */
 export function invisibles(): Extension {
   return {

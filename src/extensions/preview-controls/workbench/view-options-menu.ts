@@ -6,10 +6,8 @@ import type { Memento, Workbench } from '../../../hosts/workbench/workbench';
 
 /**
  * An entry per registered view option (page guides, box outlines, comments) in the View menu (menu `view`, group
- * `preview`, in the order the preview applies them), checked while the option is on: as this viewer left it last time
- * (kept in `state`), else its default. Choosing it turns the option over at once and remembers that. Each entry runs a
- * command of its own (`previewControls.toggleViewOption.<option id>`). The entries follow the options as they are
- * registered and go. The values this viewer chose are handed to the preview at once, also for options registered later.
+ * `preview`), checked while the option is on. Choosing one turns the option over at once. Each option starts as this
+ * viewer left it last time (kept in `state`), else at its default, also an option registered later.
  */
 export function registerViewOptionsMenu({ preview, workbench, commands, state }: ViewOptionsMenuContext): Disposable {
   preview.setViewOptionValues(remembered(state));

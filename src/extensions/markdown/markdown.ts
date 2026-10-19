@@ -3,16 +3,12 @@ import { markdownLikelihood } from './model/markdown-signals';
 import { markdownToTypst } from './model/markdown-to-typst';
 
 /**
- * Markdown pasted into Typst can go in as Typst: `## Setup` as `== Setup`, `**bold**` as `*bold*`, `[docs](url)` as
- * `#link("url")[docs]`, fences, lists, quotes, tables (model/markdown-to-typst.ts; lossy).
+ * Markdown pasted into Typst text goes in as Typst: `## Setup` as `== Setup`, `**bold**` as `*bold*` (lossy).
  *
- * A paste edit provider of the kind `typst.markdown` ("Markdown"), for text that comes without HTML (a plain text
- * editor's, a terminal's, a chat's "Copy" button) or says it is Markdown (VS Code's language mode `markdown`, a
- * highlighted block of `language-markdown`). It goes in first where the text is Markdown for sure: it says so, or more
- * of its lines have syntax only Markdown has than only Typst has (model/markdown-signals.ts). With syntax both share
- * (`*x*`, `- item`) it comes after the editors' Typst, in the "Paste as" chip; with none, not at all (it would only
- * escape what Text escapes). Nothing for Typst a Visual editor copied, nor for a web page's HTML (the Visual editor
- * reads that itself). See docs/40_architecture/07_workbench.typ (Copy and paste).
+ * A paste edit provider of the kind `typst.markdown` ("Markdown"). It is offered for text without HTML, or text that
+ * says it is Markdown (VS Code's language mode, a `language-markdown` code block); never for Typst a Visual editor
+ * copied. Where the text is surely Markdown it is the paste; where it only may be (`*x*`, `- item`) it comes after
+ * the Typst paste, in the "Paste as" chip.
  */
 export function markdown(): Extension {
   return {

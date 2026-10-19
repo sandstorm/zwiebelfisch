@@ -7,14 +7,14 @@ import { customStyles, styleApplier } from './visual-editor/visual-editor';
 import { styleSearch } from './workbench/style-search';
 
 /**
- * The custom block and inline styles a project declares (`/// @style …` above a Typst function).
+ * The custom block and inline styles a project declares (`/// @style …` above a Typst function in any of its files).
  *
- * A style is a Typst function in some file of the project, not something the editor keeps. So one TypstStyleIndex
- * reads every Typst file and follows each change. Every Visual editor shows the styles' calls as styled text and
- * applies them from the text style menu, importing a style where it is used; "New style…" there adds a block style to
- * start from and shows it in the Source editor. Search everywhere ("Styles") applies a style in either editor.
+ * - The Visual editor shows their calls as styled text and applies them from the text style menu, importing a style
+ *   where it is used.
+ * - "New style…" in that menu adds a block style to start from and shows it in the Source editor.
+ * - Search everywhere ("Styles") applies a style in either editor.
  *
- * Calls of functions not declared as styles stay raw boxes. See docs/20_features/06_custom-styles.typ.
+ * The list follows every change of the project's Typst files. Calls of functions not declared as styles stay raw boxes.
  */
 export function styles(): Extension {
   return {

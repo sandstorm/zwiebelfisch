@@ -5,18 +5,13 @@ import { HtmlView } from './preview/html-view';
 import css from './preview-html.css?inline';
 
 /**
- * The preview as HTML: the renderer `html`, Typst's HTML export of the document, page by page.
+ * The preview as HTML: the renderer `html` ("HTML"), Typst's HTML export of the document, one page at a time.
  *
- * The preview host compiles what the active renderer needs and hands it over; this renderer shows the files of
- * Typst's bundle export (`document(..)` and `asset(..)`; a document without `document(..)` is one `index.html`). One
- * page at a time, in a sandboxed frame, changed in place after every compile so it keeps its scroll position. Links
- * between the pages switch the page; links to URLs open a new tab; images, style sheets and fonts come from memory (a
- * path the bundle has no file for is looked up among the project's files, as a static site build copies fonts next
- * to the pages). The cursor (the preview's `reveal`, which previewSync calls) shows the page holding the element its
- * text produced, scrolled to it; text on every page or on none keeps the page.
- *
- * Which renderer is shown, and the switch for it, is the preview controls' (they list every renderer). No source sync
- * from a click in the page yet. See docs/40_architecture/06_preview.typ.
+ * - The page is updated in place after every compile, so it keeps its scroll position.
+ * - Its scripts do not run (a sandboxed frame).
+ * - Links between the bundle's pages switch the page; links to URLs open a new tab.
+ * - Files the bundle has no file for are looked up among the project's files (fonts next to the pages).
+ * - The cursor's `reveal` shows the page holding the element its text produced, scrolled to it.
  */
 export function previewHtml(): Extension {
   return {

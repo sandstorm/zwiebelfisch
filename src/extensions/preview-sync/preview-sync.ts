@@ -8,20 +8,13 @@ import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
 
 /**
- * Keeps the editor and the preview in step, both ways.
- *
- * - *Follow cursor:* the preview scrolls to the selection when it moves off-screen. A switch in the preview's toolbar
- *   turns it on and off. It starts as the setting `previewSync.followCursor` says, else as this viewer chose last,
- *   else on.
- * - *Shading:* while `previewSync.highlightSelection` is on (the default), the text selected in the shown file (in
- *   either editor) is shaded in the preview, a moment after the selection settles.
- * - *Click:* a click on text in the preview opens its file with that range selected (package files are ignored). The
- *   preview outlines the click until the next edit or until the selection moves away.
- *
- * The preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, `onDidClickPage`,
- * `clearClickHighlight`); the window tells the selection, the workbench opens files. When to follow, what to shade and
- * where a click leads is decided here. Without this extension the preview neither follows, shades nor jumps.
- * See docs/40_architecture/06_preview.typ.
+ * Keeps the editor and the preview in step, both ways:
+ * - Follow cursor: the preview scrolls to the selection of the focused editor. A switch in the preview's toolbar turns
+ *   it on and off; it starts as the setting `previewSync.followCursor` says, else as this viewer chose last, else on.
+ * - Shading: while `previewSync.highlightSelection` is on (the default), the text selected in the shown file is shaded
+ *   in the preview, a moment after the selection settles.
+ * - Click: a click on text in the preview opens its file with that range selected (files outside the project are
+ *   ignored). The click stays outlined until the next edit or until the selection moves away.
  */
 export function previewSync(): Extension {
   return {

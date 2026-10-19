@@ -6,17 +6,11 @@ import { noteCallSyntax } from './margin-note-syntax';
 import { includingMain, noteDefaultsPrelude } from './note-defaults';
 
 /**
- * The project as compiled for a PDF without comments; the documents
- * themselves are not touched.
- *
- * - Every margin note call (as the Visual editor knows them) is removed from
- *   the copies: a point note entirely, a range note down to its text, which
- *   stays without the highlight. (drafting's `hidden: true` alone would drop
- *   that text too.)
- * - When the project imports drafting, a generated entry hides whatever other
- *   notes there are (`margin-note.with(..)` helpers, calls in code) with
- *   `set-margin-note-defaults(hidden: true)` before including `main`. A
- *   `hidden: false` in the document would show those again.
+ * The project as compiled for a PDF without comments; the documents themselves are not touched.
+ * - Every margin note call (as the Visual editor knows them) is removed from the copies: a point note entirely, a
+ *   range note down to its text, which stays without the highlight.
+ * - When the project imports drafting, a generated entry hides all other notes with
+ *   `set-margin-note-defaults(hidden: true)` before including `main`.
  */
 export function withoutNotes(files: Record<string, FileContent>, main: string): PdfEntry {
   const sources: Record<string, string> = {};

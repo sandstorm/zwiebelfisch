@@ -5,13 +5,10 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext } from '../visual-editor';
 
 /**
- * The text style `<select>`: *Normal text*, then the providers' entries by
- * `order`, a section's under its title (`<optgroup>`). It shows the
- * selection's style (the first active entry that is no toggle, else normal
- * text in a paragraph), marks toggles ✓ where they are on, and disables what
- * cannot apply. The entries follow the providers as they change (headings, custom styles).
- * Only the value shows while the list is closed: the options are looked at
- * when it is pressed or focused (each a dry run), not after every transaction.
+ * The text style `<select>`: *Normal text*, then the providers' entries by `order`, a section's under its title.
+ *
+ * It shows the selection's style, marks toggles ✓ where they are on, disables what cannot apply, and follows the
+ * providers as they change (headings, custom styles).
  */
 export class TextStyleMenu implements ToolbarControl {
   readonly element: HTMLSelectElement;

@@ -14,18 +14,15 @@ import type { WorkbookEdit } from './workbench/workbook';
 /**
  * Spreadsheets (`.ic` files), edited in IronCalc's workbook UI and used in documents as Typst tables.
  *
- * The custom editor `spreadsheets.editor` (SpreadsheetEditor) shows a spreadsheet. Every edit saves the file and also
- * writes `name.ic.gen.typ`, the Typst file documents import (model/typst-file.ts). So Typst never needs a spreadsheet
- * engine, and the editor only reports edits: what the project gets is decided here. "New spreadsheet…" (menu
- * `file/newFile`) creates an empty one; "Insert spreadsheet" (Insert menu) creates one with a starter table and puts
- * its table into the text as a figure; so does a spreadsheet (or its Typst file) dragged from the file panel into the text
- * (a drop edit provider, priority 110: over the Typst files' `#include`). `.ic` files are the language `ironcalc`, with
- * the help sheet "Spreadsheet formulas". A path to a spreadsheet's Typst file in Typst text (`#import "budget.ic.gen.typ": sheets`)
- * is a document link "Edit spreadsheet" to the spreadsheet (priority 110, over the plain file link), so ⌘/Ctrl+click or
- * Alt+Enter opens IronCalc rather than the generated file.
+ * - The custom editor `spreadsheets.editor` shows a spreadsheet. Every edit saves the file and writes
+ *   `name.ic.gen.typ` next to it, the Typst file documents import, so Typst never needs a spreadsheet engine.
+ * - "New spreadsheet…" (menu `file/newFile`) creates an empty one.
+ * - "Insert spreadsheet" (Insert menu) creates one with a starter table and inserts it as a figure; so does a
+ *   spreadsheet dropped from the file panel into the text.
+ * - The path of a spreadsheet's Typst file in Typst text is the link "Edit spreadsheet", which opens the spreadsheet.
+ * - `.ic` files are the language `ironcalc`, with the help sheet "Spreadsheet formulas".
  *
- * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
- * (workbench/workbook.ts). See docs/20_features/08_spreadsheets.typ.
+ * IronCalc (with React, a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted.
  */
 export function spreadsheets(): Extension {
   return {

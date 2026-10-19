@@ -17,22 +17,15 @@ import css from './preview.css?inline';
 /**
  * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar.
  *
- * It is the right side's built-in panel. The workbench gives it the project's files on every change, and it compiles
- * whether shown or not, because others need what a compile finds out: the diagnostics, the pictures of raw boxes
- * (`snippet`), where a click or the cursor lands. Compiling never falls behind typing: text that is outdated before
- * its turn is skipped (`LatestOnly`).
+ * The workbench makes it the right side's panel and gives it the project's files on every change. It compiles whether
+ * shown or not, so diagnostics, snippets and clicks always belong to the newest files. Extensions add through
+ * `PreviewContributions`:
+ * - toolbar items (zoom, page number, "Follow cursor", "Download PDF")
+ * - PDF export options and view options
+ * - other renderers than the pages (the HTML preview)
  *
- * The preview keeps the mechanism: the engine worker, the page list that renders only the pages near the view,
- * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
- * page number, "Follow cursor", "Download PDF"), the PDF export options, the view options (Typst run before the main
- * file in the preview only: page guides, box outlines), when to reveal or shade what (preview-sync), and other ways to
- * show the document than its pages (`registerRenderer`: the HTML preview). Only the active renderer's output is
- * compiled: pages, or HTML; snippets compile the pages when they are asked for. While the engine loads, the pane shows
- * what it waits for.
- *
- * When the engine crashes (a bug in Typst, memory running out), the preview starts a new one and compiles the newest
- * files again, and tells (`PreviewProgress` `failed`). If that crashes again before the next `update()`, it stays off
- * until then: the same files would crash it again. See docs/40_architecture/06_preview.typ.
+ * Compiling never falls behind typing: files outdated before their turn are skipped. A crashed engine is restarted
+ * with the newest files once per `update()`.
  */
 export class Preview implements PreviewContributions {
   private readonly engine: EngineWorker;

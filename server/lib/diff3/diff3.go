@@ -1,9 +1,7 @@
 // Package diff3 compares sequences (lines of text): the changes from one to another, and the three-way
 // merge of two sequences derived from a common one, with conflicts.
 //
-// A port of node-diff3 3.x (Bryan Housel; diffPatch, diff3Merge): merges match that widely used JavaScript
-// library's (the test fixtures are its results). The LCS is Hunt and McIlroy's (1976); the merge regions follow
-// Khanna, Kunal and Pierce, "A Formal Investigation of Diff3" (2007).
+// Results are the same as node-diff3 3.x's (diffPatch, diff3Merge).
 package diff3
 
 import (

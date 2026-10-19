@@ -6,16 +6,11 @@ import css from './source-control.css?inline';
 import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './workbench/workbench';
 
 /**
- * The UI over the registered source controls (`scm`), shown while there is at least one.
- *
+ * The UI over the registered source controls (`scm`), shown while there is at least one:
  * - "Save to <label>…" in the tab bar (menu `editor/title`, "Saving to <label>…" while busy): the command
- *   `sourceControl.commit` asks for a commit message and commits.
- * - Their `statusBarCommands` at the start of the status bar (a click commits, too).
- * - Their `resourceStates` as file decorations.
- *
- * A source control (today the GitLab branch behind a collaboration room) registers itself with
- * `scm.registerSourceControl` and tells its outcomes itself. This extension only shows what is registered, so neither
- * knows the other. See docs/40_architecture/07_workbench.typ, "Source controls".
+ *   `sourceControl.commit` asks for a commit message and commits
+ * - their `statusBarCommands` at the start of the status bar (a click commits, too)
+ * - their `resourceStates` as file decorations
  */
 export function sourceControl(): Extension {
   return {

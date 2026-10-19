@@ -1,10 +1,11 @@
 package gitlab
 
-// Who may edit and save a GitLab room. The bot commits for everyone, so its rights must not become
-// everyone's: a user joins (and edits) with the Developer role or more on the project, and a save also needs
-// the right to push to the branch (protected branches). The repository is asked with the bot's credentials
-// (Repository.Access); no user token is used. Answers are kept a minute for joins and file requests (a
-// project's images are many requests); a save asks again.
+// Who may edit and save a GitLab room:
+//   - join (and edit): the Developer role or more on the project
+//   - save: also the right to push to the branch (protected branches)
+//
+// The repository is asked with the bot's credentials; no user token is used. A join or a file request may
+// rely on an answer up to a minute old; a save always asks again.
 
 import (
 	"context"

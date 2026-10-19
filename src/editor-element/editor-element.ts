@@ -8,14 +8,8 @@ import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
 /**
  * `<zwiebelfisch-editor>`: the editor widget as a custom element, for pages that should need no glue code.
  *
- * It works from plain HTML and from any framework that renders elements (React, Vue, server templates): the text goes
- * inside the tag, settings in an attribute, changes come back as DOM events, and the editor lives and dies with the
- * element (connect, move, remove). An open shadow root keeps the page's CSS and the editor's apart. Code that wants
- * the editor itself (the handle and its `onDid…` events, styles in the page's document) calls createEditor.
- *
- * It is a thin adapter, so it never lists createEditor's options one by one (and so never forgets one): one
- * `options` property passes through, one `settings` attribute maps onto the settings the extensions declare, and the
- * handle's events become DOM events from one table. Only the content (`value`, `files`) is known by name, as with `<input>`.
+ * Used from plain HTML and from any framework that renders elements (React, Vue, server templates). The editor lives
+ * and dies with the element (connect, move, remove); an open shadow root keeps the page's CSS and the editor's apart.
  *
  * - `options` (`Partial<EditorOptions>`): everything `createEditor` takes, read when the element
  *   connects.
@@ -31,8 +25,6 @@ import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
  *   `files-change` with every `FileChange` (`onDidChangeFiles`), `main-file-change` with `{ path }`
  *   (`onDidChangeMainFile`), `open` with `{ path }` (`onDidChangeActiveFile`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
- *
- * See docs/30_configuration/02_embedding.typ, "Custom element".
  */
 export class EditorElement extends Base() {
   static readonly observedAttributes = ['value', 'settings'];

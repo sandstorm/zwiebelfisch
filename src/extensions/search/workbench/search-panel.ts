@@ -12,23 +12,15 @@ import { ReplaceControls, type ReplaceControlsOptions } from './replace-controls
 import { type Choice, ScopePicker } from './scope-picker';
 
 /**
- * The query field with its three options (Match Case, Match Whole Word, Use Regular Expression), where to search
- * (ScopePicker: the project, the current file or a folder), what the search found in words ("23 results in 4 files",
- * an invalid regular expression, too many results), and the matches as a tree: a row per file (name, folder, count)
- * with a row per match below (line number, the source line cut so the match comes early, the match marked, wrapped
- * to a few rows; `previewMatches`). Files with many matches start collapsed (VS Code's `search.collapseResults: auto`),
- * and only an expanded file's rows are made. With no query it shows the keys that lead here instead.
+ * The "Find in files" panel: the query field with Match Case, Match Whole Word and Use Regular Expression, where to
+ * search (ScopePicker), what was found in words ("23 results in 4 files"), and the matches as a tree of files and
+ * their lines. With no query it shows the keys that lead here.
  *
- * Typing searches after a short pause, the previous search stopped; the options, the scope and Enter search at once.
- * Results follow the files' changes, redrawn at most every few milliseconds, while the panel is shown: a hidden panel
- * drops its results (nobody sees them go stale) and searches again when it is shown, keeping what was expanded. The
- * tree is one tab stop (↑ / ↓, Home / End, ← / → collapse and expand; ↓ from the field enters it); a click or Enter on
- * a match opens it. The editors highlight what the panel lists, the match row the tree is on emphasised.
+ * Typing searches after a short pause; the options, the scope and Enter search at once. While shown, the results
+ * follow the files' changes; hidden, it drops them and searches again when shown. A click or Enter on a match opens it.
  *
- * It has two modes, switched in its header (or by the keys that show it in a mode), remembered across visits: Find,
- * and Replace, which adds the replace field (ReplaceControls), shows each match struck through with its replacement
- * after it, and offers a replace per match (on hover, or ⇧⌘1 / Ctrl+Shift+1 on its row), per file and for all
- * (⌥⌘↩ / Ctrl+Alt+Enter). Query, options and scope stay when the mode changes.
+ * Its two modes, Find and Replace, are switched in its header and remembered across visits. Replace adds the replace
+ * field (ReplaceControls), shows each match with its replacement, and replaces a match, a file's or all of them.
  */
 export class SearchPanel {
   readonly #root: HTMLElement;

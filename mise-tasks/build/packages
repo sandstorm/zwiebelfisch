@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Download the Universe packages the demo examples import (@preview/…) into .cache/typst-packages, for the unit tests"
-# The demo downloads packages in the browser on first use (core/typst-packages); the unit tests that compile the
-# examples read them from here instead, so they run offline once downloaded. Versions are immutable: a
-# downloaded archive is never fetched again.
+# Used by the unit tests that compile the examples, so they run offline once the packages are here.
+# An archive already downloaded is never fetched again.
 set -euo pipefail
 dir=.cache/typst-packages
 mkdir -p "$dir"

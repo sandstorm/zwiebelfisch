@@ -7,16 +7,14 @@ import {
 import { urlLinks } from './workbench/url-links';
 
 /**
- * The Typst markup most text is made of, in the Visual editor: strong, emphasis, underline, strike and highlight, links,
- * raw text (inline code, code blocks) and block quotes, with their buttons in the selection's bar and the Insert menu.
+ * The basic Typst markup in the Visual editor: strong, emphasis, underline, strike, highlight, links, inline code,
+ * code blocks and block quotes.
  *
- * The Visual editor itself knows only paragraphs, text and raw boxes. Every other construct is contributed, so it can be
- * left out or replaced on its own; this is the most basic set. Where marks cover the same text, a link is outermost
- * (its Tiptap priority, 120), then bold, italic, underline, strike and highlight in that order (the order they are
- * registered in, all at priority 100: `*#underline[#strike[#highlight[x]]]*`); inline code is always written innermost
- * (`raw`). Underline, strike and highlight are marks only in their plain form (`#strike[x]`); with arguments they stay
- * raw boxes. Web and mail addresses are document links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new
- * tab. See docs/40_architecture/04_visual-editor.typ.
+ * Each comes with its button in the bar above a selection or in the Insert menu. Web and mail addresses are document
+ * links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new tab.
+ *
+ * Marks on the same text are written in a fixed order, link outermost and code innermost:
+ * `*#underline[#strike[#highlight[x]]]*`. Underline, strike and highlight with arguments stay raw boxes.
  */
 export function markup(): Extension {
   return {

@@ -5,13 +5,11 @@ import { NodeSelection, Plugin, type EditorState, type PluginView } from '@tipta
 import type { EditorView } from '@tiptap/pm/view';
 
 /**
- * A grip (six dots) in the left margin beside the block under the pointer, as in Notion or Slite: dragging it moves
- * the block (ProseMirror moves it as it moves selected text: one undo step, the block's Typst verbatim; the drop
- * cursor shows where it lands), clicking it selects the block. A block is a top-level one (a paragraph, a heading, a
- * table, a raw box, a block style with all in it, …) or an item of a list (a node in the schema group `list`), at
- * any depth; a list itself moves item by item. The grip is aligned with the block's first line and found by the
- * pointer's height alone, so it stays while the pointer moves from the text into the margin to reach it. It hides
- * when the pointer leaves the text and the grip, while typing and in a read-only editor.
+ * A grip (six dots) in the left margin beside the block under the pointer, as in Notion: dragging it moves the block,
+ * clicking it selects the block. A block is a top-level one or a list item, at any depth.
+ *
+ * A move is one undo step and keeps the block's Typst verbatim. The grip hides while typing, in a read-only editor, and
+ * when the pointer leaves the text and the grip.
  */
 export const BlockHandle = Extension.create({
   name: 'typstBlockHandle',

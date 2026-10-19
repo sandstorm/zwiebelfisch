@@ -3,12 +3,10 @@ import fontIndex from '../typst-engine/fonts.gen/index.json';
 import wasmUrl from '../typst-engine/wasm.gen/typst_engine_bg.wasm?url&no-inline';
 
 /**
- * URL of the engine's wasm binary (pass it to `createEngine`; the preview hands it to its worker).
+ * URL of the engine's wasm binary, for `createEngine` (the preview hands it to its worker).
  *
- * The engine's static files as URLs for the main thread: the wasm binary and Typst's default fonts. The files belong
- * to core/typst-engine (generated into its wasm.gen/ and fonts.gen/). They are a module of their own on purpose: the worker
- * imports typst-engine's entry, and a worker bundle that imported these URLs would emit a second copy of every file.
- * See docs/40_architecture/02_core.typ, "The Typst engine".
+ * Import it on the main thread only: a worker bundle that imports this module emits a second copy of the wasm and
+ * of every font.
  */
 export const ENGINE_WASM_URL: string = wasmUrl;
 

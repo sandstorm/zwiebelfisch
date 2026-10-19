@@ -2,7 +2,6 @@
 #MISE description="Build the documentation book (docs/main.typ) as dist/docs/zwiebelfisch.pdf"
 #MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/assets/**/*", "docs/fonts/*.ttf"]
 #MISE outputs=["dist/docs/zwiebelfisch.pdf"]
-# One Typst project in docs/: main.typ is the book, site.typ the HTML pages (mise run docs:html).
 set -euo pipefail
 mkdir -p dist/docs
 typst compile --root docs --font-path docs/fonts docs/main.typ dist/docs/zwiebelfisch.pdf "$@"

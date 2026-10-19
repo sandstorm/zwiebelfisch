@@ -15,8 +15,7 @@ import (
 	"strings"
 )
 
-// project is a Repository on a GitLab instance (REST API v4), for one project. Hidden: URLs and their
-// encoding, the token, pagination, base64, and the branch check GitLab lacks.
+// project is a Repository on a GitLab instance (REST API v4), for one project.
 type project struct {
 	instance string // https://gitlab.example.org
 	api      string // …/api/v4/projects/<id or path, encoded>

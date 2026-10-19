@@ -8,18 +8,14 @@ import type { TypstNodeSpec } from '../visual-editor';
 import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
 
 /**
- * The Tiptap extensions of a Visual editor whose schema holds `nodes` and `marks`
- * (see `documentExtensions`), and for each node type (the schema's own and the
- * specs') what its `view` asks for (`views`, see `nodeViewSpecs`):
+ * The Tiptap extensions of a Visual editor whose schema holds `nodes` and `marks`, with the node view each node type's
+ * `view` asks for:
+ * - `keepsDom`: the block keeps its DOM while a new version renders the same, so what is inside (an open note editor)
+ *   survives an edit from elsewhere
+ * - `box: 'code'`: a raw box with what `boxes` contribute
+ * - `ownsPseudoElements`: `data-zwf-pseudo="own"` on its DOM
  *
- * - with `keepsDom`, a node view keeping the block's DOM while a new version
- *   renders the same: a block whose anchors change (as every block's `src`
- *   does after an edit from elsewhere) keeps its DOM, so what is inside, like
- *   an open note editor, survives;
- * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute;
- * - with `ownsPseudoElements`, `data-zwf-pseudo="own"` on its DOM.
- *
- * Then the raw boxes' keyboard navigation (`RawBoxNavigation`).
+ * And the raw boxes' keyboard navigation.
  */
 export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: RawBoxes): AnyExtension[] {
   return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews(boxes)];

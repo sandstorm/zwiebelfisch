@@ -2,8 +2,8 @@
 import { ProjectPath } from '../../../core/paths/paths';
 
 /**
- * One link bar, above the shown file (`workbench.registerEditorFrame`): back to the file the user came
- * from (left), and forward again once they went back (right); a click runs `go`. Hidden with nowhere to go.
+ * One link bar above the shown file: back to the file the user came from (left), and forward again once they went back
+ * (right); a click runs `go`. Hidden with nowhere to go.
  */
 export class HistoryLinks {
   readonly element: HTMLElement;

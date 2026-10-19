@@ -1,9 +1,8 @@
 // Package testutil helps Go tests check the server against the real JavaScript side (yjs, the Hocuspocus
 // provider): it finds the repository and runs Node scripts from server/testdata there.
 //
-// The browser is the other half of every protocol the server speaks, so the tests that matter most run
-// its libraries. They need Node and the installed node_modules (mise run install); without them they skip,
-// so `go test` still works in a Go-only environment (e.g. the Docker build stage).
+// Without Node and the installed node_modules (mise run install) those tests skip, so `go test` still works
+// in a Go-only environment.
 package testutil
 
 import (

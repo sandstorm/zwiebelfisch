@@ -1,7 +1,5 @@
 // Package store keeps each room's document in SQLite: one row per room with the whole Yjs state, written
-// over on every store (as Hocuspocus's SQLite extension did; rooms are small, ~100 KB).
-//
-// SQLite through modernc.org/sqlite needs no cgo, so the server stays one static binary.
+// over on every store.
 package store
 
 import (

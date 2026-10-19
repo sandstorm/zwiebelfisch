@@ -8,20 +8,17 @@ import { fileSearch } from './workbench/file-search';
 import { icon } from './workbench/icons/icons';
 
 /**
- * The project's files as a tree in the left side panel, the files in search everywhere ("Files", prefix `/`), and a
- * read-only editor for any file no other editor opens (`files.file`, `priority: 'fallback'`: its name, size and type).
+ * The file panel: the project's files as a tree in the left side panel.
+ * Also the files in search everywhere ("Files", prefix `/`) and a read-only editor for any file no other editor opens
+ * (`files.file`: its name, size and type).
  *
- * The panel shows the project and the shown file, opens what is picked and uploads files dropped on the widget. It
- * changes nothing itself: every change goes through `workspace.applyEdit`, a new main file through
- * `project.setMain`. Its operations are commands (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`,
- * `files.delete`, `files.setMainFile`, each on a row), offered in two menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context
- * menu; context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row). Its badges
- * come from every FileDecorationProvider (e.g. where collaborators are). The setting `files.panel` says when it is open;
- * Alt+1 (⌃1 on the Mac, none on Linux) shows and focuses it (`workbench.view.files`).
+ * Other extensions use it through:
+ * - the menus `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context menu; context
+ *   `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row)
+ * - the commands `files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, `files.setMainFile`
+ * - FileDecorationProviders, whose decorations show as badges on the rows
  *
- * This entry is the controller over the workbench and the project. The views (FilePanel in workbench/) and the pure
- * tree model (model/) get what they need as options, so the panel is tested without a workbench.
- * See docs/20_features/05_multiple-files.typ.
+ * The setting `files.panel` says when the panel is open; Alt+1 (⌃1 on the Mac) shows and focuses it.
  */
 export function files(): Extension {
   return {

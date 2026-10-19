@@ -8,18 +8,13 @@ import { insertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';
 
 /**
- * Mermaid diagrams as figures, drawn by the Typst package merman while Typst compiles.
+ * Mermaid diagrams (`.mmd` files) as figures, drawn by the Typst package merman.
  *
- * "Insert Mermaid diagram" (Insert menu) creates a `.mmd` file with a starter flowchart and inserts its figure and the
- * import; so does a `.mmd` file dragged from the file panel into the text (a drop edit provider). In Typst text, the path of a project's `.mmd` file (`read("x.mmd")`) becomes the link "Edit diagram"
- * (priority 110, over the plain file link), so ⌘/Ctrl+click on the path or on the box's picture opens the file.
- * `.mmd` files get the help sheet "Mermaid basics". `mermaid` is declared to come from merman, so a figure pasted from
- * elsewhere gets its import.
- *
- * All of it goes through the hosts' generic points: a toolbar item, a document link provider, a drop edit provider, a
- * help provider, a known import (`languages.registerKnownImport`). The file
- * opens in whatever editor `.mmd` has (the text-files extension's). Typst draws the diagram, so nothing is rendered
- * here. See docs/20_features/09_mermaid-diagrams.typ.
+ * - "Insert Mermaid diagram" (Insert menu) creates a `.mmd` file with a starter flowchart and inserts its figure and
+ *   the import; so does a `.mmd` file dropped from the file panel into the text.
+ * - The path of a project's `.mmd` file in Typst text is the link "Edit diagram", which opens the file.
+ * - `.mmd` files get the help sheet "Mermaid basics".
+ * - `mermaid` is a known import, so a pasted figure gets its import too.
  */
 export function mermaid(): Extension {
   return {

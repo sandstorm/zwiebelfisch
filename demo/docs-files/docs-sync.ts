@@ -12,16 +12,12 @@ import {
 } from './protocol';
 
 /**
- * Keeps docs/ and the editor's files the same. Edits are written per file once the typing pauses (`flush` writes
- * what waits, e.g. when the page is hidden); a create, rename or delete in the file panel happens on disk first and
- * is refused in the editor if the disk refuses it. A change on disk replaces the file in the editor unless the
- * editor has unsaved edits of it: then the editor's text stays, and the report says so.
- *
- * It remembers what is on disk (as far as it knows: the files it started from, wrote, or heard of), which is how it
- * tells unsaved edits apart, and why its own writes coming back cause nothing. Each write names that version as the
- * one it replaces, so the server refuses a write that would undo a change on disk the page has not heard of yet (one
- * decided, or under way, before the change arrived). After a change it has heard of, the next edit of that file
- * saves over it: the report said so.
+ * Keeps docs/ on disk and the editor's files the same:
+ * - edits are written per file once typing pauses; `flush` writes what still waits
+ * - a create, rename or delete in the file panel happens on disk first; if the disk refuses it, so does the editor
+ * - a change on disk replaces the file in the editor, unless the editor has unsaved edits of it: then the editor's
+ *   text stays, the report says so, and the next edit saves over the change
+ * - a write never undoes a change on disk the page has not heard of yet (the server refuses it)
  */
 export class DocsSync {
   readonly #disk = new Map<string, FileContent>();

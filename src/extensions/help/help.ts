@@ -4,15 +4,14 @@ import { snippetDrops, TYPST_SNIPPET_TYPE } from './visual-editor/snippet-drops'
 import { HelpPanel } from './workbench/help-panel';
 
 /**
- * The left side panel "Help" (its rail button next to Files): the cheat sheets for the language of the shown file,
- * following the shown file ("No help for this file type" without any). A row is something to write. Dragged into an
- * editor, it lands where it is dropped (the Source and text editors take it as text; the Visual editor reads a Typst
- * row as Typst). Enter puts it at the cursor of the shown Typst editor (`help.insertAtCursor`), or copies it while
- * another kind of file is shown. Its context menu (`help/row`) offers "Insert at cursor" and "Copy" (`help.copy`).
+ * The "Help" side panel: the cheat sheets for the language of the shown file.
+ * The sheets come from the language extensions (`languages.registerHelpProvider`).
  *
- * The sheets are not here. A language's sheet belongs to its extension (`languages.registerHelpProvider`: Typst in
- * typst-language, Mermaid in mermaid, …). The panel only renders what `languages.provideHelp` gives for the shown
- * file's language, so a language brings its help without the panel knowing it.
+ * A row is something to write:
+ * - dragged into an editor, it lands where it is dropped (the Visual editor reads a Typst row as Typst)
+ * - Enter puts it at the cursor of the shown Typst editor (`help.insertAtCursor`), or copies it when no such editor is
+ *   shown
+ * - its context menu (`help/row`) offers "Insert at cursor" and "Copy" (`help.copy`)
  */
 export function help(): Extension {
   return {

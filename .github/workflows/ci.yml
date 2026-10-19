@@ -1,6 +1,5 @@
-# The checks a developer runs before a commit, on every push and pull request: the same mise tasks
-# (docs/40_architecture/15_development.typ). The end-to-end tests (Chromium) are a job of their own, next to the
-# checks, both after the job that builds the engine. release.yml calls it for a version tag, before it publishes.
+# The checks a developer runs before a commit (the same mise tasks), plus the end-to-end tests (Chromium) as a job of
+# their own. Runs on every push and pull request, and for a version tag when release.yml calls it before publishing.
 name: CI
 
 on:

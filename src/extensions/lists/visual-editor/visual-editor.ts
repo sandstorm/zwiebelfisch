@@ -13,10 +13,10 @@ const LIST: Omit<TypstNodeSpec, 'name'> = {
 };
 
 /**
- * Bulleted and numbered lists (`- item` / `+ item`, `1. item`) as Tiptap's lists (task lists: task-lists.ts). List
- * items are blocks of their own; consecutive items of the same kind (bulleted: `-`, numbered: `+` or `1.`) form one
- * list. An item holds a paragraph, then further blocks (nested lists) on its following lines, indented. Items keep
- * their `marker` (`-` / `+` in a list of the other kind) and the indentation of their further lines.
+ * Bulleted and numbered lists (`- item` / `+ item`, `1. item`) as Tiptap's lists. Consecutive items of the same kind
+ * (bulleted: `-`, numbered: `+` or `1.`) form one list. An item holds a paragraph, then further blocks (nested lists)
+ * on its following lines, indented. Items keep their `marker` and the indentation of their further lines when printed
+ * back.
  */
 export const BULLET_LIST: TypstNodeSpec = { ...LIST, name: 'bulletList', tiptap: tiptapLists() };
 export const ORDERED_LIST: TypstNodeSpec = { ...LIST, name: 'orderedList' };

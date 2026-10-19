@@ -7,10 +7,9 @@ import type { ProjectLabels } from '../model/label-index';
 import { findLabel, findLabelLinks } from '../model/scan';
 
 /**
- * References (`@intro`) and links to labels (`#link(<intro>)[..]`) as document links: following one goes to the
- * label, in whichever file it is (the caret at it, as search everywhere's "Labels" does); the hover says what it
- * labels ("Go to Section · Introduction in intro.typ"). A label the project lacks leads nowhere: its chip is marked
- * missing instead.
+ * References (`@intro`) and links to labels (`#link(<intro>)[..]`) as document links: following one goes to the label,
+ * in whichever file it is, with the caret at it; the hover says what it labels ("Go to Section · Introduction in
+ * intro.typ"). A link to a label the project lacks leads nowhere.
  */
 export class LabelLinks implements DocumentLinkProvider {
   /** The label each link given out points to. */

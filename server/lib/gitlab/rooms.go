@@ -1,15 +1,12 @@
 // Package gitlab makes rooms backed by a GitLab branch: people edit the branch together in the browser, and
 // the server commits it back (on a save, or by itself) and merges what others push.
 //
-// Rooms is the collab.Extension for room names `gitlab:<project id or path>@<branch>` (the widget's format;
-// `gitlab` is the provider id, the seam for other instances and providers); other rooms are left alone.
-// It also answers the HTTP endpoints next to the WebSocket: a room's files (images, data) and GitLab's push
-// webhook. The room logic (room.go) works against a Repository (repository.go); api.go is GitLab's REST
-// API behind it. Commits are made with the server's bot token: the bot is the author, the editors are
-// Co-authored-by trailers. No user token is used or kept here; who may join and save is checked with the
-// bot's token (access.go).
+// Rooms opens the rooms named `gitlab:<project id or path>@<branch>` and serves, next to the WebSocket:
+//   - a room's files (images, data): GET /rooms/<room>/files/<path>
+//   - GitLab's push webhook: POST /gitlab/webhook
 //
-// See docs/40_architecture/09_server.typ, "GitLab rooms".
+// Commits are made with the server's bot token: the bot is the author, the editors are Co-authored-by
+// trailers. No user's token is used or kept; who may join and save is asked with the bot's token.
 package gitlab
 
 import (

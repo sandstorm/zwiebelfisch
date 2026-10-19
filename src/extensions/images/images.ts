@@ -12,17 +12,15 @@ import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-e
 import { imageEditor } from './workbench/image-editor';
 
 /**
- * Images, from the file in the project to the box in the text. In the Visual editor an `#image("path", ..)` block
- * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it
- * and set its caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
- * images and uploads; image files pasted into the text are uploaded and inserted too, and an image dropped into the
- * text (from the file panel, or from the computer once the workbench uploaded it where the project's images are) becomes `#image("path")` where it
- * is dropped (a drop edit provider). Uploads go through `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
+ * Images, from the file in the project to the box in the text.
+ * - in the Visual editor, an `#image("path", ..)` block (also a figure's body) shows the image file in place of its
+ *   code, with tools to resize it and set its caption
+ * - "Insert image" offers the project's images and uploads
+ * - image files pasted or dropped into the text become `#image("path")` there; files from the computer are uploaded
+ *   first
+ * - image files open read-only in the editing area (`images.editor`)
  *
- * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
- * the window only custom editors, and the file panel only files. The picture of an image box follows the document link
- * on its path, as every box's picture does (⌘/Ctrl+click opens the file). An edit on an image box rewrites
- * only the argument it touches (model/image-call.ts). See docs/40_architecture/08_extensions.typ.
+ * An edit on an image box rewrites only the argument it touches.
  */
 export function images(): Extension {
   return {

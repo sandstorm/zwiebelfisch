@@ -6,12 +6,11 @@ import type { DocumentLink, FollowableLink, LinkTargets, TextDocument } from './
 import { FOLLOW_HINT, hoverLink, isMod } from './link-hover';
 
 /**
- * Makes the links of the editor's text navigable: Mod+click or Alt+Enter on one opens its target (a file, at the
- * link's selection, or a URL in a new tab). Hovered, it shows as every link does (`hoverLink`): its hint offers to open
- * it ("Open …", or the link's tooltip, as VS Code's "Follow link"), or says what the link's tooltip says and offers its
- * command (e.g. "Create chapter.typ"); while the modifier is held it shows as a link.
- * `languageId`: the text's language; `path`: the file the text is in, now (a file can be renamed); null: none, the
- * text has no links.
+ * Makes the links of a CodeMirror editor's text navigable: Mod+click or Alt+Enter on one opens its target (a file at
+ * the link's selection, or a URL in a new tab). Hovered, a link shows its hint ("Open …", or its tooltip and command,
+ * e.g. "Create chapter.typ"), and the link look while the modifier is held.
+ * `languageId`: the text's language; `path`: the file the text is in, now (a file can be renamed); null: the text has
+ * no links.
  */
 export function linkExtension(actions: LinkActions, languageId: string, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(

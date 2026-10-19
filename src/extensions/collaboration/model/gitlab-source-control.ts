@@ -15,14 +15,12 @@ import {
 } from '../../../core/room-protocol/room-protocol';
 
 /**
- * The commits of a room backed by a GitLab branch, as a client sees them: `commit` asks the server to commit the
- * room's changes as `author` (`state.busy` until it answers); the server's answers (saved, nothing to save, a
- * conflict, a failure) and its news (upstream changes merged) are told with `tell`. What the room has that the branch
- * has not (written by the server into the room's meta map) is shown as resource states (M / A / D) and in the status
- * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"); a conflict with upstream, as long as it
- * lasts, as "!" on its files and a warning entry before that; a failed commit (GitLab unreachable), until the next
- * commit or merge, as a warning entry, too. Shaped as the scm host's `SourceControl`; the server talks to it over
- * stateless messages and the `meta` map (`changes`, `conflict`, `commitFailure`).
+ * The commits of a room backed by a GitLab branch, as a client sees them, shaped as the scm host's `SourceControl`:
+ * - `commit` asks the server to commit the room's changes as `author` (`state.busy` until it answers)
+ * - the server's answers (saved, nothing to save, a conflict, a failure) and news (upstream merged) go to `tell`
+ * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
+ * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
+ *   warning entry until the next commit or merge
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';

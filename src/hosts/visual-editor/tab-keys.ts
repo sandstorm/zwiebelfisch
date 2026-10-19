@@ -3,13 +3,14 @@ import { Extension } from '@tiptap/core';
 import { Plugin, type EditorState, type PluginView, type Transaction } from '@tiptap/pm/state';
 
 /**
- * Tab and Shift+Tab stay in the text. In code (a textblock whose spec says `code`, a code block) they indent and
- * outdent the selected lines, as CodeMirror's `indentWithTab` does in the Source editor; before any other construct,
- * so code in a list item or a table cell indents rather than nesting the item or moving to the next cell. Elsewhere
- * the constructs' keymaps use them (lists nest, tables move between cells); what none of them takes is consumed here,
- * last (priority 1), instead of moving the focus out of the editor. The way out by keyboard, as in CodeMirror (no
- * keyboard trap): Escape, then Tab or Shift+Tab moves the focus on as the browser does, once. Escape in a raw box
- * counts too.
+ * Tab and Shift+Tab stay in the text.
+ *
+ * - In code (a code block, or a textblock whose spec says `code`) they indent and outdent the selected lines, also in a
+ *   list item or a table cell.
+ * - Elsewhere the constructs' keymaps use them (lists nest, tables move between cells); what none takes is consumed
+ *   instead of moving the focus out of the editor.
+ * - Escape, then Tab or Shift+Tab, moves the focus on as the browser does, once (no keyboard trap). Escape in a raw box
+ *   counts too.
  */
 export const TabKeys = Extension.create({
   name: 'typstTabKeys',

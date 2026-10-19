@@ -6,9 +6,8 @@ import { div, restoreSideBarState, SideBar, type PanelCommands, type Side } from
 /**
  * The widget's regions in one grid: the left side (a rail with a button per side panel and the shown panel), the
  * editing area, the right side (the shown panel and its rail, on the outer edge), and the status bar below spanning
- * them all (its items: StatusBar). Each side shows one panel at a time; clicking the shown one's rail button hides
- * the side and the editing area takes the room. Sizes and the panels picked are remembered for the session (`layout`
- * in the memento). Panels have ids (`files`, `preview`), so a later docking layout can take over the same contract.
+ * them all. Each side shows one panel at a time; clicking the shown one's rail button hides the side and the editing
+ * area takes the room. Sizes and the panels picked are remembered for the session.
  *
  * While the widget is narrower than 720px the left side's panel lies over the editing area and closes on Escape, a
  * click outside, or `dismiss()` (e.g. after a file was chosen in it).

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 //MISE description="Fail on a source file without its why or a pointer to it, or with a pointer to a file or name that does not exist"
-// Every source file carries a why (the doc comment of its main element, the first `export`) or points to the why
-// that explains it: `See <path>` or `See <Name> in <path>` in its top comment or that doc comment. A file without
-// exports (a script like main.ts, a stylesheet) may have its why as its top comment. A test (`*.test.*`, `*.spec.ts`,
-// anything in tests/) needs only a top comment (`Tests for X`). See docs/40_architecture/10_conventions.typ.
-// A pointer's path is relative to the file's folder or to the repository root. It must exist, and a named element must
-// appear in it, so a rename or a move that forgets a pointer fails here. Whether a why is a good one is for reviewers.
+// A why is the doc comment of a file's main element (its first `export`); a pointer is `See <path>` or
+// `See <Name> in <path>` in the top comment or that doc comment, its path relative to the file's folder or to the
+// repository root. A file without exports (a script, a stylesheet) may have its why as its top comment; a test
+// (`*.test.*`, `*.spec.ts`, anything in tests/) needs only a top comment (`Tests for X`). Also fails on a docs file
+// a source names that does not exist.
 // Checks the tracked files in src/, demo/, tests/, server/testdata/ and eslint-rules/; prints each failing file and exits 1.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';

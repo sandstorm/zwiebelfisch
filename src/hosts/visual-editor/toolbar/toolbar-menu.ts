@@ -3,17 +3,11 @@
 import type { ToolbarControl } from '../visual-editor';
 
 /**
- * A menu button of the toolbar: the trigger (icon, a small caret,
- * `aria-haspopup`) opens a `role="menu"` list of items below it. Choosing an
- * item, Escape, or a click elsewhere closes it; arrow keys move between the
- * items. A list taller than the room below the trigger (a short editor clips
- * it) scrolls. The items are ordinary toolbar buttons (their enabled/pressed state
- * is the toolbar's business), asked for again each time the menu opens, so
- * they follow what the menu holds now (the project's inline styles); a menu
- * without items hides. The trigger shows `icon()` as of the last `refresh()`,
- * e.g. the current alignment. The items' state is invisible while the menu is
- * closed: it is refreshed when the menu opens and on `refresh()` while it is
- * open, not after every transaction.
+ * A menu button of the toolbar: its trigger opens a `role="menu"` list of toolbar buttons below it.
+ *
+ * Choosing an item, Escape or a click elsewhere closes it; arrow keys move between the items. The items are asked for
+ * each time the menu opens, so they follow what it holds now; a menu without items hides. The trigger shows `icon()` as
+ * of the last `refresh()` (e.g. the current alignment).
  */
 export class ToolbarMenu implements ToolbarControl {
   readonly element: HTMLElement;

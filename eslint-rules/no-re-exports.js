@@ -1,10 +1,7 @@
 // ESLint rule `local/no-re-exports`: a file exports only what it defines.
 //
-// A module's entry defines its API; its internal files hold the implementation and are not forwarded.
-// See docs/40_architecture/10_conventions.typ ("Modules and folders"). Flagged: `export * from`,
-// `export { x } from` (also `export type`), and `export { x }` / `export default x` of an imported name.
-// Only the package entry (src/index.ts) re-exports; it is left out of the rule in eslint.config.js,
-// together with the few reasoned exceptions.
+// Flagged: `export * from`, `export { x } from` (also `export type`), and `export { x }` / `export default x` of an
+// imported name.
 
 /** Whether the module-scope name `name` is bound by an import declaration. */
 function isImported(scope, name) {
@@ -18,6 +15,7 @@ function moduleScope(sourceCode, node) {
   return scope.childScopes.find((child) => child.type === 'module') ?? scope;
 }
 
+/** The rule `local/no-re-exports`. The package entry (src/index.ts) is left out of it, as it is the one file that re-exports. */
 export default {
   meta: {
     type: 'problem',

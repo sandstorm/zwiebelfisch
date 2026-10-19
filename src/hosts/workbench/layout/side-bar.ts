@@ -10,7 +10,7 @@ import type { SidePanel, SidePanelOptions } from '../workbench';
  * rail button; clicking the shown panel's button hides the side), else the side's default panel, else the first panel
  * whose owner asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for
  * the moment only, and Escape, a click outside or `dismiss()` close the panel. Each panel's command
- * `workbench.view.<id>` picks it from the keyboard (`#toggleFocus`); its rail button's tooltip names the key.
+ * `workbench.view.<id>` picks it from the keyboard; its rail button's tooltip names the key.
  */
 export class SideBar {
   readonly element: HTMLElement;

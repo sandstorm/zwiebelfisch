@@ -8,22 +8,14 @@ import { calculatePageMarginChanges } from './page-margin';
 
 /**
  * The edits that add a `drafting` margin note at `range` of Typst `text`:
- * a selection becomes the highlighted text of a range note,
- * `#margin-note[selection][]` (bold or italic text the selection starts or
- * ends with goes inside whole: `#margin-note[*bold*][]`, as the Visual editor
- * prints it); a collapsed range (or a selection that is not
- * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
- * note `#margin-note[]` at its end. The file imports `margin-note` from
- * `drafting` exactly once afterwards: an existing drafting import is extended,
- * one after the note moves to the top, else one is added at the top. The notes' look is not written into the
- * document: the preview and the PDF set it (NOTE_STYLE in ../preview/preview.ts).
- * Page margins drafting 0.2.2 cannot handle (a single length) get room for
- * notes on the right (see `calculatePageMarginChanges`).
+ * - a selection becomes the highlighted text of a range note, `#margin-note[selection][]` (bold or italic text the
+ *   selection starts or ends with goes inside whole: `#margin-note[*bold*][]`)
+ * - a collapsed range, or a selection that is not self-contained markup (half of `*bold*`, two paragraphs), gets a
+ *   point note `#margin-note[]` at its end
  *
- * Null where no note fits: the position is inside code, the selection holds
- * statements (`#set`, `#show`, `#import`, `#let`: wrapped, they would apply
- * only inside the note; a selected box of them, like a document's preamble in
- * the Visual editor, is no text to comment on).
+ * Afterwards the file imports `margin-note` from `drafting` exactly once, and a page margin drafting 0.2.2 cannot handle
+ * gets room for notes on the right. Null where no note fits: inside code, or a selection that holds statements
+ * (`#set`, `#show`, `#import`, `#let`).
  */
 export function calculateMarginNoteChanges(text: string, range: SourceRange): MarginNoteChanges | null {
   if (holdsStatements(text, range)) return null;

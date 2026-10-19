@@ -10,8 +10,7 @@ import { PROJECT_MAP } from '../../../core/room-protocol/room-protocol';
  * the room compiles the same file. A change on either side reaches the other (`setMain`).
  *
  * Joining: the room's main file wins; a room without one takes the local main file. A main file the project does not
- * have yet (its file still on the way) is taken once it arrives. Not used in GitLab-backed rooms (the main file stays
- * each user's own there) nor where the host locked the main file (it neither follows nor sets the room's).
+ * have yet (its file still on the way) is taken once it arrives.
  */
 export class SharedMainFile {
   private readonly state: Y.Map<string>;

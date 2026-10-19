@@ -6,12 +6,9 @@ import { formatValue } from '../model/describe';
 
 /**
  * The contributions of the extensions it `instrument`s, in the order they were made: every `register…` call on their
- * contexts' namespaces and the settings and keys they declare, each described in its point's terms (contribution-points.ts),
- * with where it was made and whether it was disposed since.
- *
- * Instrumenting wraps an extension's `activate`: its context's namespaces become proxies that pass every call through
- * and record each `register…` call, and the registration's result tells when it is disposed. Nothing else changes for
- * the extension.
+ * contexts' namespaces and the settings and keys they declare, each described in its point's terms, with where it was
+ * made and whether it was disposed since. Instrumenting wraps an extension's `activate`; nothing else changes for the
+ * extension.
  */
 export class ContributionLog {
   readonly #entries: (Contribution & { disposed: boolean })[] = [];

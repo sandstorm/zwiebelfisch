@@ -6,15 +6,12 @@ import { typstSyntax } from './source-editor/typst-syntax';
 import { TYPST_HELP } from './workbench/typst-help';
 
 /**
- * Typst as a language for CodeMirror: highlighting and indentation. It goes into every Source editor and into the code
- * of the Visual editor's raw boxes. The help sheet "Typst basics" is here too, and what a Typst file dragged from the
- * file panel into another becomes: `#include "chapter.typ"`, its content in place, as a book's main file pulls in its
- * chapters (a drop edit provider; extensions with Typst files of their own make something else of them by priority:
- * a spreadsheet's `.ic.gen.typ`).
+ * Typst as a language, used by:
+ * - every Source editor and the code of the Visual editor's raw boxes: highlighting and indentation
+ * - the help sheet "Typst basics"
+ * - a Typst file dropped from the file panel into another: `#include "chapter.typ"`
  *
- * The Source editor and the raw boxes are plain CodeMirror hosts, colored by the Source editor host's `codeColors`;
- * that their text is Typst is contributed here once for both. Errors come from the compiler only (the diagnostics
- * extension), not from the syntax: see `typstSyntax`. See docs/40_architecture/05_source-editor.typ.
+ * The syntax reports no errors, so each error is shown once, from the compiler.
  */
 export function typstLanguage(): Extension {
   return {

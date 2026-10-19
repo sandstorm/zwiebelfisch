@@ -1,13 +1,13 @@
-// Package app puts the collaboration server together, for both commands (zwiebelfisch, and fake-gitlab for
-// the demo): the rooms (package collab) with GitLab rooms (package gitlab) as their extension, the sign-in
-// (package auth), and the HTTP endpoints next to the WebSocket, on one port.
+// Package app puts the collaboration server together on one port, for both commands (zwiebelfisch, and
+// fake-gitlab for the demo): the rooms (package collab), GitLab rooms (package gitlab) and the sign-in
+// (package auth).
 //
-// It also decides who opens which room. GitLab rooms always (when configured), for people signed in whose
-// GitLab role lets them edit (gitlab.Rooms.Authorize); plain rooms (any other name) only when enabled, for
-// anyone signed in: their content lives in nothing but the server's database, and the product leads people
-// to GitLab branches. A refused client is told why, in words the widget shows (sign in first, only GitLab
-// rooms here, your role). GET /api/info tells clients beforehand which rooms exist, so the demo offers only
-// what works.
+// Who opens which room:
+//   - a GitLab room (when configured): anyone signed in whose GitLab role lets them edit
+//   - any other room (a plain room, only when enabled): anyone signed in
+//
+// A refused client is told why, in words the widget shows. GET /api/info tells clients beforehand whether
+// plain rooms exist.
 package app
 
 import (

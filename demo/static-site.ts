@@ -2,10 +2,9 @@
 import type { Extension } from '../src';
 
 /**
- * Whether this page is the static-site build (`mise run build:demo -- --mode static`): served as plain files next to
- * the docs' HTML pages, with no playground server and no docs-files plugin behind it. There the demo opens the
- * Documentation example, offers Local mode only, and says that nothing is saved. Every other build (the dev server,
- * `mise run demo preview`, the e2e build, the Docker image) is the playground as it was.
+ * Whether this page is the static-site build (`mise run build:demo -- --mode static`): plain files next to the docs'
+ * HTML pages, with no server behind them. There the demo opens the Documentation example, offers Local mode only and
+ * says that nothing is saved.
  */
 export const STATIC_SITE = import.meta.env.MODE === 'static';
 

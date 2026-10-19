@@ -4,11 +4,11 @@ import type { MenuAnchor } from '../../../hosts/window/window';
 
 /**
  * The help sheets as lists to pick from: a heading per sheet, a list (`listbox`) per section, a row (`option`) per
- * snippet, the sheet's links below. One row is selected at a time (a click, ↑ / ↓, Home / End: the focus follows) and
- * shows its whole snippet; the others show it on one line, cut. Enter inserts the selected row, a right click, Shift+F10 or
- * the context menu key shows its menu; a row dragged carries the text it inserts as each of the drag types given.
- *
- * Why the rows are one tab stop: the panel is read as one list of many entries, walked with the arrow keys.
+ * snippet, the sheet's links below.
+ * - one row is selected at a time (a click, ↑ / ↓, Home / End; the focus follows) and shows its whole snippet, the
+ *   others one cut line; all rows are one tab stop
+ * - Enter inserts the selected row; a right click, Shift+F10 or the context menu key shows its menu
+ * - a dragged row carries the text it inserts as each of the drag types given
  */
 export class HelpPanel {
   readonly #root: HTMLElement;

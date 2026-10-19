@@ -1,9 +1,13 @@
 // What the import rules share: finding every place a file names another by relative path, and resolving it the way
-// the bundler would. Used by entry-imports.js, dependencies.js and mise-tasks/quality/module-cycles.
+// the bundler would. Used by:
+// - entry-imports.js
+// - dependencies.js
+// - mise-tasks/quality/module-cycles
 //
 // Checked: import/export declarations, `import('…')`, `new URL('…', import.meta.url)` (workers, assets) and
 // `vi.mock`/`vi.doMock`/`vi.importActual`/`vi.importMock('…')`, each with a literal relative path. Not checked:
 // computed paths and `import.meta.glob(…)`.
+
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 

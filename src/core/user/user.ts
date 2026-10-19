@@ -1,8 +1,8 @@
 /**
  * Who works in the widget, as the host page names them (`createEditor({ user })`) and as collaborators see them.
- *
- * In core because both the workbench host and extension models (the collaboration's remote cursors) speak of it, and
- * models may not import hosts. See docs/40_architecture/02_core.typ.
+ * Used by:
+ * - the workbench
+ * - the collaboration extension (presence, remote cursors)
  */
 export interface User {
   /** The name others see (collaborating), that signs comments and commits. */

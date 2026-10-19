@@ -2,9 +2,8 @@
 #MISE description="Pictures of the features for the docs: builds the demo, takes docs/assets/screenshots/<chapter>.png (tests/screenshots/features.spec.ts, Chromium), then lists them in index.typ"
 #MISE depends=["build:demo", "build:packages"]
 #USAGE arg "[playwright_args]..." help="Passed on to Playwright (e.g. --grep tables; flags after --)" double_dash="automatic"
-# e.g. `mise run docs:screenshots -- --grep 'tables|help'`. A picture not taken keeps its last file, one without a
-# test is deleted; the book shows what index.typ lists and a "Screenshot pending" box for the rest (`screenshot` in
-# docs/template.typ).
+# e.g. `mise run docs:screenshots -- --grep 'tables|help'`.
+# A picture that fails keeps its last file; one without a test is deleted.
 set -euo pipefail
 status=0
 pnpm exec playwright test -c tests/screenshots/playwright.config.ts "$@" || status=$?

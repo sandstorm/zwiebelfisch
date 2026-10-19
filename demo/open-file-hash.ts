@@ -2,15 +2,13 @@
 import { ProjectPath, SourceOffset, type Extension, type WindowApi } from '../src';
 
 /**
- * The shown file and the cursor's line in the URL fragment (`#/chapters/intro.typ:12`, the line 1-based like GitHub's
- * `#L12` or VS Code's `path:line`), so reloading or sharing the link opens the same place. Written against the public
- * extension API only, as any host could.
- *
- * On load and on every edit of the fragment it opens that file with the cursor at the start of the line, scrolled into
- * view, in whichever editor shows the file (other files just open). In a collaboration room the files and their text
- * arrive after connecting, so a file or line that is not there waits until it is, or until the user goes elsewhere;
- * meanwhile the fragment names the shown file. While the user works, the fragment follows (history.replaceState: no
- * history entries): at once for another file, after a pause for the cursor.
+ * Keeps the shown file and the cursor's line in the URL fragment (`#/chapters/intro.typ:12`, the line 1-based), so
+ * reloading or sharing the link opens the same place:
+ * - on load and on every edit of the fragment it opens that file with the cursor at the start of the line, scrolled
+ *   into view; a file or line not there yet (a collaboration room still connecting) waits until it is, or until the
+ *   user goes elsewhere
+ * - while the user works, the fragment follows without adding history entries: at once for another file, after a
+ *   pause for the cursor
  */
 export function openFileHash(): Extension {
   return {

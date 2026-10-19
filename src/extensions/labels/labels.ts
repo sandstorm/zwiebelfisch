@@ -7,18 +7,15 @@ import { LabelLinks } from './workbench/label-links';
 import { labelSearch } from './workbench/label-search';
 
 /**
- * Labels and the references to them, across the whole project.
+ * Labels (`<intro>`) and the references to them (`@intro`), across the whole project.
+ * In every Visual editor:
+ * - references show as chips that say what they point to, or that the label is missing
+ * - labels show as tags on their blocks, to rename (with every reference) or remove
+ * - `@` lists the labels
  *
- * A label (`<intro>`) and the references to it (`@intro`) are often in different files. So one LabelIndex reads every
- * `.typ` and `.bib` file of the project and follows each change. Every Visual editor uses it: references show as chips
- * that say what they point to (or that the label is missing), labels as tags on their blocks (rename with every
- * reference, or remove), and `@` lists the labels. Search everywhere lists them as "Labels". References and
- * `#link(<label>)` are document links to their label, in every editor (⌘/Ctrl+click or Alt+Enter). A label pasted
- * (in either editor) that the project has already gets a new name (`<fig:setup-1>`), and so do the references to it
- * in the pasted text: a copy never makes two labels of one name (a paste edit provider resolving every paste).
- *
- * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
- * through the figures extension, by caption. See docs/20_features/03_writing.typ.
+ * Also: "Labels" in search everywhere; references and `#link(<label>)` as document links to their label in every
+ * editor; a pasted label the project has already gets a new name (`<fig:setup-1>`), and so do the references to it in
+ * the pasted text, so a paste never makes two labels of one name.
  */
 export function labels(): Extension {
   return {

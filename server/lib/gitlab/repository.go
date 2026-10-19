@@ -6,8 +6,7 @@ import (
 )
 
 // Repository is a branch-holding repository as a room needs it: read a commit's files, commit the room's
-// changes, tell who may do so. It is the seam for other providers (GitHub, Gitea): the room logic knows nothing of GitLab's
-// REST API (api.go implements Repository for GitLab).
+// changes, tell who may do so. GitLab's is project (api.go).
 type Repository interface {
 	// Head is the commit branch points at.
 	Head(ctx context.Context, branch string) (string, error)

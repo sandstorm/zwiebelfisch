@@ -1,5 +1,4 @@
-// Package config reads the server's settings: defaults, then environment variables (koanf, as in
-// sandstorm/dashica).
+// Package config reads the server's settings: defaults, then environment variables.
 //
 //	PORT                (default 1234)
 //	ZWF_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
@@ -25,11 +24,7 @@
 //	ZWF_AUTH_REDIRECT_URL   (default: /auth/callback on the host the browser names) the callback registered
 //	                          with the application, e.g. https://editor.example.org/auth/callback
 //
-// Plain rooms are off by default: the product's rooms are GitLab branches, and a plain room's content lives
-// only in this server's database.
-//
-// Only these names are read, each mapped to a key explicitly: secrets come from the environment
-// (mise.local.toml or .env, never committed), and a typo in a name should not be silently half-parsed.
+// Only these names are read.
 package config
 
 import (

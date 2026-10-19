@@ -10,17 +10,13 @@ import { FileNavigation } from './workbench/file-navigation';
 import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
 
 /**
- * Links around the shown file that lead to other files. "← previous file" / "next file →" sit above and below a file
- * the main file includes, in its reading order. "← Back to …" / "Forward to … →" sit above a supplementary file (a
- * diagram, a spreadsheet, …) and lead through the files the user came from (VS Code's Go Back / Go Forward); their
- * keys work in every file.
+ * Links around the shown file that lead to other files.
+ * - "← previous file" / "next file →" above and below a file the main file includes, in its reading order
+ * - "← Back to …" / "Forward to … →" above a supplementary file (a diagram, a spreadsheet, …), through the files the
+ *   user came from (VS Code's Go Back / Go Forward); their keys work in every file
  *
- * Both are one extension because they share the editor frame (one per widget) and the bar's look. Neither needs the
- * file panel, so a host may keep them without it.
- *
- * The history listens to the shown file, not to the ways of opening one (links, the preview, the file panel, …).
- * Every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code, and no feature needs to
- * know about the history. See docs/20_features/05_multiple-files.typ.
+ * Every change of the shown file counts for the history, however the file was opened. Back and forward return to the
+ * editor and selection the file had when the user left it.
  */
 export function fileNavigation(): Extension {
   return {

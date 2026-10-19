@@ -4,14 +4,12 @@ import type { FileChange, Project } from '../../core/project/project';
 /**
  * Changes to the project's files and the widget's settings (VS Code's `workspace` namespace).
  *
- * `applyEdit` is the one way an extension changes files. The change must pass the project's rules and then the
- * host's veto (`allowFileChange`), so a page embedding the widget decides in one place what may happen.
+ * Extensions use it to:
+ * - change files (`applyEdit`): a change is applied only if the project's rules and then the host page
+ *   (`allowFileChange`) allow it
+ * - read the settings they declare (`contributes.configuration`) and hear when the host page sets new values
  *
- * Settings keep the widget free of feature options. Each extension declares its own settings
- * (`contributes.configuration`). The host passes all values as one map by full id (`createEditor({ settings })`,
- * or the `<zwiebelfisch-editor>` element's `settings` attribute) and may replace it later. Extensions read their section
- * (`getConfiguration('pdfExport')`) and hear about changes (`onDidChangeConfiguration`). A value that is undeclared
- * or of the wrong type is ignored with a warning. See docs/40_architecture/07_workbench.typ, "Changes and settings".
+ * A setting value that is undeclared or of the wrong type is ignored (the setting keeps its default), with a warning.
  */
 export interface Workspace {
   /**

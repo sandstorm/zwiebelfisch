@@ -2,20 +2,16 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports } from './model/pasted-imports';
 
 /**
- * Imports follow copied Typst. Pasted text that uses a name the file neither defines nor imports gets its import, in
- * the same undo step: `mermaid(..)` pasted into a file without merman adds `#import "@preview/merman:0.4.0": mermaid`
- * at the top, or `mermaid` to an import of merman already there. Never a duplicate.
+ * Imports that follow copied Typst.
+ * Pasted text that uses a name the target file neither defines nor imports gets its import, in the same undo step and
+ * never as a duplicate: `mermaid(..)` pasted into a file without merman adds `#import "@preview/merman:0.4.0": mermaid`,
+ * or adds `mermaid` to an import of merman already there.
  *
- * Where a name comes from: a copy from the Visual editor (its raw boxes too) or the Source editor puts the imports of
- * the source file that the copied text uses on the clipboard (`application/x-typst-imports`, JSON, file modules as
- * project paths), so a paste into another file imports them from there, the path written from the target file. Text
- * from elsewhere gets what extensions declare for their constructs (`languages.registerKnownImport`: mermaid from
- * merman), without this extension knowing them. Star imports do not travel (which of their names a text uses is
- * unknown).
+ * Where the import comes from:
+ * - a copy from a Typst file: the imports of that file the copied text uses, the path written from the target file
+ * - text from elsewhere: what extensions declare for their constructs (`languages.registerKnownImport`)
  *
- * The editors do the paste; this extension is a paste edit provider (`languages.registerDocumentPasteEditProvider`):
- * it adds the imports to the clipboard on a copy and the import change to whatever a paste puts in (it resolves every
- * paste edit). See docs/20_features/01_wysiwyg-editing.typ.
+ * Star imports do not travel.
  */
 export function imports(): Extension {
   return {

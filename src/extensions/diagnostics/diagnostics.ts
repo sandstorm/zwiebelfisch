@@ -9,14 +9,13 @@ import { diagnosticHighlight } from './visual-editor/visual-editor';
 import { DiagnosticsStatus } from './workbench/workbench';
 
 /**
- * Compile errors and warnings where the user looks: underlined in the Source editors (source-editor/, CodeMirror
- * lint), highlighted in the Visual editors with the message as tooltip (visual-editor/), and counted in the status bar
- * with the list behind it (DiagnosticsStatus in workbench/). The status is for the Typst file shown last, also while
- * an image is shown. Clicking the status or a message opens the file in the Source editor at the range.
+ * Compile errors and warnings where the user looks:
+ * - underlined in the Source editors, with the message on hover
+ * - highlighted in the Visual editors, with the message as tooltip
+ * - counted in the status bar, with the list behind it
  *
- * Compiling is the preview's; it reports a compilation's diagnostics once, for every file. A DiagnosticCollection
- * (model/) splits them by document, and each editor of a document reads its own from there, whenever it is made.
- * See docs/40_architecture/08_extensions.typ.
+ * The status counts the Typst file shown last, also while an image is shown. Clicking the status or a message opens
+ * the file in the Source editor at the range.
  */
 export function diagnostics(): Extension {
   return {

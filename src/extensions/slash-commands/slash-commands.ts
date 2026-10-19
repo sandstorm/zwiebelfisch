@@ -6,13 +6,11 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
 /**
- * Typing `/` in the Visual editor lists the Insert menu's entries and the text styles that can apply here, found by
- * label and keywords. The hint "Type / for commands" in the empty paragraph holding the cursor makes that easy to find
- * (not in table cells, which are too narrow for it).
+ * Typing `/` in the Visual editor lists what can be done where the cursor is: the Insert menu's entries, the list and
+ * alignment buttons and the text styles, found by label and keywords. Choosing one runs it as its menu would.
  *
- * It adds no commands of its own. It reads what other extensions put into the Insert menu and the text style menu
- * (through the completion context), so the list grows with them, and the whole feature can be left out.
- * See docs/20_features/01_wysiwyg-editing.typ and docs/40_architecture/04_visual-editor.typ, "Completion lists".
+ * The list holds whatever other extensions put into those menus. The empty paragraph holding the cursor shows the hint
+ * "Type / for commands" (not in table cells).
  */
 export function slashCommands(): Extension {
   return {

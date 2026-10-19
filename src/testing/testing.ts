@@ -31,14 +31,10 @@ import { attachGrammar, createSchema, documentExtensions, posToSource, serialize
 /**
  * The schema of a Visual editor with the built-ins configured from `options`.
  *
- * testing/ puts the widget's built-in extensions together for tests. An extension's tests often need the others (a
- * figure holds a table or an image), but an extension never imports another one; its tests get them from here. It
- * offers this schema, a Visual editor with the built-ins activated in a test's extension context (project files,
- * preview snippets, document links, prompts), and helpers for a parsed document (apply an edit, find text, check the
- * position map exhaustively).
- *
- * Only `*.test.ts` files may import it (eslint.config.js). A host's own tests use the host's minimum and their own
- * specs instead. See docs/40_architecture/10_conventions.typ, "Comments and tests".
+ * testing/ puts the built-in extensions together for an extension's tests that need the others (a figure holds a
+ * table or an image). It offers this schema, a Visual editor with the built-ins activated in a test's extension
+ * context, and helpers for a parsed document (apply an edit, find text, check the position map exhaustively).
+ * Only `*.test.ts` files may import it.
  */
 export function schemaWith(options: TestEditorOptions = {}): Schema {
   return schemaFrom(contributions(options));

@@ -6,10 +6,10 @@ import { INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-editor/page-break';
 /**
  * Page breaks and horizontal rules in the Visual editor.
  *
- * `#pagebreak()` shows as a labelled divider (Mod+Enter), a full-width `#line(length: 100%)` as a rule (`---` at the
- * start of an empty paragraph); both are in the Insert menu. Their source is kept as written. Without this extension
- * these calls are raw boxes, like any Typst the Visual editor has no construct for.
- * See docs/20_features/04_full-typst-support.typ.
+ * - `#pagebreak()` shows as a labelled divider; Mod+Enter inserts one.
+ * - A full-width `#line(length: 100%)` shows as a rule; `---` in an empty paragraph inserts one.
+ *
+ * Both are in the Insert menu, and their source is kept as written.
  */
 export function pageLayout(): Extension {
   return {

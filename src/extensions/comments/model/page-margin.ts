@@ -6,20 +6,12 @@ import { SourceRange, type TextChange } from '../../../core/typst-document/typst
 import { children } from '../../../core/typst-syntax/typst-syntax';
 
 /**
- * Page margins that `drafting` 0.2.2 can place notes in.
+ * Page margins that `drafting` 0.2.2 can place notes in: it crashes on a page margin that is a single length, or a
+ * uniform dictionary (`(rest: a)`, `(x: a, y: a)`), which Typst turns back into one.
  *
- * drafting 0.2.2 crashes on a page margin that is a single length
- * ("type relative length has no method `keys`", drafting.typ line 640:
- * `"inside" in page.margin.keys()` without checking for a dictionary). Typst
- * turns uniform dictionaries (`(rest: a)`, `(x: a, y: a)`) back into a length,
- * so they crash too; `auto` and margins that differ by side work.
- *
- * The edits give every top-level `#set page(.., margin: m)` whose `m` is such
- * a uniform literal a right margin for the notes:
- * `margin: (right: R, rest: m)`, R = 4cm, or 1cm more than `m` (whole cm) when
- * `m` is an absolute length of 4cm or more (equal sides would be uniform again).
- * Margins written any other way (variables, spreads, other dictionaries) are
- * left alone.
+ * Every top-level `#set page(.., margin: m)` with such a literal `m` gets `margin: (right: R, rest: m)`: R = 4cm, or
+ * 1cm more than `m` (whole cm) when `m` is an absolute length of 4cm or more. Margins written any other way are left
+ * alone.
  */
 export function calculatePageMarginChanges(text: string): TextChange[] {
   const changes: TextChange[] = [];

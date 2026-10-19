@@ -1,15 +1,14 @@
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
- * The text of one `.typ` file: the single source of truth every editor derives from.
+ * The text of one `.typ` file: the single source of truth every editor derives from. Read and edited by:
+ * - the Visual and Source editors
+ * - the preview and the indexes
+ * - the collaboration extension, which binds a Y.Text to it
  *
- * The Visual and Source editors, the preview and the indexes all show or read the same text. Each editor applies its
- * edits with an `origin` (usually itself) and skips events with its own origin, so edits never echo back. Every
+ * Each editor applies its edits with an `origin` and skips events with its own, so edits never echo back. Every
  * listener hears every change in the order the changes were made, also when a listener changes the document while it
  * is told (that change is told once everyone has heard the first one).
- *
- * Sharing the text with others is not done here: the collaboration extension binds a Y.Text to a document from
- * outside, like y-codemirror binds one to an editor. See docs/40_architecture/02_core.typ, "TypstDocument".
  */
 export class TypstDocument {
   private current: string;

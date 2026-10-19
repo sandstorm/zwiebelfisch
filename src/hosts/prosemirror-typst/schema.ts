@@ -5,13 +5,9 @@ import Document from '@tiptap/extension-document';
 import type { DocumentNodeSpec } from './prosemirror-typst';
 
 /**
- * Source anchors of the base's paragraphs (`src`, its original Typst; `sep`, the whitespace to its next sibling) and
- * line breaks (`src`), and `label` on the node types of `specs` that are `labelled` (global attributes). The paragraph
- * a split makes is made in the editor: no anchors (its `sep` carried into a list item would make the list loose).
- *
- * The document with its lead and trail, raw Typst (block and inline), soft breaks, the typstSource mark; and the
- * extension giving StarterKit's paragraphs and line breaks their source anchors and labelled specs' node types their
- * `label`.
+ * The extension giving StarterKit's paragraphs and line breaks their source anchors (`src`, their original Typst; a
+ * paragraph's `sep`, the whitespace to its next sibling), and the `labelled` node types of `specs` their `label`.
+ * A paragraph made by a split in the editor has no anchors.
  */
 export function sourceAnchors(specs: readonly DocumentNodeSpec[]): AnyExtension {
   return Extension.create({

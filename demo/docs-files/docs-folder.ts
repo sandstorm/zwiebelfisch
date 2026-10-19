@@ -7,14 +7,13 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { contentTag, type DiskChange, isTextPath } from './protocol.ts';
 
 /**
- * The files under `root`, by paths relative to it (`20_features/03_writing.typ`). Writes are atomic (a hidden temporary file
- * renamed over the target), and only over the version the writer knows. It remembers what it wrote last per path,
- * until someone else changes the file, so `watch` skips the event for the folder's own write (no echo to the page that
- * made it). It notes that before the file changes on disk, since the watcher's event may arrive before the write's last
- * step has finished.
+ * The files under `root`, by paths relative to it (`20_features/03_writing.typ`), as the docs-files plugin writes
+ * and watches them.
  *
- * Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
- * files, no symlink leading out.
+ * Guarantees:
+ * - a write is atomic and only replaces the version the writer names
+ * - `watch` does not report the folder's own writes back
+ * - every path stays inside `root`: no "..", no hidden files, no symlink leading out
  */
 export class DocsFolder {
   readonly #written = new Map<string, Buffer | null>();

@@ -1,15 +1,10 @@
 // Package ydoc is the server's Yjs document: the only package that imports the CRDT library
-// (github.com/reearth/ygo, a pure-Go port of Yjs).
+// (github.com/reearth/ygo, a pure-Go port of Yjs). Used by:
+//   - collab, to sync, relay and store a room's document
+//   - gitlab, to read file texts and write edits of its own
 //
-// The browser edits a room as a Yjs document, and the server must hold the same document: to relay and store
-// it, and (for GitLab rooms) to read file texts and write edits of its own. ygo is young, so nothing else
-// depends on it directly; swapping the CRDT means rewriting this package only.
-//
-// What a room looks like (src/core/room-protocol): root maps whose values are Y.Text, e.g. `files`
-// (path → text). Offsets are UTF-16 code units, as in JavaScript (and in the Yjs wire format), not Go's
-// UTF-8 bytes. Every change carries an origin (e.g. the connection that sent it), which update listeners
-// receive, so the room knows who made an edit. Awareness (presence) lives in awareness.go, the sync protocol
-// in sync.go.
+// Offsets are UTF-16 code units, as in JavaScript, not Go's UTF-8 bytes. Every change carries an origin
+// (e.g. the connection that sent it), which update listeners receive.
 package ydoc
 
 import (

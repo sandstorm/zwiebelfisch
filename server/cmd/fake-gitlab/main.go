@@ -1,17 +1,16 @@
-// Command fake-gitlab is the demo playground's server (`mise run demo`, `server:dev-fake-gitlab`,
-// `test:e2e-gitlab`, the Docker image): the collaboration server with GitLab rooms against an in-memory fake
-// GitLab, whose project demo/report holds the demo's advanced example (template, chapters, images), plus
-// the playground endpoints (package playground). People sign in at the fake GitLab (its page is
-// /oauth/authorize here: any name, no password; everyone is a Developer). No real GitLab, no secrets,
-// nothing stored. Any branch works: gitlab:demo/report@<branch> starts at main. Run it from the repository
-// root (it reads demo/examples/advanced).
+// Command fake-gitlab is the demo playground's server: the collaboration server with GitLab rooms against an
+// in-memory fake GitLab, plus the playground endpoints (package playground). Used by:
+//   - `mise run demo` and `server:dev-fake-gitlab`
+//   - `test:e2e-gitlab`
+//   - the Docker image
 //
-// Environment: as package config (PORT, ZWF_ADDRESS, ZWF_PLAIN_ROOMS, ZWF_GITLAB_AUTO_COMMIT,
-// ZWF_LOG_*; the database, the sign-in's and the real GitLab's settings are ignored: rooms live in
-// memory, the fake GitLab signs people in), and
+// The fake project demo/report holds demo/examples/advanced, so run it from the repository root. Anyone signs
+// in under any name, without a password, as a Developer. Nothing is stored. Any branch works:
+// gitlab:demo/report@<branch> starts at main.
 //
-//	ZWF_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199), where Vite
-//	                 would serve it (playground.StaticFiles)
+// Environment: as package config, except that the database, sign-in and GitLab settings are ignored, and
+//
+//	ZWF_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199)
 package main
 
 import (

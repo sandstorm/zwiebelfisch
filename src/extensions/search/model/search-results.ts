@@ -9,11 +9,10 @@ import type { TextMatch, TextQuery } from './text-query';
 /**
  * The matches of one query in the files of one scope, as "Find in files" lists them, kept current while they live.
  *
- * Searching starts when the results are made and goes through the files in slices of a few milliseconds, so typing
- * stays smooth; `dispose` stops it (a new query or scope makes new results). Every change of a file searches that file
- * again at once, so the matches always fit the text, and the view hears about it on `onDidChange`. Searched are the
- * Typst files and the text files (by `isTextFile`), never images or fonts. At most `MAX_RESULTS` matches are kept
- * (`limitHit`): more are no use to anyone, and the view stays fast.
+ * Searching starts when the results are made and runs in slices of a few milliseconds, so typing stays smooth;
+ * `dispose` stops it. Every change of a file searches that file again at once, so the matches always fit the text;
+ * `onDidChange` tells. Searched are the Typst files and the text files (`isTextFile`), never images or fonts. At most
+ * `MAX_RESULTS` matches are kept (`limitHit`).
  */
 export class SearchResults {
   readonly #changed = new EventEmitter<void>();

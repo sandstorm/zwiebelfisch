@@ -12,15 +12,10 @@ import { textSearch } from './workbench/text-search';
  * The text files a Typst project reads, editable: data (CSV, JSON, YAML, TOML, XML), bibliographies, plain text,
  * Markdown and Mermaid.
  *
- * The custom editor `textFiles.editor` (TextFileEditor) shows them in plain CodeMirror, with the document links of
- * each file's language and what is shared with every CodeMirror of the widget (`createSharedCodeMirrorExtension`:
- * shown whitespace), and saves the whole file a moment after the last edit. Where others edit it too (a GitLab room),
- * the last save wins: unlike Typst files, text files are not merged as they are typed. The extension also
- * declares their languages (`contributes.languages`: `.bib` is `bibtex`, `.mmd` is `mermaid`, …), adds the help
- * sheet "BibTeX", and gives search everywhere the group "Text": lines in these files and in the Typst files.
- *
- * Which files are text files is decided here, by their ending; the window and the workbench only offer the custom
- * editor and the saving (`workspace.applyEdit`). See docs/20_features/05_multiple-files.typ.
+ * - The custom editor `textFiles.editor` shows them in plain CodeMirror and saves the whole file a moment after the
+ *   last edit. Where others edit it too, the last save wins: text files are not merged as they are typed.
+ * - Their languages are declared (`.bib` is `bibtex`, `.mmd` is `mermaid`, …), with the help sheet "BibTeX".
+ * - Search everywhere gets the group "Text": lines in these files and in the Typst files.
  */
 export function textFiles(): Extension {
   return {

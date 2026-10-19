@@ -6,9 +6,10 @@ import { wordProcessorHtml } from './visual-editor/word-processor-html';
 /**
  * Text pasted from a word processor (Microsoft Word, Google Docs, LibreOffice) goes into the Visual editor as its
  * author formatted it: Word's lists as lists, not paragraphs after a `·`; no empty paragraphs, no bold headings, no
- * `\` lines for Google Docs' empty lines; text in a monospace font as code (visual-editor/word-processor-html.ts).
- * Its HTML is cleaned before the Visual editor reads it with its HTML rules (ProseMirror's `transformPastedHTML`), so
- * the paste's HTML edit (`typst.html`) is the cleaned one. See docs/20_features/01_wysiwyg-editing.typ (Copy and paste).
+ * `\` lines for Google Docs' empty lines; text in a monospace font as code.
+ *
+ * The cleaning happens before the Visual editor reads the HTML, so the paste's HTML edit (`typst.html`) is the
+ * cleaned one too.
  */
 export function wordProcessors(): Extension {
   return {

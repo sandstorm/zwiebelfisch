@@ -2,8 +2,7 @@
 #MISE description="Build the documentation as HTML pages (docs/site.typ, Typst's bundle export) into dist/docs/html/"
 #MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/style.css", "docs/assets/**/*", "docs/fonts/*"]
 #MISE outputs=["dist/docs/html/index.html"]
-# One page per chapter plus index.html. Bundle and HTML export are experimental in Typst 0.15,
-# hence --features; Typst warns about that on every run.
+# One page per chapter plus index.html. Typst warns on every run that HTML export is experimental.
 set -euo pipefail
 rm -rf dist/docs/html
 typst compile --root docs --font-path docs/fonts --features bundle,html --format bundle docs/site.typ dist/docs/html "$@"

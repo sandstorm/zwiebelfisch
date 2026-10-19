@@ -1,8 +1,8 @@
 // Counts the layout reads of the measured code by caller: what forces a browser to lay out again. See typing.perf.ts.
 
 /**
- * jsdom has no layout, so a read of a layout value costs nothing here. In a browser, a read after a DOM change forces
- * a synchronous layout of the page (a reflow). Counting the reads per caller shows where that would happen.
+ * Counts the reads of layout values per caller: where a browser would lay out the page again (a reflow) after a DOM
+ * change. jsdom has no layout, so here the reads cost nothing.
  */
 export class LayoutReads {
   private readonly counts = new Map<string, number>();

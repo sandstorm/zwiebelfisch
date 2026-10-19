@@ -1,6 +1,5 @@
 /* The widget's color tokens (--zwf-*) and its frame (the grid of the two sides and the editing area), scoped under
-   .zwf-editor and put in first by createEditor. Each host brings its own stylesheet (hosts/<name>/<name>.css,
-   added by the workbench), each extension its own (registerStyleSheet). See editor.ts and docs/30_configuration/02_embedding.typ. */
+   .zwf-editor. createEditor adds it before the hosts' and extensions' stylesheets, which use the tokens. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (hosts/workbench/color-scheme/). */

@@ -7,15 +7,12 @@ import { DocsFilesError, DocsFolder } from './docs-folder.ts';
 import { DOCS_FILES_CHANGE, DOCS_FILES_ENDPOINT, DOCS_FILES_HEADER, DOCS_FILES_META, DOCS_FILES_SNAPSHOT, DOCS_FILES_TOKEN_PARAM } from './protocol.ts';
 
 /**
- * The Vite plugin for the docs folder `root`: the demo's Documentation example saves to docs/ and hears about changes
- * made there by others (a checkout, another editor). So the demo is the editor for this book.
+ * The Vite plugin that lets the demo's Documentation example save to the docs folder `root` and hear about changes
+ * made there by others (a checkout, another editor). Node only.
  *
- * While the dev server (`mise run demo` / `dev`) or `vite preview` (`mise run demo preview`) runs, never in a build, it
- * serves a file API and an event stream of changes on disk at `DOCS_FILES_ENDPOINT` (protocol.ts). Only the server's
- * own page may use it: its origin, with the session token the plugin puts into the page. On the dev server a change in
- * `root` is no reload: the page keeps its editor and applies the change itself. DocsFolder (docs-folder.ts) does the
- * disk work and guards every path; the page's side is DocsSync (docs-sync.ts). Node only.
- * See docs/40_architecture/11_development.typ, "Writing the docs in the demo".
+ * While the dev server or `vite preview` runs, never in a build, it serves a file API and an event stream of changes
+ * on disk at `DOCS_FILES_ENDPOINT`. Only the server's own page may use it: its origin, with the session token the
+ * plugin puts into the page. On the dev server a change in `root` does not reload the page.
  */
 export function docsFiles(options: { root: string }): Plugin {
   const folder = new DocsFolder(options.root);

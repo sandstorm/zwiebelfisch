@@ -9,10 +9,9 @@ import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
 /**
- * The widget's side of a Collaboration: loads it on demand (so this file stays outside model/, the lazily loaded
- * chunk), publishes the local selection when the editors report a change (`selectionChanged`), and tells the widget
- * where everyone else is. With a server, it joins as the account's signed-in user, and only then: signed out (or
- * refused for that), it asks the widget to offer signing in.
+ * The widget's side of a Collaboration, which it loads on demand: publishes the local selection on `selectionChanged`
+ * and tells the widget where everyone else is. With a server, it joins only as the account's signed-in user; signed
+ * out (or refused for that), it asks the widget to offer signing in.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;

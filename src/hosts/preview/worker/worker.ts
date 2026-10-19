@@ -7,19 +7,11 @@ import { HtmlFileReceiver } from './html-files';
 import type { EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } from './protocol';
 
 /**
- * The engine worker, the Typst engine off the main thread, as the preview talks to it: requests answered by id.
+ * The Typst engine in a Web Worker, as the preview talks to it: requests answered by id.
  *
- * A compile takes long enough to stall typing, and the engine's wasm is large. So the preview runs the engine in a
- * Web Worker, and the editors never wait for it. The worker downloads the wasm itself and compiles it while it
- * arrives (download.ts). It then answers the preview's requests by id (protocol.ts) and tells, unasked, how loading
- * goes. Each request carries the project's files; bytes the worker already has are not sent again (project-files.ts),
- * nor are the SVGs of pages the preview has (page-svgs.ts).
- *
- * The engine crashes on a bug in Typst or in it (a panic) or when its memory runs out, and answers nothing any more
- * after that. Then this stops the worker, answers every open request with the error and tells `onDidCrash`; `start`
- * starts a new one, which knows no files yet. engine.worker.ts is the worker itself, and nothing on the main thread
- * imports it. The engine and its packages are core's (`core/typst-engine`, `core/typst-packages`). See
- * docs/40_architecture/06_preview.typ, "Concepts".
+ * Used by the preview, so compiling never blocks typing. Each request sends only the file bytes the worker doesn't
+ * have yet. After a crash (a panic, memory running out) every open request is answered with the error and
+ * `onDidCrash` fires; `start` starts a new worker, which knows no files yet.
  */
 export class EngineWorker {
   private worker: Worker | null = null;

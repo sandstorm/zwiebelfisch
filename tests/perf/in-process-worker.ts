@@ -9,10 +9,10 @@ const engineDir = join(process.cwd(), 'src/core/typst-engine');
 const packageCache = join(process.cwd(), '.cache/typst-packages');
 
 /**
- * Stands in for the preview's Web Worker: answers its requests with the real engine on this thread. What runs here
- * runs on the worker's thread in a browser, so `engineThread` keeps it apart (a CPU profile shows it under that
- * function; `time` sums it). Messages are copied both ways (`structuredClone`, as `postMessage` does) and answered in
- * a later task, as a worker's are.
+ * Stands in for the preview's Web Worker: answers its requests with the real engine on this thread.
+ *
+ * Behaves as a worker does: messages are copied both ways (`structuredClone`) and answered in a later task. What
+ * runs on the worker's thread in a browser runs inside `engineThread` here, so a CPU profile shows it apart.
  */
 export class InProcessWorker {
   /** Milliseconds spent answering requests, over all workers: what a browser spends on the worker's thread. */

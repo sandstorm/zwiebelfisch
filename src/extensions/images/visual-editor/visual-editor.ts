@@ -14,12 +14,12 @@ import { ImageTools } from './image-tools';
 import { IMAGE_ACCEPT } from '../model/image-files';
 
 /**
- * `#image("literal path", ..)` blocks, edited as code in a box, with the image
- * file in place of the code and resize handles (its path's link followed on the
- * picture, as on every box's), also as
- * a figure's body; a bar above the selected image (width; a caption where the
- * figures extension offers one); "Insert image" (a path, or the project's
- * images and uploads), and image files pasted into the text.
+ * Images in the Visual editor:
+ * - `#image("literal path", ..)` blocks, also as a figure's body: code in a box, shown as the image file with resize
+ *   handles
+ * - a bar above the selected image (width; a caption where figures are available)
+ * - "Insert image": a path, or the project's images and uploads
+ * - image files pasted into the text, uploaded and inserted
  */
 export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
   return {
