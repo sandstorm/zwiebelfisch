@@ -71,11 +71,12 @@ contributes: {
 },
 ```
 
-- *Keys* are a `KeyboardEvent.code` with exactly the modifiers named (`Mod` is ⌘ or Ctrl; Alt+1 is not AltGr+1), caught before any editor. `''` in `mac` / `win` / `linux` means no key there. The workbench shows each command's key in command rows, menus and tooltips.
+- *Keys* are a `KeyboardEvent.code` with exactly the modifiers named (`Mod` is ⌘ or Ctrl; Alt+1 is not AltGr+1), caught before any editor; or a modifier tapped twice, as VS Code's `shift shift` (`Shift Shift`; not in a text field). `''` in `mac` / `win` / `linux` means no key there. `commands.keybindingLabel(id)` names a command's key, for command rows, menus and tooltips.
+- *`commands.getCommands()`* lists the `contributes.commands` registered now, with titles (search everywhere's "Commands").
 - *`executeCommand`* rejects for an unknown id or a failing handler; `registerCommand` throws for an id registered twice. The host runs commands with `editor.executeCommand`.
 - *Search everywhere runs `contributes.commands` without arguments*: declare only commands that work without any.
 - *`workbench.view.<id>`*, one per side panel: shows and focuses it, or hides it when shown and focused. Extensions declare its key (`files` Alt+1, `search` Alt+3; ⌃1 / ⌃3 on the Mac).
-- *`workbench.action.searchEverywhere(text?)`* opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
+- *`workbench.action.searchEverywhere(text?)`* (the `searchEverywhere` extension's) opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
 - *`editor.action.pasteAs({ kind? })`* (the `clipboard` extension's) switches the last paste, while its chip shows, to `kind`, or asks.
 
 === Menus <architecture-workbench-menus>
@@ -90,16 +91,18 @@ A button is a menu entry: `workbench.registerMenuItem(menuId, item)`; `window.sh
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind`, `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
   [`help/row`], [A help row's context menu], [none], [the text the row inserts],
+  [`workbench/rail/left`, `workbench/rail/right`], [A rail button among the side's panels by `order` (search everywhere's: 15); tooltip with the key], [none], [nothing],
 )
 
 === Messages and quick input <architecture-workbench-messages>
 
 - *One input at a time:* a new input box or quick pick cancels the open one.
+- *`createQuickPick()`* (VS Code's, as far as needed): its owner sets `items` (with `QuickPickItemKind.Separator` headings and `highlights`) as `onDidChangeValue` fires, and hides it on `onDidAccept`; `prompt` is a line below the list.
 - *`showSaveDialog`* resolves to a new file's `ProjectPath`. It refuses existing names and names without a `filters` ending (`{ Diagrams: ['drawio.png'] }`); creating the file is your job (`workspace.applyEdit`).
 
 === Search everywhere <architecture-workbench-search>
 
-One quick pick over every `SearchProvider` (ours), a group each, as IntelliJ's: opened by Shift twice, ⌘P, ⌘⇧O (`/`), ⌘⇧A (`>`), `workbench.action.searchEverywhere` or the left rail's button.
+One quick pick over every `SearchProvider` (ours), a group each, as IntelliJ's: opened by Shift twice, ⌘P, ⌘⇧O (`/`), ⌘⇧A (`>`), `workbench.action.searchEverywhere` or the left rail's button. The window keeps the providers (`registerSearchProvider`, `getSearchProviders`); the `searchEverywhere` extension shows them (`window.createQuickPick`) and adds Commands and Settings. Without it the providers' results show nowhere.
 
 ```ts
 window.registerSearchProvider({
@@ -124,10 +127,10 @@ window.registerSearchProvider({
   [Headings], [`#`], [20], [`headings`: opens at the heading],
   [Labels], [`@`], [30], [`labels`: labels except figures' and bibliography keys],
   [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption],
-  [Commands], [`>`], [40], [the workbench: `contributes.commands`; runs],
+  [Commands], [`>`], [40], [`searchEverywhere`: `commands.getCommands()`; runs],
   [Styles], [`*`], [50], [`styles`: applies to the selection],
   [Comments], [`!`], [60], [`comments`: opens at the note],
-  [Settings], [`:`], [70], [the workbench: switches booleans, asks for `enum` values],
+  [Settings], [`:`], [70], [`searchEverywhere`: `workspace.getConfigurationProperties()`; switches booleans, asks for `enum` values (`WorkspaceConfiguration.update`)],
   [Text], [`%`], [90], [`textFiles`: lines of Typst and text files; opens with the match selected],
 )
 

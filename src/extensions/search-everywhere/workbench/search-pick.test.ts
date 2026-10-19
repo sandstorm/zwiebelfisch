@@ -1,17 +1,32 @@
 // @vitest-environment jsdom
-// Tests for search.ts (SearchEverywhere): groups, matching, prefixes, async providers and picking.
+// Tests for search-pick.ts (SearchPick) over a window: groups, matching, prefixes, async providers and picking.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CancellationToken } from '../../../core/cancellation/cancellation';
-import { QuickInput } from '../quick-input/quick-input';
-import type { SearchItem, SearchProvider } from '../window';
-import { SearchEverywhere } from './search';
+import { Disposable } from '../../../core/disposable/disposable';
+import { ProjectPath } from '../../../core/paths/paths';
+import { type SearchItem, type SearchProvider, WindowHost } from '../../../hosts/window/window';
+import { SearchPick } from './search-pick';
 
 afterEach(() => document.body.replaceChildren());
 
 function setup(...providers: SearchProvider[]) {
   const host = document.body.appendChild(document.createElement('div'));
-  const search = new SearchEverywhere(new QuickInput(host));
-  for (const provider of providers) search.register(provider);
+  const never = () => new Disposable(() => {});
+  const window = new WindowHost({
+    exists: () => false,
+    host,
+    statusBar: host.appendChild(document.createElement('div')),
+    editingArea: host.appendChild(document.createElement('div')),
+    onDidChangeFile: never,
+    activeFile: () => ProjectPath.of('/main.typ'),
+    onDidChangeActiveFile: never,
+    activeTextEditor: () => null,
+    onDidChangeTextEditorSelection: never,
+    menuItems: () => [],
+    executeCommand: async () => undefined,
+  });
+  const search = new SearchPick(window);
+  for (const provider of providers) window.registerSearchProvider(provider);
   const field = () => host.querySelector<HTMLInputElement>('.zwf-quick-pick input')!;
   const type = (value: string) => {
     field().value = value;
@@ -23,7 +38,7 @@ function setup(...providers: SearchProvider[]) {
       row.getAttribute('role') === 'option' ? row.textContent : `# ${row.textContent}`,
     );
   const marked = () => [...host.querySelectorAll('mark')].map((mark) => mark.textContent);
-  return { host, search, field, type, rows, marked };
+  return { host, window, search, field, type, rows, marked };
 }
 
 function items(...labels: string[]): SearchItem[] {
@@ -120,11 +135,11 @@ describe('SearchEverywhere', () => {
   });
 
   it('runs the picked item once the search is closed and the focus is back', () => {
-    const { host, search, field, rows } = setup(provider('Files', ['a.typ', 'b.typ']));
+    const { host, window, search, field, rows } = setup(provider('Files', ['a.typ', 'b.typ']));
     const button = host.appendChild(document.createElement('button'));
     button.focus();
     const picked = vi.fn(() => expect([document.activeElement, host.querySelector('.zwf-quick-pick')]).toEqual([button, null]));
-    search.register({ id: 'more', label: 'More', provideItems: () => [{ label: 'b.typ again', accept: picked }] });
+    window.registerSearchProvider({ id: 'more', label: 'More', provideItems: () => [{ label: 'b.typ again', accept: picked }] });
     search.show();
     expect(rows()).toContain('b.typ again');
     search.show('again');
@@ -149,7 +164,7 @@ describe('SearchEverywhere', () => {
   });
 
   it('refuses a second provider with the same id', () => {
-    const { search } = setup(provider('Files', []));
-    expect(() => search.register(provider('Files', []))).toThrow();
+    const { window } = setup(provider('Files', []));
+    expect(() => window.registerSearchProvider(provider('Files', []))).toThrow();
   });
 });

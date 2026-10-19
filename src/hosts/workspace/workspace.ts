@@ -7,7 +7,8 @@ import type { FileChange } from '../../core/project/project';
  * Extensions use it to:
  * - change files (`applyEdit`): a change is applied only if the project's rules and then the host page
  *   (`allowFileChange`) allow it
- * - read the settings they declare (`contributes.configuration`) and hear when the host page sets new values
+ * - read the settings they declare (`contributes.configuration`), hear when the host page sets new values, and set
+ *   them for the widget (a settings UI)
  *
  * A setting value that is undeclared or of the wrong type is ignored (the setting keeps its default), with a warning.
  */
@@ -19,6 +20,11 @@ export interface Workspace {
   applyEdit(change: FileChange): Promise<string | null>;
   /** The settings under `section` (`getConfiguration('pdfExport').get('download')`), or all by full id. */
   getConfiguration(section?: string): WorkspaceConfiguration;
+  /**
+   * Every declared setting by full id, in declaration order (VS Code's configuration registry's
+   * `getConfigurationProperties`), e.g. for a settings UI.
+   */
+  getConfigurationProperties(): ReadonlyMap<string, ConfigurationProperty>;
   /** Some settings changed their value (the host set new ones). */
   readonly onDidChangeConfiguration: Event<ConfigurationChangeEvent>;
 }
@@ -50,6 +56,11 @@ export interface WorkspaceConfiguration {
   has(key: string): boolean;
   /** Where the value comes from: the declared default, and the host's value if it set a valid one (`globalValue`). */
   inspect<T>(key: string): ConfigurationInspect<T> | undefined;
+  /**
+   * Sets the setting's value for this widget, as if the host had set it (VS Code's `update`, the global target);
+   * `undefined` goes back to the default. Listeners hear the change; an invalid value is ignored, with a warning.
+   */
+  update(key: string, value: unknown): Promise<void>;
 }
 
 export interface ConfigurationInspect<T> {

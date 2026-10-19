@@ -73,12 +73,12 @@ describe('WorkbenchLayout', () => {
     layout.addPanel('help', { label: 'Help', icon: icon(), order: 20 });
     layout.addPanel('settings', { label: 'Settings', icon: icon(), alignment: 'bottom', order: 5 });
     layout.addPanel('account', { label: 'Account', icon: icon(), alignment: 'bottom' });
-    const action = document.createElement('button');
-    action.title = 'Run';
-    layout.addRailAction('left', action, 15);
+    layout.setRailActions('left', [{ command: 'test.run', title: 'Run', icon: '<svg></svg>', order: 15 }]);
     layout.addPanel('outline', { label: 'Outline', icon: icon(), order: 15 });
     const titles = (selector: string) => [...host.querySelectorAll<HTMLElement>(selector)].map((button) => button.title);
     expect(titles('.zwf-editor__rail > .zwf-editor__rail-button')).toEqual(['Files', 'Run', 'Outline', 'Help']);
+    layout.setRailActions('left', []);
+    expect(titles('.zwf-editor__rail > .zwf-editor__rail-button')).toEqual(['Files', 'Outline', 'Help']);
     expect(titles('.zwf-editor__rail-bottom > .zwf-editor__rail-button')).toEqual(['Account', 'Settings']);
     // the bottom group comes after every top button
     expect(host.querySelector('.zwf-editor__rail')!.lastElementChild!.className).toBe('zwf-editor__rail-bottom');

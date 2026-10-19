@@ -138,7 +138,7 @@
 .zwf-quick-pick__item[aria-selected='true'] { background: var(--zwf-selected); color: var(--zwf-text); }
 .zwf-quick-pick__description { color: var(--zwf-muted); font-size: 12px; }
 .zwf-quick-pick__detail { flex-basis: 100%; color: var(--zwf-muted); font-size: 12px; }
-/* A command's key at the row's end (search everywhere's commands, menus). */
+/* A command's key at the row's end (quick picks, menus). */
 .zwf-quick-pick__keybinding,
 .zwf-context-menu__keybinding { margin-left: auto; padding-left: 16px; color: var(--zwf-muted); font: inherit; font-size: 12px; white-space: nowrap; }
 /* withProgress, ProgressLocation.Window: a spinner and the text in the status bar. */
@@ -205,7 +205,7 @@
   .zwf-editor__progress-spinner { animation: none; border-color: var(--zwf-accent); }
   .zwf-editor__editing-progress-bar:not([aria-valuenow])::after { animation: none; width: 100%; opacity: 0.5; }
 }
-/* Search everywhere (createQuickPick): wider, at the top in the middle; groups under headings, matches marked. */
+/* createQuickPick: wider, at the top in the middle; groups under headings, matches marked. */
 .zwf-quick-pick--wide { width: min(560px, calc(100% - 16px)); }
 .zwf-quick-pick--wide .zwf-quick-pick__list { max-height: min(420px, 60vh); }
 .zwf-quick-pick__group { display: flex; flex-direction: column; }

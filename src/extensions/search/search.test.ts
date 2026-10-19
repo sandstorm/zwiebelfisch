@@ -7,13 +7,14 @@
 // host (and its veto).
 import { EditorView as CodeView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CancellationTokenSource } from '../../core/cancellation/cancellation';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
-import type { CustomEditorPanel, WindowApi } from '../../hosts/window/window';
+import type { CustomEditorPanel, SearchItem, WindowApi } from '../../hosts/window/window';
 import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { search } from './search';
 
@@ -49,7 +50,11 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
     activate: (context) => {
       window = context.window;
       const editor = { resolveCustomEditor: (_: unknown, panel: CustomEditorPanel) => void panel.onDidRequestReveal((range) => revealed.push(range)) };
-      context.subscriptions.push(window.registerCustomEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }));
+      context.subscriptions.push(
+        window.registerCustomEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }),
+        // where search everywhere's rail button goes
+        context.workbench.registerMenuItem('workbench/rail/left', { command: 'probe.everywhere', title: 'Search everywhere', order: 15 }),
+      );
     },
   };
   workbench.activate([search(), probe]);
@@ -64,7 +69,7 @@ describe('search', () => {
     const { host } = setup();
     const button = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-search]')!;
     expect(button.getAttribute('aria-label')).toBe('Find in files');
-    expect(button.compareDocumentPosition(host.querySelector('[data-testid=zwf-search-everywhere]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(host.querySelector('.zwf-editor__rail [data-command="probe.everywhere"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('Ctrl+Shift+F shows the panel and searches for the selection of the shown editor', async () => {
@@ -148,11 +153,12 @@ describe('search', () => {
   });
 
   it('search everywhere ends the group "Text" (%) with a row that shows the query in the panel', async () => {
-    const { host, workbench, input, panel } = setup();
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '%round');
-    const option = [...host.querySelectorAll<HTMLElement>('[role=option]')].at(-1)!;
-    expect(option.textContent).toBe('Find in files: round Ctrl+Shift+F');
-    option.click();
+    const { window, input, panel } = setup();
+    const provider = window.getSearchProviders().find((candidate) => candidate.id === 'search.findInFiles')!;
+    expect([provider.prefix, provider.order]).toEqual(['%', 91]);
+    const [row] = provider.provideItems('round', new CancellationTokenSource().token) as SearchItem[];
+    expect([row.label, row.keybinding]).toEqual(['Find in files: round', 'Ctrl+Shift+F']);
+    await row.accept();
     await vi.runAllTimersAsync();
     expect(input.value).toBe('round');
     expect(panel.querySelector('[role=status]')?.textContent).toBe('2 results in 2 files');

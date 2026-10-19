@@ -10,11 +10,9 @@ import { Notifications } from './notifications/notifications';
 import { ProgressIndicators } from './progress/progress';
 import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
-import { listenForDoubleShift } from './search/double-shift';
-import { SearchEverywhere } from './search/search';
 import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
-import type { WindowApi, MessageItem, InputBoxOptions, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, ProgressReport, Progress, StatusBarPlacement, FileDecoration, FileDecorationProvider, CustomEditorOptions, CustomEditorProvider, CustomDocument, TextEditor, TextEditorSelectionChangeEvent, WindowOptions } from './window';
+import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, ProgressReport, Progress, StatusBarPlacement, FileDecoration, FileDecorationProvider, CustomEditorOptions, CustomEditorProvider, CustomDocument, TextEditor, TextEditorSelectionChangeEvent, WindowOptions } from './window';
 
 /** The `WindowApi` of one widget. The workbench decides what is shown in the editing area (`showCustomEditor`). */
 export class WindowHost implements WindowApi {
@@ -25,8 +23,7 @@ export class WindowHost implements WindowApi {
   readonly #progress: ProgressIndicators;
   readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
-  readonly #search: SearchEverywhere;
-  readonly #doubleShift: Disposable;
+  readonly #searchProviders = new Set<SearchProvider>();
   readonly #fileChanges: Disposable;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
@@ -38,11 +35,6 @@ export class WindowHost implements WindowApi {
     this.#notifications = new Notifications(options.host);
     this.#quickInput = new QuickInput(options.host);
     this.#contextMenu = new ContextMenu(options.host, { items: options.menuItems, executeCommand: options.executeCommand });
-    this.#search = new SearchEverywhere(this.#quickInput);
-    // never over an open input box or quick pick (search everywhere included): what is typed there stays
-    this.#doubleShift = listenForDoubleShift(options.host, () => {
-      if (!this.#quickInput.isOpen) this.showSearchEverywhere();
-    });
     this.#statusBar = new StatusBar(options.statusBar);
     this.#progress = new ProgressIndicators({ statusBar: this.#statusBar, editingArea: options.editingArea });
     this.#customEditors = new CustomEditors(options.editingArea);
@@ -73,6 +65,10 @@ export class WindowHost implements WindowApi {
     return this.#quickInput.showQuickPick(items, options);
   }
 
+  createQuickPick<T extends QuickPickItem>(): QuickPick<T> {
+    return this.#quickInput.createQuickPick<T>();
+  }
+
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined> {
     return showSaveDialog((input) => this.showInputBox(input), (path) => this.options.exists(path), options);
   }
@@ -86,15 +82,13 @@ export class WindowHost implements WindowApi {
   }
 
   registerSearchProvider(provider: SearchProvider): Disposable {
-    return this.#search.register(provider);
+    if (this.getSearchProviders().some((other) => other.id === provider.id)) throw new Error(`There is a search provider ${provider.id} already`);
+    this.#searchProviders.add(provider);
+    return new Disposable(() => this.#searchProviders.delete(provider));
   }
 
-  /**
-   * Opens search everywhere (cancelling an open input box or quick pick) with `value` in its field, e.g. a prefix
-   * (`>`). Double Shift opens it too, unless an input box or quick pick is open.
-   */
-  showSearchEverywhere(value = ''): void {
-    this.#search.show(value);
+  getSearchProviders(): readonly SearchProvider[] {
+    return [...this.#searchProviders];
   }
 
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
@@ -145,6 +139,7 @@ export class WindowHost implements WindowApi {
   }
 
   dispose(): void {
-    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#search, this.#doubleShift, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
+    this.#searchProviders.clear();
+    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
   }
 }

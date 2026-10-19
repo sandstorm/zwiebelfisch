@@ -45,8 +45,7 @@ export class WorkspaceHost implements Workspace {
     for (const [id, value] of Object.entries(this.#values)) this.#warnIfInvalid(id, value);
   }
 
-  /** The declared settings by full id, in the order they were declared. */
-  get properties(): ReadonlyMap<string, ConfigurationProperty> {
+  getConfigurationProperties(): ReadonlyMap<string, ConfigurationProperty> {
     return this.#properties;
   }
 
@@ -84,6 +83,7 @@ export class WorkspaceHost implements Workspace {
         const value = this.#values[id];
         return { key: id, defaultValue: property.default as T, ...(this.#isValid(id, value) ? { globalValue: value as T } : {}) };
       },
+      update: async (key: string, value: unknown) => this.update({ [full(key)]: value }),
     } as WorkspaceConfiguration;
   }
 

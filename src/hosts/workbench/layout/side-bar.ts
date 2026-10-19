@@ -24,6 +24,8 @@ export class SideBar {
   readonly #panel: HTMLElement;
   readonly #resizer: HTMLElement;
   readonly #panels = new Map<string, PanelEntry>();
+  /** The buttons of `setActions`. */
+  #actions: HTMLElement[] = [];
   readonly #size: (typeof SIZES)[Side];
   #shown: string | null = null;
   #defaultPanel: string | null | undefined;
@@ -111,10 +113,31 @@ export class SideBar {
     };
   }
 
-  /** Puts `button` (one that runs something, not a panel's) among the rail's top buttons by `order`, until it is removed. */
-  addAction(button: HTMLElement, order: number): void {
-    button.classList.add('zwf-editor__rail-button');
-    this.#place(button, order, false);
+  /**
+   * Shows `actions` (buttons that run a command, not a panel's) among the rail's top buttons by `order`, in place of
+   * those before. The tooltip names the command's key.
+   */
+  setActions(actions: readonly RailAction[]): void {
+    for (const button of this.#actions) button.remove();
+    const doc = this.host.ownerDocument;
+    this.#actions = actions.map(({ command, title, icon, order }) => {
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.className = 'zwf-editor__rail-button';
+      button.dataset.command = command;
+      button.setAttribute('aria-label', title);
+      button.innerHTML = icon;
+      const describe = () => {
+        const key = this.owner.commands.keybindingLabel(command);
+        button.title = key ? `${title} (${key})` : title;
+      };
+      describe();
+      button.addEventListener('pointerenter', describe);
+      button.addEventListener('focus', describe);
+      button.addEventListener('click', () => void this.owner.commands.executeCommand(command).catch((error: unknown) => console.error(`Command ${command} failed:`, error)));
+      this.#place(button, order, false);
+      return button;
+    });
   }
 
   /** The panel the side shows until the viewer picks one (null: none), before any panel's `setDefault`; undefined: no such panel. */
@@ -337,10 +360,22 @@ export interface SideBarOwner {
   readonly commands: PanelCommands;
 }
 
-/** What the side needs of the commands: to register each panel's, and the key of one. */
+/** What the side needs of the commands: to register each panel's, run an action's, and the key of one. */
 export interface PanelCommands {
   registerCommand(id: string, handler: () => void): Disposable;
+  executeCommand(id: string): Promise<unknown>;
   keybindingLabel(id: string): string | undefined;
+}
+
+/** A rail button that runs `command` (an item of the menu `workbench/rail/<side>`). */
+export interface RailAction {
+  readonly command: string;
+  /** Its tooltip and accessible name. */
+  readonly title: string;
+  /** SVG markup drawn in `currentColor`. */
+  readonly icon: string;
+  /** Its place among the side's panels' buttons (lower first). */
+  readonly order: number;
 }
 
 interface PanelEntry {

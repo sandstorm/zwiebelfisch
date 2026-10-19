@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-// Tests for quick-input.ts: showInputBox and showQuickPick.
+// Tests for quick-input.ts: showInputBox, showQuickPick and createQuickPick.
 import { afterEach, describe, expect, it } from 'vitest';
+import { QuickPickItemKind } from '../window';
 import { QuickInput } from './quick-input';
 
 afterEach(() => document.body.replaceChildren());
@@ -168,5 +169,41 @@ describe('showQuickPick', () => {
     boxes[1].click();
     [...box()!.querySelectorAll('button')].find((button) => button.textContent === 'OK')!.click();
     expect(await answer).toEqual([items[1]]);
+  });
+});
+
+describe('createQuickPick', () => {
+  it('shows the items its owner sets (headings, marks, keys), tells the text and the item picked, and stays until hidden', () => {
+    const { host, button, quickInput, key, type } = setup();
+    button.focus();
+    const pick = quickInput.createQuickPick<{ label: string; keybinding?: string; highlights?: { label: [number, number][] } }>();
+    pick.title = 'Find';
+    pick.prompt = 'Narrow with #';
+    const values: string[] = [];
+    const accepted: string[] = [];
+    let hidden = 0;
+    pick.onDidChangeValue((value) => {
+      values.push(value);
+      pick.items = [{ kind: QuickPickItemKind.Separator, label: 'Files', description: '2 more' }, { label: `${value}.typ`, keybinding: '⌘P', highlights: { label: [[0, value.length]] } }];
+    });
+    pick.onDidAccept(() => accepted.push(pick.selectedItems[0].label));
+    pick.onDidHide(() => hidden++);
+    pick.show();
+    pick.value = 'a';
+    const field = host.querySelector<HTMLInputElement>('.zwf-quick-pick--wide input')!;
+    expect([document.activeElement, field.getAttribute('aria-label'), host.querySelector('.zwf-quick-pick__hint')!.textContent]).toEqual([field, 'Find', 'Narrow with #']);
+    type(field, 'intro');
+    expect(values).toEqual(['a', 'intro']);
+    expect(host.querySelector('.zwf-quick-pick__heading')!.textContent).toBe('Files 2 more');
+    expect([host.querySelector('[role=option]')!.textContent, host.querySelector('mark')!.textContent]).toEqual(['intro.typ ⌘P', 'intro']);
+    pick.busy = true;
+    expect(host.querySelector<HTMLElement>('.zwf-quick-pick__progress')!.hidden).toBe(false);
+    key(field, 'Enter');
+    expect([accepted, hidden, host.querySelector('.zwf-quick-pick') !== null]).toEqual([['intro.typ'], 0, true]);
+    pick.hide();
+    expect([hidden, host.querySelector('.zwf-quick-pick'), document.activeElement]).toEqual([1, null, button]);
+    pick.show();
+    key(field, 'Escape');
+    expect(hidden).toBe(2);
   });
 });

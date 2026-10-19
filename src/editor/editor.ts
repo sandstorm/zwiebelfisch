@@ -7,6 +7,7 @@ import { fileNavigation } from '../extensions/file-navigation/file-navigation';
 import { files } from '../extensions/files/files';
 import { help } from '../extensions/help/help';
 import { search } from '../extensions/search/search';
+import { searchEverywhere } from '../extensions/search-everywhere/search-everywhere';
 import { imports } from '../extensions/imports/imports';
 import { markdown } from '../extensions/markdown/markdown';
 import { wordProcessors } from '../extensions/word-processors/word-processors';
@@ -258,6 +259,7 @@ function builtinExtensions(): Extension[] {
     fileNavigation(),
     help(),
     search(),
+    searchEverywhere(),
     spreadsheets(),
     textFiles(),
     diagrams(),

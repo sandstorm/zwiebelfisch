@@ -423,97 +423,24 @@ describe('WorkbenchHost', () => {
   });
 });
 
-describe('WorkbenchHost: search everywhere', () => {
-  function setupSearch() {
+describe('WorkbenchHost: declared keys and rail menus', () => {
+  function setupKeys() {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
-    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR, settings: { 'test.color': 'blue' } });
+    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR });
     const ran: string[] = [];
     workbench.activate([
       {
         id: 'test',
-        contributes: {
-          commands: [
-            { command: 'test.count', title: 'Count words', category: 'Test' },
-            { command: 'test.unregistered', title: 'Never registered' },
-          ],
-          keybindings: [{ command: 'test.count', key: 'Mod+Shift+KeyC' }],
-          configuration: {
-            properties: {
-              'test.wrap': { type: 'boolean', default: false, description: 'Wrap lines.' },
-              'test.color': { type: 'string', enum: ['red', 'blue'], default: 'red', description: 'The color.' },
-              'test.name': { type: 'string', default: '', description: 'Free text: not offered.' },
-            },
-          },
-        },
+        contributes: { keybindings: [{ command: 'test.count', key: 'Mod+Shift+KeyC' }] },
         activate: ({ commands, subscriptions }) => subscriptions.push(commands.registerCommand('test.count', () => ran.push('count'))),
       },
     ]);
-    const field = () => host.querySelector<HTMLInputElement>('.zwf-quick-pick input')!;
-    const options = () => [...host.querySelectorAll<HTMLElement>('[role=option]')];
-    const enter = () => field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    return { host, workbench, ran, field, options, enter };
+    return { host, workbench, ran };
   }
 
-  it('opens with the command (its argument the text to start with) and with the rail button', async () => {
-    const { host, workbench, field } = setupSearch();
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
-    expect(field().value).toBe('>');
-    host.querySelector<HTMLElement>('[data-testid=zwf-search-everywhere]')!.click();
-    expect(field().value).toBe('');
-  });
-
-  it('opens on Mod+P, with the files prefix on Mod+Shift+O and the commands prefix on Mod+Shift+A', () => {
-    const { host, field } = setupSearch();
-    const press = (code: string, shiftKey = false) => host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey, bubbles: true, cancelable: true }));
-    expect(press('KeyP')).toBe(false);
-    expect(field().value).toBe('');
-    press('KeyO', true);
-    expect(field().value).toBe('/');
-    press('KeyA', true);
-    expect(field().value).toBe('>');
-  });
-
-  it("puts its rail button among the left rail's panels by order 15: after Files (10), before Help (20)", () => {
-    const { host } = setup(({ workbench }) => {
-      const icon = () => workbench.ownerDocument.createElement('span');
-      workbench.registerSidePanel('help', { label: 'Help', icon: icon(), order: 20 });
-      workbench.registerSidePanel('files', { label: 'Files', icon: icon(), order: 10 });
-    });
-    const left = host.querySelector<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail')!;
-    expect([...left.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.dataset.testid)).toEqual([
-      'zwf-panel-toggle-files',
-      'zwf-search-everywhere',
-      'zwf-panel-toggle-help',
-    ]);
-  });
-
-  it('opens on double Shift in an editor, but not over an open input box', async () => {
-    const { host, workbench, field } = setupSearch();
-    const shiftTwice = (target: Element) => {
-      for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) target.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', shiftKey: type === 'keydown', bubbles: true }));
-    };
-    const rename = workbench.window.showInputBox({ title: 'Rename' });
-    const input = host.querySelector('.zwf-quick-input input')!;
-    shiftTwice(input);
-    expect(host.querySelector('[aria-label=Rename]')).not.toBeNull();
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(await rename).toBeUndefined();
-    shiftTwice(host.querySelector('.cm-content')!);
-    expect(field()).not.toBeNull();
-  });
-
-  it('lists the declared commands that are registered, by category and title with their keys, and runs the one picked', async () => {
-    const { workbench, ran, options, enter } = setupSearch();
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
-    expect(options().map((option) => option.textContent)).toEqual(['Test: Count words Ctrl+Shift+C']);
-    expect(options()[0].querySelector('kbd')!.textContent).toBe('Ctrl+Shift+C');
-    enter();
-    expect(ran).toEqual(['count']);
-  });
-
   it('binds the declared keys and names them in the View menu, the tab bar and on the rail (workbench.view.<id>)', async () => {
-    const { host, workbench, ran } = setupSearch();
+    const { host, workbench, ran } = setupKeys();
     host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', ctrlKey: true, shiftKey: true, bubbles: true }));
     expect(ran).toEqual(['count']);
     workbench.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
@@ -531,19 +458,18 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(panel.visible).toBe(true);
   });
 
-  it('switches a boolean setting, and sets an enum setting through a second quick pick', async () => {
-    const { workbench, options, enter } = setupSearch();
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':');
-    // free text settings (workbench.rightSidePanel, test.name) are not offered
-    expect(options().map((option) => option.querySelector('.zwf-quick-pick__label')!.textContent)).toEqual(['Workbench: Theme', 'Test: Wrap', 'Test: Color']);
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':wrap');
-    enter();
-    expect(workbench.settings['test.wrap']).toBe(true);
-    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':color');
-    enter();
-    expect(options().map((option) => option.textContent)).toEqual(['red', 'blue current']);
-    enter();
-    await Promise.resolve();
-    expect(workbench.settings['test.color']).toBe('red');
+
+  it("shows the items of workbench/rail/left among the left rail's panels by order, naming the key, running the command", () => {
+    const { host, workbench, ran } = setupKeys();
+    const icon = () => workbench.ownerDocument.createElement('span');
+    workbench.registerSidePanel('help', { label: 'Help', icon: icon(), order: 20 });
+    workbench.registerSidePanel('files', { label: 'Files', icon: icon(), order: 10 });
+    const item = workbench.registerMenuItem('workbench/rail/left', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
+    const buttons = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail-button')].map((button) => button.dataset.testid ?? button.title);
+    expect(buttons()).toEqual(['zwf-panel-toggle-files', 'Count words (Ctrl+Shift+C)', 'zwf-panel-toggle-help']);
+    host.querySelector<HTMLElement>('.zwf-editor__rail [data-command="test.count"]')!.click();
+    expect(ran).toEqual(['count']);
+    item.dispose();
+    expect(buttons()).toEqual(['zwf-panel-toggle-files', 'zwf-panel-toggle-help']);
   });
 });

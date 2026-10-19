@@ -23,11 +23,9 @@ import { WorkbenchLayout } from './layout/workbench-layout';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
-import { commandSearch } from './search/command-search';
-import { settingSearch } from './search/setting-search';
 import { DocumentEditors } from './document-editors/document-editors';
 import css from './workbench.css?inline';
-import type { Extension, CommandContribution, Workbench, MenuItem, MenuContext, OpenOptions, SidePanelOptions, SidePanel, WorkbenchOptions } from './workbench';
+import type { Extension, Workbench, MenuItem, MenuContext, OpenOptions, SidePanelOptions, SidePanel, WorkbenchOptions } from './workbench';
 
 /**
  * The frame of the widget on `host`: shows the project's files in custom editors (Typst files in the Visual and the
@@ -62,9 +60,7 @@ export class WorkbenchHost implements Workbench {
   readonly #sourceEditors = new SourceEditorHost();
   readonly #preview: Preview;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
-  /** The commands the extensions declare (`contributes.commands`), for search everywhere. */
-  #declaredCommands: readonly CommandContribution[] = [];
-  readonly #search: Disposable;
+  readonly #railActions: Disposable;
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscription: Disposable;
@@ -112,7 +108,7 @@ export class WorkbenchHost implements Workbench {
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = Disposable.from(project.onDidChangeFile((change) => this.#changed(change)), project.onDidChangeMain(() => this.#compile()));
     this.#extendEditors();
-    this.#search = this.#registerSearch();
+    this.#railActions = this.#menus.onDidChange((menuId) => this.#showRailActions(menuId));
     this.#applyRightSidePanel();
     this.#workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
@@ -146,9 +142,9 @@ export class WorkbenchHost implements Workbench {
     for (const extension of extensions) {
       this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
       this.#languages.declare(extension.contributes?.languages ?? []);
-      this.commands.declareKeybindings(extension.contributes?.keybindings ?? []);
+      this.commands.declareKeybindings(extension.contributes?.keybindings);
+      this.commands.declareCommands(extension.contributes?.commands);
     }
-    this.#declaredCommands = extensions.flatMap((extension) => extension.contributes?.commands ?? []);
     this.#workspace.check();
     this.#extensions.activate(extensions);
     this.open(this.project.main, { viewType: this.options.viewType });
@@ -224,7 +220,7 @@ export class WorkbenchHost implements Workbench {
   dispose(): void {
     this.#subscription.dispose();
     this.#extensions.dispose();
-    this.#search.dispose();
+    this.#railActions.dispose();
     this.window.dispose();
     this.#tabs.dispose();
     this.#scm.dispose();
@@ -290,45 +286,12 @@ export class WorkbenchHost implements Workbench {
     }
   }
 
-  /**
-   * Search everywhere's ways in besides double Shift: the command `workbench.action.searchEverywhere` (its argument:
-   * the text to start with, e.g. a prefix), its keys (⌘P; ⌘⇧O for files, ⌘⇧A for commands, as IntelliJ's) and a
-   * button among the left rail's side panels (`SEARCH_EVERYWHERE_ORDER`); and its built-in groups, the declared
-   * commands and the settings.
-   */
-  #registerSearch(): Disposable {
-    const command = 'workbench.action.searchEverywhere';
-    const button = this.host.ownerDocument.createElement('button');
-    button.type = 'button';
-    button.title = 'Search everywhere (Shift Shift)';
-    button.setAttribute('aria-label', 'Search everywhere');
-    button.dataset.testid = 'zwf-search-everywhere';
-    button.innerHTML = SEARCH_ICON;
-    button.addEventListener('click', () => void this.commands.executeCommand(command));
-    this.#layout.addRailAction('left', button, SEARCH_EVERYWHERE_ORDER);
-    return Disposable.from(
-      new Disposable(() => button.remove()),
-      this.commands.registerCommand(command, (value?: string) => this.window.showSearchEverywhere(typeof value === 'string' ? value : '')),
-      this.commands.registerKeybinding('Mod+KeyP', command),
-      this.commands.registerKeybinding('Mod+Shift+KeyO', command, '/'),
-      this.commands.registerKeybinding('Mod+Shift+KeyA', command, '>'),
-      this.window.registerSearchProvider(
-        commandSearch({
-          declared: () => this.#declaredCommands,
-          isRegistered: (id) => this.commands.has(id),
-          keybindingLabel: (id) => this.commands.keybindingLabel(id),
-          executeCommand: (id) => this.commands.executeCommand(id),
-        }),
-      ),
-      this.window.registerSearchProvider(
-        settingSearch({
-          properties: () => this.#workspace.properties,
-          value: (id) => this.#workspace.getConfiguration().get(id),
-          update: (id, value) => this.updateSettings({ [id]: value }),
-          window: this.window,
-        }),
-      ),
-    );
+  /** The rail buttons of the menus `workbench/rail/left` and `workbench/rail/right`, anew when `menuId` is one of them. */
+  #showRailActions(menuId: string): void {
+    const side = RAIL_MENUS.find((candidate) => menuId === `workbench/rail/${candidate}`);
+    if (!side) return;
+    const actions = this.#menus.items(menuId).map(({ command, title, icon, order }) => ({ command, title: title ?? command, icon: icon ?? '', order: order ?? 0 }));
+    this.#layout.setRailActions(side, actions);
   }
 
   /** The right side's default panel from the setting `workbench.rightSidePanel`. */
@@ -435,9 +398,5 @@ function previewIcon(doc: Document): SVGSVGElement {
   return svg;
 }
 
-/** Search everywhere's place among the left rail's side panels (their `order`): after Files (10), before Help (20). */
-const SEARCH_EVERYWHERE_ORDER = 15;
-
-/** Search everywhere's rail button: a field over a list. */
-const SEARCH_ICON =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="5" rx="1.5"/><path d="M4 4h4M3 9.5h10M3 12h7M3 14.5h8.5"/></svg>';
+/** The sides whose rail shows a menu's items (`workbench/rail/<side>`). */
+const RAIL_MENUS = ['left', 'right'] as const;

@@ -4,7 +4,7 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { User } from '../../core/user/user';
-import type { Commands, KeybindingContribution } from '../commands/commands';
+import type { CommandContribution, Commands, KeybindingContribution } from '../commands/commands';
 import type { LanguageContribution, Languages } from '../languages/languages';
 import type { PreviewContributions } from '../preview/preview';
 import type { Scm } from '../scm/scm';
@@ -39,8 +39,8 @@ export interface ExtensionContributions {
    */
   readonly configuration?: { readonly properties: Readonly<Record<string, ConfigurationProperty>> };
   /**
-   * Its commands for people: what they are called. Search everywhere lists them (while registered) and runs them
-   * without arguments, so declare only commands that work without any.
+   * Its commands for people: what they are called (`commands.getCommands`, e.g. search everywhere's list, which
+   * runs them without arguments: declare only commands that work without any).
    */
   readonly commands?: readonly CommandContribution[];
   /**
@@ -53,16 +53,6 @@ export interface ExtensionContributions {
    * reads them, e.g. to pick the help sheet of the shown file. An ending belongs to one language.
    */
   readonly languages?: readonly LanguageContribution[];
-}
-
-/** A command as people see it (VS Code's `contributes.commands` entry). */
-export interface CommandContribution {
-  /** The command's id (`commands.registerCommand`). */
-  readonly command: string;
-  /** What it does, as a menu would say it ("Add comment", "New diagram…"). */
-  readonly title: string;
-  /** What it belongs to, shown before the title ("Comments: Add comment"). */
-  readonly category?: string;
 }
 
 /**
@@ -152,10 +142,12 @@ export interface Workbench {
   /**
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
-   * arguments. The workbench shows two: `editor/title`, buttons at the right end of the editing area's tab bar, and
+   * arguments. The workbench shows these: `editor/title`, buttons at the right end of the editing area's tab bar, and
    * `view`, the "View" menu after them (context of both: `activeCustomEditorId` (the view type of the editor shown),
-   * `resource` (the shown file); no arguments). Other ids are menus that extensions show (`window.showContextMenu`),
-   * documented there (the file panel: `file/newFile`, `explorer/context`).
+   * `resource` (the shown file); no arguments); `workbench/rail/left` and `workbench/rail/right`, a button per item
+   * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
+   * arguments). Other ids are menus that extensions show (`window.showContextMenu`), documented there (the file
+   * panel: `file/newFile`, `explorer/context`).
    */
   registerMenuItem(menuId: string, item: MenuItem): Disposable;
   /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a side panel or editor that shows that menu. */

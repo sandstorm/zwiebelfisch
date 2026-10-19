@@ -10,7 +10,7 @@ import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-
  *
  * Extensions use it to:
  * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
- * - fill places: the status bar, the editing area (custom editors), file decorations, search everywhere
+ * - fill places: the status bar, the editing area (custom editors), file decorations, search providers
  * - follow which file and which Typst editor the user works in
  */
 export interface WindowApi {
@@ -40,6 +40,12 @@ export interface WindowApi {
   ): Promise<T[] | undefined>;
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
   /**
+   * A quick pick its owner drives (VS Code's `window.createQuickPick`): wider than `showQuickPick`'s, at the top in
+   * the middle of the widget, with the items the owner sets as the text changes. Hidden until `show`; one box at a
+   * time, as `showInputBox`.
+   */
+  createQuickPick<T extends QuickPickItem>(): QuickPick<T>;
+  /**
    * Asks where a new file goes (VS Code's `window.showSaveDialog`, as an input box placed as `showInputBox`): a name,
    * starting in the folder of `defaultUri` (or proposing it, see `SaveDialogOptions`), with the first `filters` ending added to a name without one. A name
    * without one of the endings, or of a file the project has, is refused. Resolves to the path, or undefined when
@@ -61,11 +67,12 @@ export interface WindowApi {
    */
   withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R>;
   /**
-   * Adds what `provider` finds to search everywhere (double Shift anywhere in the widget, or the command
-   * `workbench.action.searchEverywhere`) until disposed: a group of results under `provider.label`. `provider.id` is
-   * unique.
+   * Adds what `provider` finds to search everywhere (the searchEverywhere extension's, double Shift) until disposed: a
+   * group of results under `provider.label`. `provider.id` is unique.
    */
   registerSearchProvider(provider: SearchProvider): Disposable;
+  /** The search providers registered now, in registration order, for whoever shows search everywhere. */
+  getSearchProviders(): readonly SearchProvider[];
 
   /**
    * Puts `element` into the status bar below everything, until disposed: on the side `placement.alignment` says, the
@@ -138,7 +145,7 @@ export interface InputBoxOptions {
   validateInput?(value: string): string | undefined | null | Promise<string | undefined | null>;
 }
 
-/** An item of `showQuickPick` (VS Code's QuickPickItem). */
+/** An item of `showQuickPick` and `createQuickPick` (VS Code's QuickPickItem). */
 export interface QuickPickItem {
   /** What the item is called; typing filters by it. */
   readonly label: string;
@@ -148,6 +155,56 @@ export interface QuickPickItem {
   readonly detail?: string;
   /** Checked at first (with `canPickMany`). */
   readonly picked?: boolean;
+  /** The characters marked where the typed text matched (`createQuickPick`: its owner matched them). */
+  readonly highlights?: QuickPickHighlights;
+  /** The key that does the same, as people read it (`⌘⇧F`), at the row's end. */
+  readonly keybinding?: string;
+}
+
+/** What `QuickPickSeparator.kind` says (VS Code's QuickPickItemKind). */
+export const QuickPickItemKind = { Separator: -1, Default: 0 } as const;
+
+export type QuickPickItemKind = (typeof QuickPickItemKind)[keyof typeof QuickPickItemKind];
+
+/** A heading starting a group of a `QuickPick`'s items (VS Code's separator item), with a note after it. */
+export interface QuickPickSeparator {
+  readonly kind: typeof QuickPickItemKind.Separator;
+  readonly label: string;
+  readonly description?: string;
+}
+
+/**
+ * A quick pick its owner drives (VS Code's QuickPick, as far as needed): it shows `items` as they are (the owner
+ * filters and marks them as `value` changes) and tells what the user does. Picking an item (Enter, a click) fires
+ * `onDidAccept` with it in `selectedItems`; the box stays until `hide`. Escape, a press outside or another box hide it.
+ */
+export interface QuickPick<T extends QuickPickItem> {
+  /** The box's accessible name and the field's label. */
+  title: string | undefined;
+  /** Shown in the empty field. */
+  placeholder: string | undefined;
+  /** The text in the field; setting it fires `onDidChangeValue` (the caret goes after it once shown). */
+  value: string;
+  /** A line below the list describing the field (e.g. how to narrow a search). */
+  prompt: string | undefined;
+  /** The rows, the first item active; without any item (and text typed), "No results" unless `busy`. */
+  items: readonly (T | QuickPickSeparator)[];
+  /** Items are still coming: a progress line. */
+  busy: boolean;
+  /** The item picked last. */
+  readonly selectedItems: readonly T[];
+  /** The text in the field changed (typed, or set). */
+  readonly onDidChangeValue: Event<string>;
+  /** An item was picked (`selectedItems`). */
+  readonly onDidAccept: Event<void>;
+  /** The box is gone (`hide`, Escape, a press outside, another box), the focus back where it was. */
+  readonly onDidHide: Event<void>;
+  /** Shows the box (cancelling an open one) and focuses its field. */
+  show(): void;
+  /** Hides the box; it can be shown again. */
+  hide(): void;
+  /** Hides it for good. */
+  dispose(): void;
 }
 
 /** How `showQuickPick` asks (VS Code's QuickPickOptions). */
@@ -193,12 +250,11 @@ export interface SearchProvider {
   provideItems(query: string, token: CancellationToken): readonly SearchItem[] | Promise<readonly SearchItem[]>;
 }
 
-/** A result of search everywhere: what it shows (as a quick pick item) and what picking it does. */
+/**
+ * A result of search everywhere: what it shows (as a quick pick item; with `highlights` the provider matched the
+ * query itself: the item is shown as given, not matched again) and what picking it does.
+ */
 export interface SearchItem extends QuickPickItem {
-  /** Where the provider matched the query: the item is shown as given, not matched again. */
-  readonly highlights?: QuickPickHighlights;
-  /** The key that does the same, as people read it (`⌘⇧F`), at the row's end. */
-  readonly keybinding?: string;
   /**
    * Opens, runs or applies what the item stands for. Called once the search is closed and the focus is back where it
    * was, still within the user's key press or click (a file picker may open).

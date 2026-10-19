@@ -70,7 +70,7 @@ test('Shift held for a capital letter does not open it', async ({ page }) => {
 
 test('the rail button opens it over everything, grouped; / opens a file; Escape closes it', async ({ page }) => {
   await setup(page);
-  const button = editor(page).getByTestId('zwf-search-everywhere');
+  const button = editor(page).locator('.zwf-editor__rail [data-command="workbench.action.searchEverywhere"]');
   await button.click();
   await expect(editor(page).locator('.zwf-quick-pick__heading').first()).toContainText('Files');
   await page.keyboard.type('compile');

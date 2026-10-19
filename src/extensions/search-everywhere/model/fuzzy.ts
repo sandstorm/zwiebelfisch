@@ -1,5 +1,5 @@
 // Fuzzy matching for search everywhere: whether a query matches a label, how well, and which characters to highlight.
-// See SearchEverywhere in search.ts.
+// See SearchPick in ../workbench/search-pick.ts.
 
 /**
  * Whether `query` matches `target` (case-insensitive): as one piece (best, earlier is better), else its characters

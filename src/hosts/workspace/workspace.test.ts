@@ -101,6 +101,15 @@ describe('WorkspaceHost settings', () => {
     expect(events).toEqual([]);
   });
 
+  it("lists the declared settings, and sets one through a section's configuration (update)", async () => {
+    const { configuration, events } = setup();
+    expect([...configuration.getConfigurationProperties().keys()]).toEqual(Object.keys(PROPERTIES));
+    await configuration.getConfiguration('files').update('panel', 'hide');
+    expect([configuration.values, events.length]).toEqual([{ 'files.panel': 'hide' }, 1]);
+    await configuration.getConfiguration().update('files.panel', undefined);
+    expect(configuration.getConfiguration('files').get('panel')).toBe('auto');
+  });
+
   it('refuses a setting declared twice', () => {
     expect(() => setup().configuration.declare({ 'files.panel': PROPERTIES['files.panel'] })).toThrow(/declared twice/);
   });

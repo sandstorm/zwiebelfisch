@@ -157,4 +157,28 @@ describe('CommandsHost', () => {
   it('refuses unknown modifiers', () => {
     expect(() => setup().commands.registerKeybinding('Hyper+KeyM', 'test.run')).toThrow(/Unknown modifier Hyper/);
   });
+
+  it('binds a modifier tapped twice (Shift Shift), named so, until disposed', () => {
+    const { inner, commands } = setup();
+    const run = vi.fn();
+    commands.registerCommand('test.search', run);
+    const binding = commands.registerKeybinding('Shift Shift', 'test.search', 'all');
+    const tapShift = () => {
+      for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) inner.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', shiftKey: type === 'keydown', bubbles: true }));
+    };
+    tapShift();
+    expect(run.mock.calls).toEqual([['all']]);
+    expect([commands.keybindingLabel('test.search'), keyLabel('Shift Shift', true)]).toEqual(['Shift Shift', '⇧ ⇧']);
+    binding.dispose();
+    tapShift();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists the declared commands that are registered now', () => {
+    const { commands } = setup();
+    commands.declareCommands([{ command: 'test.count', title: 'Count words', category: 'Test' }, { command: 'test.gone', title: 'Gone' }]);
+    commands.registerCommand('test.count', () => {});
+    commands.registerCommand('test.undeclared', () => {});
+    expect(commands.getCommands()).toEqual([{ command: 'test.count', title: 'Count words', category: 'Test' }]);
+  });
 });

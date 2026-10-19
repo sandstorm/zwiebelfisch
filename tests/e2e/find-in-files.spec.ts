@@ -73,7 +73,7 @@ test('⌘⇧H shows Replace mode; Replace all asks first, replaces in both files
 
 test('search everywhere\'s "Find in files: …" row and the file panel\'s "Find in folder…" lead to the panel', async ({ page }) => {
   await setup(page);
-  await editor(page).getByTestId('zwf-search-everywhere').click();
+  await editor(page).locator('.zwf-editor__rail [data-command="workbench.action.searchEverywhere"]').click();
   await page.keyboard.type('%measured');
   await editor(page).getByRole('option').filter({ hasText: 'Find in files: measured' }).click();
   await expect(findField(page)).toHaveValue('measured');

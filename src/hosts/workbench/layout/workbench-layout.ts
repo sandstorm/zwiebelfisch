@@ -1,7 +1,7 @@
 // See WorkbenchHost in ../workbench-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
-import { div, restoreSideBarState, SideBar, type PanelCommands, type Side } from './side-bar';
+import { div, restoreSideBarState, SideBar, type PanelCommands, type RailAction, type Side } from './side-bar';
 
 /**
  * The widget's regions in one grid: the left side (a rail with a button per side panel and the shown panel), the
@@ -50,9 +50,9 @@ export class WorkbenchLayout {
     return this.#sides[options.side ?? 'left'].addPanel(id, options);
   }
 
-  /** Puts `button` among the top buttons of `side`'s rail by `order`, as a panel's (shown while the side has a panel). */
-  addRailAction(side: Side, button: HTMLElement, order: number): void {
-    this.#sides[side].addAction(button, order);
+  /** Shows `actions` on `side`'s rail (in place of those before), each among the top buttons by its `order`. */
+  setRailActions(side: Side, actions: readonly RailAction[]): void {
+    this.#sides[side].setActions(actions);
   }
 
   /**

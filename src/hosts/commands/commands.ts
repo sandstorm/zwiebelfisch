@@ -27,10 +27,28 @@ export interface Commands {
    * Runs `command` (with `args` as its one argument, if given) on `key` anywhere in the widget, before the editors see
    * the key (they never do; a failing command is logged). `key`: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM`
    * (Mod: Cmd on the Mac, else Ctrl). The modifiers must be exactly those (as VS Code's): `Alt+Digit1` is not
-   * AltGr+1 (Ctrl+Alt on Windows), `Ctrl+Minus` not Ctrl+Shift+Minus. For a command people run: declare the key
-   * (`contributes.keybindings`) instead.
+   * AltGr+1 (Ctrl+Alt on Windows), `Ctrl+Minus` not Ctrl+Shift+Minus. A modifier tapped twice is a key, too (as VS
+   * Code's `shift shift`): `Shift Shift`, `Alt Alt`, …, not while the user types in a text field. For a command people
+   * run: declare the key (`contributes.keybindings`) instead.
    */
   registerKeybinding(key: string, command: string, args?: unknown): Disposable;
+  /**
+   * The commands declared for people (`contributes.commands`) that are registered now, in declaration order: what VS
+   * Code's `getCommands` and its Command Palette show (search everywhere's "Commands"). Each runs without arguments.
+   */
+  getCommands(): readonly CommandContribution[];
+  /** The key that runs command `id`, as people read it (`⌘⇧F`, `Ctrl+Shift+F`): the first bound; undefined: none. */
+  keybindingLabel(id: string): string | undefined;
+}
+
+/** A command as people see it (VS Code's `contributes.commands` entry). */
+export interface CommandContribution {
+  /** The command's id (`registerCommand`). */
+  readonly command: string;
+  /** What it does, as a menu would say it ("Add comment", "New diagram…"). */
+  readonly title: string;
+  /** What it belongs to, shown before the title ("Comments: Add comment"). */
+  readonly category?: string;
 }
 
 /**

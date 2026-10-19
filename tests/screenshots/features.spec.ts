@@ -113,7 +113,7 @@ test('files', async ({ page }) => {
 
 test('search-everywhere', async ({ page }) => {
   await open(page, '/?example=advanced');
-  await page.getByTestId('zwf-search-everywhere').click();
+  await page.locator('.zwf-editor__rail [data-command="workbench.action.searchEverywhere"]').click();
   await page.keyboard.type('compile');
   await expect(page.locator('.zwf-quick-pick__heading').first()).toBeVisible();
   await shoot(page, 'search-everywhere', [page.locator('.zwf-quick-pick:visible')]);

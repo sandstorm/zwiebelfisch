@@ -95,7 +95,7 @@ What `activate` gets (`ExtensionContext`):
 == Settings <architecture-extensions-settings>
 
 - *As VS Code's*: declare each in `contributes.configuration.properties` as `<section>.<key>`, with `type`, `default`, `description` and an optional `enum`.
-- *Read* with `workspace.getConfiguration(section).get(key)` and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.updateSettings`).
+- *Read* with `workspace.getConfiguration(section).get(key)` and follow `workspace.onDidChangeConfiguration`: the host may change values any time (`editor.updateSettings`). `update(key, value)` sets one for the widget, as the host would (search everywhere's Settings); `workspace.getConfigurationProperties()` lists the declared ones.
 - *A wrong value* (wrong type, outside `enum`) counts as unset; an undeclared setting is ignored. Both log a warning. An id declared twice is an error.
 
 == Competing contributions <architecture-extensions-rules>
@@ -141,6 +141,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`documentLinks`], [every provider's document links shown and followed in every editor (hover, ⌘-click, Alt+Enter); file paths in Typst text as links; `documentLinks.createFile`], [document links, shared CodeMirror extension, Tiptap extension, raw box pictures, style sheet],
   [`files`], [the file panel (Alt+1 / ⌃1) and its commands, "Set as main file" among them; the read-only fallback editor], [side panel, menus, custom editor, search],
   [`search`], [the side panel "Find in files": text or regex in the project, current file or a folder; Replace mode with one Undo; matches highlighted in both editors; "Find in folder…"], [side panel, commands, keys, menu, highlights, search],
+  [`searchEverywhere`], [search everywhere: the quick pick over every search provider (Shift twice, ⌘P, ⌘⇧O, ⌘⇧A, the rail button); its groups Commands (`>`) and Settings (`:`)], [`createQuickPick`, `getSearchProviders`, command, keys, menu `workbench/rail/left`, search],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
   [`help`], [the side panel "Help" with the shown file's help sheets; rows drag or insert into the editor], [side panel, commands, menu, Tiptap extension],
   [`spreadsheets`], [`.ic` in IronCalc, written also as `name.ic.gen.typ`; "New spreadsheet…", "Insert spreadsheet"], [custom editor, menus, toolbar, languages, help, links, drop edit],
@@ -193,6 +194,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [preview renderers], [`previewHtml`], [`previewControls`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
   [menu `explorer/context`], [`files`, `search`], [`files`],
+  [search providers], [`files`, `headings`, `labels`, `figures`, `styles`, `comments`, `textFiles`, `search`, `searchEverywhere`], [`searchEverywhere`],
 )
 
 == Page guides and box outlines <architecture-extensions-guides>

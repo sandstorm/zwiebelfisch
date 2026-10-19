@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// Tests for double-shift.ts: what counts as pressing Shift twice.
+// Tests for double-tap.ts: what counts as pressing a modifier twice.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listenForDoubleShift } from './double-shift';
+import { listenForDoubleTap } from './double-tap';
 
 afterEach(() => document.body.replaceChildren());
 
@@ -13,7 +13,7 @@ function setup() {
   editor.addEventListener('keyup', (event) => event.stopPropagation());
   let time = 0;
   const onDoubleShift = vi.fn();
-  listenForDoubleShift(host, onDoubleShift, () => time);
+  listenForDoubleTap(host, 'Shift', onDoubleShift, () => time);
   const send = (type: 'keydown' | 'keyup', key: string, init: KeyboardEventInit = {}) =>
     editor.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true, ...init }));
   /** Shift down and up, `wait` ms after the previous step. */
@@ -26,7 +26,7 @@ function setup() {
   return { onDoubleShift, send, tap, wait: (ms: number) => (time += ms) };
 }
 
-describe('listenForDoubleShift', () => {
+describe('listenForDoubleTap', () => {
   it('fires when Shift is tapped twice quickly, inside an editor too, on the second release', () => {
     const { onDoubleShift, tap, send } = setup();
     tap();
@@ -73,5 +73,21 @@ describe('listenForDoubleShift', () => {
     send('keydown', 'Shift', { shiftKey: true, repeat: true });
     send('keyup', 'Shift');
     expect(onDoubleShift).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not count presses in a text field (an input box), and counts another modifier alone', () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const field = host.appendChild(document.createElement('input'));
+    const onAlt = vi.fn();
+    listenForDoubleTap(host, 'Alt', onAlt);
+    const tapOn = (target: Element, key: string, init: KeyboardEventInit) => {
+      for (const type of ['keydown', 'keyup']) target.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true, ...(type === 'keydown' ? init : {}) }));
+    };
+    tapOn(field, 'Alt', { altKey: true });
+    tapOn(field, 'Alt', { altKey: true });
+    expect(onAlt).not.toHaveBeenCalled();
+    tapOn(host, 'Alt', { altKey: true });
+    tapOn(host, 'Alt', { altKey: true });
+    expect(onAlt).toHaveBeenCalledTimes(1);
   });
 });

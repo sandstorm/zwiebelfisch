@@ -1,14 +1,14 @@
 // See WindowApi in ../window.ts.
-import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOptions } from '../window';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import { type InputBoxOptions, type QuickPick, type QuickPickHighlights, type QuickPickItem, QuickPickItemKind, type QuickPickOptions, type QuickPickSeparator } from '../window';
 
 /**
- * What `showInputBox` and `showQuickPick` show, and the quick pick whose rows its owner sets while the user types
- * (search everywhere). One box at a time over the widget `host` (a new one cancels the open one), placed below its
+ * What `showInputBox`, `showQuickPick` and `createQuickPick` show. One box at a time over the widget `host` (a new one cancels the open one), placed below its
  * anchor and kept inside the widget (above the anchor where there is no room below): the anchor is what the user last
  * pressed or typed in (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS
  * Code's). Escape or a mouse press elsewhere cancels; closing gives the focus back to where it was (an editor's caret, too).
  *
- * @internal Extensions use it through `window.showQuickPick` and `window.showInputBox`.
+ * @internal Extensions use it through `window.showQuickPick`, `window.createQuickPick` and `window.showInputBox`.
  */
 export class QuickInput {
   #trigger: Element | null = null;
@@ -17,11 +17,6 @@ export class QuickInput {
   constructor(private readonly host: HTMLElement) {
     host.addEventListener('pointerdown', this.#remember, true);
     host.addEventListener('keydown', this.#remember, true);
-  }
-
-  /** Whether a box is open. */
-  get isOpen(): boolean {
-    return this.#open !== null;
   }
 
   showInputBox(options: InputBoxOptions = {}): Promise<string | undefined> {
@@ -77,54 +72,14 @@ export class QuickInput {
     return isArray(items) ? this.#pick(items, options) : items.then((list) => this.#pick(list, options));
   }
 
-  /**
-   * Opens a quick pick at the top in the middle of the widget, wider than `showQuickPick`'s, whose rows the owner
-   * sets as the text changes (`onDidChangeValue` → `setEntries`). Cancels the open box.
-   */
-  createQuickPick<T extends string | QuickPickItem>(options: DynamicQuickPickOptions<T>): DynamicQuickPick<T> {
-    const doc = this.host.ownerDocument;
-    const box = element(doc, 'div', 'zwf-quick-input zwf-quick-pick zwf-quick-pick--wide');
-    box.setAttribute('role', 'dialog');
-    box.setAttribute('aria-label', options.title);
-    const filter = element(doc, 'input', 'zwf-quick-input__field');
-    filter.type = 'text';
-    filter.value = options.value ?? '';
-    filter.placeholder = options.placeHolder ?? '';
-    filter.setAttribute('aria-label', options.title);
-    const progress = element(doc, 'div', 'zwf-quick-pick__progress');
-    progress.hidden = true;
-    const listbox = element(doc, 'div', 'zwf-quick-pick__list');
-    const empty = element(doc, 'div', 'zwf-quick-pick__empty');
-    empty.textContent = 'No results';
-    empty.hidden = true;
-    box.append(filter, progress, listbox, empty, ...hint(doc, filter, options.hint));
-    const picker = new OnePicker<T>(doc, { listbox, input: filter }, (item) => close(item));
-    let busy = false;
-    const showEmpty = () => (empty.hidden = busy || picker.size > 0 || filter.value.trim() === '');
-    const changed = () => options.onDidChangeValue(filter.value);
-    filter.addEventListener('input', changed);
-    filter.addEventListener('keydown', (event) => picker.key(event));
-    const close = this.#present<T>(box, filter, (item) => {
-      if (item !== undefined) options.onDidAccept(item);
-      options.onDidHide();
-    }, false);
-    filter.setSelectionRange(filter.value.length, filter.value.length);
-    return {
-      setEntries: (entries) => {
-        picker.show(entries);
-        showEmpty();
+  /** A quick pick its owner drives, at the top in the middle of the widget (see `WindowApi.createQuickPick`). */
+  createQuickPick<T extends QuickPickItem>(): QuickPick<T> {
+    return new OwnedQuickPick<T>(this.host.ownerDocument, {
+      show: (box, field, onHide) => this.#present<void>(box, field, onHide, false),
+      hide: (box) => {
+        if (this.#open?.box === box) this.#open.cancel();
       },
-      setBusy: (now) => {
-        busy = now;
-        progress.hidden = !now;
-        showEmpty();
-      },
-      setValue: (value) => {
-        filter.value = value;
-        changed();
-      },
-      hide: () => this.#open?.box === box && this.#open.cancel(),
-    };
+    });
   }
 
   #pick<T extends string | QuickPickItem>(list: readonly T[], options: QuickPickOptions): Promise<T | T[] | undefined> {
@@ -250,50 +205,25 @@ export class QuickInput {
   }
 }
 
-/** A heading starting a group of items (VS Code's separator item), with a note after it. */
-export interface QuickPickSeparator {
+/** A heading starting a group of items, as the list shows it. */
+interface SeparatorEntry {
   readonly kind: 'separator';
   readonly label: string;
   readonly description?: string;
 }
 
 /** An item of a quick pick, with the characters to highlight. */
-export interface QuickPickItemEntry<T> {
+interface ItemEntry<T> {
   readonly kind: 'item';
   readonly item: T;
   readonly highlights?: QuickPickHighlights;
 }
 
 /** A row of a quick pick: an item, or a heading starting a group. */
-export type QuickPickEntry<T> = QuickPickItemEntry<T> | QuickPickSeparator;
+type QuickPickEntry<T> = ItemEntry<T> | SeparatorEntry;
 
-/** What a dynamic quick pick shows and whom it tells (see `QuickInput.createQuickPick`). */
-export interface DynamicQuickPickOptions<T> {
-  /** The box's accessible name and the field's label. */
-  readonly title: string;
-  readonly placeHolder?: string;
-  /** The text the field starts with (the caret after it). */
-  readonly value?: string;
-  /** A line below the list, read as the field's description (e.g. how to narrow the search). */
-  readonly hint?: string;
-  /** The text in the field changed (typed, or `setValue`; not for the starting `value`). */
-  onDidChangeValue(value: string): void;
-  /** An item was picked (Enter or a click); the box is gone and the focus back where it was. */
-  onDidAccept(item: T): void;
-  /** The box is gone (after `onDidAccept`, on Escape, a press outside, another box, or `hide`). */
-  onDidHide(): void;
-}
-
-/** A quick pick whose rows its owner sets while the user types (VS Code's `window.createQuickPick`, as far as needed). */
-export interface DynamicQuickPick<T> {
-  /** Shows these rows, the first item active; without any item, "No results" (unless busy). */
-  setEntries(entries: readonly QuickPickEntry<T>[]): void;
-  /** Rows are still coming (a progress line). */
-  setBusy(busy: boolean): void;
-  /** Sets the field's text (as if typed). */
-  setValue(value: string): void;
-  /** Closes it (as Escape). */
-  hide(): void;
+function isSeparator<T extends QuickPickItem>(item: T | QuickPickSeparator): item is QuickPickSeparator {
+  return (item as Partial<QuickPickSeparator>).kind === QuickPickItemKind.Separator;
 }
 
 /** A box on screen: closing it removes it and gives the focus back. */
@@ -318,16 +248,6 @@ function title(doc: Document, text: string | undefined): HTMLElement[] {
 
 function isArray<T>(items: readonly T[] | Promise<readonly T[]>): items is readonly T[] {
   return Array.isArray(items);
-}
-
-/** The line below the list, describing `field`. */
-function hint(doc: Document, field: HTMLElement, text: string | undefined): HTMLElement[] {
-  if (!text) return [];
-  const line = element(doc, 'div', 'zwf-quick-pick__hint');
-  line.id = `zwf-quick-pick-hint-${++ids}`;
-  line.textContent = text;
-  field.setAttribute('aria-describedby', line.id);
-  return [line];
 }
 
 let ids = 0;
@@ -384,7 +304,7 @@ class OnePicker<T extends string | QuickPickItem> {
   }
 
   /** A group under a heading, which names it. */
-  #group(separator: QuickPickSeparator): HTMLElement {
+  #group(separator: SeparatorEntry): HTMLElement {
     const group = element(this.doc, 'div', 'zwf-quick-pick__group');
     group.setAttribute('role', 'group');
     const heading = element(this.doc, 'div', 'zwf-quick-pick__heading');
@@ -401,7 +321,7 @@ class OnePicker<T extends string | QuickPickItem> {
     return group;
   }
 
-  #option({ item, highlights }: QuickPickItemEntry<T>): HTMLElement {
+  #option({ item, highlights }: ItemEntry<T>): HTMLElement {
     const option = itemElement(this.doc, item, highlights);
     option.setAttribute('role', 'option');
     option.id = `${this.parts.listbox.id}-${++this.#rows}`;
@@ -424,8 +344,149 @@ class OnePicker<T extends string | QuickPickItem> {
   }
 }
 
-/** An item's label, description, key (search everywhere's) and detail, the `highlights` marked. */
-function itemElement(doc: Document, item: string | (QuickPickItem & { keybinding?: string }), highlights: QuickPickHighlights = {}): HTMLElement {
+/**
+ * The quick pick of `createQuickPick`: a wide box with a field, a progress line, the owner's items, "No results" and
+ * the prompt. `boxes` shows and hides it as one of the widget's boxes (one at a time).
+ */
+class OwnedQuickPick<T extends QuickPickItem> implements QuickPick<T> {
+  readonly #box: HTMLElement;
+  readonly #field: HTMLInputElement;
+  readonly #progress: HTMLElement;
+  readonly #empty: HTMLElement;
+  readonly #prompt: HTMLElement;
+  readonly #picker: OnePicker<T>;
+  readonly #changed = new EventEmitter<string>();
+  readonly #accepted = new EventEmitter<void>();
+  readonly #hidden = new EventEmitter<void>();
+  #title: string | undefined;
+  #items: readonly (T | QuickPickSeparator)[] = [];
+  #selected: readonly T[] = [];
+  #busy = false;
+  #shown = false;
+  readonly onDidChangeValue = this.#changed.event;
+  readonly onDidAccept = this.#accepted.event;
+  readonly onDidHide = this.#hidden.event;
+
+  constructor(
+    doc: Document,
+    private readonly boxes: {
+      show(box: HTMLElement, field: HTMLElement, onHide: () => void): void;
+      hide(box: HTMLElement): void;
+    },
+  ) {
+    this.#box = element(doc, 'div', 'zwf-quick-input zwf-quick-pick zwf-quick-pick--wide');
+    this.#box.setAttribute('role', 'dialog');
+    this.#field = element(doc, 'input', 'zwf-quick-input__field');
+    this.#field.type = 'text';
+    this.#progress = element(doc, 'div', 'zwf-quick-pick__progress');
+    const listbox = element(doc, 'div', 'zwf-quick-pick__list');
+    this.#empty = element(doc, 'div', 'zwf-quick-pick__empty');
+    this.#empty.textContent = 'No results';
+    this.#prompt = element(doc, 'div', 'zwf-quick-pick__hint');
+    this.#prompt.id = `zwf-quick-pick-hint-${++ids}`;
+    this.#box.append(this.#field, this.#progress, listbox, this.#empty, this.#prompt);
+    this.#picker = new OnePicker<T>(doc, { listbox, input: this.#field }, (item) => {
+      this.#selected = [item];
+      this.#accepted.fire();
+    });
+    this.#field.addEventListener('input', () => this.#changed.fire(this.#field.value));
+    this.#field.addEventListener('keydown', (event) => this.#picker.key(event));
+    this.#update();
+  }
+
+  get title(): string | undefined {
+    return this.#title;
+  }
+
+  set title(title: string | undefined) {
+    this.#title = title;
+    this.#update();
+  }
+
+  get placeholder(): string | undefined {
+    return this.#field.placeholder || undefined;
+  }
+
+  set placeholder(placeholder: string | undefined) {
+    this.#field.placeholder = placeholder ?? '';
+  }
+
+  get value(): string {
+    return this.#field.value;
+  }
+
+  set value(value: string) {
+    this.#field.value = value;
+    this.#field.setSelectionRange(value.length, value.length);
+    this.#changed.fire(value);
+  }
+
+  get prompt(): string | undefined {
+    return this.#prompt.textContent || undefined;
+  }
+
+  set prompt(prompt: string | undefined) {
+    this.#prompt.textContent = prompt ?? '';
+    this.#update();
+  }
+
+  get items(): readonly (T | QuickPickSeparator)[] {
+    return this.#items;
+  }
+
+  set items(items: readonly (T | QuickPickSeparator)[]) {
+    this.#items = items;
+    this.#picker.show(items.map((item) => (isSeparator(item) ? { kind: 'separator', label: item.label, description: item.description } : { kind: 'item', item, highlights: item.highlights })));
+    this.#update();
+  }
+
+  get busy(): boolean {
+    return this.#busy;
+  }
+
+  set busy(busy: boolean) {
+    this.#busy = busy;
+    this.#update();
+  }
+
+  get selectedItems(): readonly T[] {
+    return this.#selected;
+  }
+
+  show(): void {
+    if (this.#shown) return;
+    this.#shown = true;
+    this.boxes.show(this.#box, this.#field, () => {
+      this.#shown = false;
+      this.#hidden.fire();
+    });
+    this.#field.setSelectionRange(this.#field.value.length, this.#field.value.length);
+  }
+
+  hide(): void {
+    this.boxes.hide(this.#box);
+  }
+
+  dispose(): void {
+    this.hide();
+    for (const emitter of [this.#changed, this.#accepted, this.#hidden]) emitter.dispose();
+  }
+
+  /** The names, the progress line, "No results" and the prompt as the state says. */
+  #update(): void {
+    const name = this.#title ?? 'Pick';
+    this.#box.setAttribute('aria-label', name);
+    this.#field.setAttribute('aria-label', name);
+    this.#progress.hidden = !this.#busy;
+    this.#empty.hidden = this.#busy || this.#picker.size > 0 || this.#field.value.trim() === '';
+    this.#prompt.hidden = !this.#prompt.textContent;
+    if (this.#prompt.hidden) this.#field.removeAttribute('aria-describedby');
+    else this.#field.setAttribute('aria-describedby', this.#prompt.id);
+  }
+}
+
+/** An item's label, description, key and detail, the `highlights` marked. */
+function itemElement(doc: Document, item: string | QuickPickItem, highlights: QuickPickHighlights = {}): HTMLElement {
   const option = element(doc, 'div', 'zwf-quick-pick__item');
   option.append(highlighted(doc, 'zwf-quick-pick__label', labelOf(item), highlights.label));
   if (typeof item === 'string') return option;
