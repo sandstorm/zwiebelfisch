@@ -7,7 +7,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { DocumentPasteEdit, DocumentPasteEditProvider, PasteChoices } from '../languages/languages';
-import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { BlockGaps, caretAtSource } from './block-gaps';
 import { BlockHandle } from './block-handle';
 import { clipboard } from './clipboard';
@@ -87,9 +87,9 @@ export class VisualEditor {
       ],
       injectCSS: false,
       editorProps: { attributes: { class: 'zwf-visual', 'data-testid': 'zwf-visual' } },
-      onTransaction: ({ transaction }) => {
+      onTransaction: ({ transaction, appendedTransactions }) => {
         if (transaction.docChanged || !this.revealed?.selection.eq(transaction.selection)) this.revealed = null;
-        this.afterTransaction(transaction);
+        this.afterTransaction(transaction, appendedTransactions);
         if (transaction.selectionSet || transaction.docChanged) this.selectionChanged.fire();
       },
     });
@@ -188,9 +188,12 @@ export class VisualEditor {
     this.tiptap.view.dispatch(setHighlights(this.tiptap.state.tr, layer, ranges));
   }
 
-  private afterTransaction(tr: Transaction): void {
-    if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
-    this.document.setText(serializeToTypst(this.tiptap.state.doc), this);
+  /** Writes what `tr` and the transactions plugins appended to it changed back to the text, block by block. */
+  private afterTransaction(tr: Transaction, appended: readonly Transaction[]): void {
+    if (tr.getMeta(FROM_DOCUMENT)) return;
+    for (const each of [tr, ...appended]) {
+      if (each.docChanged) this.document.change(typstChanges(each, this.document.text), this);
+    }
   }
 
   private syncFromDocument(): void {

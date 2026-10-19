@@ -18,7 +18,10 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
 .dispose()
 ```
 
-- *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
+- *Write-back:* after every transaction that changed the document, `document.change(typstChanges(tr), this)`: one minimal `TextChange` per textblock the transaction touched (the opposite of `applyTypstChanges`, @architecture-prosemirror-typst-sync). An edit in two places leaves the text between them alone, so a collaborator's edit there at the same time stays where it was.
+  - *How:* the touched ranges (from `tr.mapping`; mark and attribute steps by their own range) grow to their textblocks' content; `posToSource` gives their source ranges in the old and the new text, which cut both texts into matching pieces. Each pair of pieces gets its `minimalChange`.
+  - *Neighbours:* what a block's neighbours print (blank lines, list markers, a label, the document's leading whitespace) lies between the cuts and is diffed the same way, so the changes always give exactly `serializeToTypst(tr.doc)`. Cuts out of order are dropped; at worst one change covers the whole edit.
+  - Transactions plugins append are written back in turn. Each starts from `document.text`, so a document that prints differently converges as well.
 - *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
 - *Reveal* focuses first, then selects. Until the selection moves, `selection()` returns the range asked for, so the preview follows to where was asked (a figure's label shows as the caret below the figure).
 - *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame, highlights, completion lists, the clipboard, and the three below. Every other construct and feature is a contribution.

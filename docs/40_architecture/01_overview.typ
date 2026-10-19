@@ -28,7 +28,7 @@ Who may import whom, and why extensions never depend on each other: @architectur
   caption: [A keystroke in the Visual editor; the numbers are the listeners' subscription order.],
 )
 
-The way back is the same: a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (`applyTypstChanges`, @architecture-prosemirror-typst-sync).
+The Visual editor writes back only what the transaction touched: one change per edited textblock, untouched nodes printing their source verbatim (@architecture-visual-editor-class). The way back is the same: a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (`applyTypstChanges`, @architecture-prosemirror-typst-sync).
 
 == One edit format, one source of truth <architecture-overview-truth>
 

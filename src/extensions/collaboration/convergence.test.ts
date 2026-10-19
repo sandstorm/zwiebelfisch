@@ -114,6 +114,25 @@ describe('collaboration', () => {
     expect(a.tiptap.state.doc.textContent).toBe(b.tiptap.state.doc.textContent);
   });
 
+  it('a Visual edit in two places keeps what another user did between them at the same time', async () => {
+    const a = await user('Ann', { [MAIN]: 'One.\n\nTwo words.\n\nThree.\n' });
+    const b = await user('Bob', {}, a);
+    b.disconnect();
+    const ends = (word: string) => {
+      let end = -1;
+      a.tiptap.state.doc.descendants((node, pos) => {
+        if (end < 0 && node.isTextblock && node.textContent.includes(word)) end = pos + node.nodeSize - 1;
+      });
+      return end;
+    };
+    const { tr } = a.tiptap.state;
+    a.tiptap.view.dispatch(tr.insertText(' A', ends('Three')).insertText(' A', ends('One')));
+    typeSource(b, b.document.text.indexOf('words'), 'more ');
+    b.codemirror.dispatch({ changes: { from: b.document.text.indexOf('Two'), to: b.document.text.indexOf('Two') + 4 }, userEvent: 'delete' });
+    connect(a.ydoc, b.ydoc);
+    for (const u of [a, b]) expect(u.document.text).toBe('One. A\n\nmore words.\n\nThree. A\n');
+  });
+
   it('a margin note (one edit in two places, as the comments extension makes it) reaches the other user and survives their edits', async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);

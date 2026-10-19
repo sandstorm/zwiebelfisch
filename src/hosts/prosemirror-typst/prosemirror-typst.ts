@@ -4,7 +4,7 @@ import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
-import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-document';
+import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../../core/typst-document/typst-document';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
@@ -21,7 +21,8 @@ import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSour
  * document; `serializeToTypst` writes it back, where untouched nodes print their source byte for byte and only edited
  * ones are printed anew. So `serializeToTypst(parseTypst(text)) === text` for any text. `sourceToPos` and
  * `posToSource` map between source offsets and document positions, down to the character. `applyTypstChanges` turns
- * the shown document into a fresh parse with the smallest replacement.
+ * the shown document into a fresh parse with the smallest replacement; `typstChanges`, the other way,
+ * turns a transaction into the text changes it makes.
  *
  * The framework knows only paragraphs, text, breaks and raw Typst (the minimum schema). Every other construct is a
  * spec (`DocumentNodeSpec`, `TypstMarkSpec`) that an extension contributes to the Visual editor: which syntax it
@@ -368,6 +369,35 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   return tr;
 }
 
+/**
+ * The changes that turn `source`, the Typst `tr.before` shows, into the Typst of `tr.doc`: one per textblock the
+ * transaction touched, so an edit in two places leaves the text between them alone (a concurrent edit there stays).
+ *
+ * The textblocks the steps touched are found in both documents; their source ranges cut the old and the new text into
+ * matching pieces, and each pair of pieces gets its minimal change. Text a block's neighbours print (separators, list
+ * markers, a doc's leading whitespace) lies between those ranges and is diffed the same way, so the changes always turn
+ * `source` into exactly the new text; where cuts cannot be matched up they are dropped (at worst: one change for all).
+ */
+export function typstChanges(tr: Transaction, source: string = serializeToTypst(tr.before)): TextChange[] {
+  const target = serializeToTypst(tr.doc);
+  const cuts: Cut[] = [{ before: 0, after: 0 }];
+  for (const { before, after } of touchedBlocks(tr)) {
+    // `source` may differ from what `tr.before` prints (then the pieces differ, and their changes say how)
+    cuts.push({ before: Math.min(posToSource(tr.before, before.from), source.length), after: posToSource(tr.doc, after.from) });
+    cuts.push({ before: Math.min(posToSource(tr.before, before.to, -1), source.length), after: posToSource(tr.doc, after.to, -1) });
+  }
+  cuts.push({ before: source.length, after: target.length });
+  const changes: TextChange[] = [];
+  let last = cuts[0];
+  for (const cut of cuts.slice(1)) {
+    if (cut.before < last.before || cut.after < last.after) continue;
+    const change = minimalChange(source.slice(last.before, cut.before), target.slice(last.after, cut.after));
+    if (change) append(changes, { ...SourceRange.of({ from: last.before + change.from, to: last.before + change.to }), insert: change.insert });
+    last = cut;
+  }
+  return changes;
+}
+
 /** The base: paragraphs, text, line breaks (`\`), history, the drop cursor. */
 function baseExtension(): AnyExtension {
   return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: { color: 'var(--zwf-accent)', width: 2 } });
@@ -437,4 +467,73 @@ function markUnchanged(node: Node, target: Node): void {
   if (unchangedNodes.has(target)) unchangedNodes.set(node, unchangedNodes.get(target)!);
   if (node.childCount !== target.childCount) return;
   node.forEach((child, _offset, index) => markUnchanged(child, target.child(index)));
+}
+
+/** Offsets that cut the old (`before`) and the new text (`after`) at the same place. */
+interface Cut {
+  before: number;
+  after: number;
+}
+
+/** A range of document positions. */
+interface DocRange {
+  from: number;
+  to: number;
+}
+
+/** `change` added to `changes` (in order), merged with the last one if they touch. */
+function append(changes: TextChange[], change: TextChange): void {
+  const previous = changes.at(-1);
+  if (previous?.to !== change.from) return void changes.push(change);
+  changes[changes.length - 1] = { from: previous.from, to: change.to, insert: previous.insert + change.insert };
+}
+
+/**
+ * What `tr` changed, in order: in `tr.doc` and as the range it replaced in `tr.before`, each widened to the content of
+ * the textblocks its ends are in.
+ */
+function touchedBlocks(tr: Transaction): { before: DocRange; after: DocRange }[] {
+  const back = tr.mapping.invert();
+  return merged(changedRanges(tr)).map((after) => ({
+    before: textblocks(tr.before, { from: back.map(after.from, -1), to: back.map(after.to, 1) }),
+    after: textblocks(tr.doc, after),
+  }));
+}
+
+/** The ranges of `tr.doc` its steps replaced or restyled. */
+function changedRanges(tr: Transaction): DocRange[] {
+  const ranges: DocRange[] = [];
+  tr.steps.forEach((step, index) => {
+    const later = tr.mapping.slice(index + 1);
+    const add = (from: number, to: number) => ranges.push({ from: later.map(from, -1), to: later.map(to, 1) });
+    let replaced = false;
+    step.getMap().forEach((_from, _to, from, to) => {
+      replaced = true;
+      add(from, to);
+    });
+    if (replaced) return;
+    // marks and attributes leave positions alone: their step's own range (a doc attribute has none)
+    const { from, to, pos } = step as unknown as Partial<DocRange & { pos: number }>;
+    if (from !== undefined && to !== undefined) add(from, to);
+    else if (pos !== undefined) add(pos, pos + ((tr.docs[index + 1] ?? tr.doc).nodeAt(pos)?.nodeSize ?? 0));
+  });
+  return ranges;
+}
+
+/** `ranges` sorted, those that overlap or touch made one. */
+function merged(ranges: DocRange[]): DocRange[] {
+  const result: DocRange[] = [];
+  for (const range of [...ranges].sort((a, b) => a.from - b.from)) {
+    const last = result.at(-1);
+    if (last && range.from <= last.to) last.to = Math.max(last.to, range.to);
+    else result.push({ ...range });
+  }
+  return result;
+}
+
+/** `range` of `doc` grown to the content of the textblock each of its ends is in. */
+function textblocks(doc: Node, { from, to }: DocRange): DocRange {
+  const $from = doc.resolve(from);
+  const $to = doc.resolve(Math.max(from, to));
+  return { from: $from.parent.isTextblock ? $from.start() : from, to: $to.parent.isTextblock ? $to.end() : $to.pos };
 }

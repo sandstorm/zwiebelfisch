@@ -1,8 +1,7 @@
 flowchart TD
   visual["`VisualEditor (Tiptap)
   keystroke → ProseMirror transaction`"]
-  document["`TypstDocument.setText(text, visualEditor)
-  one minimal TextChange
+  document["`TypstDocument.change(changes, visualEditor)
   onDidChange({ contentChanges, origin }):
   listeners in subscription order`"]
   project["Project"]
@@ -13,8 +12,8 @@ flowchart TD
   source["SourceEditor"]
   binding["`TextBinding
   (collaboration)`"]
-  visual -- "`serializeToTypst(doc)
-  untouched nodes print their source verbatim`" --> document
+  visual -- "`typstChanges(tr): one minimal TextChange
+  per textblock touched`" --> document
   document -- 1 --> project
   document -. "`2: origin is itself, ignored`" .-> visual
   document -- "`3: dispatched with

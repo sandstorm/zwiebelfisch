@@ -3,10 +3,10 @@
 // hosts/prosemirror-typst/prosemirror-typst.test.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
-import { EditorState, TextSelection } from '@tiptap/pm/state';
-import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges } from '../hosts/prosemirror-typst/prosemirror-typst';
+import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
+import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges, typstChanges } from '../hosts/prosemirror-typst/prosemirror-typst';
 import { after, builtins, edit, expectPreciseMap, parseTypst, schema, schemaOf } from '../testing/testing';
-import { SourceOffset } from '../core/typst-document/typst-document';
+import { SourceOffset, type TextChange } from '../core/typst-document/typst-document';
 
 
 const FIXTURES: Record<string, string> = {
@@ -272,6 +272,129 @@ describe('applyTypstChanges', () => {
     expect(serializeToTypst(tr.doc)).toBe('\nA\n\n');
   });
 });
+
+describe('typstChanges', () => {
+  /** Edits that touch one place or several, made of one step or many; those a document has no place for are skipped. */
+  const EDITS: Record<string, (tr: Transaction) => unknown> = {
+    'typing in every textblock': (tr) => textblocks(tr.doc).reverse().forEach(({ end }) => tr.insertText(' *x*', end)),
+    'typing at the start of a textblock': (tr) => tr.insertText('- a', textblocks(tr.doc)[0].start),
+    'deleting the first character of every textblock': (tr) =>
+      textblocks(tr.doc).filter(({ start, end }) => end > start).reverse().forEach(({ start }) => tr.delete(start, start + 1)),
+    'making the first and last textblock bold': (tr) =>
+      [textblocks(tr.doc)[0], textblocks(tr.doc).at(-1)!].forEach(({ start, end }) => tr.addMark(start, end, schema.marks.bold.create())),
+    'removing all formatting': (tr) => tr.removeMark(0, tr.doc.content.size),
+    'splitting the first textblock': (tr) => tr.split(middle(textblocks(tr.doc)[0])),
+    'splitting the last textblock twice': (tr) => tr.split(middle(textblocks(tr.doc).at(-1)!)).split(textblocks(tr.doc).at(-1)!.start),
+    'joining the first two textblocks': (tr) => tr.delete(textblocks(tr.doc)[0].end, textblocks(tr.doc)[1].start),
+    'turning the first textblock into a heading': (tr) => tr.setBlockType(textblocks(tr.doc)[0].start, textblocks(tr.doc)[0].start, schema.nodes.heading, { level: 2 }),
+    'adding a paragraph at the start and at the end': (tr) =>
+      tr.insert(tr.doc.content.size, schema.nodes.paragraph.create(null, schema.text('End'))).insert(0, schema.nodes.paragraph.create(null, schema.text('Start'))),
+    'deleting the first block': (tr) => tr.delete(0, tr.doc.firstChild!.nodeSize),
+    'deleting the second block and typing in the last': (tr) =>
+      tr.delete(tr.doc.child(0).nodeSize, tr.doc.child(0).nodeSize + tr.doc.child(1).nodeSize).insertText('!', textblocks(tr.doc).at(-1)!.end),
+    'deleting everything': (tr) => tr.delete(0, tr.doc.content.size),
+  };
+
+  for (const [name, source] of Object.entries(FIXTURES)) {
+    describe(`turns ${name}'s text into the edited document's`, () => {
+      for (const [editName, change] of Object.entries(EDITS)) {
+        it(editName, () => {
+          const tr = EditorState.create({ doc: parseTypst(source) }).tr;
+          try {
+            change(tr);
+          } catch {
+            return;
+          }
+          expectChanges(source, tr);
+        });
+      }
+
+      it('random edits', () => {
+        const random = seeded(name.length);
+        for (let round = 0; round < 20; round++) {
+          const tr = EditorState.create({ doc: parseTypst(source) }).tr;
+          for (let step = 0; step < 3; step++) randomEdit(tr, random);
+          expectChanges(source, tr);
+        }
+      });
+    });
+  }
+
+  it('changes only the blocks edited, not the text between them', () => {
+    const source = '= Title\n\nOne\n\n- a\n- b\n\nTwo\n';
+    const tr = EditorState.create({ doc: parseTypst(source) }).tr;
+    tr.insertText('!', after(tr.doc, 'Two')).insertText('*', after(tr.doc, 'Title'));
+    expect(typstChanges(tr)).toEqual([
+      { from: 7, to: 7, insert: '\\*' },
+      { from: source.length - 1, to: source.length - 1, insert: '!' },
+    ]);
+  });
+
+  it('changes the separator a block insert needs, not the blocks around it', () => {
+    const source = 'One\n\nTwo\n';
+    const tr = EditorState.create({ doc: parseTypst(source) }).tr;
+    tr.insert(tr.doc.child(0).nodeSize, schema.nodes.paragraph.create(null, schema.text('New')));
+    expect(typstChanges(tr)).toEqual([{ from: 3, to: 3, insert: '\n\nNew' }]);
+  });
+
+  it('starts from the given text where the document printed something else', () => {
+    const tr = EditorState.create({ doc: parseTypst('One\n\nTwo\n') }).tr;
+    tr.insertText('!', after(tr.doc, 'Two'));
+    expect(applied('One\n\nOne and a half\n\nTwo\n', typstChanges(tr, 'One\n\nOne and a half\n\nTwo\n'))).toBe('One\n\nTwo!\n');
+  });
+});
+
+/** Checks that `typstChanges(tr)` are ordered, apart, and turn `source` into the Typst of `tr.doc`. */
+function expectChanges(source: string, tr: Transaction): void {
+  const changes = typstChanges(tr);
+  changes.slice(1).forEach((change, i) => expect(change.from).toBeGreaterThan(changes[i].to));
+  expect(applied(source, changes)).toBe(serializeToTypst(tr.doc));
+}
+
+function applied(text: string, changes: readonly TextChange[]): string {
+  return [...changes].reverse().reduce((current, { from, to, insert }) => current.slice(0, from) + insert + current.slice(to), text);
+}
+
+/** The content ranges of the textblocks of `doc`, in order. */
+function textblocks(doc: Node): { start: number; end: number }[] {
+  const found: { start: number; end: number }[] = [];
+  doc.descendants((node, pos) => {
+    if (node.isTextblock) found.push({ start: pos + 1, end: pos + node.nodeSize - 1 });
+  });
+  return found;
+}
+
+const middle = ({ start, end }: { start: number; end: number }) => (start + end) >> 1;
+
+/** A small deterministic random number generator (0 ≤ n < 1). */
+function seeded(seed: number): () => number {
+  let state = seed + 1;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+/** Types, deletes, formats, splits or joins somewhere in the textblocks of `tr.doc`; skipped where that does not fit. */
+function randomEdit(tr: Transaction, random: () => number): void {
+  const blocks = textblocks(tr.doc);
+  if (blocks.length === 0) return;
+  const block = blocks[Math.floor(random() * blocks.length)];
+  const at = block.start + Math.floor(random() * (block.end - block.start + 1));
+  const to = Math.min(block.end, at + Math.floor(random() * 4));
+  const edits = [
+    () => tr.insertText(['a', ' ', '*', '\n', '= ', '#'][Math.floor(random() * 6)], at),
+    () => tr.delete(at, to),
+    () => tr.addMark(at, to, [schema.marks.bold, schema.marks.italic][Math.floor(random() * 2)].create()),
+    () => tr.split(at),
+    () => tr.delete(block.start - 2, block.start),
+  ];
+  try {
+    edits[Math.floor(random() * edits.length)]();
+  } catch {
+    // no such edit there
+  }
+}
 
 /** The position inside the first empty textblock of `doc`. */
 function insideEmptyBlock(doc: Node): number {
