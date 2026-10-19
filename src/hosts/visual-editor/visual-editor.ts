@@ -89,11 +89,6 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     tools?(host: RawBoxToolsHost, node: Node): RawBoxTools;
     /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
     readonly keepsDom?: boolean;
-    /**
-     * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
-     * DOM `data-zwf-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
-     */
-    readonly ownsPseudoElements?: boolean;
   };
 }
 

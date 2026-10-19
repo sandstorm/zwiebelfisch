@@ -17,7 +17,9 @@ const PageBreak = Node.create({
   },
   renderHTML({ node }) {
     const weak = /\bweak\s*:\s*true\b/.test(node.attrs.src);
-    return ['div', { 'data-type': 'page-break', class: 'zwf-page-layout__page-break', title: node.attrs.src }, ['span', weak ? 'Page break (weak)' : 'Page break']];
+    // data-zwf-pseudo: its ::before / ::after are its dashed lines, so what others draw on boxes leaves them alone
+    const attrs = { 'data-type': 'page-break', 'data-zwf-pseudo': 'own', class: 'zwf-page-layout__page-break', title: node.attrs.src };
+    return ['div', attrs, ['span', weak ? 'Page break (weak)' : 'Page break']];
   },
   addCommands() {
     return { setPageBreak: () => ({ commands }) => commands.insertContent({ type: this.name }) };
@@ -39,8 +41,6 @@ export const PAGE_BREAK: TypstNodeSpec = {
     parseTypst: { calls: { pagebreak: { block: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.pageBreak.create({ src: p.text(withHash(call)), sep }) : null) } } },
     labelled: true,
   },
-  // the dashed lines
-  view: { ownsPseudoElements: true },
 };
 
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');

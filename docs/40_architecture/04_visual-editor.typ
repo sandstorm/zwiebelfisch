@@ -92,7 +92,7 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
     toTypst,        // how an edited node is written back (ProseMirror's toDOM, for Typst)
     labelled, anchors, container, atomToTypst, escapeAfter, onDidChange,
   },
-  view: { box, title, tools, keepsDom, ownsPseudoElements }, // nodes only
+  view: { box, title, tools, keepsDom }, // nodes only
 }
 ```
 

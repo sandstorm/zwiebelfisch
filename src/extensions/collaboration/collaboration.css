@@ -58,7 +58,7 @@
   100% { opacity: 0; }
 }
 /* Visual editor: a box (raw code, image, page break, note) someone's caret is in; its name flag only on boxes whose
-   own ::after is free (the host marks the others data-zwf-pseudo="own"). */
+   own ::after is free (a node drawing its own, as the page break, sets data-zwf-pseudo="own" on its DOM). */
 .zwf-collaboration__box {
   position: relative;
   outline: 2px solid var(--zwf-remote-color, #268bd2);

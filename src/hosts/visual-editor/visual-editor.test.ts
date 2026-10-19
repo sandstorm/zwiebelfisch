@@ -5,10 +5,10 @@ import { EditorView as CodeView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { Extension, Node as TiptapNode, type AnyExtension, type Editor } from '@tiptap/core';
-import { children, withHash } from '../../core/typst-syntax/typst-syntax';
+import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
+import { children } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
+import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -109,19 +109,6 @@ describe('VisualEditor', () => {
     const { doc, parent } = setup('Title\n\nText\n');
     doc.setText('Title\n\nText changed\n', 'source');
     expect(parent.querySelectorAll('p')[1]?.textContent).toBe('Text changed');
-  });
-
-  it('marks the DOM of a node whose spec owns its pseudo-elements', () => {
-    const divider: TypstNodeSpec = {
-      name: 'divider',
-      tiptap: TiptapNode.create({ name: 'divider', group: 'block', atom: true, addAttributes: () => ({ src: { default: '', rendered: false } }), renderHTML: () => ['hr'] }),
-      typst: { parseTypst: { calls: { divider: { block: (p, call) => p.schema.nodes.divider.create({ src: p.text(withHash(call)) }) } } } },
-      view: { ownsPseudoElements: true },
-    };
-    const parent = document.body.appendChild(document.createElement('div'));
-    new VisualEditor(parent, new TypstDocument('#divider()\n\nText\n'), VisualEditorHost.from([{ id: 'divider', activate: ({ visualEditor }) => visualEditor.registerNode(divider) }]));
-    expect(parent.querySelector('hr')?.getAttribute('data-zwf-pseudo')).toBe('own');
-    expect(parent.querySelector('p')?.hasAttribute('data-zwf-pseudo')).toBe(false);
   });
 });
 

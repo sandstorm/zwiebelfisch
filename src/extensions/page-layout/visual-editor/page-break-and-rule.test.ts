@@ -54,6 +54,11 @@ describe('page breaks and horizontal rules', () => {
     expectPreciseMap(doc);
   });
 
+  it('marks a page break\'s DOM as owning its pseudo-elements (its dashed lines)', () => {
+    const [, attrs] = schema.nodes.pageBreak.spec.toDOM!(schema.nodes.pageBreak.create()) as [string, Record<string, string>];
+    expect(attrs['data-zwf-pseudo']).toBe('own');
+  });
+
   it('deleting a page break removes just its source', () => {
     const source = 'One\n\n#pagebreak()\n\nTwo\n';
     const doc = edit(parseTypst(source), (s) => s.tr.delete(after(s.doc, 'One') + 1, after(s.doc, 'One') + 2));
