@@ -38,7 +38,7 @@
   padding: 2px 3px 2px 0;
   border: 1px solid var(--zwf-border);
   border-radius: 6px;
-  background: var(--zwf-control);
+  background: var(--zwf-bg);
 }
 .zwf-search__field:focus-within { border-color: var(--zwf-accent); }
 .zwf-search__replace { margin-top: 0; }
@@ -80,7 +80,7 @@
   border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 1px 2px;
-  background: var(--zwf-control);
+  background: var(--zwf-surface);
   color: var(--zwf-text);
   font: inherit;
 }
@@ -121,7 +121,7 @@
   border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 1px 8px;
-  background: var(--zwf-control);
+  background: var(--zwf-surface);
   color: var(--zwf-text);
   font: inherit;
   font-size: 12px;
