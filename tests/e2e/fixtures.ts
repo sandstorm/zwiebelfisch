@@ -84,10 +84,10 @@ export const SERVER_DEMO = 'http://127.0.0.1:5199';
 
 /**
  * Signs `context` in as `user` at the server's fake GitLab, without a page: the sign-in's redirects (the fake's
- * page signs in at once with `login_hint`) end at the server's own `/`, and the session cookie lands in the context.
+ * page signs in at once with `login_hint`) end at the server's `/api/me`, and the session cookie lands in the context.
  */
 export async function signIn(context: BrowserContext, user: string): Promise<void> {
-  const response = await context.request.get(`${SERVER}/auth/login?${new URLSearchParams({ login_hint: user, return: '/' })}`);
+  const response = await context.request.get(`${SERVER}/api/public/auth/login?${new URLSearchParams({ login_hint: user, return: '/api/me' })}`);
   expect(response.ok(), await response.text()).toBe(true);
   expect((await context.cookies(SERVER)).map((cookie) => cookie.name)).toContain('zwf_session');
 }

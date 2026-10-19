@@ -4,12 +4,12 @@
 // Rooms need to know who joins them (GitLab rooms check the user's access to the project), and people have
 // an account at the provider already. Auth is a relying party, a confidential client: authorization code
 // flow with PKCE, state (also in a cookie, so a sign-in finishes only in the browser that began it) and
-// nonce, the ID token verified against the provider's published keys. It answers
+// nonce, the ID token verified against the provider's published keys. Its handlers (package app mounts them):
 //
-//	GET  /auth/login?return=<url>[&login_hint=<name>]  to the provider; afterwards back to <url> (this host only)
-//	GET  /auth/callback                                the provider's redirect: starts the session
-//	POST /auth/logout                                  ends it
-//	GET  /api/me                                       the Identity, or 401
+//	Login     GET  /api/public/auth/login?return=<url>[&login_hint=<name>]  to the provider; afterwards back to <url> (this host only)
+//	Callback  GET  /api/public/auth/callback  the provider's redirect: starts the session
+//	Logout    POST /api/auth/logout           ends it (signed in only)
+//	Me        GET  /api/me                    the Identity (signed in only)
 //
 // Nothing secret is stored: sessions, with the user's tokens, live in this process's memory only (decided:
 // no user tokens on disk). A restart signs everyone out. Keeping the identity alone in the database would
@@ -49,8 +49,9 @@ type Options struct {
 	Issuer string
 	// ClientID and ClientSecret are the application registered at the provider.
 	ClientID, ClientSecret string
-	// RedirectURL is the callback as registered at the provider (https://editor.example.org/auth/callback).
-	// "": this host's /auth/callback, as the browser named the host.
+	// RedirectURL is the callback as registered at the provider
+	// (https://editor.example.org/api/public/auth/callback). "": this host's CallbackPath, as the browser named
+	// the host.
 	RedirectURL string
 	// Scopes asked for (default openid, profile, email).
 	Scopes []string
@@ -71,10 +72,9 @@ type Identity struct {
 	Email    string `json:"email,omitempty"`
 }
 
-// Auth is the sign-in and its sessions. Create it with New; it is the http.Handler of Paths.
+// Auth is the sign-in and its sessions. Create it with New.
 type Auth struct {
 	opts Options
-	mux  *http.ServeMux
 
 	mu       sync.Mutex
 	provider *oidc.Provider // nil until discovered (on the first sign-in, so a server starts without it)
@@ -98,6 +98,10 @@ type session struct {
 	expires time.Time
 }
 
+// CallbackPath is where the provider sends the browser back (Callback): the redirect URI to register, on this
+// server's host.
+const CallbackPath = "/api/public/auth/callback"
+
 const (
 	sessionCookie = "zwf_session"
 	loginCookie   = "zwf_login"
@@ -118,20 +122,7 @@ func New(o Options) *Auth {
 	if o.now == nil {
 		o.now = time.Now
 	}
-	a := &Auth{opts: o, mux: http.NewServeMux(), logins: map[string]login{}, sessions: map[string]*session{}}
-	a.mux.HandleFunc("GET /auth/login", a.login)
-	a.mux.HandleFunc("GET /auth/callback", a.callback)
-	a.mux.HandleFunc("POST /auth/logout", a.logout)
-	a.mux.HandleFunc("GET /api/me", a.me)
-	return a
-}
-
-// Paths are the http.ServeMux patterns ServeHTTP answers.
-func (a *Auth) Paths() []string { return []string{"/auth/", "/api/me"} }
-
-func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	AllowCredentials(w, r)
-	a.mux.ServeHTTP(w, r)
+	return &Auth{opts: o, logins: map[string]login{}, sessions: map[string]*session{}}
 }
 
 // Identify is who sent r: the session its cookie names. False without a session, with an expired one, or
@@ -152,6 +143,20 @@ func (a *Auth) Identify(r *http.Request) (Identity, bool) {
 		return Identity{}, false
 	}
 	return s.identity, true
+}
+
+type identityKey struct{}
+
+// WithIdentity is r for the handlers behind a sign-in check (Identify): SignedIn(r) is identity.
+func WithIdentity(r *http.Request, identity Identity) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), identityKey{}, identity))
+}
+
+// SignedIn is who sent r, as the sign-in check put it there (WithIdentity); false for a request that did not
+// pass one.
+func SignedIn(r *http.Request) (Identity, bool) {
+	identity, ok := r.Context().Value(identityKey{}).(Identity)
+	return identity, ok
 }
 
 // SameSite reports whether r comes from a page of this host (any port), or names no page (no Origin: a
@@ -175,7 +180,8 @@ func AllowCredentials(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *Auth) login(w http.ResponseWriter, r *http.Request) {
+// Login sends the browser to the provider to sign in (GET /api/public/auth/login).
+func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	provider, _, err := a.discover(r.Context())
 	if err != nil {
 		a.opts.Log.Error().Err(err).Str("issuer", a.opts.Issuer).Msg("cannot reach the sign-in provider")
@@ -192,7 +198,7 @@ func (a *Auth) login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Too many sign-ins at once; try again in a few minutes.", http.StatusServiceUnavailable)
 		return
 	}
-	http.SetCookie(w, cookie(r, loginCookie, state, "/auth/", loginLifetime))
+	http.SetCookie(w, cookie(r, loginCookie, state, "/api/public/auth/", loginLifetime))
 	options := []oauth2.AuthCodeOption{oidc.Nonce(l.nonce), oauth2.S256ChallengeOption(l.verifier)}
 	if hint := query.Get("login_hint"); hint != "" {
 		options = append(options, oauth2.SetAuthURLParam("login_hint", hint))
@@ -200,7 +206,8 @@ func (a *Auth) login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, a.config(provider, l.redirect).AuthCodeURL(state, options...), http.StatusFound)
 }
 
-func (a *Auth) callback(w http.ResponseWriter, r *http.Request) {
+// Callback is where the provider sends the browser back (CallbackPath): it starts the session.
+func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	state := query.Get("state")
 	l, ok := a.finish(state)
@@ -209,7 +216,7 @@ func (a *Auth) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "This sign-in expired or began elsewhere: sign in again.", http.StatusBadRequest)
 		return
 	}
-	http.SetCookie(w, cookie(r, loginCookie, "", "/auth/", -1))
+	http.SetCookie(w, cookie(r, loginCookie, "", "/api/public/auth/", -1))
 	if refused := query.Get("error"); refused != "" {
 		http.Error(w, "Sign-in refused: "+first(query.Get("error_description"), refused), http.StatusForbidden)
 		return
@@ -278,11 +285,8 @@ type profile struct {
 	Email             string `json:"email"`
 }
 
-func (a *Auth) logout(w http.ResponseWriter, r *http.Request) {
-	if !SameSite(r) {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
-	}
+// Logout ends the session (POST /api/auth/logout).
+func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(sessionCookie); err == nil {
 		a.mu.Lock()
 		delete(a.sessions, c.Value)
@@ -292,9 +296,10 @@ func (a *Auth) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (a *Auth) me(w http.ResponseWriter, r *http.Request) {
+// Me answers who signed in (GET /api/me): the Identity SignedIn finds, or 401.
+func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	identity, ok := a.Identify(r)
+	identity, ok := SignedIn(r)
 	if !ok {
 		http.Error(w, "Not signed in", http.StatusUnauthorized)
 		return
@@ -337,7 +342,7 @@ func (a *Auth) redirectURL(r *http.Request) string {
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
-	return scheme + "://" + r.Host + "/auth/callback"
+	return scheme + "://" + r.Host + CallbackPath
 }
 
 // begin remembers a sign-in until the provider sends the browser back; false when too many are open.

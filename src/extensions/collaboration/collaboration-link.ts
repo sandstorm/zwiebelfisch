@@ -1,18 +1,17 @@
 // The eager half of collaboration. See collaboration in collaboration.ts.
-import type { Account } from './account';
+import { SignInRequired, type Account } from './account';
 import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
-import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
 /**
  * The widget's side of a Collaboration: loads it on demand (so this file stays outside model/, the lazily loaded
  * chunk), publishes the local selection when the editors report a change (`selectionChanged`), and tells the widget
- * where everyone else is. With a server, it joins as the account's signed-in user, and only then: signed out (or
- * refused for that), it asks the widget to offer signing in.
+ * where everyone else is. With a server, it joins as the account's signed-in user, and only then: signed out, before
+ * connecting or when the session ends, it asks the widget to offer signing in.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
@@ -33,8 +32,8 @@ export class CollaborationLink {
     private readonly account: Account | null = null,
   ) {
     this.ready = this.start(options, shared).catch((error: unknown) => {
+      if (error instanceof SignInRequired) return this.widget.signInRequired?.();
       const reason = error instanceof Error ? error.message : String(error);
-      if (reason === SIGN_IN_REQUIRED) return this.widget.signInRequired?.();
       console.error('collaboration could not start:', error);
       this.widget.tell?.(`Cannot join the room: ${reason}`, 'error');
     });
@@ -48,18 +47,21 @@ export class CollaborationLink {
   private async start(options: CollaborationOptions, shared: SharedRoom): Promise<void> {
     if (this.account) {
       const identity = await this.account.refresh();
-      if (!identity) throw new Error(SIGN_IN_REQUIRED);
+      if (!identity) throw new SignInRequired();
       // others see the name the server knows (in GitLab rooms, the GitLab account's)
       shared = { ...shared, user: { ...shared.user, name: identity.name } };
     }
     if (this.disposed) return;
     const { Collaboration } = await import('./model/model');
-    const collaboration = await Collaboration.start(options, shared, this.widget.tell);
+    const account = this.account;
+    const signedIn = account ? async () => !!(await account.refresh()) : undefined;
+    const collaboration = await Collaboration.start(options, shared, this.widget.tell, signedIn);
     if (this.disposed) {
       collaboration.dispose();
       return;
     }
     this.collaboration = collaboration;
+    void collaboration.signedOut.then(() => this.disposed || this.widget.signInRequired?.());
     collaboration.onDidChangePresence((presences) => this.widget.onPresence?.(presences));
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }

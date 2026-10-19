@@ -14,8 +14,8 @@
 #table(
   columns: (auto, 1fr),
   table.header[Package][Task],
-  [`app`], [Puts it together on one port: the rooms, GitLab rooms as their extension, the sign-in, `GET /api/info`, the GitLab endpoints; who opens which room; `Run` (serve until SIGINT/SIGTERM, then store the open rooms)],
-  [`auth`], [The sign-in: an OpenID Connect relying party (`coreos/go-oidc`, `x/oauth2`), sessions in memory, `Identify(request)`],
+  [`app`], [Puts it together on one port: the rooms, GitLab rooms as their extension, the sign-in, every route (@architecture-server-routes); who opens which room; `Run` (serve until SIGINT/SIGTERM, then store the open rooms)],
+  [`auth`], [The sign-in: an OpenID Connect relying party (`coreos/go-oidc`, `x/oauth2`), sessions in memory, `Identify(request)`; its handlers, which `app` mounts],
   [`collab`], [The Hocuspocus protocol and the rooms: auth per room, sync, awareness, stateless messages, debounced storing, unloading. `Authenticate` decides who gets in; an `Extension` decides what a room is],
   [`ydoc`], [The Yjs document (#link("https://github.com/reearth/ygo")[`reearth/ygo`]), its sync protocol and awareness; the only importer of ygo],
   [`store`], [Room states in SQLite (`modernc.org/sqlite`, no cgo)],
@@ -26,10 +26,10 @@
 )
 
 - *Rooms*: one Y.Doc per project, named by the client. A room runs on its own goroutine, which owns the document: joins, messages and stores are queued to it, so rooms need no locks.
-- *Which rooms*: `gitlab:<project>@<branch>` when GitLab is configured. Any other name is a *plain room*, backed by nothing but the database: only with `ZWF_PLAIN_ROOMS=1` (the demo and `test:e2e-collab` set it). Without it the client is refused with a reason the widget shows ("This server opens only GitLab rooms …"), and `GET /api/info` (`{"plainRooms": false}`) tells clients beforehand. A server with neither does not start.
+- *Which rooms*: `gitlab:<project>@<branch>` when GitLab is configured. Any other name is a *plain room*, backed by nothing but the database: only with `ZWF_PLAIN_ROOMS=1` (the demo and `test:e2e-collab` set it). Without it the client is refused with a reason the widget shows ("This server opens only GitLab rooms …"), and `GET /api/public/info` (`{"plainRooms": false}`) tells clients beforehand. A server with neither does not start.
 - *Sign-in* (`auth`): authorization code flow with PKCE, state (also in a short cookie, so a sign-in ends only in the browser that began it) and nonce; the ID token is verified with the provider's keys. Identity = (provider id, subject): with the GitLab instance as the provider (the default), `gitlab` and the GitLab user id. Sessions and the user's tokens live in memory only: no table, nothing secret on disk; a restart signs everyone out. The session cookie is httpOnly, SameSite=Lax, Secure except on loopback hosts; a request whose `Origin` is another host is nobody's, so the WebSocket needs no origin list.
-- *Auth* (`app`): per room, in the Hocuspocus Auth message, from the session cookie of the WebSocket's upgrade request (the message's token is ignored); nothing of a room is sent before it. The room must exist here, the client be signed in (else `SignInRequired`, on which the widget offers to sign in), and for a GitLab room have a role that edits. A `collab.Refusal` carries the reason the client is told; other errors say `permission-denied`. The room files go through the same check.
-- *The widget's side* is the `collaboration` extension (@configuration-collaboration-server, @architecture-extensions-built-in); the Y.Doc layout is `src/core/room-protocol/`, mirrored in `server/lib/gitlab/protocol.go`.
+- *Auth*: a WebSocket without a session never opens (401, @architecture-server-routes). Then per room (`app`), in the Hocuspocus Auth message, with the identity of the upgrade request (the message's token is ignored); nothing of a room is sent before it. The room must exist here, and for a GitLab room the user have a role that edits. A `collab.Refusal` carries the reason the client is told; other errors say `permission-denied`. The room files go through the same check.
+- *The widget's side* is the `collaboration` extension: it asks `GET /api/me` first, and only signed in opens the WebSocket; a connection that closes for an ended session stops reconnecting and offers to sign in again (@configuration-collaboration-server, @architecture-extensions-built-in); the Y.Doc layout is `src/core/room-protocol/`, mirrored in `server/lib/gitlab/protocol.go`.
 
 #table(
   columns: (auto, 1fr, auto),
@@ -41,9 +41,28 @@
   [`meta`], [written by the server: the base (`baseSha`, `base`, `baseAssets`), `changes`, `conflict`, `commitFailure`, `autoCommit`], [GitLab],
 )
 
+== Routes <architecture-server-routes>
+
+One rule, visible in every path: `/api/public/` is the only part anyone may call; everything else answers only people signed in. `app.New` lists every route in two muxes: `mux.Handle("/api/public/", public)` and `mux.Handle("/", requireSignIn(signedIn))`. `requireSignIn` answers 401 without a session (with CORS and credentials, so the widget on another port reads it) and puts the identity into the request (`auth.SignedIn`). The public mux takes no pattern outside its prefix (it panics); the tests try every route of both without a session.
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Route][What],
+  [`GET /api/public/auth/login?return=<url>`], [Public: signing in begins signed out. To the provider, then back to `<url>` (this host)],
+  [`GET /api/public/auth/callback`], [Public: the redirect URI the provider sends the browser back to; starts the session],
+  [`GET /api/public/info`], [Public: what the server offers (`{"plainRooms": …}`), read before signing in],
+  [`POST /api/public/gitlab/webhook`], [Public: GitLab calls it, checked by `X-Gitlab-Token` (only with `ZWF_GITLAB_WEBHOOK_SECRET`)],
+  [`GET /api/rooms`], [The WebSocket (Hocuspocus); 401 before the upgrade],
+  [`GET /api/me`], [Who is signed in],
+  [`POST /api/auth/logout`], [Ends the session],
+  [`GET /api/rooms/<room>/files/<path>`], [A file of an open GitLab room],
+)
+
+Any other path is 404 (401 first without a session). The demo's server (`fake-gitlab`) adds its own: the fake GitLab's sign-in page under GitLab's path (`/oauth/authorize`) and `/playground/…` (@architecture-server-commands); never part of a real deployment.
+
 == GitLab rooms <architecture-server-gitlab>
 
-A room named `gitlab:<project id or path>@<branch>` is that branch (`gitlab.Rooms`, one `room` each). `gitlab` is the provider id: it is also in the webhook's path, the seam for other instances and providers.
+A room named `gitlab:<project id or path>@<branch>` is that branch (`gitlab.Rooms`, one `room` each). `gitlab` is the provider id, the seam for other instances and providers.
 
 #figure(
   mermaid(read("../diagrams/gitlab-room.mmd"), width: 100%),
@@ -55,7 +74,7 @@ A room named `gitlab:<project id or path>@<branch>` is that branch (`gitlab.Room
 - *Branch-level check*: GitLab's commit API cannot require "the branch is still at X". `Commit` compares the head first and again when GitLab refuses an action; moved means `ErrConflict`, a merge and a retry. A push that lands in between unrefused ends up under the room's commit: the room sees `parent ≠ base` and merges it.
 - *Merge of an upstream push*: per path, three-way by lines (`diff3`). Any conflict: nothing is applied and `meta.conflict` stays until a merge succeeds. Otherwise minimal edits at UTF-16 offsets, so cursors stay put.
 - *Leaving*: `Handler.Left` keeps the room loaded (and joinable) for `LeaveDelay` (20 s), then commits; someone back cancels it.
-- *Files endpoint*: `GET /rooms/<room>/files/<path>`, for whom the room lets in (the session cookie; CORS with credentials for the page's host), returns a repository file's bytes from a blob cache (by sha, 64 MB).
+- *Files endpoint*: `GET /api/rooms/<room>/files/<path>`, for whom the room lets in (CORS with credentials for the page's host), returns a repository file's bytes from a blob cache (by sha, 64 MB).
 
 Depth (commit actions, renames, `meta.changes`, `meta.commitFailure`, the operation queue): `room` in `server/lib/gitlab/room.go`.
 

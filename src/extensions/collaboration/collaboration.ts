@@ -1,10 +1,9 @@
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
-import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import { ProgressLocation } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
-import { Account } from './account';
+import { Account, SignInRequired } from './account';
 import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
@@ -30,8 +29,8 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  * changes nobody commits.
  *
  * A server lets in only people signed in there (a session cookie; the widget holds no token): the status bar shows
- * the account ("Sign in", or the name with "Sign out" in its menu), and a room the user may not join yet for that
- * offers to sign in, which leaves the page for the server's sign-in and comes back. See
+ * the account ("Sign in", or the name with "Sign out" in its menu). Signed out, the widget does not connect but offers
+ * to sign in (also when the session ends), which leaves the page for the server's sign-in and comes back. See
  * docs/20_features/12_collaborative-editing.typ, docs/30_configuration/03_collaboration-server.typ and
  * docs/40_architecture/09_server.typ.
  */
@@ -66,7 +65,7 @@ export function collaboration(options: CollaborationOptions): Extension {
         tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
         signInRequired: () =>
-          void window.showErrorMessage(SIGN_IN_REQUIRED, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
+          void window.showErrorMessage(SignInRequired.reason, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
       }, account);
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
       visualPresence(presences, documents).activate({ visualEditor, subscriptions });
@@ -119,6 +118,8 @@ const ACCOUNT_MENU = 'collaboration/account';
  * provider; pass it synced, and its awareness for remote cursors), or a
  * Hocuspocus server the widget connects to: the collaboration server of
  * this repository, on the page's host (the session cookie is sent to it).
+ * `url` is that server's URL (`wss://editor.example.org`, maybe with a
+ * path prefix); the widget opens its WebSocket at `<url>/api/rooms`.
  */
 export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }

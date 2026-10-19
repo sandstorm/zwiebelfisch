@@ -26,6 +26,7 @@ const server = "http://127.0.0.1:1234"
 type browser struct {
 	t       *testing.T
 	auth    *Auth
+	server  http.Handler // the handlers as package app mounts them
 	fake    *fakegitlab.GitLab
 	cookies map[string]*http.Cookie
 	origin  string // the page's (sent as Origin), "" for navigations
@@ -35,7 +36,28 @@ func newBrowser(t *testing.T, o Options) *browser {
 	fake := fakegitlab.New("demo/report", fakegitlab.Files{"/main.typ": []byte("x")})
 	o.Provider, o.Issuer, o.ClientID, o.ClientSecret = "gitlab", fakegitlab.URL, fakegitlab.ClientID, fakegitlab.ClientSecret
 	o.Client, o.Log = fake.Client(), zerolog.Nop()
-	return &browser{t: t, auth: New(o), fake: fake, cookies: map[string]*http.Cookie{}}
+	a := New(o)
+	return &browser{t: t, auth: a, server: mount(a), fake: fake, cookies: map[string]*http.Cookie{}}
+}
+
+// mount is the handlers as package app mounts them: Logout and Me behind its sign-in check.
+func mount(a *Auth) http.Handler {
+	signedIn := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			identity, ok := a.Identify(r)
+			if !ok {
+				http.Error(w, "Not signed in", http.StatusUnauthorized)
+				return
+			}
+			next(w, WithIdentity(r, identity))
+		}
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/public/auth/login", a.Login)
+	mux.HandleFunc("GET "+CallbackPath, a.Callback)
+	mux.HandleFunc("POST /api/auth/logout", signedIn(a.Logout))
+	mux.HandleFunc("GET /api/me", signedIn(a.Me))
+	return mux
 }
 
 // do sends one request to the server (or the fake's sign-in page) with the browser's cookies.
@@ -53,7 +75,7 @@ func (b *browser) do(method, target string) *httptest.ResponseRecorder {
 	if req.URL.Path == "/oauth/authorize" { // the fake's page, on whatever host sent the browser there
 		b.fake.IdentityProvider().ServeHTTP(res, req)
 	} else {
-		b.auth.ServeHTTP(res, req)
+		b.server.ServeHTTP(res, req)
 	}
 	for _, c := range res.Result().Cookies() {
 		if c.MaxAge < 0 {
@@ -84,7 +106,7 @@ func (b *browser) follow(target string) *httptest.ResponseRecorder {
 }
 
 func (b *browser) signIn(name, back string) *httptest.ResponseRecorder {
-	return b.follow(server + "/auth/login?" + url.Values{"return": {back}, "login_hint": {name}}.Encode())
+	return b.follow(server + "/api/public/auth/login?" + url.Values{"return": {back}, "login_hint": {name}}.Encode())
 }
 
 func (b *browser) me() (Identity, int) {
@@ -125,7 +147,7 @@ func TestSignIn(t *testing.T) {
 
 func TestTheFakesPageAsksForANameWithoutAHint(t *testing.T) {
 	b := newBrowser(t, Options{})
-	res := b.do(http.MethodGet, server+"/auth/login?return=/")
+	res := b.do(http.MethodGet, server+"/api/public/auth/login?return=/")
 	require.Equal(t, http.StatusFound, res.Code)
 	page := b.do(http.MethodGet, server+res.Header().Get("Location"))
 	require.Equal(t, http.StatusOK, page.Code)
@@ -135,16 +157,16 @@ func TestTheFakesPageAsksForANameWithoutAHint(t *testing.T) {
 
 func TestSecureCookiesOffLoopback(t *testing.T) {
 	b := newBrowser(t, Options{})
-	res := b.do(http.MethodGet, "https://editor.example.org/auth/login?return=/")
+	res := b.do(http.MethodGet, "https://editor.example.org/api/public/auth/login?return=/")
 	require.Equal(t, http.StatusFound, res.Code)
 	require.True(t, b.cookies[loginCookie].Secure)
-	require.Contains(t, res.Header().Get("Location"), url.QueryEscape("https://editor.example.org/auth/callback"), "the callback on the host the browser named")
+	require.Contains(t, res.Header().Get("Location"), url.QueryEscape("https://editor.example.org/api/public/auth/callback"), "the callback on the host the browser named")
 }
 
 func TestRedirectURLFromConfig(t *testing.T) {
-	b := newBrowser(t, Options{RedirectURL: "https://editor.example.org/auth/callback"})
-	res := b.do(http.MethodGet, server+"/auth/login")
-	require.Contains(t, res.Header().Get("Location"), "redirect_uri="+url.QueryEscape("https://editor.example.org/auth/callback"))
+	b := newBrowser(t, Options{RedirectURL: "https://editor.example.org/api/public/auth/callback"})
+	res := b.do(http.MethodGet, server+"/api/public/auth/login")
+	require.Contains(t, res.Header().Get("Location"), "redirect_uri="+url.QueryEscape("https://editor.example.org/api/public/auth/callback"))
 	require.Contains(t, res.Header().Get("Location"), "code_challenge_method=S256")
 	require.Contains(t, res.Header().Get("Location"), "nonce=")
 }
@@ -154,7 +176,7 @@ func TestCallbackRefusals(t *testing.T) {
 		victim, attacker := newBrowser(t, Options{}), newBrowser(t, Options{})
 		attacker.auth = victim.auth // the same server
 		attacker.fake = victim.fake
-		res := attacker.do(http.MethodGet, server+"/auth/login?login_hint=Mallory")
+		res := attacker.do(http.MethodGet, server+"/api/public/auth/login?login_hint=Mallory")
 		callback := attacker.do(http.MethodGet, server+res.Header().Get("Location")).Header().Get("Location")
 		res = victim.do(http.MethodGet, callback)
 		require.Equal(t, http.StatusBadRequest, res.Code)
@@ -164,7 +186,7 @@ func TestCallbackRefusals(t *testing.T) {
 
 	t.Run("a callback used twice", func(t *testing.T) {
 		b := newBrowser(t, Options{})
-		res := b.do(http.MethodGet, server+"/auth/login?login_hint=Ann")
+		res := b.do(http.MethodGet, server+"/api/public/auth/login?login_hint=Ann")
 		callback := b.do(http.MethodGet, server+res.Header().Get("Location")).Header().Get("Location")
 		login := b.cookies[loginCookie]
 		require.Equal(t, http.StatusSeeOther, b.do(http.MethodGet, callback).Code)
@@ -174,18 +196,18 @@ func TestCallbackRefusals(t *testing.T) {
 
 	t.Run("the provider refused", func(t *testing.T) {
 		b := newBrowser(t, Options{})
-		res := b.do(http.MethodGet, server+"/auth/login")
+		res := b.do(http.MethodGet, server+"/api/public/auth/login")
 		state := mustQuery(t, res.Header().Get("Location")).Get("state")
-		res = b.do(http.MethodGet, server+"/auth/callback?"+url.Values{"state": {state}, "error": {"access_denied"}, "error_description": {"The user denied it"}}.Encode())
+		res = b.do(http.MethodGet, server+"/api/public/auth/callback?"+url.Values{"state": {state}, "error": {"access_denied"}, "error_description": {"The user denied it"}}.Encode())
 		require.Equal(t, http.StatusForbidden, res.Code)
 		require.Contains(t, res.Body.String(), "The user denied it")
 	})
 
 	t.Run("a code the provider does not know", func(t *testing.T) {
 		b := newBrowser(t, Options{})
-		res := b.do(http.MethodGet, server+"/auth/login")
+		res := b.do(http.MethodGet, server+"/api/public/auth/login")
 		state := mustQuery(t, res.Header().Get("Location")).Get("state")
-		res = b.do(http.MethodGet, server+"/auth/callback?"+url.Values{"state": {state}, "code": {"forged"}}.Encode())
+		res = b.do(http.MethodGet, server+"/api/public/auth/callback?"+url.Values{"state": {state}, "code": {"forged"}}.Encode())
 		require.Equal(t, http.StatusBadGateway, res.Code)
 		_, status := b.me()
 		require.Equal(t, http.StatusUnauthorized, status)
@@ -199,7 +221,7 @@ func mustQuery(t *testing.T, target string) url.Values {
 }
 
 func TestReturnURL(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "http://editor.example.org/auth/login", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://editor.example.org/api/public/auth/login", nil)
 	for raw, want := range map[string]string{
 		"":                                    "/",
 		"/projects?x=1#a":                     "/projects?x=1#a",
@@ -219,7 +241,7 @@ func TestLogout(t *testing.T) {
 	b := newBrowser(t, Options{})
 	b.signIn("Ann", "/")
 	session := b.cookies[sessionCookie]
-	require.Equal(t, http.StatusNoContent, b.do(http.MethodPost, server+"/auth/logout").Code)
+	require.Equal(t, http.StatusNoContent, b.do(http.MethodPost, server+"/api/auth/logout").Code)
 	require.NotContains(t, b.cookies, sessionCookie)
 	b.cookies[sessionCookie] = session // a copy kept elsewhere is worth nothing now
 	_, status := b.me()
@@ -230,18 +252,15 @@ func TestOtherSitesPagesAreNobody(t *testing.T) {
 	b := newBrowser(t, Options{})
 	b.signIn("Ann", "/")
 	b.origin = "http://127.0.0.1:5199" // the demo: same host, another port
-	res := b.do(http.MethodGet, server+"/api/me")
-	require.Equal(t, http.StatusOK, res.Code)
-	require.Equal(t, "http://127.0.0.1:5199", res.Header().Get("Access-Control-Allow-Origin"))
-	require.Equal(t, "true", res.Header().Get("Access-Control-Allow-Credentials"))
+	_, status := b.me()
+	require.Equal(t, http.StatusOK, status)
 
 	b.origin = "https://evil.example"
-	res = b.do(http.MethodGet, server+"/api/me")
-	require.Equal(t, http.StatusUnauthorized, res.Code)
-	require.Empty(t, res.Header().Get("Access-Control-Allow-Origin"))
-	require.Equal(t, http.StatusForbidden, b.do(http.MethodPost, server+"/auth/logout").Code)
+	_, status = b.me()
+	require.Equal(t, http.StatusUnauthorized, status)
+	require.Equal(t, http.StatusUnauthorized, b.do(http.MethodPost, server+"/api/auth/logout").Code)
 	b.origin = ""
-	_, status := b.me()
+	_, status = b.me()
 	require.Equal(t, http.StatusOK, status, "another site cannot sign the user out either")
 }
 
@@ -260,7 +279,7 @@ func TestSessionsExpire(t *testing.T) {
 func TestProviderUnreachable(t *testing.T) {
 	a := New(Options{Provider: "gitlab", Issuer: "https://gitlab.invalid", ClientID: "x", ClientSecret: "y", Client: fakegitlab.New("p", nil).Client(), Log: zerolog.Nop()})
 	res := httptest.NewRecorder()
-	a.ServeHTTP(res, httptest.NewRequest(http.MethodGet, server+"/auth/login", nil))
+	mount(a).ServeHTTP(res, httptest.NewRequest(http.MethodGet, server+"/api/public/auth/login", nil))
 	require.Equal(t, http.StatusBadGateway, res.Code)
 	require.Contains(t, res.Body.String(), "cannot be reached")
 }

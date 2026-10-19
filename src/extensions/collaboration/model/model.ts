@@ -9,7 +9,7 @@ import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/room-protocol/room-protocol';
-import { serverHttpBase } from '../account';
+import { roomsWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
@@ -38,14 +38,22 @@ export class Collaboration {
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
   /** Commits to the branch, in a room backed by a GitLab branch (else null). */
   readonly sourceControl: GitLabSourceControl | null = null;
+  /** Settles when the server's connection ended because the session did (it no longer reconnects then). */
+  readonly signedOut: Promise<void>;
 
   private constructor(
     ydoc: Y.Doc,
     awareness: Awareness | null,
     shared: SharedRoom,
-    private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array>; tell: Tell } | null,
+    private readonly server: {
+      provider: HocuspocusProvider;
+      files: (path: ProjectPath) => Promise<Uint8Array>;
+      tell: Tell;
+      signedOut: Promise<void>;
+    } | null,
   ) {
     const { project, user } = shared;
+    this.signedOut = server?.signedOut ?? new Promise<void>(() => {});
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
       this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, user && { name: user.name });
       this.assets = new SharedAssets(project, ydoc, server.files);
@@ -62,16 +70,25 @@ export class Collaboration {
    * Starts sharing `shared`. With a server, this connects and waits for the
    * first sync, so a room's existing text wins over the local one; the room's source control tells its outcomes
    * and news with `tell` (default: not at all). The WebSocket carries the session cookie: the server knows who
-   * connects. Rejects with the server's reason when it refuses the room (not signed in: SIGN_IN_REQUIRED; no access
-   * to the GitLab project; a plain room on a server that opens only GitLab rooms).
+   * connects, and refuses it without a session (401, which a browser does not tell; the connection just closes).
+   * So `signedIn` is asked whenever it closes: false, and it stops reconnecting, `start` rejecting with
+   * SignInRequired, or later `signedOut` settling. Rejects with the server's reason when it refuses the room (no
+   * access to the GitLab project; a plain room on a server that opens only GitLab rooms).
    */
-  static async start(options: CollaborationOptions, shared: SharedRoom, tell: Tell = () => {}): Promise<Collaboration> {
+  static async start(
+    options: CollaborationOptions,
+    shared: SharedRoom,
+    tell: Tell = () => {},
+    signedIn: () => Promise<boolean> = async () => true,
+  ): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
-    const provider = new HocuspocusProvider({ url: options.url, name: options.room, document: ydoc });
+    const provider = new HocuspocusProvider({ url: roomsWebSocketUrl(options.url), name: options.room, document: ydoc });
+    const signedOut = whenSignedOut(provider, signedIn);
     try {
       await new Promise<void>((resolve, reject) => {
         provider.on('authenticationFailed', ({ reason }: { reason: string }) => reject(new Error(reason)));
+        void signedOut.then(() => reject(new SignInRequired()));
         if (provider.isSynced) resolve();
         else provider.on('synced', () => resolve());
       });
@@ -80,7 +97,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell, signedOut });
   }
 
   /**
@@ -123,6 +140,22 @@ function statelessChannel(provider: HocuspocusProvider): StatelessChannel {
       return new Disposable(() => provider.off('stateless', handler));
     },
   };
+}
+
+/** Settles once the connection closed and `signedIn` says the session is gone (not when the server cannot be asked); the provider stops reconnecting then. */
+function whenSignedOut(provider: HocuspocusProvider, signedIn: () => Promise<boolean>): Promise<void> {
+  return new Promise((resolve) => {
+    const closed = () =>
+      void signedIn()
+        .catch(() => true)
+        .then((still) => {
+          if (still) return;
+          provider.off('close', closed);
+          provider.disconnect();
+          resolve();
+        });
+    provider.on('close', closed);
+  });
 }
 
 /** Fetches a file of the room from the server's HTTP side, with the session cookie (as the WebSocket). */
