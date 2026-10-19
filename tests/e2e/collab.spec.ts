@@ -6,9 +6,8 @@ import { SERVER_DEMO, serve, signIn, test } from './fixtures';
 import { caretAtEnd, caretAtStart, selectText } from './visual-helpers';
 
 // Two users in one room of the local collaboration server. Needs the server:
-// run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234,
+// its config (playwright.collab.config.ts) starts it (ws://127.0.0.1:1234,
 // plain rooms on). Each user signs in at its fake GitLab, in a browser session of their own.
-test.skip(!process.env.ZWF_COLLAB_E2E, 'needs the collaboration server: mise run test:e2e-collab');
 test.use({ baseURL: SERVER_DEMO });
 
 async function join(browser: Browser, baseURL: string, room: string, user: string): Promise<Page> {

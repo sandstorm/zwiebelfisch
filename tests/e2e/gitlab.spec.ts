@@ -3,11 +3,10 @@ import { expect, type Browser, type Page } from '@playwright/test';
 import { SERVER, SERVER_DEMO, fileRow, openFile, serve, signIn, test } from './fixtures';
 
 // A room backed by a (fake, in-memory) GitLab branch. Needs the server with
-// the fake GitLab: run through `mise run test:e2e-gitlab`, which starts it
+// the fake GitLab: its config (playwright.gitlab.config.ts) starts it
 // (ws://127.0.0.1:1234; every test gets a fresh branch of demo/report, which
 // holds the demo's advanced example: template, chapters, SVG images). Everyone
 // signs in at the fake GitLab first (any name; everyone is a Developer).
-test.skip(!process.env.ZWF_GITLAB_E2E, 'needs the collaboration server with a fake GitLab: mise run test:e2e-gitlab');
 test.use({ baseURL: SERVER_DEMO });
 
 /** Opens the room as `user`, signed in in a browser session of their own (main.typ shown). */

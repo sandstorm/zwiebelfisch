@@ -2,17 +2,13 @@
 
 = Architecture overview <architecture-overview>
 
-#unreviewed
-
-The widget is a few models, a few view hosts, and extensions for everything else.
-
 == Layers <architecture-overview-layers>
 
 #table(
   columns: (auto, 1fr),
   table.header[Folder][Job],
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax (@architecture-core).],
-  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, no feature knowledge (@architecture-prosemirror-typst, @architecture-visual-editor, @architecture-source-editor, @architecture-preview, @architecture-workbench).],
+  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-prosemirror-typst, @architecture-visual-editor, @architecture-source-editor, @architecture-preview, @architecture-workbench).],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …): every feature and every construct beyond paragraphs and raw Typst (@architecture-extensions-built-in).],
   [`src/editor/`], [`createEditor`: a `Project` in the workbench host with the built-in extensions.],
   [`src/editor-element/`], [`<zwiebelfisch-editor>`: a shadow root around `createEditor`.],

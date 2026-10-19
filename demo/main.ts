@@ -73,7 +73,7 @@ async function probe(): Promise<ServerProbe | null> {
 /** The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved (static build). */
 function docsSync(files: ProjectFiles): DocsSync | null {
   const sync = connectDocsSync(files, (text, level) => bar.setSaveStatus(text, level));
-  bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo or demo:build saves them to docs/)', 'muted');
+  bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo saves them to docs/)', 'muted');
   return sync;
 }
 

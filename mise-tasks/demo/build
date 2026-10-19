@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Playground on the built demo: builds it (build:demo → dist/demo, as the e2e build), then serves it with vite preview like demo (:5199, collaboration server with a fake GitLab on :1234); Ctrl-C stops both"
-#MISE depends=["build:demo"]
-# Loading as in production: a few bundled files instead of the dev server's many modules. The Documentation example
-# still saves to docs/ (the docs-files plugin runs in vite preview too). Usage: README.md (Demo).
-set -euo pipefail
-exec mise run demo preview "$@"

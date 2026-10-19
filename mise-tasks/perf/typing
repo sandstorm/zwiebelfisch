@@ -4,4 +4,4 @@
 #USAGE arg "[scenario]" help="Only the scenarios whose name contains this (e.g. 'docs', 'table cell')" default=""
 set -euo pipefail
 # tests/perf/typing.perf.ts; open a .cpuprofile in Chrome DevTools' Performance panel
-ZWF_PERF=1 ZWF_PERF_SCENARIO="$usage_scenario" exec pnpm exec vitest run
+ZWF_PERF_SCENARIO="$usage_scenario" exec pnpm exec vitest run --config tests/perf/vitest.config.ts

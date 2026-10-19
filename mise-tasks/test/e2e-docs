@@ -1,22 +1,10 @@
 #!/usr/bin/env bash
-#MISE description="Start the demo dev server and run the docs-editing Playwright spec against it (edits docs/10_getting-started/01_getting-started.typ, restores it)"
+#MISE description="Run the docs-editing Playwright spec against the demo dev server, which Playwright starts (edits docs/10_getting-started/01_getting-started.typ, restores it)"
 #MISE depends=["build:engine", "build:fonts"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }
 #USAGE arg "[playwright_args]..." help="Passed on to Playwright (flags after --)" double_dash="automatic"
 set -euo pipefail
-# the browser choice as Playwright's --project, the rest passed on (as in test:e2e)
-args=("$@")
-[[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
-[[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-pnpm exec vite &
-server=$!
-trap 'kill "$server"' EXIT
-# wait until Vite accepts connections (up to 30 s)
-for _ in $(seq 300); do
-  if (exec 3<>/dev/tcp/127.0.0.1/5199) 2>/dev/null; then break; fi
-  sleep 0.1
-done
-# one worker: every browser edits the same file
-ZWF_DOCS_E2E=1 pnpm exec playwright test tests/e2e/docs-editing.spec.ts --workers=1 ${args[@]+"${args[@]}"}
+source mise-tasks/test/playwright.sh
+playwright_test playwright.docs.config.ts "$@"

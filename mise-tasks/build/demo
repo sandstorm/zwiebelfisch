@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Build the demo app as in production (vite build → dist/demo; what demo:build, the e2e tests and the Docker image serve)"
+#MISE description="Build the demo app as in production (vite build → dist/demo; what `demo preview`, the e2e tests and the Docker image serve)"
 #MISE depends=["build:engine", "build:fonts"]
 # `-- --base ./ --mode static`: the static site GitHub Pages publishes (demo/static-site.ts, .github/workflows/pages.yml)
 set -euo pipefail

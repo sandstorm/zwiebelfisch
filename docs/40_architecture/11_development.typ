@@ -48,13 +48,13 @@ mise run server:test   # when server/ or core/room-protocol changed
 == Tests <architecture-development-tests>
 
 - *Unit* (vitest, `*.test.ts` next to the code) run in node. DOM tests opt in with `// @vitest-environment jsdom`.
-- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`) run against `dist/demo` and `dist/lib` through request interception, so no port is opened. The specs against the playground server (`test:e2e-collab`, `test:e2e-gitlab`) open the demo that server serves on :5199: Chromium lets only a page from a loopback address reach the server on 127.0.0.1 (Local Network Access). A slow connection is a route that holds requests back (`slow-connection.spec.ts`).
+- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`) run against `dist/demo` and `dist/lib` through request interception, so no port is opened. The specs that need a server of their own (`test:e2e-collab`, `test:e2e-gitlab`, `test:e2e-docs`) have a Playwright config each (`playwright.<suite>.config.ts`), which starts that server; the main config leaves them out. The ones against the playground server open the demo it serves on :5199: Chromium lets only a page from a loopback address reach the server on 127.0.0.1 (Local Network Access). A slow connection is a route that holds requests back (`slow-connection.spec.ts`).
 - *Test packages* (`greet`, `drafting`, `cheq`) sit next to the tests that use them.
 - *Agents in the sandbox* cannot launch a browser or bind ports. They write Playwright specs; the user runs them.
 
 == Performance <architecture-development-performance>
 
-`mise run perf:typing` types into the whole widget with the real engine, in jsdom (a paragraph, a list item and a table cell, in the advanced example and in these docs), and prints per keystroke: *sync* (what the keystroke itself blocks), *main thread* (by module and function), *engine* (the worker's work, counted apart) and *layout reads* by caller (free in jsdom, a forced layout in a browser).
+`mise run perf:typing` (`tests/perf/`, vitest with a config of its own: a measurement, no pass or fail) types into the whole widget with the real engine, in jsdom (a paragraph, a list item and a table cell, in the advanced example and in these docs), and prints per keystroke: *sync* (what the keystroke itself blocks), *main thread* (by module and function), *engine* (the worker's work, counted apart) and *layout reads* by caller (free in jsdom, a forced layout in a browser).
 
 - The profiles land in `.cache/perf/*.cpuprofile`; Chrome DevTools opens them.
 - jsdom does not measure style, layout and paint: record typing in DevTools' Performance panel and look at the long tasks after a keystroke and after a compile.
@@ -85,7 +85,7 @@ Hello TYPST
 
 == Writing the docs in the demo <architecture-development-writing-docs>
 
-On `mise run demo` and `mise run demo:build`, the Documentation example (`?example=docs`) edits the files in `docs/` of the checkout: write, watch the preview, commit.
+On `mise run demo` and `mise run demo preview` (the last `build:demo`), the Documentation example (`?example=docs`) edits the files in `docs/` of the checkout: write, watch the preview, commit.
 
 - *Saving*: an edit is written once typing pauses. A create, rename, delete or upload in the file panel happens on disk first. The playground bar says "Saving…", "Saved to …", or why not.
 - *Changes on disk* (a checkout, another editor) show up without a reload; unsaved edits in the editor are kept and the next edit saves over the disk.

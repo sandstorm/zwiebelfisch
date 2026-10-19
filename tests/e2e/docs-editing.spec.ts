@@ -4,8 +4,6 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-test.skip(!process.env.ZWF_DOCS_E2E, 'needs the dev server: mise run test:e2e-docs');
-
 const DEV_SERVER = 'http://127.0.0.1:5199';
 const FILE = resolve(import.meta.dirname, '../../docs/10_getting-started/01_getting-started.typ');
 const saveStatus = (page: Page) => page.getByTestId('save-status');

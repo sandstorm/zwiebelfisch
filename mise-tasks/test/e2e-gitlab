@@ -1,24 +1,10 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), then run the GitLab room Playwright spec"
+#MISE description="Run the GitLab room Playwright spec against the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), which Playwright starts"
 #MISE depends=["build", "server:build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }
 #USAGE arg "[playwright_args]..." help="Passed on to Playwright (flags after --)" double_dash="automatic"
 set -euo pipefail
-# the browser choice as Playwright's --project, the rest passed on (as in test:e2e)
-args=("$@")
-[[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
-[[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
-# plain rooms off (the default): gitlab.spec.ts checks that such a server refuses them. The demo build on :5199
-# (ZWF_DEMO_DIST): the specs open it there, same host as the server, so the session cookie goes along, and the
-# browser comes back there from signing in.
-ZWF_DEMO_DIST=dist/demo .cache/bin/fake-gitlab &
-server=$!
-trap 'kill "$server"' EXIT
-# wait until the server accepts connections (up to 10 s)
-for _ in $(seq 100); do
-  if (exec 3<>/dev/tcp/127.0.0.1/1234) 2>/dev/null; then break; fi
-  sleep 0.1
-done
-ZWF_GITLAB_E2E=1 pnpm exec playwright test tests/e2e/gitlab.spec.ts ${args[@]+"${args[@]}"}
+source mise-tasks/test/playwright.sh
+playwright_test playwright.gitlab.config.ts "$@"

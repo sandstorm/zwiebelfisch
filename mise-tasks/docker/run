@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Run the zwiebelfisch-demo image (docker:build): the demo on http://127.0.0.1:5199/, the server on ws://127.0.0.1:1234; Ctrl-C stops both"
+#MISE description="Run the zwiebelfisch-demo image (docker:build): the demo on http://127.0.0.1:5199/, the server on ws://127.0.0.1:1234; like `mise run demo preview`; Ctrl-C stops both"
 # Published on 127.0.0.1 only: the playground server has no authentication. The ports are fixed, as the page expects the
 # server on 127.0.0.1:1234 (demo/playground.ts). Arguments go to docker run.
 set -euo pipefail

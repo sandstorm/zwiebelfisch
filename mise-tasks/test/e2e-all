@@ -1,22 +1,19 @@
 #!/usr/bin/env bash
 #MISE description="Run every end-to-end suite: all browsers, collaboration, GitLab, docs editing; goes on after a failure, then lists the failed suites"
-#MISE depends=["build", "build:lib"]
+#MISE depends=["build", "build:packages", "server:build"]
 #USAGE arg "[browser]" help="Only this browser, in every suite (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }
 set -uo pipefail
+source mise-tasks/test/playwright.sh
 failed=()
-run() {
-  local name="$1"
-  shift
-  echo "=== $name"
-  "$@" || failed+=("$name")
-}
-# each suite its own results folder (test-results/<suite>/), so a later suite does not wipe an earlier one's failures
-run "test:e2e ($usage_browser)" mise run test:e2e "$usage_browser" -- --output=test-results/e2e
-run "test:e2e-collab ($usage_browser)" mise run test:e2e-collab "$usage_browser" -- --output=test-results/collab
-run "test:e2e-gitlab ($usage_browser)" mise run test:e2e-gitlab "$usage_browser" -- --output=test-results/gitlab
-run "test:e2e-docs ($usage_browser)" mise run test:e2e-docs "$usage_browser" -- --output=test-results/docs
+# each suite its own results folder (test-results/<suite>/, its config's outputDir)
+for suite in e2e collab gitlab docs; do
+  config=playwright.$suite.config.ts
+  [[ $suite == e2e ]] && config=playwright.config.ts
+  echo "=== $suite ($usage_browser)"
+  playwright_test "$config" "$@" || failed+=("$suite")
+done
 if ((${#failed[@]})); then
   printf 'Failed: %s\n' "${failed[@]}"
   exit 1

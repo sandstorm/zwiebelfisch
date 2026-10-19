@@ -73,7 +73,7 @@ export async function clickGlyph(glyph: Locator, options: { clickCount?: number 
   await glyph.page().mouse.click(point.x, point.y, options);
 }
 
-/** The playground server (server/cmd/fake-gitlab, as `mise run test:e2e-gitlab` / `test:e2e-collab` start it). */
+/** The playground server (server/cmd/fake-gitlab, as playwright.gitlab.config.ts / playwright.collab.config.ts start it). */
 export const SERVER = 'http://127.0.0.1:1234';
 
 /**
