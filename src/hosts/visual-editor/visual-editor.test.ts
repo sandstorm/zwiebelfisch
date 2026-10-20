@@ -217,14 +217,14 @@ describe('VisualEditor contexts', () => {
   });
 
   it("gives a raw box's code its decorations (setRawBoxDecorations), when made and on every update", () => {
-    const contributions = new VisualEditorHost();
     const given: number[] = [];
-    contributions.registerRawBoxCodeMirrorExtension(() =>
-      EditorState.transactionExtender.of((tr) => {
-        for (const effect of tr.effects) if (effect.is(setRawBoxDecorations)) given.push(effect.value.length);
-        return null;
-      }),
-    );
+    const contributions = new VisualEditorHost({
+      rawBoxCodeMirrorExtensions: () =>
+        EditorState.transactionExtender.of((tr) => {
+          for (const effect of tr.effects) if (effect.is(setRawBoxDecorations)) given.push(effect.value.length);
+          return null;
+        }),
+    });
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Intro\n\n#set page(width: 10cm)\n');
     const view = new VisualEditor(parent, doc, contributions);

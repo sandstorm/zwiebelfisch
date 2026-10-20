@@ -17,8 +17,8 @@ export function codeEditing(): Extension {
     id: 'code-editing',
     activate({ sourceEditor, subscriptions }) {
       subscriptions.push(
-        sourceEditor.registerSharedCodeMirrorExtension(codeColors),
-        sourceEditor.registerCodeMirrorExtension([basicSetup, keymap.of([indentWithTab]), EditorView.lineWrapping]),
+        sourceEditor.registerCodeMirrorExtension({}, codeColors),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, [basicSetup, keymap.of([indentWithTab]), EditorView.lineWrapping]),
       );
     },
   };

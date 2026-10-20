@@ -18,8 +18,8 @@ import { RenderedBox } from './rendered-box';
  * outline). It is edited as code in a nested CodeMirror, so no Typst is lost or rewritten. Contributions add the code's
  * language and links, a picture instead of the code (box renderers) and what the picture does, a title and tools.
  *
- * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxCodeMirrorExtension`,
- * `registerRawBoxPictureExtension` and a node spec's `tools`.
+ * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxPictureExtension`, a
+ * node spec's `tools` and, to the code, `sourceEditor.registerCodeMirrorExtension`.
  */
 export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });
@@ -31,7 +31,7 @@ export interface RawBoxes {
   /** Draw boxes instead of their code; the first that `renders` a box draws it. */
   readonly renderers: readonly RawBoxRenderer[];
   /** Extensions of every box's code editor. */
-  readonly codeExtensions: readonly CodeExtension[];
+  readonly codeExtensions: CodeExtension;
   /** Take part in every box's picture (see `registerRawBoxPictureExtension`). */
   readonly pictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
   /** What the specs ask the editor for, by node type name (a box's title and tools). */
@@ -178,7 +178,7 @@ class RawBox implements NodeView {
   }
 
   /** The nested code editor, in `parent`. */
-  private createCode(parent: HTMLElement, inline: boolean, contributed: readonly CodeExtension[]): CodeView {
+  private createCode(parent: HTMLElement, inline: boolean, contributed: CodeExtension): CodeView {
     return new CodeView({
       parent,
       // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root

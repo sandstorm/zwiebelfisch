@@ -57,7 +57,7 @@ export class VisualEditor {
     this.tiptap = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.rawBoxCodeMirrorExtensions(editor))),
         highlights,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
@@ -216,13 +216,15 @@ export class VisualEditorHost implements VisualEditorContributions {
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
-    rawBoxCodeMirrorExtensions: [] as ((editor: VisualEditorContext) => Extension)[],
     rawBoxPictureExtensions: [] as ((box: RawBoxPictureHost) => Disposable)[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
+
+  /** `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the workbench's: its CodeMirror contributions); default: none. */
+  constructor(private readonly options: { rawBoxCodeMirrorExtensions?(editor: VisualEditorContext): Extension } = {}) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
@@ -264,16 +266,17 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable {
-    return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
-  }
-
   registerRawBoxPictureExtension(provider: (box: RawBoxPictureHost) => Disposable): Disposable {
     return this.add(this.lists.rawBoxPictureExtensions, provider);
   }
 
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
     return this.add(this.lists.textStyles, provider);
+  }
+
+  /** The CodeMirror extensions of the raw boxes' code in `editor` (see the constructor). */
+  rawBoxCodeMirrorExtensions(editor: VisualEditorContext): Extension {
+    return this.options.rawBoxCodeMirrorExtensions?.(editor) ?? [];
   }
 
   /** Everything registered now (for the host, when it creates an editor). */
@@ -287,7 +290,6 @@ export class VisualEditorHost implements VisualEditorContributions {
       toolbarItems: [...lists.toolbarItems],
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
-      rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
       rawBoxPictureExtensions: [...lists.rawBoxPictureExtensions],
       textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
@@ -304,11 +306,11 @@ export class VisualEditorHost implements VisualEditorContributions {
 }
 
 /** What the raw boxes of `editor` get from the contributions. */
-function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews']): RawBoxes {
+function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], codeExtensions: Extension): RawBoxes {
   return {
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
-    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(editor)),
+    codeExtensions,
     pictureExtensions: contributed.rawBoxPictureExtensions,
     nodeViews,
   };

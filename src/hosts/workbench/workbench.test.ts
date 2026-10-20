@@ -344,7 +344,7 @@ describe('WorkbenchHost', () => {
     const { host, workbench } = setup((context) => {
       preview = context.preview;
       context.subscriptions.push(
-        context.sourceEditor.registerCodeMirrorExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
+        context.sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, EditorView.editorAttributes.of({ class: 'contributed' })),
         context.preview.registerToolbarItem(item, { group: 'test' }),
       );
     });
@@ -409,17 +409,20 @@ describe('WorkbenchHost', () => {
     expect(workbench.isEditorFocused()).toBe(true);
   });
 
-  it("gives the shared CodeMirror extensions to the Source editors and raw boxes' code, as Typst in their file", () => {
+  it("gives the CodeMirror extensions to the Source editors and raw boxes' code, as Typst in their file", () => {
     const seen: string[] = [];
     const { host, workbench } = setup(({ sourceEditor, subscriptions }) =>
       subscriptions.push(
-        sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path()}`), EditorView.editorAttributes.of({ class: 'shared' }))),
+        sourceEditor.registerCodeMirrorExtension({}, ({ editor, languageId, path }) => (seen.push(`${editor} ${languageId} ${path()}`), EditorView.editorAttributes.of({ class: 'every' }))),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, EditorView.editorAttributes.of({ class: 'box' })),
       ),
     );
-    expect(host.querySelector('[data-testid=zwf-source]')!.classList.contains('shared')).toBe(true);
+    const source = host.querySelector('[data-testid=zwf-source]')!;
+    expect([source.classList.contains('every'), source.classList.contains('box')]).toEqual([true, false]);
     workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
-    expect(host.querySelector('.zwf-visual__raw-block .cm-editor')!.classList.contains('shared')).toBe(true);
-    expect(new Set(seen)).toEqual(new Set(['typst /main.typ']));
+    const box = host.querySelector('.zwf-visual__raw-block .cm-editor')!;
+    expect([box.classList.contains('every'), box.classList.contains('box')]).toEqual([true, true]);
+    expect(new Set(seen)).toEqual(new Set(['source typst /main.typ', 'rawBox typst /main.typ']));
   });
 });
 

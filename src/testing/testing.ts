@@ -1,3 +1,4 @@
+import type { Extension as CodeExtension } from '@codemirror/state';
 import { Editor } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
@@ -74,6 +75,8 @@ export interface TestEditorOptions {
   prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
   contributions?: readonly VisualEditorContribution[];
+  /** The CodeMirror extensions of the raw boxes' code (the widget's: those for `editor: 'rawBox'`); default: none. */
+  rawBoxCodeMirrorExtensions?: CodeExtension;
 }
 
 /**
@@ -146,11 +149,11 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
  * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
  * The languages are a real registry (the clipboard's paste edits take part in a paste); other registrations than the
- * Visual editor's (style sheets, commands, custom editors, search providers, Source editor extensions) are accepted
+ * Visual editor's (style sheets, commands, custom editors, search providers, CodeMirror extensions) are accepted
  * and ignored.
  */
 function activate(contributions: readonly VisualEditorContribution[], options: TestEditorOptions = {}): VisualEditorHost {
-  const visualEditor = new VisualEditorHost();
+  const visualEditor = new VisualEditorHost({ rawBoxCodeMirrorExtensions: () => options.rawBoxCodeMirrorExtensions ?? [] });
   const context = { visualEditor, subscriptions: [], ...testContext(options) };
   for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);
   return visualEditor;

@@ -56,8 +56,12 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  readonly #visualEditor = new VisualEditorHost();
   readonly #sourceEditors = new SourceEditorHost();
+  /** Its raw boxes' code takes the CodeMirror contributions (`editor: 'rawBox'`, as Typst in its file). */
+  readonly #visualEditor = new VisualEditorHost({
+    rawBoxCodeMirrorExtensions: ({ document }) =>
+      this.#sourceEditors.codeMirrorExtensionsFor({ editor: 'rawBox', languageId: 'typst', path: () => this.project.pathOf(document) ?? null, document }),
+  });
   readonly #preview: Preview;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   readonly #railActions: Disposable;
@@ -300,17 +304,13 @@ export class WorkbenchHost implements Workbench {
   }
 
   /**
-   * The Typst files' language, `typst` (`.typ`). The raw boxes' code takes the shared CodeMirror extensions (as Typst
-   * in its file), as the Source editors do. A project
-   * file (a row of the file panel) dropped into a Visual or Source editor becomes what the drop edit providers
-   * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped; so does a file from the
-   * computer, once uploaded (`#upload`): the providers know only project files.
+   * The Typst files' language, `typst` (`.typ`). A project file (a row of the file panel) dropped into a Visual or
+   * Source editor becomes what the drop edit providers (`languages.registerDocumentDropEditProvider`) make of it,
+   * inserted where it was dropped; so does a file from the computer, once uploaded (`#upload`): the providers know only
+   * project files.
    */
   #extendEditors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
-    this.#visualEditor.registerRawBoxCodeMirrorExtension(({ document }) =>
-      this.#sourceEditors.createSharedCodeMirrorExtension({ languageId: 'typst', path: () => this.project.pathOf(document) ?? null }),
-    );
     const drops: DocumentDrops = {
       edit: (document, offset, file) => {
         const path = this.project.pathOf(document);
@@ -319,7 +319,7 @@ export class WorkbenchHost implements Workbench {
       upload: (document, files) => this.#upload(document, files),
     };
     this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
-    this.#sourceEditors.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, drops));
+    this.#sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => sourceEditorDrops(document, drops));
   }
 
   /**

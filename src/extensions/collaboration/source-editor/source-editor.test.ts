@@ -14,7 +14,7 @@ function withPresence(text: string) {
   const doc = new TypstDocument(text);
   const presences = new Presences((document) => (document === doc ? MAIN : undefined));
   const host = new SourceEditorHost();
-  host.registerCodeMirrorExtension(sourcePresence(presences));
+  host.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences));
   const parent = document.createElement('div');
   document.body.append(parent);
   host.createEditor(parent, doc);
@@ -62,7 +62,7 @@ describe('presence in the Source editor', () => {
     const presences = new Presences((document) => (document === doc ? MAIN : undefined));
     presences.set([{ ...ann, anchor: SourceOffset.of(5), head: SourceOffset.of(9), path: MAIN }, { ...ann, id: '2', anchor: SourceOffset.of(0), head: SourceOffset.of(4), path: ProjectPath.of('/a.typ') }]);
     const host = new SourceEditorHost();
-    host.registerCodeMirrorExtension(sourcePresence(presences));
+    host.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences));
     const parent = document.body.appendChild(document.createElement('div'));
     host.createEditor(parent, doc);
     expect(marked(parent, '.zwf-collaboration__selection')).toEqual(['bold']);

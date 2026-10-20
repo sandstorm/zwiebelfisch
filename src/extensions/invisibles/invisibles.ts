@@ -27,7 +27,7 @@ export function invisibles(): Extension {
       const show = (on: boolean) => {
         shown = on;
         codeMirror?.dispose();
-        codeMirror = on ? sourceEditor.registerSharedCodeMirrorExtension(highlightWhitespace()) : null;
+        codeMirror = on ? sourceEditor.registerCodeMirrorExtension({}, highlightWhitespace()) : null;
         changed.fire(on);
       };
       show(shown);

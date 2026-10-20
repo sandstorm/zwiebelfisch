@@ -25,7 +25,7 @@ function setup() {
     languages: {
       registerDocumentLinkProvider: (registeredFor: DocumentSelector, registered: DocumentLinkProvider) => ((selector = registeredFor), (provider = registered), new Disposable(() => {})),
     },
-    sourceEditor: { registerSharedCodeMirrorExtension: ignored },
+    sourceEditor: { registerCodeMirrorExtension: ignored },
     visualEditor: { registerTiptapExtension: ignored, registerRawBoxPictureExtension: ignored },
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,

@@ -26,7 +26,7 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   const project = new Project(path('/main.typ'), { '/main.typ': 'Alpha\n', '/b.typ': 'Beta\n', '/logo.png': new Uint8Array([1]) });
   // the Source editors with an undo history (the code-editing extension's basic setup has one)
   const sourceEditors = new SourceEditorHost();
-  sourceEditors.registerCodeMirrorExtension(history());
+  sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, history());
   const editors = new DocumentEditors(project, { visualEditor: VisualEditorHost.from([]), sourceEditors, onSelection: (editor) => options.onSelection?.(editor.selection) });
   const window = new WindowHost({
     exists: (at) => project.has(at),

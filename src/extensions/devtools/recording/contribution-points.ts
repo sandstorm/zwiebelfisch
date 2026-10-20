@@ -68,10 +68,11 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
   'visualEditor.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
-  'visualEditor.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
   'visualEditor.registerRawBoxPictureExtension': ([provider]) => named(provider, 'picture extension'),
-  'sourceEditor.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
-  'sourceEditor.registerSharedCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
+  'sourceEditor.registerCodeMirrorExtension': ([selector, extension]) => {
+    const { language, editor } = record(selector);
+    return { ...named(extension, 'CodeMirror extensions'), details: [`language ${String(language ?? '*')}`, `editor ${String(editor ?? '*')}`] };
+  },
   'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
   'workbench.registerSidePanel': ([id, options]) => {
     const { label, side, order } = record(options);

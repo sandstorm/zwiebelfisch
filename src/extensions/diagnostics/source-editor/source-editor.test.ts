@@ -13,7 +13,7 @@ const base = { severity: 'error' as const, message: 'unknown variable: unknown',
 describe('lint in the Source editors', () => {
   function setup(diagnostics: DiagnosticCollection, document: TypstDocument) {
     const host = new SourceEditorHost();
-    host.registerCodeMirrorExtension(lint(diagnostics));
+    host.registerCodeMirrorExtension({ editor: 'source' }, lint(diagnostics));
     const parent = window.document.body.appendChild(window.document.createElement('div'));
     host.createEditor(parent, document);
     return () => [...parent.querySelectorAll('.cm-lintRange-error')].map((range) => range.textContent);
@@ -53,7 +53,7 @@ describe('lint in the Source editors', () => {
     const document = new TypstDocument('#unknown\n');
     const parent = window.document.body.appendChild(window.document.createElement('div'));
     const host = new SourceEditorHost();
-    host.registerCodeMirrorExtension(lint(diagnostics));
+    host.registerCodeMirrorExtension({ editor: 'source' }, lint(diagnostics));
     host.createEditor(parent, document);
     diagnostics.set(document, [{ ...base, severity: 'warning', hints: ['did you mean `known`?', 'or this'], from: SourceOffset.of(5), to: SourceOffset.of(30) }]);
     expect(shown(parent)).toEqual([

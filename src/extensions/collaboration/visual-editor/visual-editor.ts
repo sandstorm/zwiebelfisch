@@ -9,11 +9,12 @@ import type { SourceHighlight, SourceHighlightProvider, VisualEditorContext, Vis
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
 import type { PlacedPresence, PresenceSource, PresenceUser } from '../presence/presence';
 import { caretElement } from '../source-editor/source-editor';
-import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';
+import { boxCaretsSpec, type BoxCaret } from './box-carets';
 
 /**
  * Draws the other users' places in every Visual editor, as `presences` has them: their selections as highlights,
- * their carets in the editor and in the code of its raw boxes; they follow edits. `documents`: the project's
+ * their carets in the editor and, as decorations for `boxPresence` to draw, in the code of its raw boxes; they follow
+ * edits. `documents`: the project's
  * documents now (any of them may have editors).
  */
 export function visualPresence(presences: PresenceSource, documents: () => readonly TypstDocument[]): VisualEditorContribution {
@@ -23,7 +24,6 @@ export function visualPresence(presences: PresenceSource, documents: () => reado
       subscriptions.push(
         visualEditor.registerHighlights('collaboration.selections', selections(presences, documents)),
         visualEditor.registerTiptapExtension((editor) => remoteCarets(editor, presences)),
-        visualEditor.registerRawBoxCodeMirrorExtension(() => boxPresence),
       );
     },
   };

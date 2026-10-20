@@ -8,6 +8,7 @@ import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
 import { visualPresence } from './visual-editor/visual-editor';
+import { boxPresence } from './visual-editor/box-carets';
 import { AccountStatus } from './workbench/account';
 import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
@@ -61,8 +62,9 @@ export function collaboration(options: CollaborationOptions): Extension {
       visualPresence(presences, documents).activate({ visualEditor, subscriptions });
       subscriptions.push(
         presences,
-        sourceEditor.registerCodeMirrorExtension(sourcePresence(presences)),
-        sourceEditor.registerCodeMirrorExtension(perUserUndo),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences)),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, perUserUndo),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, boxPresence),
         window.registerFileDecorationProvider(presenceDecorations(presences)),
         link,
         // fired from the editors' own updates, after their state has the new selection

@@ -34,7 +34,7 @@ export function clipboard(): Extension {
         visualEditor.registerToolbarGroup(PASTE_BAR),
         visualEditor.registerToolbarItem(pasteChip(choices)),
         // a paste goes in as CodeMirror pastes it (the text as Typst) first
-        sourceEditor.registerCodeMirrorExtension(({ document }) => pasteExtension(languages, 'typst', () => project.pathOf(document) ?? null, { preferences: ['typst'], choices })),
+        sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => pasteExtension(languages, 'typst', () => project.pathOf(document) ?? null, { preferences: ['typst'], choices })),
         commands.registerCommand('editor.action.pasteAs', (args?: { kind?: string }) => choices.pasteAs(args)),
       );
     },

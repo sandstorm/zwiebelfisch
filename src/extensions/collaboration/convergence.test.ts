@@ -47,9 +47,9 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   window.document.body.append(visualParent, sourceParent);
   const visual = new VisualEditor(visualParent, document, VisualEditorHost.from([visualPresence(presences, () => [document])]));
   const sourceEditors = new SourceEditorHost();
-  sourceEditors.registerCodeMirrorExtension(sourcePresence(presences));
-  sourceEditors.registerCodeMirrorExtension(history());
-  sourceEditors.registerCodeMirrorExtension(perUserUndo);
+  sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences));
+  sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, history());
+  sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, perUserUndo);
   const source = sourceEditors.createEditor(sourceParent, document);
   cleanup.push(() => {
     disconnect();

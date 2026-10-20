@@ -4,51 +4,49 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 
 /**
- * The Source editors (CodeMirror 6 bound to a `TypstDocument`: a Typst file as plain text) and their contribution
- * points (what `ExtensionContext.sourceEditor` offers).
+ * The widget's CodeMirrors and what extensions add to them (what `ExtensionContext.sourceEditor` offers):
+ * - the Source editors (CodeMirror 6 bound to a `TypstDocument`: a Typst file as plain text)
+ * - the code of the Visual editor's raw boxes
+ * - an extension's own CodeMirror (the text files' editor), which takes them through `codeMirrorExtensionsFor`
  *
- * Used by:
- * - the workbench, which registers the Source editor for `*.typ` and makes the editors (`SourceEditorHost.createEditor`)
- * - extensions, which contribute CodeMirror extensions (the Typst language, diagnostics, other users' carets, links)
- * - the widget's other CodeMirror editors (raw boxes, the text files' editor), which take the shared contributions
- *   (`createSharedCodeMirrorExtension`)
- *
- * A contribution applies to every editor, open or made later. Text and selection stay in sync with the document both
- * ways.
+ * A contribution applies to every CodeMirror it selects, open or made later. A Source editor's text and selection
+ * stay in sync with its document both ways.
  */
 export interface SourceEditorContributions {
   /**
-   * Adds CodeMirror extensions to every Source editor, the existing ones included, until disposed: the same value for
-   * all of them, or made per editor from what the editor shows (`SourceEditorContext`).
+   * Adds CodeMirror extensions to every CodeMirror `selector` selects, the existing ones included, until disposed: the
+   * same value for all of them, or made per CodeMirror from what it shows (`CodeMirrorContext`).
    */
-  registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable;
+  registerCodeMirrorExtension<S extends CodeMirrorSelector>(selector: S, extension: Extension | ((editor: CodeMirrorContextOf<S>) => Extension)): Disposable;
   /**
-   * Adds a CodeMirror extension to every CodeMirror of the widget that shows text, not only Typst, the existing ones
-   * included, until disposed: the Source editors, the raw boxes' code, and the editors that include
-   * `createSharedCodeMirrorExtension(..)` (the text files'). The same value for all of them, or made per editor from
-   * the text it shows (`SharedCodeMirrorContext`: its language and file, e.g. for document links). For what fits any
-   * text in any language (shown whitespace, links), never one language's own.
+   * What a CodeMirror made elsewhere (an extension's own) includes to get the extensions registered for it, now and
+   * later, until it is destroyed; `editor` says what it shows (`editor: 'other'`).
    */
-  registerSharedCodeMirrorExtension(extension: Extension | ((editor: SharedCodeMirrorContext) => Extension)): Disposable;
-  /**
-   * What a CodeMirror made elsewhere (an extension's own editor) includes to get the shared extensions
-   * (`registerSharedCodeMirrorExtension`), those registered now and later, until it is destroyed; `editor` says what
-   * text it shows.
-   */
-  createSharedCodeMirrorExtension(editor: SharedCodeMirrorContext): Extension;
+  codeMirrorExtensionsFor(editor: CodeMirrorContext): Extension;
 }
 
-/** What a contribution knows about the one Source editor it is applied to. */
-export interface SourceEditorContext {
-  /** The document the editor edits. */
-  readonly document: TypstDocument;
+/** CodeMirrors by language and kind (as `DocumentFilter`); empty: every CodeMirror. */
+export interface CodeMirrorSelector {
+  readonly language?: string;
+  readonly editor?: CodeMirrorContext['editor'];
 }
 
-/** What a shared contribution knows about the one CodeMirror it is applied to: the text it shows. */
-export interface SharedCodeMirrorContext {
-  /** The text's language: `typst` (Source editors, raw boxes), `bibtex`, `plaintext`, … */
+/**
+ * What a contribution knows about the one CodeMirror it is applied to. `editor`: a Source editor, a raw box's code or
+ * another CodeMirror; the first two show Typst of `document`.
+ */
+export type CodeMirrorContext =
+  | (CodeMirrorText & { readonly editor: 'source' | 'rawBox'; readonly document: TypstDocument })
+  | (CodeMirrorText & { readonly editor: 'other' });
+
+/** The context of the CodeMirrors `S` selects. */
+export type CodeMirrorContextOf<S extends CodeMirrorSelector> = S extends { editor: infer E } ? CodeMirrorContext & { readonly editor: E } : CodeMirrorContext;
+
+/** The text a CodeMirror shows. */
+interface CodeMirrorText {
+  /** Its language: `typst` (Source editors, raw boxes), `bibtex`, `plaintext`, … */
   readonly languageId: string;
-  /** The project file the text is in, now (a file can be renamed); null: none. */
+  /** The project file it is in, now (a file can be renamed); null: none. */
   path(): ProjectPath | null;
 }
 
@@ -62,7 +60,7 @@ export const fromDocument = Annotation.define<{ readonly origin: unknown }>();
 export interface SourceEditorOptions {
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
-  /** The project file the document is, now, for the shared contributions (`SharedCodeMirrorContext.path`); default: none. */
+  /** The project file the document is, now, for the contributions (`CodeMirrorContext.path`); default: none. */
   path?(): ProjectPath | null;
 }
 

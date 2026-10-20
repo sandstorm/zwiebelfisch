@@ -7,7 +7,8 @@ import { TYPST_HELP } from './workbench/typst-help';
 
 /**
  * Typst as a language, used by:
- * - every Source editor and the code of the Visual editor's raw boxes: highlighting and indentation
+ * - every CodeMirror of Typst (Source editors, the code of the Visual editor's raw boxes, a `.typ` in the text files'
+ *   editor): highlighting and indentation
  * - the help sheet "Typst basics"
  * - a Typst file dropped from the file panel into another: `#include "chapter.typ"`
  *
@@ -16,11 +17,9 @@ import { TYPST_HELP } from './workbench/typst-help';
 export function typstLanguage(): Extension {
   return {
     id: 'typst-language',
-    activate({ sourceEditor, visualEditor, languages, subscriptions }) {
-      const syntax = typstSyntax();
+    activate({ sourceEditor, languages, subscriptions }) {
       subscriptions.push(
-        sourceEditor.registerCodeMirrorExtension(syntax),
-        visualEditor.registerRawBoxCodeMirrorExtension(() => syntax),
+        sourceEditor.registerCodeMirrorExtension({ language: 'typst' }, typstSyntax()),
         languages.registerHelpProvider({ language: 'typst' }, { provideHelp: () => TYPST_HELP }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, includeDrops),
       );

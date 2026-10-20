@@ -11,8 +11,8 @@ import { pictureLink, textLinks } from './visual-editor/text-links';
 
 /**
  * Document links in every editor: the links of every provider (`languages.registerDocumentLinkProvider`) shown and
- * followed as VS Code's "Follow link" does, in the Source editors, the raw boxes' code and every CodeMirror that takes
- * the shared extensions (the text files'), in the Visual editor's text (reference chips, link marks) and on raw boxes'
+ * followed as VS Code's "Follow link" does, in every CodeMirror (the Source editors, the raw boxes' code, the text
+ * files'), in the Visual editor's text (reference chips, link marks) and on raw boxes'
  * pictures (their Typst's first link). Hovered, a link shows its hint; ⌘/Ctrl+click or Alt+Enter follows it: a project
  * file opens (at the link's selection), a web or mail address in a new tab. Without it, no editor shows links.
  *
@@ -29,7 +29,7 @@ export function documentLinks(): Extension {
       const pathOf = (document: TypstDocument) => () => project.pathOf(document) ?? null;
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => linkExtension(actions, languageId, path)),
+        sourceEditor.registerCodeMirrorExtension({}, ({ languageId, path }) => linkExtension(actions, languageId, path)),
         visualEditor.registerTiptapExtension((editor) => textLinks(editor, actions, pathOf(editor.document))),
         visualEditor.registerRawBoxPictureExtension((box) => pictureLink(box, actions, pathOf(box.editor.document))),
         languages.registerDocumentLinkProvider({ language: 'typst' }, new FilePathLinks(project)),

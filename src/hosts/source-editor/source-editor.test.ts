@@ -7,11 +7,11 @@ import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemir
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { fromDocument, SourceEditorHost, type SourceEditorContext } from './source-editor';
+import { fromDocument, SourceEditorHost, type CodeMirrorContext } from './source-editor';
 
 /** A Source editor of `text`, with an undo history (what the code-editing extension's basic setup gives the widget's). */
 function setup(text: string, host = new SourceEditorHost()) {
-  host.registerCodeMirrorExtension(history());
+  host.registerCodeMirrorExtension({ editor: 'source' }, history());
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
@@ -34,6 +34,7 @@ describe('SourceEditor history', () => {
   it('a contribution keeps changes of some origin out of the history (as collaboration does with other users\' edits)', () => {
     const host = new SourceEditorHost();
     host.registerCodeMirrorExtension(
+      { editor: 'source' },
       EditorState.transactionExtender.of((tr) => (tr.annotation(fromDocument)?.origin === 'other user' ? { annotations: Transaction.addToHistory.of(false) } : null)),
     );
     const { doc, editor } = setup('one two\n', host);
@@ -85,7 +86,7 @@ describe('SourceEditor reveal', () => {
 
 describe('SourceEditorHost contributions', () => {
   /** Marks the first word of the editor's document (as it was when the extension was made). */
-  const firstWord = ({ document }: SourceEditorContext) =>
+  const firstWord = ({ document }: { readonly document: TypstDocument }) =>
     EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
   /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all editors). */
   const drawn = StateEffect.define<readonly { anchor: number; head: number }[]>();
@@ -110,7 +111,7 @@ describe('SourceEditorHost contributions', () => {
   it('applies a registered extension to the editors made before and after, until disposed', () => {
     const host = new SourceEditorHost();
     const before = setup('alpha beta\n', host);
-    const registration = host.registerCodeMirrorExtension(firstWord);
+    const registration = host.registerCodeMirrorExtension({ editor: 'source' }, firstWord);
     const after = setup('gamma delta\n', host);
     expect(marked(before.parent, '.first')).toEqual(['alpha']);
     expect(marked(after.parent, '.first')).toEqual(['gamma']);
@@ -121,56 +122,72 @@ describe('SourceEditorHost contributions', () => {
 
   it('keeps what an extension drew when another one is registered', () => {
     const host = new SourceEditorHost();
-    host.registerCodeMirrorExtension(drawRanges);
+    host.registerCodeMirrorExtension({}, drawRanges);
     const { parent } = setup('Some bold text\n', host);
     ranges.fire([{ anchor: 5, head: 9 }]);
-    host.registerCodeMirrorExtension(firstWord);
+    host.registerCodeMirrorExtension({ editor: 'source' }, firstWord);
     expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
 
   it('stops applying contributions to a disposed editor', () => {
     const host = new SourceEditorHost();
     const made: string[] = [];
-    host.registerCodeMirrorExtension(({ document }) => {
+    host.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => {
       made.push(document.text);
       return [];
     });
     const { view } = setup('text\n', host);
     view.dispose();
-    host.registerCodeMirrorExtension(firstWord);
+    host.registerCodeMirrorExtension({ editor: 'source' }, firstWord);
     expect(made).toEqual(['text\n']);
   });
 });
 
-describe('shared CodeMirror extensions', () => {
-  const PLAIN = { languageId: 'plaintext', path: () => ProjectPath.of('/notes.txt') };
-  const shared = EditorView.editorAttributes.of({ class: 'shared' });
-  const isShared = (dom: Element) => dom.classList.contains('shared');
+describe('CodeMirror selectors', () => {
+  const PLAIN: CodeMirrorContext = { editor: 'other', languageId: 'plaintext', path: () => ProjectPath.of('/notes.txt') };
+  const marker = (name: string) => EditorView.editorAttributes.of({ class: name });
+  const classes = (view: EditorView) => [...view.dom.classList].filter((name) => name.startsWith('x-')).sort();
 
   it('apply to the Source editors and to other CodeMirrors that take them, before and after, until disposed', () => {
     const host = new SourceEditorHost();
     const { editor } = setup('text\n', host);
-    const other = new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
-    const registration = host.registerSharedCodeMirrorExtension(shared);
-    const later = new EditorView({ parent: document.body, doc: 'later', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
-    expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([true, true, true]);
+    const other = new EditorView({ parent: document.body, doc: 'plain', extensions: host.codeMirrorExtensionsFor(PLAIN) });
+    const registration = host.registerCodeMirrorExtension({}, marker('x-all'));
+    const later = new EditorView({ parent: document.body, doc: 'later', extensions: host.codeMirrorExtensionsFor(PLAIN) });
+    expect([editor(), other, later].map(classes)).toEqual([['x-all'], ['x-all'], ['x-all']]);
     registration.dispose();
-    expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([false, false, false]);
+    expect([editor(), other, later].map(classes)).toEqual([[], [], []]);
+  });
+
+  it('select by language and kind of editor; empty: every CodeMirror', () => {
+    const host = new SourceEditorHost();
+    host.registerCodeMirrorExtension({}, marker('x-all'));
+    host.registerCodeMirrorExtension({ language: 'typst' }, marker('x-typst'));
+    host.registerCodeMirrorExtension({ editor: 'source' }, marker('x-source'));
+    host.registerCodeMirrorExtension({ editor: 'rawBox' }, marker('x-box'));
+    host.registerCodeMirrorExtension({ language: 'typst', editor: 'other' }, marker('x-typst-other'));
+    const { editor } = setup('text\n', host);
+    const shown = (context: CodeMirrorContext) => classes(new EditorView({ parent: document.body, extensions: host.codeMirrorExtensionsFor(context) }));
+    const box: CodeMirrorContext = { editor: 'rawBox', languageId: 'typst', path: () => null, document: new TypstDocument('') };
+    expect(classes(editor())).toEqual(['x-all', 'x-source', 'x-typst']);
+    expect(shown(box)).toEqual(['x-all', 'x-box', 'x-typst']);
+    expect(shown({ editor: 'other', languageId: 'typst', path: () => null })).toEqual(['x-all', 'x-typst', 'x-typst-other']);
+    expect(shown(PLAIN)).toEqual(['x-all']);
   });
 
   it('stop following the host once the other CodeMirror is destroyed', () => {
     const host = new SourceEditorHost();
-    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) }).destroy();
-    expect(() => host.registerSharedCodeMirrorExtension(shared)).not.toThrow();
+    new EditorView({ parent: document.body, doc: 'plain', extensions: host.codeMirrorExtensionsFor(PLAIN) }).destroy();
+    expect(() => host.registerCodeMirrorExtension({}, marker('x-all'))).not.toThrow();
   });
 
   it('made per editor, know its text: a Source editor shows Typst in its file, another CodeMirror says what it shows', () => {
     const host = new SourceEditorHost();
     const seen: string[] = [];
-    host.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path() ?? 'nowhere'}`), []));
+    host.registerCodeMirrorExtension({}, ({ editor, languageId, path }) => (seen.push(`${editor} ${languageId} ${path() ?? 'nowhere'}`), []));
     host.createEditor(document.body.appendChild(document.createElement('div')), new TypstDocument('text\n'), { path: () => ProjectPath.of('/main.typ') });
     host.createEditor(document.body.appendChild(document.createElement('div')), new TypstDocument('text\n'));
-    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension(PLAIN) });
-    expect(seen).toEqual(['typst /main.typ', 'typst nowhere', 'plaintext /notes.txt']);
+    new EditorView({ parent: document.body, doc: 'plain', extensions: host.codeMirrorExtensionsFor(PLAIN) });
+    expect(seen).toEqual(['source typst /main.typ', 'source typst nowhere', 'other plaintext /notes.txt']);
   });
 });

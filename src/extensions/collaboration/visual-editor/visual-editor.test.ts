@@ -5,12 +5,14 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../../core/typst-do
 import { ProjectPath } from '../../../core/paths/paths';
 import { createVisualEditor } from '../../../testing/testing';
 import { Presences, type Presence } from '../presence/presence';
+import { boxPresence } from './box-carets';
 import { visualPresence } from './visual-editor';
 
 const MAIN = ProjectPath.of('/main.typ');
 
 /**
- * A Visual editor with the built-ins (the boxes and cells the tests put carets in) and the presence contribution;
+ * A Visual editor with the built-ins (the boxes and cells the tests put carets in), the presence contribution and
+ * `boxPresence` in its raw boxes' code;
  * `view.setPresence` reports the others' places in its file.
  */
 function setup(text: string) {
@@ -18,7 +20,7 @@ function setup(text: string) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const presences = new Presences((document) => (document === doc ? MAIN : undefined));
-  const visual = createVisualEditor(parent, doc, { contributions: [visualPresence(presences, () => [doc])] });
+  const visual = createVisualEditor(parent, doc, { contributions: [visualPresence(presences, () => [doc])], rawBoxCodeMirrorExtensions: boxPresence });
   const view = {
     reveal: (from: number, to: number) => visual.reveal(SourceRange.of({ from, to })),
     setPresence: (here: readonly Presence[]) =>

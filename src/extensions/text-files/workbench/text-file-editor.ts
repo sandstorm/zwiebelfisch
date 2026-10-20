@@ -96,7 +96,7 @@ export interface TextFileEditorOptions {
   readonly text: string;
   /** Stores the whole text (the file's new content). */
   save(text: string): void;
-  /** More of CodeMirror (the shared extensions: document links, the look). */
+  /** More of CodeMirror (its contributions: document links, the look). */
   readonly extensions?: Extension;
 }
 

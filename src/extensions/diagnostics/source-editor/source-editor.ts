@@ -4,14 +4,13 @@ import type { Extension } from '@codemirror/state';
 import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { SourceEditorContext } from '../../../hosts/source-editor/source-editor';
 import { describeDiagnostic, type DiagnosticCollection, type SourceDiagnostic } from '../model/model';
 
 /**
  * Underlines the diagnostics `diagnostics` holds for an editor's document, with the message and hints on
  * hover; they follow later edits until the document's diagnostics are set again.
  */
-export function lint(diagnostics: DiagnosticCollection): (editor: SourceEditorContext) => Extension {
+export function lint(diagnostics: DiagnosticCollection): (editor: { readonly document: TypstDocument }) => Extension {
   return ({ document }) => ViewPlugin.define((view) => new LintShown(view, document, diagnostics));
 }
 

@@ -1,5 +1,5 @@
 import type { AnyExtension, ChainedCommands, Editor, Range } from '@tiptap/core';
-import { StateEffect, type Extension } from '@codemirror/state';
+import { StateEffect } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
 import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../core/disposable/disposable';
@@ -60,8 +60,6 @@ export interface VisualEditorContributions {
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
-  /** CodeMirror extensions for the code of every raw box of each editor (e.g. the shared ones of the Source editors). */
-  registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable;
   /**
    * Takes part in the picture of every raw box a box renderer draws, in each editor (document links: hovered, the
    * picture shows the box's link; Mod+click follows it): `provider` is called once per picture, before the box adds
@@ -157,7 +155,6 @@ export interface Contributed {
   readonly toolbarItems: readonly ToolbarItem[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
-  readonly rawBoxCodeMirrorExtensions: readonly ((editor: VisualEditorContext) => Extension)[];
   readonly rawBoxPictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];

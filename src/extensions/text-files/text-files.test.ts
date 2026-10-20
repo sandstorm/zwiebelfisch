@@ -68,11 +68,11 @@ describe('text files', () => {
     await vi.waitFor(() => expect(project.content(path('/refs.bib'))).toBe('% refs\n@book{a}\n@book{b}\n'));
   });
 
-  it('takes the shared CodeMirror extensions (the look), also those registered while it is open', () => {
+  it('takes the CodeMirror extensions for every CodeMirror (the look), also those registered while it is open', () => {
     const { workbench, sourceEditor, view } = setup();
     workbench.open(path('/refs.bib'));
     expect(view().state.facet(EditorView.darkTheme)).toBe(false);
-    sourceEditor.registerSharedCodeMirrorExtension(EditorView.darkTheme.of(true));
+    sourceEditor.registerCodeMirrorExtension({}, EditorView.darkTheme.of(true));
     expect(view().state.facet(EditorView.darkTheme)).toBe(true);
   });
 
@@ -91,7 +91,7 @@ describe('text files', () => {
     expect(view().state.doc.toString()).toBe('@book{ä}\n');
   });
 
-  it('gives the shared CodeMirror extensions its language (by ending: a .bib is bibtex) and file', () => {
+  it('gives the CodeMirror extensions its kind, language (by ending: a .bib is bibtex) and file', () => {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/refs.bib': '@book{a}\n' });
     const workbench = new WorkbenchHost(host, project);
@@ -99,12 +99,12 @@ describe('text files', () => {
     workbench.activate([
       textFiles(),
       {
-        id: 'shared',
-        activate: ({ sourceEditor, subscriptions }) => subscriptions.push(sourceEditor.registerSharedCodeMirrorExtension(({ languageId, path }) => (seen.push(`${languageId} ${path()}`), []))),
+        id: 'every',
+        activate: ({ sourceEditor, subscriptions }) => subscriptions.push(sourceEditor.registerCodeMirrorExtension({}, ({ editor, languageId, path }) => (seen.push(`${editor} ${languageId} ${path()}`), []))),
       },
     ]);
     workbench.open(path('/refs.bib'));
-    expect(seen).toContain('bibtex /refs.bib');
+    expect(seen).toContain('other bibtex /refs.bib');
   });
 
   it('a refused save is an error message', async () => {
