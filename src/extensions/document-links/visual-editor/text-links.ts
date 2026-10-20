@@ -6,7 +6,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { TextDocument } from '../../../hosts/languages/languages';
-import type { RawBoxPictureHost, VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
+import type { RawBoxContext, VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
 import { posToSource } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { Disposable } from '../../../core/disposable/disposable';
 import { linkFinder, primaryLink, type FollowableLink, type LinkActions } from '../followable-link';
@@ -64,9 +64,10 @@ export function textLinks(editor: VisualEditorContext, actions: LinkActions, pat
 /**
  * Makes the picture of a raw box lead where the box's Typst links to (`boxLink`), as a link in text: hovered, the hint
  * of every link (the link asked once per visit: finding it takes a parse); Mod+click follows it, instead of opening
- * the box.
+ * the box. Null for a box without a picture.
  */
-export function pictureLink({ picture, src }: RawBoxPictureHost, actions: LinkActions, path: () => ProjectPath | null): Disposable {
+export function pictureLink({ picture, src }: RawBoxContext, actions: LinkActions, path: () => ProjectPath | null): Disposable | null {
+  if (!picture) return null;
   let link: FollowableLink | null = null;
   const listeners: [string, (event: MouseEvent) => void][] = [
     [

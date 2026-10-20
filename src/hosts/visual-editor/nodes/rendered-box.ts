@@ -1,14 +1,14 @@
 // RenderedBox: a raw box shown as a picture (from a box renderer) while it is not edited. See rawBoxViews in
 // raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
-import { Disposable } from '../../../core/disposable/disposable';
+import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { RawBoxPicture, RawBoxRenderer } from '../visual-editor';
 
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of the code while the box does not have focus.
  *
- * Clicking the picture activates the box, unless a picture extension stopped the click. Until the renderer has a
+ * Clicking the picture activates the box, unless a raw box extension stopped the click. Until the renderer has a
  * picture the box shows its code, and a new picture is decoded before it replaces what was shown, so the box never
  * shows a blank picture. Only boxes near the view (one viewport above and below) are redrawn
  * when the renderer changes; the others once they come near.
@@ -16,8 +16,8 @@ import type { RawBoxPicture, RawBoxRenderer } from '../visual-editor';
  * @internal Extensions draw it through `visualEditor.registerRawBoxRenderer`.
  */
 export class RenderedBox {
-  /** The `<img>` shown instead of the code (the box's tools may move it, e.g. into a frame). */
-  readonly picture: HTMLImageElement;
+  /** The `<img>` shown instead of the code (an extension may move it, e.g. into a frame). */
+  private readonly picture: HTMLImageElement;
   private readonly subscription: Disposable;
   private url: string | null = null;
   private editing = false;
@@ -38,19 +38,19 @@ export class RenderedBox {
     if (renderer.className) this.picture.classList.add(renderer.className);
     this.picture.alt = '';
     this.picture.hidden = true;
+    dom.insertBefore(this.picture, code);
     // the extensions' listeners first: they may stop a click
-    const extensions = host.extend(this.picture);
+    host.extend(this.picture);
     this.picture.addEventListener('mousedown', (event) => {
       event.preventDefault();
       host.activate();
     });
-    dom.insertBefore(this.picture, code);
     code.addEventListener('focusin', () => this.setEditing(true));
     code.addEventListener('focusout', (event) => {
       const next = event.relatedTarget as globalThis.Node | null;
       if (!next || !code.contains(next)) this.setEditing(false);
     });
-    this.subscription = Disposable.from(renderer.onDidChange(() => this.changed()), ...extensions);
+    this.subscription = renderer.onDidChange(() => this.changed());
     const view = dom.ownerDocument.defaultView;
     this.observer = view?.IntersectionObserver ? new view.IntersectionObserver(([entry]) => this.setNear(entry.isIntersecting), { rootMargin: '100% 0px' }) : null;
     this.observer?.observe(dom);
@@ -130,8 +130,8 @@ export interface BoxHost {
   source(): { node: Node; from: SourceOffset } | null;
   /** The picture was clicked (focus the code, or select the box). */
   activate(): void;
-  /** Adds what the picture extensions do to `picture`; what it returns goes with the box. */
-  extend(picture: HTMLImageElement): readonly Disposable[];
+  /** Adds what the raw box extensions do to the box, its picture `picture` (in place, before the box's own listeners). */
+  extend(picture: HTMLImageElement): void;
 }
 
 /** Once the image at `url` is decoded (or failed to; then the box shows it as the browser does), where the browser can tell. */

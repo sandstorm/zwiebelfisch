@@ -68,7 +68,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
   'visualEditor.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
-  'visualEditor.registerRawBoxPictureExtension': ([provider]) => named(provider, 'picture extension'),
+  'visualEditor.registerRawBoxExtension': ([provider]) => named(provider, 'raw box extension'),
   'sourceEditor.registerCodeMirrorExtension': ([selector, extension]) => {
     const { language, editor } = record(selector);
     return { ...named(extension, 'CodeMirror extensions'), details: [`language ${String(language ?? '*')}`, `editor ${String(editor ?? '*')}`] };

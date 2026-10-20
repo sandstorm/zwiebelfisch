@@ -61,12 +61,13 @@ export interface VisualEditorContributions {
    */
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: { readonly priority?: number }): Disposable;
   /**
-   * Takes part in the picture of every raw box a box renderer draws, in each editor (document links: hovered, the
-   * picture shows the box's link; Mod+click follows it): `provider` is called once per picture, before the box adds
-   * its own listeners to it, so the provider's run first; one that stops a `mousedown` (`stopImmediatePropagation`)
-   * keeps the box from opening. What it returns is disposed with the box.
+   * Takes part in every raw box of each editor: `provider` is called once per box, as it is made, and decides by the
+   * box's node itself (an image: resize handles; document links: the picture's link); null: nothing for this box.
+   * Providers are called in registration order, before the box adds its own listeners to its picture, so theirs run
+   * first: one that stops a `mousedown` there (`stopImmediatePropagation`) keeps the box from opening its code. What
+   * it returns is told of the box's new nodes and disposed with the box.
    */
-  registerRawBoxPictureExtension(provider: (box: RawBoxPictureHost) => Disposable): Disposable;
+  registerRawBoxExtension(provider: (box: RawBoxContext) => RawBoxExtension | null): Disposable;
 }
 
 /**
@@ -89,8 +90,6 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     readonly box?: 'code' | 'widget';
     /** For `box: 'code'`: a heading above the code saying what the box shows (an outline: "Table of contents"); `className` goes on the box. */
     readonly title?: { readonly className: string; text(src: string): string };
-    /** For `box: 'code'`: tools on every box of this type (an image's heading and resize handles). */
-    tools?(host: RawBoxToolsHost, node: Node): RawBoxTools;
     /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
     readonly keepsDom?: boolean;
   };
@@ -162,38 +161,35 @@ export type RawBoxRendererProvider = (editor: VisualEditorContext) => RawBoxRend
  */
 export const setRawBoxDecorations = StateEffect.define<readonly Decoration[]>();
 
-/** The box tools of a code box belong to. */
-export interface RawBoxToolsHost {
+/** One raw box, as a raw box extension (`registerRawBoxExtension`) gets it. */
+export interface RawBoxContext {
   /** The box's element. */
   readonly dom: HTMLElement;
-  /** The element holding the code editor; tools go in before it. */
+  /** The element holding the code editor; what the extension adds goes in before it. */
   readonly code: HTMLElement;
-  /** The rendered picture (the tools may move it, e.g. into a frame), or null without a renderer. */
+  /**
+   * The picture (`<img>`) a box renderer draws instead of the code (the extension may move it, e.g. into a frame);
+   * null: no renderer draws the box. The element stays for the box's life; a new picture changes its `src` (`load`).
+   */
   readonly picture: HTMLImageElement | null;
   readonly tiptap: Editor;
   /** The editor the box is in. */
   readonly editor: VisualEditorContext;
+  /** The box's node now. */
+  node(): Node;
+  /** The box's Typst now (its node's `src`; a figure's body is code, without `#`). */
+  src(): string;
   /** The box's document position, while it is in the document. */
   getPos(): number | undefined;
   /** Shows and focuses the code. */
   editCode(): void;
 }
 
-/** Tools on a code box (an image's heading and resize handles); a click on the picture then selects the box. */
-export interface RawBoxTools {
-  /** The box's node changed. */
-  update(node: Node): void;
+/** What a raw box extension adds to one box. */
+export interface RawBoxExtension {
+  /** The box's node changed (e.g. its code was edited). */
+  update?(node: Node): void;
   dispose(): void;
-}
-
-/** The picture of a raw box, as a picture extension (`registerRawBoxPictureExtension`) gets it. */
-export interface RawBoxPictureHost {
-  /** The picture (`<img>`) the box shows instead of its code. */
-  readonly picture: HTMLImageElement;
-  /** The editor the box is in. */
-  readonly editor: VisualEditorContext;
-  /** The box's Typst now (its node's `src`; a figure's body is code, without `#`). */
-  src(): string;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.

@@ -6,7 +6,7 @@ import type { Editor } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type RawBoxPictureHost } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type RawBoxContext } from '../visual-editor';
 
 function setup(text: string) {
   const parent = document.createElement('div');
@@ -159,7 +159,7 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('Hello\n');
   });
 
-  it("picture extensions get each picture before the box listens to it: a stopped click keeps the box closed, a plain one edits", async () => {
+  it("raw box extensions get each picture before the box listens to it: a stopped click keeps the box closed, a plain one edits", async () => {
     const { parent, sources, disposed } = setupPictures(RAW);
     const picture = await shownPicture(parent);
     expect(sources()).toEqual(['#set text(size: 12pt)']);
@@ -168,6 +168,26 @@ describe('raw boxes', () => {
     picture.dispatchEvent(new MouseEvent('mousedown', { button: 0, cancelable: true }));
     expect(picture.hidden).toBe(true);
     expect(disposed).not.toHaveBeenCalled();
+    const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    tiptap.commands.setContent('<p>Gone</p>');
+    expect(disposed).toHaveBeenCalledTimes(1);
+  });
+
+  it('raw box extensions are made per box (null: none), told of its new nodes and disposed with it', () => {
+    const visualEditor = new VisualEditorHost();
+    const updated: string[] = [];
+    const disposed = vi.fn();
+    const boxes: RawBoxContext[] = [];
+    visualEditor.registerRawBoxExtension((box) => {
+      boxes.push(box);
+      return box.src().startsWith('#set') ? { update: (node) => updated.push(node.attrs.src), dispose: disposed } : null;
+    });
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('#set text(size: 12pt)\n\n#let x = 1\n');
+    new VisualEditor(parent, doc, visualEditor);
+    expect(boxes.map((box) => [box.src(), box.picture])).toEqual([['#set text(size: 12pt)', null], ['#let x = 1', null]]);
+    doc.setText('#set text(size: 14pt)\n\n#let x = 1\n', 'source');
+    expect(updated).toEqual(['#set text(size: 14pt)']);
     const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     tiptap.commands.setContent('<p>Gone</p>');
     expect(disposed).toHaveBeenCalledTimes(1);
@@ -208,15 +228,15 @@ describe('rendered raw boxes', () => {
 
 const modifier = { ctrlKey: true, metaKey: true };
 
-/** Raw boxes drawn as a picture, with a picture extension that stops a click with Ctrl or ⌘ held. */
+/** Raw boxes drawn as a picture, with a raw box extension that stops a click on the picture with Ctrl or ⌘ held. */
 function setupPictures(text: string) {
-  const pictures: RawBoxPictureHost[] = [];
+  const pictures: RawBoxContext[] = [];
   const disposed = vi.fn();
   const visualEditor = new VisualEditorHost();
   visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
-  visualEditor.registerRawBoxPictureExtension((box) => {
+  visualEditor.registerRawBoxExtension((box) => {
     pictures.push(box);
-    box.picture.addEventListener('mousedown', (event) => {
+    box.picture!.addEventListener('mousedown', (event) => {
       if (event.ctrlKey) event.stopImmediatePropagation();
     });
     return new Disposable(disposed);

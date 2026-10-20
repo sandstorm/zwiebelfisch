@@ -48,9 +48,9 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - *Editing:* a nested CodeMirror edits the node's `src`. Each edit is an attribute step, so the source changes exactly there.
 - *Keys:* undo and redo run the Visual editor's history. Arrow keys, Escape and Enter move between box and text. Tab and Shift+Tab indent and outdent a block box's lines.
 - *Picture:* with a box renderer, the box shows a picture (the preview's boxes of its range, @architecture-preview-rules) until its code gets focus. Only boxes near the view are drawn again after a compile.
-- `view.title` heads the box; `view.tools` add tools (an image's resize handles).
+- `view.title` heads the box; raw box extensions (`registerRawBoxExtension`) add the rest (an image's resize handles, a picture's link).
 - `editRawBox(pos, from, to?)`: a Tiptap command that focuses the box's code with the cursor at `from` or `from..to` selected (after Insert → "Inline math", to reveal a search match inside the box).
-- `setRawBoxDecorations` hands what the Visual editor draws on the box to its code (another user's caret inside it).
+- `setRawBoxDecorations` hands what the Visual editor draws on the box to its code (another user's caret inside it): a CodeMirror effect, read by the box code's own extensions, which a raw box extension cannot reach.
 
 == VisualEditorHost <architecture-visual-editor-host>
 
@@ -67,7 +67,7 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
   [`registerCompletionItemProvider(provider, trigger)`], [A list after a trigger character (@architecture-visual-editor-completion)],
   [`registerHighlights(layer, provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
   [`registerRawBoxRenderer(provider, options?)`], [What raw boxes show instead of their code],
-  [`registerRawBoxPictureExtension(box => disposable)`], [Takes part in every raw box's picture (`picture`, `editor`, `src()`); its listeners run before the box's, so stopping a `mousedown` keeps the box closed],
+  [`registerRawBoxExtension(box => extension | null)`], [Takes part in every raw box, deciding by `box.node()` (`dom`, `code`, `picture` or null, `tiptap`, `editor`, `src()`, `getPos()`, `editCode()`); returns `{ update?(node), dispose() }` or null. Called in registration order before the box listens to its picture, so stopping a `mousedown` there keeps the box closed],
 )
 
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
@@ -76,7 +76,7 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
 - *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the workbench hands them to the Visual editor host, which knows no Source editor.
-- *Links* are the `documentLinks` extension's (@architecture-source-editor-links): a Tiptap extension for the text, a picture extension for raw boxes' pictures. The host knows no links.
+- *Links* are the `documentLinks` extension's (@architecture-source-editor-links): a Tiptap extension for the text, a raw box extension for raw boxes' pictures. The host knows no links.
 
 == Constructs <architecture-visual-editor-constructs>
 
@@ -94,7 +94,7 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
     toTypst,        // how an edited node is written back (ProseMirror's toDOM, for Typst)
     labelled, anchors, container, atomToTypst, escapeAfter, onDidChange,
   },
-  view: { box, title, tools, keepsDom }, // nodes only
+  view: { box, title, keepsDom }, // nodes only
 }
 ```
 

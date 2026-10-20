@@ -15,7 +15,7 @@ import { suggestions } from './suggestions/suggestions';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -216,7 +216,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
-    rawBoxPictureExtensions: [] as ((box: RawBoxPictureHost) => Disposable)[],
+    rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
@@ -258,8 +258,8 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerRawBoxPictureExtension(provider: (box: RawBoxPictureHost) => Disposable): Disposable {
-    return this.add(this.lists.rawBoxPictureExtensions, provider);
+  registerRawBoxExtension(provider: (box: RawBoxContext) => RawBoxExtension | null): Disposable {
+    return this.add(this.lists.rawBoxExtensions, provider);
   }
 
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
@@ -282,7 +282,7 @@ export class VisualEditorHost implements VisualEditorContributions {
       toolbarItems: [...lists.toolbarItems],
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
-      rawBoxPictureExtensions: [...lists.rawBoxPictureExtensions],
+      rawBoxExtensions: [...lists.rawBoxExtensions],
       textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
     };
@@ -306,7 +306,7 @@ export interface Contributed {
   readonly toolbarItems: readonly ToolbarItem[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
-  readonly rawBoxPictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
+  readonly rawBoxExtensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
@@ -317,7 +317,7 @@ function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews:
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
     codeExtensions,
-    pictureExtensions: contributed.rawBoxPictureExtensions,
+    extensions: contributed.rawBoxExtensions,
     nodeViews,
   };
 }

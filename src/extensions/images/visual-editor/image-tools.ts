@@ -1,25 +1,26 @@
 // The resize handles of an image box. See images in ../images.ts.
 import type { Node } from '@tiptap/pm/model';
-import type { EditorState, Transaction } from '@tiptap/pm/state';
-import type { RawBoxTools, RawBoxToolsHost } from '../../../hosts/visual-editor/visual-editor';
+import { NodeSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
+import type { RawBoxContext, RawBoxExtension } from '../../../hosts/visual-editor/visual-editor';
 import { imageWidthCss, withImageWidth } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 
 /**
  * The resize frame of an image box: a frame around the rendered picture showing the image's width, with drag handles
- * to change it. Double-clicking the picture shows the code.
+ * to change it. Clicking the picture selects the box (showing the image bar) instead of opening the code;
+ * double-clicking it shows the code.
  *
  * A drag changes the width live and writes `width: NN%` once, on release: one undo step that rewrites only that
  * argument.
  */
-export class ImageTools implements RawBoxTools {
+export class ImageTools implements RawBoxExtension {
   private readonly frame: HTMLElement | null = null;
   private readonly badge: HTMLElement | null = null;
   private node: Node;
   private stopDrag: (() => void) | null = null;
 
-  constructor(private readonly host: RawBoxToolsHost, node: Node) {
-    this.node = node;
+  constructor(private readonly host: RawBoxContext) {
+    this.node = host.node();
     const doc = host.dom.ownerDocument;
     host.dom.classList.add('zwf-images__box');
     if (host.picture) {
@@ -30,11 +31,12 @@ export class ImageTools implements RawBoxTools {
       this.frame.append(host.picture, ...HANDLES.map((h) => this.handle(h)), this.badge);
       this.frame.addEventListener('dblclick', () => host.editCode());
       const picture = host.picture;
+      picture.addEventListener('mousedown', (event) => this.selectBox(event));
       // an SVG with only a viewBox has no size of its own: it would shrink to nothing, so it fills the text width
       picture.addEventListener('load', () => this.frame!.classList.toggle('zwf-images__frame--no-size', picture.naturalWidth === 0));
       host.dom.insertBefore(this.frame, host.code);
     }
-    this.update(node);
+    this.update(this.node);
   }
 
   /** The image node changed (e.g. its call was edited): the width follows. */
@@ -45,6 +47,17 @@ export class ImageTools implements RawBoxTools {
 
   dispose(): void {
     this.stopDrag?.();
+  }
+
+  /** A click on the picture selects the box as a whole in the outer editor, rather than opening the code. */
+  private selectBox(event: MouseEvent): void {
+    const pos = this.host.getPos();
+    if (event.button !== 0 || pos === undefined) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const { view } = this.host.tiptap;
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+    view.focus();
   }
 
   /** Dispatches the edit for this image (if it applies) and returns the focus to the text. */
