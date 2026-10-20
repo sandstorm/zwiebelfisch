@@ -1,14 +1,14 @@
 // Tests for account.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { Account, serverHttpBase } from './account';
+import { Account, roomsWebSocketUrl, serverHttpBase } from './account';
 
 const ann = { provider: 'gitlab', id: '2', name: 'Ann', username: 'ann', email: 'ann@gitlab.test' };
 
-/** A server answering /api/me with `me` (null: 401) and /auth/logout with 204. */
+/** A server answering /api/me with `me` (null: 401) and /api/auth/logout with 204. */
 function server(me: unknown, status = 200) {
   return vi.fn<typeof fetch>(async (input) => {
     const url = String(input);
-    if (url.endsWith('/auth/logout')) return new Response(null, { status: 204 });
+    if (url.endsWith('/api/auth/logout')) return new Response(null, { status: 204 });
     if (me === null) return new Response('Not signed in', { status: 401 });
     return new Response(JSON.stringify(me), { status });
   });
@@ -51,8 +51,14 @@ describe('Account', () => {
   it('signs in at the server, coming back to the page', () => {
     const account = new Account('ws://127.0.0.1:1234', server(null));
     expect(account.signInUrl('http://127.0.0.1:5199/?room=r1')).toBe(
-      `http://127.0.0.1:1234/auth/login?return=${encodeURIComponent('http://127.0.0.1:5199/?room=r1')}`,
+      `http://127.0.0.1:1234/api/public/auth/login?return=${encodeURIComponent('http://127.0.0.1:5199/?room=r1')}`,
     );
+  });
+
+  it('signs out (a session already gone too: 401)', async () => {
+    const signedOut = new Account('ws://127.0.0.1:1234', async () => new Response('Not signed in', { status: 401 }));
+    await expect(signedOut.signOut()).resolves.toBeUndefined();
+    expect(signedOut.identity).toBeNull();
   });
 
   it('signs out', async () => {
@@ -61,13 +67,18 @@ describe('Account', () => {
     await account.refresh();
     await account.signOut();
     expect(account.identity).toBeNull();
-    expect(send).toHaveBeenLastCalledWith('http://127.0.0.1:1234/auth/logout', { method: 'POST', credentials: 'include' });
+    expect(send).toHaveBeenLastCalledWith('http://127.0.0.1:1234/api/auth/logout', { method: 'POST', credentials: 'include' });
   });
 });
 
-describe('serverHttpBase', () => {
-  it('is the WebSocket URL over HTTP', () => {
+describe('the server URL', () => {
+  it('over HTTP: the same host and path', () => {
     expect(serverHttpBase('ws://127.0.0.1:1234')).toBe('http://127.0.0.1:1234');
     expect(serverHttpBase('wss://collab.example.org/')).toBe('https://collab.example.org');
+  });
+
+  it("the rooms' WebSocket", () => {
+    expect(roomsWebSocketUrl('ws://127.0.0.1:1234')).toBe('ws://127.0.0.1:1234/api/rooms');
+    expect(roomsWebSocketUrl('wss://editor.example.org/collab/')).toBe('wss://editor.example.org/collab/api/rooms');
   });
 });

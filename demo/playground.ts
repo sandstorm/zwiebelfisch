@@ -20,7 +20,7 @@ export type Mode = 'local' | 'collab' | 'gitlab';
 
 /**
  * The modes the bar offers. GitLab first: rooms are GitLab branches. Collaborate (a plain room) only where the server
- * has plain rooms (`GET /api/info`, see playground-bar.ts); the playground server enables them.
+ * has plain rooms (`GET /api/public/info`, see playground-bar.ts); the playground server enables them.
  */
 export const MODES: readonly { mode: Mode; label: string }[] = [
   { mode: 'local', label: 'Local' },

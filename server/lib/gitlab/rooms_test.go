@@ -202,28 +202,36 @@ func signedIn(r *http.Request, _ string) (collab.User, error) {
 	return collab.User{}, nil
 }
 
+// routes are the handlers as package app mounts them.
+func (e *env) routes() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/rooms/{room}/files/{path...}", e.x.ServeFile)
+	mux.HandleFunc("POST /api/public/gitlab/webhook", e.x.ServeWebhook)
+	return mux
+}
+
 // get requests a file of the room over HTTP as the session's user ("": signed out).
 func (e *env) get(path, session string) *httptest.ResponseRecorder {
 	var segments []string
 	for _, s := range strings.Split(path, "/") {
 		segments = append(segments, url.PathEscape(s))
 	}
-	req := httptest.NewRequest(http.MethodGet, "/rooms/"+url.PathEscape(roomName)+"/files"+strings.Join(segments, "/"), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/rooms/"+url.PathEscape(roomName)+"/files"+strings.Join(segments, "/"), nil)
 	if session != "" {
 		req.AddCookie(&http.Cookie{Name: "session", Value: session})
 	}
 	res := httptest.NewRecorder()
-	e.x.ServeHTTP(res, req)
+	e.routes().ServeHTTP(res, req)
 	return res
 }
 
 // webhook posts a push event for main.
 func (e *env) webhook(secret string) *httptest.ResponseRecorder {
 	body := `{"object_kind":"push","ref":"refs/heads/main","project_id":7,"project":{"id":7,"path_with_namespace":"` + projectPath + `"}}`
-	req := httptest.NewRequest(http.MethodPost, "/gitlab/webhook", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/public/gitlab/webhook", strings.NewReader(body))
 	req.Header.Set("X-Gitlab-Token", secret)
 	res := httptest.NewRecorder()
-	e.x.ServeHTTP(res, req)
+	e.routes().ServeHTTP(res, req)
 	return res
 }
 
@@ -430,14 +438,14 @@ func TestUpstreamChanges(t *testing.T) {
 			`{"object_kind":"push","ref":"refs/heads/other","project_id":7}`: http.StatusAccepted,
 			`not json`: http.StatusBadRequest,
 		} {
-			req := httptest.NewRequest(http.MethodPost, "/gitlab/webhook", strings.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/public/gitlab/webhook", strings.NewReader(body))
 			req.Header.Set("X-Gitlab-Token", "hook-secret")
 			res := httptest.NewRecorder()
-			e.x.ServeHTTP(res, req)
+			e.routes().ServeHTTP(res, req)
 			require.Equal(t, code, res.Code, body)
 		}
 		res = httptest.NewRecorder()
-		e.x.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/gitlab/webhook", nil))
+		e.routes().ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/api/public/gitlab/webhook", nil))
 		require.Equal(t, http.StatusMethodNotAllowed, res.Code)
 	})
 

@@ -14,7 +14,7 @@ sequenceDiagram
   Note over R,G: AutoCommit (10 min) after the last edit,<br/>or LeaveDelay (20 s) after the last user left<br/>(Left waits, someone back: no commit)
   R->>G: the same commit,<br/>message naming the editors
   Note over C,G: webhook
-  G->>R: POST /gitlab/webhook<br/>(X-Gitlab-Token)
+  G->>R: POST /api/public/gitlab/webhook<br/>(X-Gitlab-Token)
   Note over R: merge into the open<br/>rooms of that branch
   Note over C,G: answers
   R-->>C: gitlab:saved / merged / conflict<br/>to everyone

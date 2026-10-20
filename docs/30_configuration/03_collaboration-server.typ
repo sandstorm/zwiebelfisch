@@ -14,7 +14,7 @@ createEditor(host, {
   user: { name: 'Ada', color: '#6c71c4' },   // the name until signed in; color optional
   extensions: (builtinExtensions) => [
     ...builtinExtensions,
-    collaboration({ url: 'wss://editor.example.org', room: 'project-42' }),
+    collaboration({ url: 'wss://editor.example.org', room: 'project-42' }), // the WebSocket: <url>/api/rooms
   ],
 });
 ```
@@ -25,7 +25,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/rooms`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
@@ -49,24 +49,24 @@ mise run server:dev    # ws://127.0.0.1:1234
   [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-A server without sign-in, or with neither GitLab nor plain rooms, does not start. `GET /api/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
+A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in (@architecture-server-routes); behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
 
 === Sign-in <configuration-collaboration-server-sign-in>
 
-People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.html")[OpenID Connect] provider, by default the GitLab instance (@configuration-gitlab-integration): register an application there (GitLab: _Edit profile → Applications_, or an instance or group application), confidential, with the callback URL and the scopes `openid profile email read_api`.
+People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.html")[OpenID Connect] provider, by default the GitLab instance (@configuration-gitlab-integration): register an application there (GitLab: _Edit profile → Applications_, or an instance or group application), confidential, with the callback URL `https://<server>/api/public/auth/callback` and the scopes `openid profile email read_api`.
 
 #table(
   columns: 2,
   [Variable], [Meaning],
   [`ZWF_AUTH_CLIENT_ID`], [Required: the application's id.],
   [`ZWF_AUTH_CLIENT_SECRET`], [Required: its secret (never commit it).],
-  [`ZWF_AUTH_REDIRECT_URL`], [The callback registered with the application, e.g. `https://editor.example.org/auth/callback`. Default: `/auth/callback` on the host the browser named.],
+  [`ZWF_AUTH_REDIRECT_URL`], [The callback registered with the application, e.g. `https://editor.example.org/api/public/auth/callback`. Default: `/api/public/auth/callback` on the host the browser named.],
   [`ZWF_AUTH_ISSUER`], [The provider (default `ZWF_GITLAB_URL`). Another one signs people in, but GitLab rooms refuse them: their GitLab account is unknown.],
 )
 
 - The server keeps who signed in in memory, with the user's tokens: nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise.
 - The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
-- Endpoints: `GET /auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /auth/callback`, `POST /auth/logout`, `GET /api/me` (who is signed in, or 401).
+- Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
 
 == Trying it locally <configuration-collaboration-server-demo>
 

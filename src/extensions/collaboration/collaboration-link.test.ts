@@ -5,13 +5,12 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { connect, connectAwareness } from './model/in-process';
 import type { PlacedPresence } from './presence/presence';
-import { Account } from './account';
+import { Account, SignInRequired } from './account';
 import { CollaborationLink } from './collaboration-link';
 import { Collaboration } from './model/model';
 import { Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
-import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 
 const path = ProjectPath.of;
 
@@ -124,12 +123,35 @@ describe('CollaborationLink', () => {
       expect(start.mock.calls[0][1].user).toEqual({ name: 'Ann', color: '#123456' });
     });
 
-    it('refused for not being signed in (the session ended meanwhile): asks to sign in, too', async () => {
-      vi.spyOn(Collaboration, 'start').mockRejectedValueOnce(new Error(SIGN_IN_REQUIRED));
+    it('the session ended before the room was joined (the WebSocket refused): asks to sign in, too', async () => {
+      vi.spyOn(Collaboration, 'start').mockRejectedValueOnce(new SignInRequired());
       const { link, widget } = join(account({ provider: 'gitlab', id: '2', name: 'Ann' }));
       await link.ready;
       expect(widget.signInRequired).toHaveBeenCalledOnce();
       expect(widget.tell).not.toHaveBeenCalled();
+    });
+
+    it('asks the account, when the connection closes, whether the session is still there', async () => {
+      const start = vi.spyOn(Collaboration, 'start').mockRejectedValueOnce(new Error('stop here'));
+      vi.spyOn(console, 'error').mockImplementationOnce(() => {});
+      let me: object | null = { provider: 'gitlab', id: '2', name: 'Ann' };
+      const { link } = join(new Account(SERVER.url, async () => (me ? new Response(JSON.stringify(me)) : new Response('', { status: 401 }))));
+      await link.ready;
+      const signedIn = start.mock.calls[0][3]!;
+      await expect(signedIn()).resolves.toBe(true);
+      me = null;
+      await expect(signedIn()).resolves.toBe(false);
+    });
+
+    it('the session ends later: asks to sign in', async () => {
+      let signOut = () => {};
+      const signedOut = new Promise<void>((resolve) => (signOut = resolve));
+      vi.spyOn(Collaboration, 'start').mockResolvedValueOnce({ signedOut, onDidChangePresence: () => ({ dispose() {} }), sourceControl: null, dispose() {} } as unknown as Collaboration);
+      const { link, widget } = join(account({ provider: 'gitlab', id: '2', name: 'Ann' }));
+      await link.ready;
+      expect(widget.signInRequired).not.toHaveBeenCalled();
+      signOut();
+      await vi.waitFor(() => expect(widget.signInRequired).toHaveBeenCalledOnce());
     });
   });
 });

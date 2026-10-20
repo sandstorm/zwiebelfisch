@@ -1,9 +1,9 @@
 flowchart LR
-  W[widget<br/>HocuspocusProvider] -- WebSocket --> A
-  B[demo, other clients] -- "GET /api/info, /api/me<br/>GET /rooms/…/files/…<br/>/auth/…" --> A
+  W[widget<br/>HocuspocusProvider] -- "WebSocket /api/rooms" --> A
+  B[demo, other clients] -- "public: /api/public/… (sign-in, info)<br/>signed in: /api/me, /api/rooms/…/files/…" --> A
   A --> AU[auth<br/>sessions in memory]
   AU -- "OpenID Connect" --> GL
-  GL[GitLab] -- "POST /gitlab/webhook" --> A
+  GL[GitLab] -- "POST /api/public/gitlab/webhook" --> A
   A[app<br/>one port] --> C[collab<br/>a goroutine per room]
   A --> X
   C --> Y[ydoc<br/>Yjs: ygo]

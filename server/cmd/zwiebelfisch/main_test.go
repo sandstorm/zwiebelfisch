@@ -19,14 +19,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/sandstorm/zwiebelfisch/server/lib/app"
 	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/testutil"
 )
 
 // The built binary on a real port, with real WebSockets from the real HocuspocusProvider: sign in (at the
 // fake GitLab's OpenID Connect provider, on a port of its own), edit with two clients in a plain room,
-// refuse a client without a session, restart (SIGTERM stores the rooms; the sessions are gone: sign in
+// refuse a client without a session (401, before the WebSocket's upgrade), restart (SIGTERM stores the rooms; the sessions are gone: sign in
 // again), read the room back; without sign-in or rooms, it does not start. Needs ports: it skips where none
 // can be bound (the agent sandbox); TestRealHocuspocusProvider in package collab and the tests of package
 // app and auth cover it there.
@@ -53,13 +52,17 @@ func TestServerBinary(t *testing.T) {
 	env := append(append(os.Environ(), fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
 		"ZWF_PLAIN_ROOMS=1", "ZWF_LOG_LEVEL=debug"), signIn...)
 	server := fmt.Sprintf("http://127.0.0.1:%d", port)
-	ws := fmt.Sprintf("ws://127.0.0.1:%d", port)
+	ws := fmt.Sprintf("ws://127.0.0.1:%d/api/rooms", port)
 
 	stop := start(t, binary, env, port)
 	edit := clients(t, "edit", ws, session(t, server, "Ann"))
 	require.Equal(t, map[string]any{"/main.typ": "» Hello 😀 and B 𝄞"}, edit["texts"])
-	require.Equal(t, app.SignInRequired, edit["denied"])
+	require.Equal(t, "closed", edit["denied"], "the WebSocket was refused")
 	require.Equal(t, map[string]any{}, edit["intruderTexts"])
+	res, err := http.Get(server + "/api/rooms")
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 	stop()
 
 	stop = start(t, binary, env, port)
@@ -84,7 +87,7 @@ func session(t *testing.T, server, name string) string {
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err)
 	client := &http.Client{Jar: jar}
-	res, err := client.Get(server + "/auth/login?" + url.Values{"login_hint": {name}, "return": {"/"}}.Encode())
+	res, err := client.Get(server + "/api/public/auth/login?" + url.Values{"login_hint": {name}, "return": {"/api/me"}}.Encode())
 	require.NoError(t, err)
 	require.NoError(t, res.Body.Close())
 	require.Equal(t, http.StatusOK, res.StatusCode)

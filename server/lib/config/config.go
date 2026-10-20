@@ -11,7 +11,7 @@
 //
 //	ZWF_GITLAB_URL             e.g. https://gitlab.com
 //	ZWF_GITLAB_TOKEN           the bot's token (`api` scope), the author of every commit
-//	ZWF_GITLAB_WEBHOOK_SECRET  (optional) enables POST /gitlab/webhook for push events
+//	ZWF_GITLAB_WEBHOOK_SECRET  (optional) enables POST /api/public/gitlab/webhook for push events
 //	ZWF_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in Co-authored-by trailers when theirs is unknown
 //	ZWF_GITLAB_AUTO_COMMIT     (default 10) minutes without edits before a room commits by itself; off: never
 //
@@ -21,8 +21,8 @@
 //	                          rooms refuse them (their GitLab user is unknown)
 //	ZWF_AUTH_CLIENT_ID      the application registered at the provider
 //	ZWF_AUTH_CLIENT_SECRET  its secret
-//	ZWF_AUTH_REDIRECT_URL   (default: /auth/callback on the host the browser names) the callback registered
-//	                          with the application, e.g. https://editor.example.org/auth/callback
+//	ZWF_AUTH_REDIRECT_URL   (default: /api/public/auth/callback on the host the browser names) the callback registered
+//	                          with the application, e.g. https://editor.example.org/api/public/auth/callback
 //
 // Only these names are read.
 package config

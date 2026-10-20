@@ -1,10 +1,9 @@
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
-import { SIGN_IN_REQUIRED } from '../../core/room-protocol/room-protocol';
 import { ProgressLocation } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
-import { Account } from './account';
+import { Account, SignInRequired } from './account';
 import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
@@ -21,8 +20,9 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  * - file decorations in the workbench
  *
  * Until the room's text is in the project, the editing area takes no input. Other users' edits never enter the local
- * undo history. With a server, only signed-in users join: the status bar shows the account and offers signing in. A
- * room backed by a GitLab branch is a source control, and the browser warns before leaving changes nobody commits.
+ * undo history. With a server, only signed-in users connect: the status bar shows the account and offers signing in,
+ * also when the session ends. A room backed by a GitLab branch is a source control, and the browser warns before
+ * leaving changes nobody commits.
  */
 export function collaboration(options: CollaborationOptions): Extension {
   const server = 'url' in options;
@@ -55,7 +55,7 @@ export function collaboration(options: CollaborationOptions): Extension {
         tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
         signInRequired: () =>
-          void window.showErrorMessage(SIGN_IN_REQUIRED, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
+          void window.showErrorMessage(SignInRequired.reason, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
       }, account);
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
       visualPresence(presences, documents).activate({ visualEditor, subscriptions });
@@ -108,6 +108,8 @@ const ACCOUNT_MENU = 'collaboration/account';
  * provider; pass it synced, and its awareness for remote cursors), or a
  * Hocuspocus server the widget connects to: the collaboration server of
  * this repository, on the page's host (the session cookie is sent to it).
+ * `url` is that server's URL (`wss://editor.example.org`, maybe with a
+ * path prefix); the widget opens its WebSocket at `<url>/api/rooms`.
  */
 export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }

@@ -34,8 +34,8 @@ const DefaultID = "gitlab"
 
 // Options configure Rooms. URL and Token are required.
 type Options struct {
-	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>`) and of the webhook path
-	// (`/<ID>/webhook`), and the provider of the users it lets in (their collab.User.ID is a user id of
+	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>`), and the provider of the
+	// users it lets in (their collab.User.ID is a user id of
 	// this instance). Default DefaultID.
 	ID string
 	// URL is the GitLab instance, e.g. https://gitlab.com; Token a bot token with `api` scope (server-side,
@@ -46,7 +46,7 @@ type Options struct {
 	// Authenticate decides who may read a room's files (as for the WebSocket: the app's check, which
 	// includes Authorize).
 	Authenticate collab.Authenticate
-	// WebhookSecret is what GitLab sends as X-Gitlab-Token with push events ("": no webhook endpoint).
+	// WebhookSecret is what GitLab sends as X-Gitlab-Token with push events (ServeWebhook; "": none).
 	WebhookSecret string
 	// AuthorEmail is the email of an editor whose email is not known (in Co-authored-by trailers). Default
 	// zwiebelfisch@localhost.
@@ -60,8 +60,8 @@ type Options struct {
 	clock      clock                           // tests: instead of time
 }
 
-// Rooms are the GitLab rooms of a server. Create them with New, pass them as collab.Options.Extension and
-// mount them as the http.Handler of /rooms/ and /<ID>/webhook; Close them after the collab server.
+// Rooms are the GitLab rooms of a server. Create them with New, pass them as collab.Options.Extension, mount
+// ServeFile and ServeWebhook (package app); Close them after the collab server.
 type Rooms struct {
 	opts        Options
 	prefix      string
@@ -72,7 +72,6 @@ type Rooms struct {
 	accessCache accessCache
 	clock       clock
 	log         zerolog.Logger
-	http        *http.ServeMux
 	ctx         context.Context // ends with Close: repository calls and waits
 	cancel      context.CancelFunc
 
@@ -105,11 +104,6 @@ func New(opts Options) *Rooms {
 		opts: opts, prefix: opts.ID + ":", authorEmail: opts.AuthorEmail, autoCommit: opts.AutoCommit,
 		leaveDelay: LeaveDelay, blobs: newBlobCache(64 << 20), accessCache: accessCache{entries: map[accessKey]cachedAccess{}},
 		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel, open: map[string]*room{}, autoCommitOff: map[string]bool{},
-	}
-	x.http = http.NewServeMux()
-	x.http.HandleFunc("GET /rooms/{room}/files/{path...}", x.serveFile)
-	if opts.WebhookSecret != "" {
-		x.http.HandleFunc("POST /"+opts.ID+"/webhook", x.serveWebhook)
 	}
 	return x
 }
@@ -189,16 +183,6 @@ func (x *Rooms) autoCommitOf(name string) time.Duration {
 		return 0
 	}
 	return x.autoCommit
-}
-
-// Paths are the URL path prefixes ServeHTTP answers (an http.ServeMux pattern each): the room files, and
-// the webhook when it is enabled.
-func (x *Rooms) Paths() []string {
-	paths := []string{"/rooms/"}
-	if x.opts.WebhookSecret != "" {
-		paths = append(paths, "/"+x.opts.ID+"/webhook")
-	}
-	return paths
 }
 
 // Handles reports whether room is one of these rooms' names (`<ID>:<project>@<branch>`).
@@ -300,14 +284,9 @@ func (x *Rooms) editorOf(origin any) *person {
 	return &person{c.Name(), email}
 }
 
-// ServeHTTP answers GET /rooms/<room>/files/<path> (a file of an open room to whom Authenticate lets in;
-// blob bytes are cached by sha) and POST /<ID>/webhook (GitLab push events with X-Gitlab-Token; merges the
-// push into the open rooms of that branch). CORS is the app's.
-func (x *Rooms) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	x.http.ServeHTTP(w, r)
-}
-
-func (x *Rooms) serveFile(w http.ResponseWriter, r *http.Request) {
+// ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in;
+// blob bytes are cached by sha. CORS is the app's.
+func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 	name, file := r.PathValue("room"), "/"+r.PathValue("path")
 	if x.opts.Authenticate == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -354,8 +333,10 @@ var imageTypes = map[string]string{
 	".svg": "image/svg+xml", ".webp": "image/webp", ".pdf": "application/pdf",
 }
 
-func (x *Rooms) serveWebhook(w http.ResponseWriter, r *http.Request) {
-	if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Gitlab-Token")), []byte(x.opts.WebhookSecret)) != 1 {
+// ServeWebhook takes GitLab's push events, with X-Gitlab-Token (WebhookSecret; none without it), and merges
+// a push into the open rooms of that branch.
+func (x *Rooms) ServeWebhook(w http.ResponseWriter, r *http.Request) {
+	if x.opts.WebhookSecret == "" || subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Gitlab-Token")), []byte(x.opts.WebhookSecret)) != 1 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

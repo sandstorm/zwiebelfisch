@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -84,14 +83,9 @@ func (s *Server) Close(ctx context.Context) error {
 	}
 }
 
-// ServeHTTP accepts a WebSocket (any path: the room is named in each message, not in the URL) and serves
-// it until it closes. Other requests get a short text, so the port can be probed.
+// ServeHTTP accepts a WebSocket (the room is named in each message, not in the URL) and serves it until it
+// closes.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("Zwiebelfisch collaboration server\n"))
-		return
-	}
 	// Any origin here: Authenticate decides per room, from r (the session cookie, which other sites' pages
 	// do not get to send).
 	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})

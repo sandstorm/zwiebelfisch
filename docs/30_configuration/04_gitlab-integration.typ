@@ -23,7 +23,7 @@ Configure the server with environment variables, e.g. in a git-ignored `mise.loc
   [Variable], [Meaning],
   [`ZWF_GITLAB_URL`], [Required: the GitLab instance, e.g. `https://gitlab.com`.],
   [`ZWF_GITLAB_TOKEN`], [Required: a bot's token with `api` scope, the author of every commit; its user should be a Maintainer of the projects (it reads their protected branches). Clients never see it.],
-  [`ZWF_GITLAB_WEBHOOK_SECRET`], [Enables `POST /gitlab/webhook`: add a push webhook with this secret in the GitLab project.],
+  [`ZWF_GITLAB_WEBHOOK_SECRET`], [Enables the push webhook: add one in the GitLab project (_Settings → Webhooks_, _Push events_) with the URL `https://<server>/api/public/gitlab/webhook` and this secret as its token.],
   [`ZWF_GITLAB_AUTHOR_EMAIL`], [An editor's email in the `Co-authored-by:` trailers when theirs is unknown.],
   [`ZWF_GITLAB_AUTO_COMMIT`], [Minutes without edits before a room saves by itself (default `10`); `off`: only "Save to GitLab…".],
 )
@@ -32,5 +32,5 @@ Configure the server with environment variables, e.g. in a git-ignored `mise.loc
 - *Who may save:* who may also push to the branch: a protected branch's rules (roles, users, groups; wildcards) are checked again on every save, since the bot would bypass them.
 - Commits are the bot's; everyone who edited is a `Co-authored-by:` trailer. No user's token is used for them, and none is stored.
 - Other room names (plain rooms) need `ZWF_PLAIN_ROOMS=1` (@configuration-collaboration-server-running).
-- Files other than `.typ` are fetched from the server (`GET /rooms/<room>/files/<path>`, with the session cookie, as the room), so it must be reachable over HTTP too.
+- Files other than `.typ` are fetched from the server (`GET /api/rooms/<room>/files/<path>`, with the session cookie, as the room), so it must be reachable over HTTP too.
 - Saving and conflicts, as users see them: @features-gitlab.

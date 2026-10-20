@@ -23,15 +23,15 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 describe('probeServer', () => {
   it('finds the playground server with its fake GitLab, and whether it has plain rooms', async () => {
     const { fetch, calls } = fakeFetch({
-      '/api/info': () => json({ plainRooms: true }),
+      '/api/public/info': () => json({ plainRooms: true }),
       '/playground': () => json({ project: 'demo/report', room: GITLAB_ROOM }),
     });
     await expect(probeServer(fetch)).resolves.toEqual({ kind: 'gitlab', plainRooms: true });
-    expect(calls.map((call) => call.url)).toEqual([`${SERVER.http}/api/info`, `${SERVER.http}/playground`]);
+    expect(calls.map((call) => call.url)).toEqual([`${SERVER.http}/api/public/info`, `${SERVER.http}/playground`]);
   });
 
   it('a server without the playground endpoints (mise run server:dev) is just a server; plain rooms off', async () => {
-    const { fetch } = fakeFetch({ '/api/info': () => json({ plainRooms: false }) });
+    const { fetch } = fakeFetch({ '/api/public/info': () => json({ plainRooms: false }) });
     await expect(probeServer(fetch)).resolves.toEqual({ kind: 'server', plainRooms: false });
   });
 

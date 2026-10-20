@@ -3,8 +3,8 @@
  * server reads and merges them in GitLab rooms).
  *
  * This file is the widget's side of what it and the collaboration server agree on: the maps of a room's Y.Doc, the
- * messages of GitLab-backed rooms and the URL of a room's file. The server's side is server/lib/gitlab/protocol.go;
- * a change here is a change there.
+ * messages of GitLab-backed rooms, and the paths of the rooms' WebSocket and a room's file. The server's side is
+ * server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there.
  */
 export const FILES_MAP = 'files';
 
@@ -35,7 +35,7 @@ export const META_MAP = 'meta';
 /**
  * The Y.Doc map of the project's other files (images, data), written by
  * clients and server: path → blob sha (the file as in the repository, its
- * bytes at `GET /rooms/<room>/files/<path>`) or `Uint8Array` (uploaded, not
+ * bytes at `GET /api/rooms/<room>/files/<path>`) or `Uint8Array` (uploaded, not
  * committed yet).
  */
 export const ASSETS_MAP = 'assets';
@@ -112,13 +112,10 @@ export type ServerMessage =
 
 export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 
-/**
- * The reason the server refuses a client that is not signed in (Hocuspocus' PermissionDenied): the widget offers to
- * sign in instead of only telling it. The server's: `SignInRequired` in server/lib/app.
- */
-export const SIGN_IN_REQUIRED = 'Sign in to join this room.';
+/** The path of the rooms' WebSocket (relative to the server's URL); signed in only, like every path outside `/api/public/`. */
+export const ROOMS_PATH = '/api/rooms';
 
-/** The HTTP path of a file of a room (relative to the server's base URL). */
+/** The HTTP path of a file of a room (relative to the server's URL). */
 export function roomFilePath(room: string, path: string): string {
-  return `/rooms/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}`;
+  return `${ROOMS_PATH}/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}`;
 }

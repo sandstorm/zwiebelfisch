@@ -28,7 +28,7 @@ func TestEnvironment(t *testing.T) {
 		"ZWF_LOG_LEVEL=debug", "ZWF_LOG_FORMAT=json", "ZWF_PLAIN_ROOMS=1",
 		"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_GITLAB_TOKEN=bot", "ZWF_GITLAB_WEBHOOK_SECRET=hook",
 		"ZWF_GITLAB_AUTHOR_EMAIL=a@example.org", "ZWF_GITLAB_AUTO_COMMIT=off",
-		"ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=s=1", "ZWF_AUTH_REDIRECT_URL=https://editor.example/auth/callback",
+		"ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=s=1", "ZWF_AUTH_REDIRECT_URL=https://editor.example/api/public/auth/callback",
 	})
 	require.NoError(t, err)
 	require.Equal(t, 4321, c.Port)
@@ -37,7 +37,7 @@ func TestEnvironment(t *testing.T) {
 	require.Equal(t, "https://gitlab.example", c.Auth.Issuer, "the GitLab instance by default")
 	require.Equal(t, "app", c.Auth.ClientID)
 	require.Equal(t, "s=1", c.Auth.ClientSecret, "values may contain =")
-	require.Equal(t, "https://editor.example/auth/callback", c.Auth.RedirectURL)
+	require.Equal(t, "https://editor.example/api/public/auth/callback", c.Auth.RedirectURL)
 	require.Equal(t, "debug", c.Log.Level)
 	require.Equal(t, "json", c.Log.Format)
 	require.True(t, c.Rooms.Plain)

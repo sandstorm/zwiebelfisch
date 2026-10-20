@@ -2,7 +2,7 @@
 // for the Go tests: TestRealHocuspocusProvider (in-process, over stdio) and TestServerBinary (the built
 // binary on a port).
 //
-//   node server/testdata/hocuspocus-clients.ts <scenario> <cookie> [ws://host:port]
+//   node server/testdata/hocuspocus-clients.ts <scenario> <cookie> [ws://host:port/api/rooms]
 //
 // <cookie> is the Cookie header the clients' WebSockets send (a session: who signed in; the server reads
 // it from the upgrade request). Without a URL the WebSockets are bridged over stdin/stdout (one JSON line
@@ -10,7 +10,7 @@
 // run in cannot bind one. The scenario's result is printed as a line {"t":"result",...}; failures exit with
 // status 1.
 //   edit: two clients edit one room and see each other's text and presence; a third without the cookie is
-//         refused and gets nothing.
+//         refused (denied: the reason, or "closed" when the server refused the WebSocket) and gets nothing.
 //   converge: one client seeds the room with the demo's example, a second joins; both type at once, key by key, and
 //         end with the same text; a caret (relative position) of one is in the same place for the other.
 //   read: one client prints what the room holds (after a server restart).
@@ -99,7 +99,7 @@ function cookieSocket(cookie: string) {
 }
 
 const providers: HocuspocusProvider[] = [];
-function client(cookie: string, events: { onAuthenticationFailed?: (data: { reason: string }) => void } = {}) {
+function client(cookie: string, events: { onAuthenticationFailed?: (data: { reason: string }) => void; onClose?: () => void } = {}) {
   const provider = new HocuspocusProvider({
     url: url ?? `ws://stdio/?${new URLSearchParams({ cookie })}`,
     name: room,
@@ -139,7 +139,7 @@ async function edit() {
   await until('the server acknowledged every update', () => !a.hasUnsyncedChanges && !b.hasUnsyncedChanges);
 
   let denied = '';
-  const intruder = client('', { onAuthenticationFailed: ({ reason }) => (denied = reason) });
+  const intruder = client('', { onAuthenticationFailed: ({ reason }) => (denied = reason), onClose: () => (denied ||= 'closed') });
   await until('the client without a session is refused', () => denied !== '');
   await new Promise((resolve) => setTimeout(resolve, 100));
 

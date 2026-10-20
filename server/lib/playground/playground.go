@@ -187,7 +187,7 @@ func (e *endpoints) deliver(r *http.Request, branch, before, after string) error
 		"before": before, "after": after, "checkout_sha": after,
 		"project": map[string]string{"path_with_namespace": e.opts.GitLab.Project()},
 	})
-	hook, err := http.NewRequestWithContext(r.Context(), http.MethodPost, "/gitlab/webhook", bytes.NewReader(event))
+	hook, err := http.NewRequestWithContext(r.Context(), http.MethodPost, "/api/public/gitlab/webhook", bytes.NewReader(event))
 	if err != nil {
 		return err
 	}

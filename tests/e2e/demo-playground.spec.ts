@@ -4,7 +4,7 @@ import { test } from './fixtures';
 
 // The demo's playground bar without a server: Local mode (the default) never
 // talks to one; the room modes are checked against an unreachable server and
-// stubbed server endpoints (/api/info, /playground) (WebSockets are not stubbed: the widget keeps
+// stubbed server endpoints (/api/public/info, /playground) (WebSockets are not stubbed: the widget keeps
 // waiting for its room there, which these tests do not need). The real
 // server is covered by collab.spec.ts and gitlab.spec.ts.
 
@@ -22,7 +22,7 @@ async function noServer(page: Page): Promise<void> {
 /** The playground server's answers: what it offers, and the fake GitLab's endpoint. */
 async function playgroundServer(page: Page, info: { plainRooms: boolean }): Promise<void> {
   const cors = { 'Access-Control-Allow-Origin': '*' };
-  await page.route(`${SERVER}/api/info`, (route) => route.fulfill({ json: info, headers: cors }));
+  await page.route(`${SERVER}/api/public/info`, (route) => route.fulfill({ json: info, headers: cors }));
   await page.route(`${SERVER}/playground`, (route) => route.fulfill({ json: { project: 'demo/report', room: GITLAB_ROOM }, headers: cors }));
 }
 

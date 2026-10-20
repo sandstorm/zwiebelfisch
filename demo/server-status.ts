@@ -25,14 +25,14 @@ export interface ServerProbe {
 export type ServerState = ServerKind | 'checking' | 'reload' | 'lost';
 
 /**
- * Asks the server what it offers (`GET /api/info`: plain rooms or not) and whether it is the playground server
+ * Asks the server what it offers (`GET /api/public/info`: plain rooms or not) and whether it is the playground server
  * with the fake GitLab (`GET /playground`). A server without that endpoint (e.g. `mise run server:dev`) sends no
  * CORS header there, so its request fails.
  */
 export async function probeServer(fetchFn: typeof fetch = fetch): Promise<ServerProbe> {
   let plainRooms: boolean;
   try {
-    const response = await fetchFn(`${SERVER.http}/api/info`);
+    const response = await fetchFn(`${SERVER.http}/api/public/info`);
     plainRooms = response.ok && ((await response.json()) as { plainRooms?: unknown }).plainRooms === true;
   } catch {
     return { kind: 'offline', plainRooms: false };
