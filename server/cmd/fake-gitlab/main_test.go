@@ -70,7 +70,7 @@ func TestPlaygroundBinary(t *testing.T) {
 			session = c.String()
 		}
 	}
-	refused := testutil.RunNode(t, "hocuspocus-clients.ts", "refused", session, fmt.Sprintf("ws://127.0.0.1:%d/api/rooms", port))
+	refused := testutil.RunNode(t, "hocuspocus-clients.ts", "refused", session, fmt.Sprintf("ws://127.0.0.1:%d/api/collaboration", port))
 	require.Contains(t, string(refused), "only GitLab rooms")
 	require.Equal(t, "<title>demo</title>", body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/", demoPort)))
 

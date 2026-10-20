@@ -9,7 +9,7 @@ import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/room-protocol/room-protocol';
-import { roomsWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
+import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
@@ -82,7 +82,7 @@ export class Collaboration {
   ): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
-    const provider = new HocuspocusProvider({ url: roomsWebSocketUrl(options.url), name: options.room, document: ydoc });
+    const provider = new HocuspocusProvider({ url: collaborationWebSocketUrl(options.url), name: options.room, document: ydoc });
     const signedOut = whenSignedOut(provider, signedIn);
     try {
       await new Promise<void>((resolve, reject) => {

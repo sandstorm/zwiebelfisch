@@ -1,5 +1,5 @@
 flowchart LR
-  W[widget<br/>HocuspocusProvider] -- "WebSocket /api/rooms" --> A
+  W[widget<br/>HocuspocusProvider] -- "WebSocket /api/collaboration" --> A
   B[demo, other clients] -- "public: /api/public/… (sign-in, info)<br/>signed in: /api/me, /api/rooms/…/files/…" --> A
   A --> AU[auth<br/>sessions in memory]
   AU -- "OpenID Connect" --> GL

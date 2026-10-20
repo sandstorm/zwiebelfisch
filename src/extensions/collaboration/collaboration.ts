@@ -109,7 +109,7 @@ const ACCOUNT_MENU = 'collaboration/account';
  * Hocuspocus server the widget connects to: the collaboration server of
  * this repository, on the page's host (the session cookie is sent to it).
  * `url` is that server's URL (`wss://editor.example.org`, maybe with a
- * path prefix); the widget opens its WebSocket at `<url>/api/rooms`.
+ * path prefix); the widget opens its WebSocket at `<url>/api/collaboration`.
  */
 export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }

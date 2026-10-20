@@ -14,7 +14,7 @@ createEditor(host, {
   user: { name: 'Ada', color: '#6c71c4' },   // the name until signed in; color optional
   extensions: (builtinExtensions) => [
     ...builtinExtensions,
-    collaboration({ url: 'wss://editor.example.org', room: 'project-42' }), // the WebSocket: <url>/api/rooms
+    collaboration({ url: 'wss://editor.example.org', room: 'project-42' }), // the WebSocket: <url>/api/collaboration
   ],
 });
 ```
@@ -25,7 +25,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/rooms`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.

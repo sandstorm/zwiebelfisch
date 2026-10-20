@@ -137,24 +137,24 @@ func TestWhoOpensWhichRoom(t *testing.T) {
 		return refusal.Reason
 	}
 
-	user, err := s.authenticate(s.identified(request("GET", host+"/api/rooms", ann)), room)
+	user, err := s.authenticate(s.identified(request("GET", host+"/api/collaboration", ann)), room)
 	require.NoError(t, err)
 	require.Equal(t, collab.User{Provider: "gitlab", ID: "2", Name: "Ann", Email: "ann@gitlab.test"}, user)
-	_, err = s.authenticate(s.identified(request("GET", host+"/api/rooms", nil)), room)
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", nil)), room)
 	require.Error(t, err, "not behind requireSignIn")
-	_, err = s.authenticate(s.identified(request("GET", host+"/api/rooms", rita)), room)
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", rita)), room)
 	require.Equal(t, "Editing demo/report needs the Developer role on GitLab; you are Reporter.", reason(err))
-	_, err = s.authenticate(s.identified(request("GET", host+"/api/rooms", stranger)), room)
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", stranger)), room)
 	require.Equal(t, "You are not a member of demo/report on GitLab.", reason(err))
-	_, err = s.authenticate(s.identified(request("GET", host+"/api/rooms", ann)), "playground-simple")
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", ann)), "playground-simple")
 	require.Contains(t, reason(err), "only GitLab rooms")
 
 	plainFake, _ := fakeGitLab()
 	plain := newServer(t, plainFake, Options{PlainRooms: true})
 	bob := signIn(t, plainFake, plain, "Bob")
-	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/rooms", bob)), "playground-simple")
+	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/collaboration", bob)), "playground-simple")
 	require.NoError(t, err, "plain rooms: anyone signed in")
-	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/rooms", bob)), room)
+	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/collaboration", bob)), room)
 	require.NoError(t, err, "without GitLab rooms, a GitLab-like name is a plain room")
 }
 
@@ -199,7 +199,7 @@ func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 	fake, gl := fakeGitLab()
 	s := newServer(t, fake, Options{GitLab: gl, PlainRooms: true})
 	require.ElementsMatch(t, []string{
-		"GET /api/rooms", "GET /api/me", "POST /api/auth/logout", "GET /api/rooms/{room}/files/{path...}",
+		"GET /api/collaboration", "GET /api/me", "POST /api/auth/logout", "GET /api/rooms/{room}/files/{path...}",
 	}, s.signedIn.patterns)
 	for _, pattern := range append(s.signedIn.patterns, "GET /", "GET /unknown", "GET /api/unknown") {
 		req := requestFor(pattern)
@@ -209,7 +209,7 @@ func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 		require.Equal(t, "http://127.0.0.1:5199", res.Header.Get("Access-Control-Allow-Origin"), "the widget reads the 401")
 		require.Equal(t, "true", res.Header.Get("Access-Control-Allow-Credentials"))
 	}
-	upgrade := requestFor("GET /api/rooms")
+	upgrade := requestFor("GET /api/collaboration")
 	upgrade.Header.Set("Connection", "Upgrade")
 	upgrade.Header.Set("Upgrade", "websocket")
 	upgrade.Header.Set("Sec-WebSocket-Version", "13")

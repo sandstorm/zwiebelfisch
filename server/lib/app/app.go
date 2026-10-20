@@ -90,7 +90,7 @@ func New(o Options) (*Server, error) {
 	}
 
 	signedIn := newRoutes("/api/")
-	signedIn.Handle("GET /api/rooms", s.rooms) // the WebSocket
+	signedIn.Handle("GET /api/collaboration", s.rooms) // the WebSocket
 	signedIn.HandleFunc("GET /api/me", o.Auth.Me)
 	signedIn.HandleFunc("POST /api/auth/logout", o.Auth.Logout)
 	if s.gitlab != nil {

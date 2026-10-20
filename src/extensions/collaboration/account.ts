@@ -1,6 +1,6 @@
 // Who is signed in to the collaboration server. See collaboration in collaboration.ts.
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import { ROOMS_PATH } from '../../core/room-protocol/room-protocol';
+import { COLLABORATION_PATH } from '../../core/room-protocol/room-protocol';
 
 /** Who signed in to the collaboration server (`GET /api/me`): (provider, id) identifies them. */
 export interface Identity {
@@ -85,9 +85,9 @@ export function serverHttpBase(url: string): string {
   return url.replace(/^ws/, 'http').replace(/\/$/, '');
 }
 
-/** The rooms' WebSocket of the server at `url`. */
-export function roomsWebSocketUrl(url: string): string {
-  return url.replace(/\/$/, '') + ROOMS_PATH;
+/** The collaboration WebSocket of the server at `url`. */
+export function collaborationWebSocketUrl(url: string): string {
+  return url.replace(/\/$/, '') + COLLABORATION_PATH;
 }
 
 /** `value` as an Identity, or null when it is not one (it comes from outside). */

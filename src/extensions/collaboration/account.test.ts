@@ -1,6 +1,6 @@
 // Tests for account.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { Account, roomsWebSocketUrl, serverHttpBase } from './account';
+import { Account, collaborationWebSocketUrl, serverHttpBase } from './account';
 
 const ann = { provider: 'gitlab', id: '2', name: 'Ann', username: 'ann', email: 'ann@gitlab.test' };
 
@@ -77,8 +77,8 @@ describe('the server URL', () => {
     expect(serverHttpBase('wss://collab.example.org/')).toBe('https://collab.example.org');
   });
 
-  it("the rooms' WebSocket", () => {
-    expect(roomsWebSocketUrl('ws://127.0.0.1:1234')).toBe('ws://127.0.0.1:1234/api/rooms');
-    expect(roomsWebSocketUrl('wss://editor.example.org/collab/')).toBe('wss://editor.example.org/collab/api/rooms');
+  it('the collaboration WebSocket', () => {
+    expect(collaborationWebSocketUrl('ws://127.0.0.1:1234')).toBe('ws://127.0.0.1:1234/api/collaboration');
+    expect(collaborationWebSocketUrl('wss://editor.example.org/collab/')).toBe('wss://editor.example.org/collab/api/collaboration');
   });
 });

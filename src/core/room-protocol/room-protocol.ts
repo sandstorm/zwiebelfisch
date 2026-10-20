@@ -3,7 +3,7 @@
  * server reads and merges them in GitLab rooms).
  *
  * This file is the widget's side of what it and the collaboration server agree on: the maps of a room's Y.Doc, the
- * messages of GitLab-backed rooms, and the paths of the rooms' WebSocket and a room's file. The server's side is
+ * messages of GitLab-backed rooms, and the paths of the collaboration WebSocket and a room's file. The server's side is
  * server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there.
  */
 export const FILES_MAP = 'files';
@@ -112,10 +112,10 @@ export type ServerMessage =
 
 export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 
-/** The path of the rooms' WebSocket (relative to the server's URL); signed in only, like every path outside `/api/public/`. */
-export const ROOMS_PATH = '/api/rooms';
+/** The path of the collaboration WebSocket (relative to the server's URL): one connection carries the rooms joined; signed in only, like every path outside `/api/public/`. */
+export const COLLABORATION_PATH = '/api/collaboration';
 
 /** The HTTP path of a file of a room (relative to the server's URL). */
 export function roomFilePath(room: string, path: string): string {
-  return `${ROOMS_PATH}/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}`;
+  return `/api/rooms/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}`;
 }

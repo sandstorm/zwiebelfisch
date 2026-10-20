@@ -2,7 +2,7 @@
 // for the Go tests: TestRealHocuspocusProvider (in-process, over stdio) and TestServerBinary (the built
 // binary on a port).
 //
-//   node server/testdata/hocuspocus-clients.ts <scenario> <cookie> [ws://host:port/api/rooms]
+//   node server/testdata/hocuspocus-clients.ts <scenario> <cookie> [ws://host:port/api/collaboration]
 //
 // <cookie> is the Cookie header the clients' WebSockets send (a session: who signed in; the server reads
 // it from the upgrade request). Without a URL the WebSockets are bridged over stdin/stdout (one JSON line

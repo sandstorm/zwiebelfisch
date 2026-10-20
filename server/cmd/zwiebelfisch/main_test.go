@@ -52,14 +52,14 @@ func TestServerBinary(t *testing.T) {
 	env := append(append(os.Environ(), fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
 		"ZWF_PLAIN_ROOMS=1", "ZWF_LOG_LEVEL=debug"), signIn...)
 	server := fmt.Sprintf("http://127.0.0.1:%d", port)
-	ws := fmt.Sprintf("ws://127.0.0.1:%d/api/rooms", port)
+	ws := fmt.Sprintf("ws://127.0.0.1:%d/api/collaboration", port)
 
 	stop := start(t, binary, env, port)
 	edit := clients(t, "edit", ws, session(t, server, "Ann"))
 	require.Equal(t, map[string]any{"/main.typ": "» Hello 😀 and B 𝄞"}, edit["texts"])
 	require.Equal(t, "closed", edit["denied"], "the WebSocket was refused")
 	require.Equal(t, map[string]any{}, edit["intruderTexts"])
-	res, err := http.Get(server + "/api/rooms")
+	res, err := http.Get(server + "/api/collaboration")
 	require.NoError(t, err)
 	require.NoError(t, res.Body.Close())
 	require.Equal(t, http.StatusUnauthorized, res.StatusCode)

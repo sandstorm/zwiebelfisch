@@ -1,7 +1,7 @@
 // Command zwiebelfisch is the collaboration server (`mise run server:dev`).
 //
 // It reads its settings from the environment (package config) and serves on ADDRESS:PORT:
-//   - the Hocuspocus protocol (a WebSocket at /api/rooms)
+//   - the Hocuspocus protocol (a WebSocket at /api/collaboration)
 //   - the HTTP endpoints of package app
 //
 // On SIGINT/SIGTERM it stores every open room before exiting.

@@ -52,7 +52,7 @@ One rule, visible in every path: `/api/public/` is the only part anyone may call
   [`GET /api/public/auth/callback`], [Public: the redirect URI the provider sends the browser back to; starts the session],
   [`GET /api/public/info`], [Public: what the server offers (`{"plainRooms": …}`), read before signing in],
   [`POST /api/public/gitlab/webhook`], [Public: GitLab calls it, checked by `X-Gitlab-Token` (only with `ZWF_GITLAB_WEBHOOK_SECRET`)],
-  [`GET /api/rooms`], [The WebSocket (Hocuspocus); 401 before the upgrade],
+  [`GET /api/collaboration`], [The WebSocket (Hocuspocus); 401 before the upgrade],
   [`GET /api/me`], [Who is signed in],
   [`POST /api/auth/logout`], [Ends the session],
   [`GET /api/rooms/<room>/files/<path>`], [A file of an open GitLab room],
