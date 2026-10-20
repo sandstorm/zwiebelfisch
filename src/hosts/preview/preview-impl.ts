@@ -10,7 +10,7 @@ import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
 import type { FileContent } from '../../core/project/project';
 import { EngineWorker } from './worker/worker';
-import { LatestOnly } from '../../core/latest-only/latest-only';
+import { LatestOnly } from './latest-only/latest-only';
 import type {
   EngineCrash,
   LoadEvent,
