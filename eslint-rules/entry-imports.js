@@ -1,7 +1,8 @@
 // ESLint rule `local/entry-imports`: a module under src/ is entered only through its entry file.
 //
 // - A module is a folder directly under src/, or one level deeper in a grouping folder (the `groupingFolders`
-//   option: `core/`, `hosts/`, `extensions/`).
+//   option: `core/`, `hosts/`, `extensions/`), or a folder inside a module listed in the `subModules` option
+//   (`hosts/visual-editor/typst-conversion`): a module of its own, which its parent module also enters by its entry.
 // - Its entry file is named like it, `x/x.ts` (a stylesheet may be `x/x.css`). From outside the module only the entry
 //   may be imported; inside it everything is open.
 // - Only TypeScript and CSS files count.
@@ -15,8 +16,11 @@ import { importVisitors } from './imports.js';
 const SOURCE = /\.(ts|css)$/;
 
 /** The module folder (absolute) `file` belongs to, or null for files directly in src/ or outside it. */
-export function moduleOf(file, { srcRoot, groupingFolders = [] }) {
-  const parts = path.relative(srcRoot, file).split(path.sep);
+export function moduleOf(file, { srcRoot, groupingFolders = [], subModules = [] }) {
+  const rel = path.relative(srcRoot, file);
+  const subModule = subModules.find((folder) => rel.startsWith(folder + path.sep));
+  if (subModule) return path.join(srcRoot, subModule);
+  const parts = rel.split(path.sep);
   if (parts[0] === '..' || parts.length < 2) return null;
   const depth = groupingFolders.includes(parts[0]) ? 2 : 1;
   return parts.length > depth ? path.join(srcRoot, ...parts.slice(0, depth)) : null;
@@ -46,6 +50,7 @@ export default {
         properties: {
           srcRoot: { type: 'string' },
           groupingFolders: { type: 'array', items: { type: 'string' } },
+          subModules: { type: 'array', items: { type: 'string' } },
           exceptions: {
             type: 'array',
             items: {

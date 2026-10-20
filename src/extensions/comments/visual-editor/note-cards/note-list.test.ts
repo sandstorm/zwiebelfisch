@@ -2,7 +2,7 @@
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
-import { serializeToTypst } from '../../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst } from '../../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { after, parseTypst as parseTypstWith, schemaWith } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 import { SourceOffset } from '../../../../core/typst-document/typst-document';

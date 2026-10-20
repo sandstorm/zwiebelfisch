@@ -85,6 +85,8 @@ export const reExportExceptions = [
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
   groupingFolders: ['core', 'extensions', 'hosts'],
+  // folders inside a module that are modules of their own (entry `<folder>/<name>.ts`)
+  subModules: ['hosts/visual-editor/typst-conversion'],
   exceptions: [],
 };
 

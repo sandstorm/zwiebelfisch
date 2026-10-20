@@ -6,7 +6,8 @@ import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset, type TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentDropEdit } from '../../languages/languages';
-import { posToSource, insertTypst } from '../../visual-editor/visual-editor';
+import { insertTypst } from '../../visual-editor/visual-editor';
+import { posToSource } from '../../visual-editor/typst-conversion/typst-conversion';
 import { PROJECT_PATH_TYPE } from '../workbench';
 
 /** What the Typst editors do with dropped files: what a project file becomes, and how files from the computer get into the project. */

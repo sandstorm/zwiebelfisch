@@ -1,7 +1,7 @@
 // Tests for image-syntax.ts: an image call's path and a new call.
 import { describe, expect, it } from 'vitest';
 import { PathReference } from '../../../core/paths/paths';
-import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { edit, expectPreciseMap, parseTypst, schema } from '../../../testing/testing';
 import { imagePath, imageSource } from './image-syntax';
 

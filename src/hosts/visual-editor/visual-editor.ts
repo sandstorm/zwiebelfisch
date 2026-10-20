@@ -434,4 +434,3 @@ export type ToolbarItem =
 
 export { VisualEditor, VisualEditorHost } from './visual-editor-impl';
 export { insertTypst } from './visual-editor-helpers';
-export { serializeToTypst, parseTypst, escapeTypst, applyTypstChanges, typstChanges, sourceToPos, posToSource, starterKitPart, documentNodeSpec, createSchema, documentExtensions, attachGrammar, type TypstMarkSpec, type TypstNodeConversion, type TypstMarkConversion, type TypstParseContext, type TypstParseRules, type TypstSerializeState, type PlacedNode, type BlockLabel, type Around } from './typst-conversion/typst-conversion';

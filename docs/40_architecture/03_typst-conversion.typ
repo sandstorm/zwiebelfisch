@@ -4,7 +4,7 @@
 
 #unreviewed
 
-The Visual editor's model (@architecture-visual-editor): it turns Typst text into the editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched. A stateless library in the Visual editor host, `src/hosts/visual-editor/typst-conversion/`; extensions reach it through the host's contract (`visual-editor.ts`). Shaped like prosemirror-markdown (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`), no view, tested without a DOM.
+The Visual editor's model (@architecture-visual-editor): it turns Typst text into the editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched. A stateless library in the Visual editor host, `src/hosts/visual-editor/typst-conversion/`; a module of its own: extensions, the workbench and the editor import its entry `typst-conversion/typst-conversion.ts` directly. Shaped like prosemirror-markdown (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`), no view, tested without a DOM.
 
 #figure(
   mermaid(read("../diagrams/typst-prosemirror.mmd"), width: 60%),

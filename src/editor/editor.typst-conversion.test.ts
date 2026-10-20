@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
-import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges, typstChanges } from '../hosts/visual-editor/visual-editor';
+import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges, typstChanges } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import { after, builtins, edit, expectPreciseMap, parseTypst, schema, schemaOf } from '../testing/testing';
 import { SourceOffset, type TextChange } from '../core/typst-document/typst-document';
 

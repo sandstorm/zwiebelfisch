@@ -5,7 +5,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstStyle } from '../model/discover';
 import type { ProjectStyles } from '../model/typst-style-index';
-import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-editor';
 

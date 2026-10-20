@@ -32,10 +32,10 @@ describe('no-re-exports', () => {
     expect(lint("import a from './a';\nexport default a;")).toHaveLength(1);
   });
 
-  it("allows a host's contract to forward its implementation and helpers, and the host's entry a subfolder's contract", () => {
+  it("allows a host's contract (also a subfolder's) to forward its implementation and helpers, not another contract", () => {
     expect(lint("export { a, type A } from './h-impl';", 'src/hosts/h/h.ts')).toEqual([]);
     expect(lint("export { a } from './h-helpers';", 'src/hosts/h/h.ts')).toEqual([]);
-    expect(lint("export { a, type A } from './sub/sub';", 'src/hosts/h/h.ts')).toEqual([]);
+    expect(lint("export { a, type A } from './sub/sub';", 'src/hosts/h/h.ts')).toHaveLength(2);
     expect(lint("export { a } from './sub-impl';", 'src/hosts/h/sub/sub.ts')).toEqual([]);
     expect(lint("export { a } from './other/sub';", 'src/hosts/h/sub/sub.ts')).toHaveLength(1);
     expect(lint("export { a } from './sub/other';", 'src/hosts/h/h.ts')).toHaveLength(1);

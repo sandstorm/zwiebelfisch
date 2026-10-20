@@ -7,7 +7,7 @@ import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts } from '..
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { references as referencesContribution } from './visual-editor';
 
 const noLabels = new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));

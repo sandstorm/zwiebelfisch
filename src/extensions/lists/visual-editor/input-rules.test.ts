@@ -2,7 +2,7 @@
 // Tests for the lists' typing shortcuts (visual-editor.ts): `- ` bulleted, `+ ` (Typst) or `1. ` numbered.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
-import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { createEditor, type } from '../../../testing/testing';
 
 /** The document after typing `text` into a new paragraph after "Text". */

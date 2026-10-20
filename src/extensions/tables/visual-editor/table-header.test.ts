@@ -1,7 +1,7 @@
 // Tests for table header rows (visual-editor.ts, through the Typst ↔ ProseMirror conversion).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
+import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

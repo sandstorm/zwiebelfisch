@@ -2,8 +2,7 @@
 //
 // Flagged: `export * from`, `export { x } from` (also `export type`), and `export { x }` / `export default x` of an
 // imported name. Allowed: a host's contract (`hosts/<name>/<name>.ts`, or `<sub>/<sub>.ts` in a host's subfolder)
-// forwarding its implementation (`export { … } from './<name>-impl'`) or its stateless helpers (`'./<name>-helpers'`)
-// or, from the host's entry, a subfolder's contract (`export { … } from './<sub>/<sub>'`).
+// forwarding its implementation (`export { … } from './<name>-impl'`) or its stateless helpers (`'./<name>-helpers'`).
 
 /** Whether the module-scope name `name` is bound by an import declaration. */
 function isImported(scope, name) {
@@ -17,13 +16,12 @@ function moduleScope(sourceCode, node) {
   return scope.childScopes.find((child) => child.type === 'module') ?? scope;
 }
 
-/** Whether `node` (an `export … from`) is the host contract `filename` forwarding its implementation, its helpers or a subfolder's contract. */
+/** Whether `node` (an `export … from`) is the host contract `filename` forwarding its implementation or its helpers. */
 function forwardsImplementation(filename, node) {
   const contract = /[\\/]hosts[\\/](?:[^\\/]+[\\/])*([^\\/]+)[\\/]\1\.ts$/.exec(filename);
   if (contract === null || node.exportKind === 'type') return false;
   const source = node.source?.value;
-  const entry = /[\\/]hosts[\\/]([^\\/]+)[\\/]\1\.ts$/.test(filename);
-  return source === `./${contract[1]}-impl` || source === `./${contract[1]}-helpers` || (entry && /^\.\/([^/]+)\/\1$/.test(source ?? ''));
+  return source === `./${contract[1]}-impl` || source === `./${contract[1]}-helpers`;
 }
 
 /** The rule `local/no-re-exports`. The package entry (src/index.ts) is left out of it, as it is the one file that re-exports freely. */

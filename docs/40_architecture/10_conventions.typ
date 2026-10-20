@@ -22,10 +22,11 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 - *Code lives in the highest layer that can hold it* (extension, then host, then core), next to its consumers: a host function only one extension uses goes into that extension (`sortPasteEdits`: the clipboard's). `core/` holds only what models need or many share; core and hosts stay as small as possible.
 - *A module* is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `editor/`, `editor-element/` or `testing/`. From outside, import only its *entry file*.
+- *A sub-module* is a subfolder listed in `subModules` (eslint.config.js: `hosts/visual-editor/typst-conversion`): a module of its own with the entry `<sub>/<sub>.ts`, which everyone, its parent included, imports directly.
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
 - *`*.worker.ts` runs only in a Web Worker*; files without the suffix run on the main thread or in both.
-- *No re-exports*, except `src/index.ts`, a host contract's re-export of its implementation and helpers, and a host entry's re-export of a subfolder's contract (`visual-editor.ts` forwards `typst-conversion/`). When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`).
+- *No re-exports*, except `src/index.ts`, a host contract's re-export of its implementation and helpers. A sub-module is imported directly, never forwarded. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`).
 - *Folders are named after a concept*: no grab-bag folders (`utils/`, `impl/`, `helpers/`, `shared/`, `services/`).
 - *A module's top level holds about 3 source files*: the entry, its `-impl.ts` and one more; tests and `.css` don't count. More get subfolders by concept (the Visual editor's `nodes/`, `toolbar/`).
 - *No cycles between modules*.
@@ -46,7 +47,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *Core's line is "no DOM"*: no DOM, no library that needs it (Tiptap, prosemirror-view, CodeMirror views), no Yjs.
 - *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
 - *Hosts keep only mechanism.* Ask for every host member: mechanism, or one feature's policy? Policy is an extension.
-- *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its re-exports, at the bottom, are the implementation others construct and, one line per subfolder, a subfolder's contract the host's users need (the Visual editor's `typst-conversion/`).
+- *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its re-exports, at the bottom, are the implementation others construct and its helpers.
 - *`<name>-impl.ts` is the implementation*, starting with `See <Contract> in <name>.ts`.
 - *`<name>-helpers.ts` holds a host's stateless DOM-bound helpers* (`insertTypst`, `keyLabel`), each tagged in its doc comment `@helper Stateless: no registry, no per-widget state.`; the contract re-exports them in a line next to the implementation's. A helper only one extension uses lives in that extension.
 - *Extensions never depend on each other*: not through imports, services, commands or schema names. A host offers a generic contribution point instead, and the consumer reads every contribution. Another extension's schema names are read only as data (`figureBody`) and always guarded (`schema.nodes.x`, `editor.can()`).

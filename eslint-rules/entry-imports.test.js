@@ -51,6 +51,16 @@ describe('entry-imports', () => {
     ]);
   });
 
+  it('enters a listed sub-module through its own entry file, also from its parent module', () => {
+    const conversion = "import { x } from '../../hosts/visual-editor/typst-conversion/typst-conversion';";
+    expect(lint('src/extensions/lists/lists.ts', conversion)).toEqual([]);
+    expect(lint('src/extensions/lists/lists.ts', "import { x } from '../../hosts/visual-editor/typst-conversion/parser';")).toEqual([
+      expect.stringContaining('through its entry file hosts/visual-editor/typst-conversion/typst-conversion.ts'),
+    ]);
+    expect(lint('src/hosts/visual-editor/highlights.ts', "import { x } from './typst-conversion/typst-conversion';")).toEqual([]);
+    expect(lint('src/hosts/visual-editor/highlights.ts', "import { x } from './typst-conversion/parser';")).toHaveLength(1);
+  });
+
   it('allows the listed exceptions, and only for their importers', () => {
     const options = {
       ...boundaries,

@@ -4,7 +4,7 @@ import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/stat
 import type { Mappable } from '@tiptap/pm/transform';
 import type { SourceOffset } from '../../../../core/typst-document/typst-document';
 import { rangeNoteSyntax } from '../../model/margin-note-syntax';
-import { posToSource, serializeToTypst, sourceToPos } from '../../../../hosts/visual-editor/visual-editor';
+import { posToSource, serializeToTypst, sourceToPos } from '../../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
  * The margin notes of a Visual-editor document as a list, followed across

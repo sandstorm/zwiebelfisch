@@ -1,6 +1,6 @@
 // The clipboard extension's own ways a paste of Typst can go in. See clipboard.ts.
 import type { DocumentPasteEdit, DocumentPasteEditProvider, DocumentPasteProviderMetadata } from '../../hosts/languages/languages';
-import { escapeTypst } from '../../hosts/visual-editor/visual-editor';
+import { escapeTypst } from '../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
  * The ways a paste of text into Typst can go in, as the Visual and the Source editor offer them: the clipboard's text
