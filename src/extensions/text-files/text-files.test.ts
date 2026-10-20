@@ -11,7 +11,7 @@ import type { SourceEditorContributions } from '../../hosts/source-editor/source
 import type { WindowApi } from '../../hosts/window/window';
 import { Widget } from '../../editor/widget/widget';
 import { textFiles } from './text-files';
-import { SAVE_DELAY } from './workbench/text-file-editor';
+import { SAVE_DELAY } from './window/text-file-editor';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),

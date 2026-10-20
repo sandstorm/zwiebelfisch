@@ -4,7 +4,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { DIAGRAM_EDITOR, diagramFigure } from '../model/model';
-import { createDiagram } from '../workbench/new-diagram';
+import { createDiagram } from '../window/new-diagram';
 
 /**
  * "Insert diagram": asks for the new diagram's name (proposing a free `diagrams/diagram.drawio.png` next to the

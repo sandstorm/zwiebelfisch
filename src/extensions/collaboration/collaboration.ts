@@ -9,8 +9,8 @@ import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
 import { registerVisualPresence } from './visual-editor/visual-editor';
 import { boxPresence } from './visual-editor/box-carets';
-import { AccountStatus } from './workbench/account';
-import { leaveWarning, presenceDecorations } from './workbench/workbench';
+import { AccountStatus } from './window/account';
+import { leaveWarning, presenceDecorations } from './window/window';
 
 /**
  * Real-time editing of the project with others, over Yjs. Not a built-in: the host adds it with its connection

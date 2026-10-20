@@ -6,8 +6,8 @@ import type { TextEditor } from '../../hosts/window/window';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './file-navigation.css?inline';
 import { type NavigationLocation, NavigationHistory } from './model/navigation-history';
-import { FileNavigation } from './workbench/file-navigation';
-import { HistoryLinks } from './workbench/history-links';
+import { FileNavigation } from './window/file-navigation';
+import { HistoryLinks } from './window/history-links';
 
 /**
  * Links around the shown file that lead to other files.

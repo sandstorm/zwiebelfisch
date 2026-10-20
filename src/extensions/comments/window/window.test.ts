@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts: the command comments.addComment.
+// Tests for window.ts: the command comments.addComment.
 import type { Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
@@ -12,7 +12,7 @@ import { localDate } from '../model/note-thread';
 import { testHosts } from '../../../testing/testing';
 import { registerCommentButtons, registerMarginNotes } from '../visual-editor/margin-notes';
 import { registerNoteCards } from '../visual-editor/note-cards/note-cards';
-import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
+import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './window';
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 

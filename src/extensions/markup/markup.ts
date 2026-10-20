@@ -5,7 +5,7 @@ import {
   BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, HARD_BREAK, HIGHLIGHT, INSERT_BUTTONS, ITALIC, LINK, LINK_BAR, LINK_BUTTON, LINK_COMMAND, linkCommand, linkShortcut, MARK_BUTTONS,
   STRIKE, UNDERLINE,
 } from './visual-editor/visual-editor';
-import { urlLinks } from './workbench/url-links';
+import { urlLinks } from './window/url-links';
 
 /**
  * The basic Typst markup in the Visual editor: strong, emphasis, underline, strike, highlight, links, inline code,

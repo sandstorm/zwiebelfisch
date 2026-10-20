@@ -10,7 +10,7 @@ import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceControl, SourceControlResourceState, SourceControlStatusBarItem } from '../../../hosts/scm/scm';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
 import { sourceControl as sourceControlExtension } from '../source-control';
-import { commit, type SourceControlUi } from './workbench';
+import { commit, type SourceControlUi } from './window';
 
 function control(id = 'gitlab', label = 'GitLab') {
   const committed: string[] = [];

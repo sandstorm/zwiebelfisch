@@ -6,8 +6,8 @@ import type { ExtensionContext, Extension } from '../../hosts/extension-host/ext
 import { Replacement } from './model/replace';
 import { SearchResults } from './model/search-results';
 import css from './search.css?inline';
-import { MatchHighlights } from './workbench/match-highlights';
-import { type FindOptions, type Mode, SearchPanel } from './workbench/search-panel';
+import { MatchHighlights } from './window/match-highlights';
+import { type FindOptions, type Mode, SearchPanel } from './window/search-panel';
 
 /**
  * "Find in files": a side panel that finds and replaces a text or regular expression in the project's Typst files and

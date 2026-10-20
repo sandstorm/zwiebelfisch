@@ -6,8 +6,8 @@ import { EngineMemoryLog } from './model/engine-memory';
 import { ContributionLog } from './recording/contributions';
 import { EventLog, subscribeToEvents } from './recording/event-log';
 import { LoadedVisualEditors } from './visual-editor/loaded-visual-editors';
-import { DevtoolsPanel, type DevtoolsTab } from './workbench/devtools-panel';
-import type { ShownDocument } from './workbench/document-tab';
+import { DevtoolsPanel, type DevtoolsTab } from './window/devtools-panel';
+import type { ShownDocument } from './window/document-tab';
 
 /**
  * `extensions` with their contributions recorded, followed by the devtools extension: a right side panel that shows

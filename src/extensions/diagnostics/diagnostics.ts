@@ -6,7 +6,7 @@ import { DiagnosticCollection } from './model/model';
 import { summarizeDiagnostics } from './model/diagnostics-summary';
 import { lint } from './source-editor/source-editor';
 import { diagnosticHighlight } from './visual-editor/visual-editor';
-import { DiagnosticsStatus } from './workbench/workbench';
+import { DiagnosticsStatus } from './window/window';
 
 /**
  * Compile errors and warnings where the user looks:

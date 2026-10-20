@@ -1,4 +1,4 @@
-/* The devtools' side panel (workbench/devtools-panel.ts), in the widget's color tokens. See devtools in devtools.ts,
+/* The devtools' side panel (window/devtools-panel.ts), in the widget's color tokens. See devtools in devtools.ts,
    which registers it. */
 .zwf-devtools {
   display: flex;

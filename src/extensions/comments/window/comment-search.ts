@@ -5,7 +5,7 @@ import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';
 import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import { findNotes, type FoundNote } from '../model/find-notes';
 import { firstWords } from '../model/note-thread';
-import type { NoteCards } from './workbench';
+import type { NoteCards } from './window';
 
 /**
  * "Comments" (prefix `!`): the margin notes of every Typst file, by their first message, with who wrote in the thread

@@ -5,7 +5,7 @@ import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import { calculateMermaidFigure, isMermaid, MERMAN } from './model/mermaid-figure';
 import { registerInsertMermaid } from './visual-editor/visual-editor';
-import { MERMAID_HELP } from './workbench/mermaid-help';
+import { MERMAID_HELP } from './window/mermaid-help';
 
 /**
  * Mermaid diagrams (`.mmd` files) as figures, drawn by the Typst package merman.

@@ -1,5 +1,5 @@
 // The margin notes of Typst source as threads, for search everywhere. See commentSearch in
-// ../workbench/comment-search.ts.
+// ../window/comment-search.ts.
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 import { noteCallSyntax } from './margin-note-syntax';

@@ -4,7 +4,7 @@ import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
 import { HEADING, HEADING_STYLES } from './visual-editor/visual-editor';
 import { HeadingNumbers } from './visual-editor/heading-numbers';
-import { headingSearch } from './workbench/heading-search';
+import { headingSearch } from './window/heading-search';
 
 /**
  * Headings (`= Title`) in the Visual editor and in search everywhere.

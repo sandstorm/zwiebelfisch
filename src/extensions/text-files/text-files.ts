@@ -4,9 +4,9 @@ import type { LanguageContribution } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './text-files.css?inline';
-import { BIBTEX_HELP } from './workbench/bibtex-help';
-import { TextFileEditor } from './workbench/text-file-editor';
-import { textSearch } from './workbench/text-search';
+import { BIBTEX_HELP } from './window/bibtex-help';
+import { TextFileEditor } from './window/text-file-editor';
+import { textSearch } from './window/text-search';
 
 /**
  * The text files a Typst project reads, editable: data (CSV, JSON, YAML, TOML, XML), bibliographies, plain text,

@@ -29,7 +29,7 @@ describe('layers', () => {
   });
 
   it("enters a host's concept folder only through the host's entry (the window's menus: window.showContextMenu)", async () => {
-    const file = 'src/extensions/files/workbench/file-panel.ts';
+    const file = 'src/extensions/files/window/file-panel.ts';
     expect(await broken(file, "import { ContextMenu } from '../../../hosts/window/menus/context-menu';")).toEqual(['local/entry-imports']);
     expect(await broken(file, "import type { WindowApi } from '../../../hosts/window/window';")).toEqual([]);
     expect(await broken('src/hosts/window/window.ts', "import { ContextMenu } from './menus/context-menu';")).toEqual([]);

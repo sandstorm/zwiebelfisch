@@ -3,8 +3,8 @@ import css from './comments.css?inline';
 import { registerIncludeComments, registerShowComments } from './preview/preview';
 import { registerCommentButtons, registerMarginNotes } from './visual-editor/margin-notes';
 import { registerNoteCards } from './visual-editor/note-cards/note-cards';
-import { commentSearch } from './workbench/comment-search';
-import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
+import { commentSearch } from './window/comment-search';
+import { ADD_COMMENT, registerAddComment } from './window/window';
 
 /**
  * Comments as `drafting` margin notes in the Typst source itself, so a margin note written by hand is a comment too.

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts.
+// Tests for window.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from '../model/diagnostics-summary';
-import { DiagnosticsStatus } from './workbench';
+import { DiagnosticsStatus } from './window';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const MAIN = ProjectPath.of('/main.typ');

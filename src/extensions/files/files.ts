@@ -3,10 +3,10 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { MenuContext } from '../../hosts/commands/commands';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './files.css?inline';
-import { fileInfoEditor } from './workbench/file-info';
-import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';
-import { fileSearch } from './workbench/file-search';
-import { FILES_ICON } from './workbench/icons/icons';
+import { fileInfoEditor } from './window/file-info';
+import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './window/file-panel';
+import { fileSearch } from './window/file-search';
+import { FILES_ICON } from './window/icons/icons';
 
 /**
  * The file panel: the project's files as a tree in the left side panel.

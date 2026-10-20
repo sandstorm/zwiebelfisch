@@ -3,7 +3,7 @@ import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import type { SourceControl } from '../../hosts/scm/scm';
 import css from './source-control.css?inline';
-import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './workbench/workbench';
+import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './window/window';
 
 /**
  * The UI over the registered source controls (`scm`), shown while there is at least one:

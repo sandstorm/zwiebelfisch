@@ -1,8 +1,8 @@
-// Tests for workbench.ts.
+// Tests for window.ts.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Presences } from '../presence/presence';
-import { leaveWarning, presenceDecorations } from './workbench';
+import { leaveWarning, presenceDecorations } from './window';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 describe('presenceDecorations', () => {

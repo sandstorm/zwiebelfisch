@@ -1,7 +1,7 @@
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './figures.css?inline';
 import { FIGURE, FIGURE_CAPTION } from './visual-editor/visual-editor';
-import { figureSearch } from './workbench/figure-search';
+import { figureSearch } from './window/figure-search';
 
 /**
  * Figures (`#figure(body, caption: [..])`) in the Visual editor and in search everywhere.

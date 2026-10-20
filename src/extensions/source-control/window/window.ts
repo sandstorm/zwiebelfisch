@@ -1,4 +1,4 @@
-// What the source-control extension does in the workbench. See sourceControl in ../source-control.ts.
+// What the source-control extension does in the window. See sourceControl in ../source-control.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { Scm, SourceControl } from '../../../hosts/scm/scm';
 import type { FileDecoration, FileDecorationProvider, WindowApi } from '../../../hosts/window/window';

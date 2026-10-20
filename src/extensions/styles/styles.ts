@@ -4,7 +4,7 @@ import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';
 import { registerCustomStyles, registerStyleApplier } from './visual-editor/visual-editor';
-import { styleSearch } from './workbench/style-search';
+import { styleSearch } from './window/style-search';
 
 /**
  * The custom block and inline styles a project declares (`/// @style …` above a Typst function in any of its files).

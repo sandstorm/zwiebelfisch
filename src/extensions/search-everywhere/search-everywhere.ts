@@ -1,7 +1,7 @@
 import type { Extension } from '../../hosts/extension-host/extension-host';
-import { commandSearch } from './workbench/command-search';
-import { SearchPick } from './workbench/search-pick';
-import { settingSearch } from './workbench/setting-search';
+import { commandSearch } from './window/command-search';
+import { SearchPick } from './window/search-pick';
+import { settingSearch } from './window/setting-search';
 
 /**
  * Search everywhere: one quick pick over everything the search providers find (`window.registerSearchProvider`:

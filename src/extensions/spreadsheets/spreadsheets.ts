@@ -7,9 +7,9 @@ import css from './spreadsheets.css?inline';
 import { calculateSheetFigure, droppedSpreadsheet, firstSheet } from './model/sheet-figure';
 import { spreadsheetPath, typstPath } from './model/typst-file';
 import { registerInsertSpreadsheet } from './visual-editor/insert-spreadsheet';
-import { SpreadsheetEditor } from './workbench/spreadsheet-editor';
-import { SPREADSHEET_HELP } from './workbench/spreadsheet-help';
-import type { WorkbookEdit } from './workbench/workbook';
+import { SpreadsheetEditor } from './window/spreadsheet-editor';
+import { SPREADSHEET_HELP } from './window/spreadsheet-help';
+import type { WorkbookEdit } from './window/workbook';
 
 /**
  * Spreadsheets (`.ic` files), edited in IronCalc's workbook UI and used in documents as Typst tables.
@@ -51,7 +51,7 @@ export function spreadsheets(): Extension {
         languages.registerHelpSheet({ language: 'ironcalc' }, SPREADSHEET_HELP),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),
-        registerInsertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName)),
+        registerInsertSpreadsheet(context, async (fileName) => (await import('./window/workbook')).newWorkbook(fileName)),
       );
     },
   };

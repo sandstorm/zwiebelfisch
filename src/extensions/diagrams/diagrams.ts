@@ -7,8 +7,8 @@ import type { ExtensionContext, Extension } from '../../hosts/extension-host/ext
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, diagramFigure, isDiagram } from './model/model';
 import { registerInsertDiagram } from './visual-editor/insert-diagram';
-import { DiagramEditor } from './workbench/diagram-editor';
-import { newDiagram } from './workbench/new-diagram';
+import { DiagramEditor } from './window/diagram-editor';
+import { newDiagram } from './window/new-diagram';
 
 /**
  * Diagrams in Typst documents, drawn in diagrams.net. A diagram is a `.drawio.png`: a PNG with the diagram's XML

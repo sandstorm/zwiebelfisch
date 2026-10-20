@@ -1,5 +1,5 @@
 // darkThemeVariables: IronCalc's workbook UI in the dark, made from the widget's color tokens. Pure: no DOM. Used by
-// ../workbench/color-scheme.ts while the widget is dark. See spreadsheets in ../spreadsheets.ts.
+// ../window/color-scheme.ts while the widget is dark. See spreadsheets in ../spreadsheets.ts.
 
 /**
  * IronCalc's theme variables (the custom properties `--palette-*` its CSS and its grid canvas read) for a dark

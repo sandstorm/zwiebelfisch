@@ -9,7 +9,7 @@ import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage, uploadFolder } from './model/image-files';
 import { imageSource } from './visual-editor/image-syntax';
 import { registerImages, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
-import { imageEditor } from './workbench/image-editor';
+import { imageEditor } from './window/image-editor';
 
 /**
  * Images, from the file in the project to the box in the text.

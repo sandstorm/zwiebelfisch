@@ -6,7 +6,7 @@ import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/v
 import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { calculateSheetFigure } from '../model/sheet-figure';
 import { typstPath } from '../model/typst-file';
-import type { NewWorkbook } from '../workbench/workbook';
+import type { NewWorkbook } from '../window/workbook';
 
 /**
  * "Insert spreadsheet" in the Insert menu: asks for the new spreadsheet's name (proposing a free `data/table.ic` next
