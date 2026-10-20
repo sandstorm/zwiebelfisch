@@ -1,4 +1,4 @@
-#import "/template.typ": unreviewed
+#import "../template.typ": unreviewed
 
 = GitLab integration <configuration-gitlab-integration>
 

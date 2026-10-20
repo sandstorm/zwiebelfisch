@@ -174,7 +174,7 @@ describe('demo examples', () => {
     expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
   });
 
-  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo, the screenshots, the diagrams, the spreadsheets and the fonts as bytes', () => {
+  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo, the screenshots, the diagrams, the spreadsheets, the fonts and the hosts\' contracts as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
       expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/40_architecture/07_window.typ']),
@@ -182,9 +182,11 @@ describe('demo examples', () => {
     expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
     expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);
     expect(files['/data/runs.ic']).toBeInstanceOf(Uint8Array);
+    expect(files['/src/hosts/commands/commands.ts']).toEqual(new Uint8Array(readFileSync(new URL('../src/hosts/commands/commands.ts', import.meta.url))));
+    expect(Object.keys(files).filter((path) => /^\/src\/.*(\.test|-impl|-helpers)\.ts$/.test(path))).toEqual([]);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$/);
+      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/hosts\/[\w-]+\/[\w-]+\.ts$/);
     }
   });
 

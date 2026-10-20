@@ -1,7 +1,7 @@
 
 = GitLab <features-gitlab>
 
-#import "/template.typ": unreviewed
+#import "../template.typ": unreviewed
 #unreviewed
 #set heading(outlined: false)
 

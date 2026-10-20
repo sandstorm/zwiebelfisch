@@ -1,4 +1,4 @@
-#import "/template.typ": mermaid, unreviewed
+#import "../template.typ": mermaid, unreviewed
 
 = Getting started <getting-started>
 

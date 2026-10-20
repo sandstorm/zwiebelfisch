@@ -1,6 +1,6 @@
 // The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ):
 // Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here but
-// `mermaid` for a diagram, `screenshot` for a picture of the editor and `example` (a block style:
+// `mermaid` for a diagram, `screenshot` for a picture of the editor, `api` for a TypeScript declaration and `example` (a block style:
 // `#example[```typ … ```]`) for a Typst document with its result: plain headings, `@label` references,
 // raw blocks and tables.
 //
@@ -52,6 +52,132 @@
   ),
   typography: (font: font),
 )
+
+/// The index in `cs` (TypeScript's codepoints) after the string, template literal or comment starting at `i`; `i`
+/// when none starts there.
+#let ts-skip(cs, i) = {
+  let (c, next, n, j) = (cs.at(i), cs.at(i + 1, default: ""), cs.len(), i)
+  if c == "/" and next == "/" {
+    while j < n and cs.at(j) != "\n" { j += 1 }
+  } else if c == "/" and next == "*" {
+    j += 2
+    while j < n and not (cs.at(j) == "*" and cs.at(j + 1, default: "") == "/") { j += 1 }
+    j += 2
+  } else if c in ("\"", "'", "`") {
+    // depth: braces open in a template literal's `${…}`
+    let depth = 0
+    j += 1
+    while j < n and (depth > 0 or cs.at(j) != c) {
+      let d = cs.at(j)
+      if d == "\\" { j += 1 } else if c == "`" and d == "$" and cs.at(j + 1, default: "") == "{" { depth += 1; j += 1 } else if depth > 0 and d == "{" { depth += 1 } else if depth > 0 and d == "}" { depth -= 1 }
+      j += 1
+    }
+    j += 1
+  }
+  j
+}
+
+/// Where the declaration of `kind` that `cs` starts with ends (`end`: after its `;` or closing brace at depth 0) and
+/// its body's braces (`open`, `close`; none without one). A function's body is the first brace after its parameters
+/// that is not its return type.
+#let ts-declaration(cs, kind) = {
+  let (i, depth, n, open, close, params, last) = (0, 0, cs.len(), none, none, false, "")
+  while i < n {
+    let j = ts-skip(cs, i)
+    if j != i { i = j; continue }
+    let c = cs.at(i)
+    if depth == 0 and c == ";" { return (end: i + 1, open: open, close: close) }
+    if c in ("(", "[", "{") {
+      if depth == 0 and c == "{" and open == none and (kind != "function" or (params and last != ":")) { open = i }
+      depth += 1
+    } else if c in (")", "]", "}") {
+      depth -= 1
+      if depth == 0 and c == ")" { params = true }
+      if depth == 0 and c == "}" and open != none and close == none {
+        close = i
+        // a type or const goes on to its `;`
+        if kind in ("interface", "class", "function") { return (end: i + 1, open: open, close: close) }
+      }
+    }
+    if c.trim() != "" { last = c }
+    i += 1
+  }
+  (end: n, open: open, close: close)
+}
+
+/// The members of the body `cs.slice(from, to)` as spans (`(start, end)`), each with the comments and spaces before
+/// it: up to its `;` or `,` or a method body's closing brace that ends its line.
+#let ts-members(cs, from, to) = {
+  let (members, i, depth, start) = ((), from, 0, from)
+  while i < to {
+    let j = ts-skip(cs, i)
+    if j != i { i = j; continue }
+    let c = cs.at(i)
+    if c in ("(", "[", "{") { depth += 1 } else if c in (")", "]", "}") {
+      depth -= 1
+      let k = i + 1
+      while k < to and cs.at(k) in (" ", "\t") { k += 1 }
+      if depth == 0 and c == "}" and (k >= to or cs.at(k) == "\n") { members.push((start, i + 1)); start = i + 1 }
+    } else if depth == 0 and c in (";", ",") { members.push((start, i + 1)); start = i + 1 }
+    i += 1
+  }
+  members
+}
+
+/// A TypeScript declaration of the repository as a code block, cut from its file:
+/// `#api("/src/hosts/commands/commands.ts", "Commands")` (the path from the repository root) is `interface`, `type`,
+/// `function`, `class` or `const` `Commands`, exported or not, with its doc comment, up to its closing brace or `;`.
+/// - `docs`: its doc comments (true), none (false) or the first sentence of each ("first-sentence")
+/// - `only`: the members of an interface, class or object type to keep, by name
+/// A missing file, declaration or member fails the build.
+#let api(path, name, docs: true, only: none) = {
+  let source = read(path)
+  let found = source.match(regex(
+    "(?m)^(?:export\s+)?(?:declare\s+)?(?:abstract\s+)?(interface|type|function|class|const)\s+" + name.replace("$", "\\$") + "\b",
+  ))
+  if found == none { panic("api: " + path + " declares no interface, type, function, class or const " + name) }
+  let cs = source.slice(found.start).codepoints()
+  let bounds = ts-declaration(cs, found.captures.at(0))
+  let code = cs.slice(0, bounds.end).join()
+  if only != none {
+    if bounds.close == none { panic("api: " + name + " in " + path + " has no members to pick (only)") }
+    let close = bounds.close
+    let members = ts-members(cs, bounds.open + 1, close).map(((from, to)) => cs.slice(from, to).join())
+    let member-name(text) = {
+      let bare = text.replace(regex("/\*[\s\S]*?\*/|//.*"), "").trim()
+      let m = bare.match(regex("^(?:(?:readonly|static|async|public|private|protected|abstract|declare|override|get|set)\s+)*([\w$#]+)"))
+      if m != none { m.captures.at(0) }
+    }
+    let names = members.map(member-name)
+    for wanted in only {
+      if wanted not in names { panic("api: " + name + " in " + path + " has no member " + wanted) }
+    }
+    let kept = members.filter(member => member-name(member) in only)
+    code = cs.slice(0, bounds.open + 1).join() + kept.join() + "\n" + cs.slice(close, bounds.end).join()
+  }
+  // its doc comment: the `/** … */` right above it
+  let above = source.slice(0, found.start).trim(at: end)
+  if above.ends-with("*/") {
+    let start = above.matches("/**").last().start
+    if above.slice(start).matches("*/").len() == 1 { code = above.slice(start) + "\n" + code }
+  }
+  if docs == false {
+    code = code.replace(regex("(?m)^[ \t]*/\*\*[\s\S]*?\*/[ \t]*\n"), "").replace(regex("/\*\*[\s\S]*?\*/[ \t]*"), "")
+  } else if docs == "first-sentence" {
+    code = code.replace(regex("/\*\*([\s\S]*?)\*/"), m => {
+      let lines = m.captures.at(0).split("\n").map(line => line.trim().trim("*", at: start).trim()).filter(line => line != "")
+      // its first paragraph (up to a list), up to the first full stop that ends a sentence
+      let list = lines.position(line => line.starts-with("- "))
+      let paragraph = lines.slice(0, if list == none { lines.len() } else { list }).join(" ")
+      let sentence = paragraph.replace("e.g.", "e@g@").replace("i.e.", "i@e@").match(regex("^.*?\.(\s|$)"))
+      let sentence = if sentence == none { paragraph } else { sentence.text.trim() }
+      "/** " + sentence.replace("e@g@", "e.g.").replace("i@e@", "i.e.") + " */"
+    })
+  } else if docs != true {
+    panic("api: docs is true, false or \"first-sentence\", not " + repr(docs))
+  }
+  raw(code, lang: "ts", block: true)
+}
 
 /// A picture of the editor showing a feature, `assets/screenshots/<name>.png`: one per feature chapter that shows the
 /// editor, named after its label without `features-` (`#screenshot("tables")`), taken by `mise run docs:screenshots`

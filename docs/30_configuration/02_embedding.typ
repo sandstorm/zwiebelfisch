@@ -1,4 +1,4 @@
-#import "/template.typ": unreviewed
+#import "../template.typ": unreviewed
 
 = Embedding <configuration-embedding>
 

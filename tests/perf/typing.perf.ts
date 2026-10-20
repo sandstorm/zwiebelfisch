@@ -154,17 +154,21 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
   process.stdout.write(`${report(result)}\n`);
 }, 600_000);
 
-/** The files of an example folder as `createEditor` takes them: `.typ` as text, the rest as bytes. */
+/**
+ * The files of an example folder as `createEditor` takes them: `.typ` as text, the rest as bytes. The docs also get
+ * the hosts' contracts their `#api(..)` reads, at their paths from the repository root (`/src/hosts/…`).
+ */
 function folderFiles(folder: string): ProjectFiles {
   const files: ProjectFiles = {};
-  const walk = (dir: string) => {
+  const walk = (dir: string, base: string) => {
     for (const name of readdirSync(dir)) {
       const path = join(dir, name);
-      if (statSync(path).isDirectory()) walk(path);
-      else files[`/${relative(join(root, folder), path)}`] = name.endsWith('.typ') ? readFileSync(path, 'utf8') : new Uint8Array(readFileSync(path));
+      if (statSync(path).isDirectory()) walk(path, base);
+      else files[`/${relative(base, path)}`] = name.endsWith('.typ') ? readFileSync(path, 'utf8') : new Uint8Array(readFileSync(path));
     }
   };
-  walk(join(root, folder));
+  walk(join(root, folder), join(root, folder));
+  if (folder === DOCS) walk(join(root, 'src/hosts'), root);
   return files;
 }
 

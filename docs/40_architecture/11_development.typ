@@ -1,4 +1,4 @@
-#import "/template.typ": unreviewed
+#import "../template.typ": unreviewed
 
 = Development <architecture-development>
 
@@ -61,13 +61,14 @@ mise run server:test   # when server/ or extensions/collaboration/room-protocol.
 
 == The docs <architecture-development-docs>
 
-The docs are one Typst project in `docs/`: `main.typ` (the book, one `#include` per chapter), `site.typ` (one HTML page per chapter) and `template.typ` (helpers).
+The docs are one Typst project in `docs/`, compiled from the repository root: `main.typ` (the book, one `#include` per chapter), `site.typ` (one HTML page per chapter) and `template.typ` (helpers).
 
 - *Parts*: `10_getting-started/`, `20_features/` (for users), `30_configuration/` (for technical users), `40_architecture/` (for developers of the editor). One chapter is one file, numbered in reading order.
 - *Style*: the model is `20_features/01`–`04`. Start with one sentence, or a screenshot and then that sentence. Name sections after the sub-feature or task. Speak to the reader ("Type `/`…"), keep sentences short, compare with tools the reader knows. Leave out "Why" and settings; settings go to the configuration part.
 - *Labels*: a chapter's label is its path without the numbers, `/` → `-` (`<architecture-window>`). A section gets a label only when something refers to it. Cross-references are `@label`.
 - *Font*: Gabarito (`fonts/`, SIL Open Font License), a project font for the editor and `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
 - *Diagrams*: Mermaid files in `diagrams/`, drawn by merman: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])`.
+- *Contracts*: shown from the code, not copied: `#api("/src/hosts/commands/commands.ts", "Commands", docs: "first-sentence", only: ("registerCommand",))` is that declaration with its doc comments as a code block; `docs:pdf` / `docs:html` compile from the repository root (`--root .`), the demo's Documentation example has the hosts' contracts (`src/hosts/*/*.ts`). A declaration or member renamed or gone fails the build.
 
 *Examples* show a Typst snippet and below it what Typst makes of it, compiled with the book. The Visual editor offers `example` in the text style menu. Each example is evaluated alone, so the reader can copy it into an empty file. A `#set page(..)` shows its pages side by side.
 

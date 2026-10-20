@@ -5,7 +5,8 @@ import type { ProjectFiles } from '../src';
  * The demo's example projects, each a folder whose files become the project's files (`examples/<name>/main.typ` →
  * `/main.typ`): Typst files as text, everything else (images, Mermaid diagrams, spreadsheets) as bytes.
  * "Documentation" is this project's own docs/: on the dev server and in vite preview its edits are saved there, in a
- * static build nowhere.
+ * static build nowhere. It also has the hosts' contracts its `#api(..)` reads, at their paths from the repository root
+ * (`/src/hosts/commands/commands.ts`), as `typst compile --root .` reads them.
  */
 export const EXAMPLES = [
   { name: 'simple', label: 'Simple', folder: './examples/simple' },
@@ -30,6 +31,7 @@ export function exampleFiles(name: ExampleName): ProjectFiles {
   for (const [key, url] of Object.entries(binaries)) {
     if (key.startsWith(`${prefix}/`)) files[key.slice(prefix.length)] = dataUrlBytes(url);
   }
+  if (name === 'docs') for (const [key, text] of Object.entries(contracts)) files[key.slice('..'.length)] = new TextEncoder().encode(text);
   return files;
 }
 
@@ -54,6 +56,13 @@ const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../d
 /** Binary files (IronCalc spreadsheets, images such as draw.io diagrams, fonts) as `data:` URLs: `?raw` would decode them as UTF-8. */
 const binaries = import.meta.glob<string>(['./examples/**/*.{ic,png}','../docs/**/*.{ic,png,jpg,jpeg,gif,webp,ttf}'], {
   query: '?inline',
+  import: 'default',
+  eager: true,
+});
+
+/** The hosts' contracts (`src/hosts/<host>/*.ts`, no tests or implementations), for the docs' `#api(..)`. */
+const contracts = import.meta.glob<string>(['../src/hosts/*/*.ts', '!**/*.test.ts', '!**/*-impl.ts', '!**/*-helpers.ts'], {
+  query: '?raw',
   import: 'default',
   eager: true,
 });
