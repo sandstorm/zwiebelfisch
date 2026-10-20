@@ -65,9 +65,7 @@ export class QuickInput {
     });
   }
 
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions & { canPickMany: true }): Promise<T[] | undefined>;
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions = {}): Promise<T | T[] | undefined> {
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions = {}): Promise<T | undefined> {
     // shown at once when the items are there (a test, or a caller, sees the box right after the call)
     return isArray(items) ? this.#pick(items, options) : items.then((list) => this.#pick(list, options));
   }
@@ -82,7 +80,7 @@ export class QuickInput {
     });
   }
 
-  #pick<T extends string | QuickPickItem>(list: readonly T[], options: QuickPickOptions): Promise<T | T[] | undefined> {
+  #pick<T extends string | QuickPickItem>(list: readonly T[], options: QuickPickOptions): Promise<T | undefined> {
     return new Promise((resolve) => {
       const doc = this.host.ownerDocument;
       const box = element(doc, 'div', 'zwf-quick-input zwf-quick-pick');
@@ -94,23 +92,12 @@ export class QuickInput {
       filter.setAttribute('aria-label', options.placeHolder ?? options.title ?? 'Filter');
       const listbox = element(doc, 'div', 'zwf-quick-pick__list');
       box.append(...title(doc, options.title), filter, listbox);
-      let picker: { filter(text: string): void; key(event: KeyboardEvent): void };
-      if (options.canPickMany) {
-        const many = new ManyPicker(doc, list, listbox, () => close(many.picked()));
-        const ok = element(doc, 'button', 'zwf-quick-input__ok');
-        ok.type = 'button';
-        ok.textContent = 'OK';
-        ok.addEventListener('click', () => close(many.picked()));
-        box.append(ok);
-        picker = many;
-      } else {
-        const one = new OnePicker(doc, { listbox, input: filter }, (item: T) => close(item));
-        picker = { filter: (text) => one.show(list.filter((item) => matches(item, text)).map((item) => ({ kind: 'item', item }))), key: (event) => one.key(event) };
-        picker.filter('');
-      }
-      filter.addEventListener('input', () => picker.filter(filter.value));
+      const picker = new OnePicker(doc, { listbox, input: filter }, (item: T) => close(item));
+      const show = (text: string) => picker.show(list.filter((item) => matches(item, text)).map((item) => ({ kind: 'item', item })));
+      show('');
+      filter.addEventListener('input', () => show(filter.value));
       filter.addEventListener('keydown', (event) => picker.key(event));
-      const close = this.#present<T | T[]>(box, filter, resolve);
+      const close = this.#present<T>(box, filter, resolve);
     });
   }
 
@@ -518,43 +505,6 @@ function highlighted(doc: Document, className: string, text: string, ranges: Qui
 
 function labelOf(item: string | QuickPickItem): string {
   return typeof item === 'string' ? item : item.label;
-}
-
-/** Picks several: a checkbox per item; Enter in the filter field accepts the checked ones. */
-class ManyPicker<T extends string | QuickPickItem> {
-  readonly #options: { item: T; element: HTMLElement; checkbox: HTMLInputElement }[];
-
-  constructor(
-    doc: Document,
-    items: readonly T[],
-    listbox: HTMLElement,
-    private readonly accept: () => void,
-  ) {
-    listbox.setAttribute('role', 'group');
-    this.#options = items.map((item) => {
-      const option = element(doc, 'label', 'zwf-quick-pick__item');
-      const checkbox = element(doc, 'input', 'zwf-quick-pick__check');
-      checkbox.type = 'checkbox';
-      checkbox.checked = typeof item !== 'string' && !!item.picked;
-      option.append(checkbox, ...itemElement(doc, item).childNodes);
-      return { item, element: option, checkbox };
-    });
-    listbox.append(...this.#options.map(({ element }) => element));
-  }
-
-  filter(text: string): void {
-    for (const { item, element } of this.#options) element.hidden = !matches(item, text);
-  }
-
-  key(event: KeyboardEvent): void {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    this.accept();
-  }
-
-  picked(): T[] {
-    return this.#options.filter(({ checkbox }) => checkbox.checked).map(({ item }) => item);
-  }
 }
 
 function matches(item: string | QuickPickItem, text: string): boolean {

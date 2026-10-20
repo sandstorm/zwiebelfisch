@@ -64,10 +64,10 @@ export class Preview implements PreviewContributions {
   private readonly context: PreviewContext;
   /** The toolbar's items in toolbar order. */
   private readonly items: { made: ToolbarItemElements; group: string; order: number; renderer: string | null }[] = [];
-  /** The PDF export options, with their priority, in registration order. */
-  private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
-  /** The view options, with their priority, in registration order. */
-  private readonly registeredViewOptions: { option: PreviewViewOption; priority: number }[] = [];
+  /** The PDF export options, in registration order. */
+  private readonly exportOptions: PdfExportOption[] = [];
+  /** The view options, in registration order. */
+  private readonly registeredViewOptions: PreviewViewOption[] = [];
   /** The renderers registered besides the built-in pages, in registration order. */
   private readonly registeredRenderers: PreviewRenderer[] = [];
   /** The renderer `setActiveRenderer` asked for last (maybe not registered yet: then the pages are shown). */
@@ -255,29 +255,26 @@ export class Preview implements PreviewContributions {
     if (this.showRenderer()) this.renderersChanged.fire();
   }
 
-  registerPdfExportOption(option: PdfExportOption, options: { priority?: number } = {}): Disposable {
-    if (this.exportOptions.some((entry) => entry.option.id === option.id)) throw new Error(`PDF export option '${option.id}' is already registered`);
-    const entry = { option, priority: options.priority ?? 100 };
-    this.exportOptions.push(entry);
+  registerPdfExportOption(option: PdfExportOption): Disposable {
+    if (this.exportOptions.some((other) => other.id === option.id)) throw new Error(`PDF export option '${option.id}' is already registered`);
+    this.exportOptions.push(option);
     return new Disposable(() => {
-      const index = this.exportOptions.indexOf(entry);
+      const index = this.exportOptions.indexOf(option);
       if (index >= 0) this.exportOptions.splice(index, 1);
     });
   }
 
   pdfExportOptions(): readonly PdfExportOption[] {
-    // the sort is stable: equal priorities stay in registration order
-    return [...this.exportOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
+    return [...this.exportOptions];
   }
 
-  registerViewOption(option: PreviewViewOption, options: { priority?: number } = {}): Disposable {
-    if (this.registeredViewOptions.some((entry) => entry.option.id === option.id)) throw new Error(`View option '${option.id}' is already registered`);
-    const entry = { option, priority: options.priority ?? 100 };
-    this.registeredViewOptions.push(entry);
+  registerViewOption(option: PreviewViewOption): Disposable {
+    if (this.registeredViewOptions.some((other) => other.id === option.id)) throw new Error(`View option '${option.id}' is already registered`);
+    this.registeredViewOptions.push(option);
     this.viewChanged();
     this.viewOptionsChanged.fire();
     return new Disposable(() => {
-      const index = this.registeredViewOptions.indexOf(entry);
+      const index = this.registeredViewOptions.indexOf(option);
       if (index < 0) return;
       this.registeredViewOptions.splice(index, 1);
       this.viewChanged();
@@ -286,8 +283,7 @@ export class Preview implements PreviewContributions {
   }
 
   viewOptions(): readonly PreviewViewOption[] {
-    // the sort is stable: equal priorities stay in registration order
-    return [...this.registeredViewOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
+    return [...this.registeredViewOptions];
   }
 
   setViewOptionValues(values: Readonly<Record<string, boolean>>): void {

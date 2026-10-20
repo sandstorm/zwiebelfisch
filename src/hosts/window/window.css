@@ -122,7 +122,6 @@
 .zwf-quick-input__prompt { color: var(--zwf-muted); font-size: 12px; }
 .zwf-quick-input__message { color: var(--zwf-danger); font-size: 12px; }
 .zwf-quick-input__message:empty { display: none; }
-.zwf-quick-pick .zwf-quick-input__ok { align-self: flex-end; }
 .zwf-quick-pick__list { display: flex; flex-direction: column; max-height: 240px; overflow: auto; }
 .zwf-quick-pick__item {
   display: flex;
@@ -141,27 +140,6 @@
 /* A command's key at the row's end (quick picks, menus). */
 .zwf-quick-pick__keybinding,
 .zwf-context-menu__keybinding { margin-left: auto; padding-left: 16px; color: var(--zwf-muted); font: inherit; font-size: 12px; white-space: nowrap; }
-/* withProgress, ProgressLocation.Window: a spinner and the text in the status bar. */
-.zwf-editor__progress {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  color: var(--zwf-muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.zwf-editor__progress-spinner {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--zwf-border);
-  border-top-color: var(--zwf-accent);
-  border-radius: 50%;
-  animation: zwf-editor-spin 0.8s linear infinite;
-}
-@keyframes zwf-editor-spin { to { transform: rotate(360deg); } }
 /* withProgress, ProgressLocation.EditingArea: a note over the editing area, in its grid cell (the frame's column 2,
    editor.css), while the area is inert. */
 .zwf-editor__editing-progress {
@@ -192,18 +170,16 @@
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: var(--zwf-progress, 35%);
+  width: 35%;
   background: var(--zwf-accent);
+  animation: zwf-editor-indeterminate 1.2s ease-in-out infinite;
 }
-.zwf-editor__editing-progress-bar:not([aria-valuenow])::after { animation: zwf-editor-indeterminate 1.2s ease-in-out infinite; }
 @keyframes zwf-editor-indeterminate {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
 }
-.zwf-editor__editing-progress-message:empty { display: none; }
 @media (prefers-reduced-motion: reduce) {
-  .zwf-editor__progress-spinner { animation: none; border-color: var(--zwf-accent); }
-  .zwf-editor__editing-progress-bar:not([aria-valuenow])::after { animation: none; width: 100%; opacity: 0.5; }
+  .zwf-editor__editing-progress-bar::after { animation: none; width: 100%; opacity: 0.5; }
 }
 /* createQuickPick: wider, at the top in the middle; groups under headings, matches marked. */
 .zwf-quick-pick--wide { width: min(560px, calc(100% - 16px)); }

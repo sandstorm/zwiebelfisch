@@ -126,13 +126,13 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { id, label, output } = record(renderer);
     return { title: String(id), details: [`"${String(label)}"`, `output ${String(output)}`] };
   },
-  'preview.registerPdfExportOption': ([option, options]) => {
+  'preview.registerPdfExportOption': ([option]) => {
     const { id, label, default: value } = record(option);
-    return prioritized({ title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] }, record(options).priority);
+    return { title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] };
   },
-  'preview.registerViewOption': ([option, options]) => {
+  'preview.registerViewOption': ([option]) => {
     const { id, label, default: value } = record(option);
-    return prioritized({ title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] }, record(options).priority);
+    return { title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] };
   },
   'scm.registerSourceControl':([sourceControl]) => {
     const { id, label } = record(sourceControl);

@@ -24,8 +24,6 @@ async function holdBack(page: Page, url: string | RegExp, serve: (route: Route) 
 
 const preview = (page: Page) => page.getByTestId('zwf-preview');
 const loader = (page: Page) => page.getByTestId('zwf-preview-progress');
-/** What the preview loads shows in its pane only: the status bar has no progress entry for it. */
-const statusBarProgress = (page: Page) => page.getByTestId('zwf-progress');
 
 test('the text shows and takes typing before the compiler is there; the preview says it loads it, then shows the pages', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
@@ -33,7 +31,6 @@ test('the text shows and takes typing before the compiler is there; the preview 
   await expect(page.getByTestId('zwf-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(loader(page).getByRole('status')).toHaveText('Loading the Typst compiler…');
   await expect(loader(page).getByRole('progressbar')).toBeVisible();
-  await expect(statusBarProgress(page)).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('zwf-source').locator('.cm-content').click();
@@ -73,7 +70,6 @@ test('the preview says when it loads fonts', async ({ page }) => {
   const fonts = await holdBack(page, /\.(otf|ttf)$/);
   await page.goto('/');
   await expect(loader(page).getByRole('status')).toHaveText('Loading fonts…');
-  await expect(statusBarProgress(page)).toHaveCount(0);
   fonts.release();
   await expect(preview(page).locator('.zwf-preview__page svg').first()).toBeVisible();
 });
@@ -85,7 +81,6 @@ test('the preview names a package while it downloads', async ({ page }) => {
   );
   await page.goto('/?example=advanced');
   await expect(loader(page).getByRole('status')).toHaveText('Downloading @preview/merman 0.4.0…', { timeout: 30_000 });
-  await expect(statusBarProgress(page)).toHaveCount(0);
   merman.release();
   await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
   await expect(preview(page).locator('.zwf-preview__page').first()).toBeVisible();

@@ -79,10 +79,9 @@ describe('describeContribution', () => {
       details: ['after " ", "("'],
       rank: ['@'],
     });
-    expect(describeAt('preview.registerPdfExportOption', { id: 'comments.include', label: 'Include comments', default: false, apply: () => ({}) }, { priority: 50 })).toEqual({
+    expect(describeAt('preview.registerPdfExportOption', { id: 'comments.include', label: 'Include comments', default: false, apply: () => ({}) })).toEqual({
       title: 'comments.include',
-      details: ['"Include comments"', 'default false', 'priority 50'],
-      rank: [-50],
+      details: ['"Include comments"', 'default false'],
     });
     expect(describeAt('scm.registerSourceControl', { id: 'gitlab', label: 'GitLab' }).details).toEqual(['"GitLab"']);
     expect(describeAt('window.registerFileDecorationProvider', new (class Presence {})()).title).toBe('Presence');

@@ -1,6 +1,11 @@
 // Which label (`<name>`) belongs to which block, and printing it back after the block. See typst-conversion.ts.
 import type { SyntaxNode } from '@lezer/common';
-import type { BlockLabel } from './typst-conversion';
+
+/** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
+export interface BlockLabel {
+  name: string;
+  gap: string;
+}
 
 /** `<name>` after its gap. */
 export function labelSyntax({ name, gap }: BlockLabel): string {

@@ -29,12 +29,6 @@ export interface DocumentNodeSpec {
   readonly typst?: TypstNodeConversion;
 }
 
-/** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
-export interface BlockLabel {
-  name: string;
-  gap: string;
-}
-
 /** An inline node and the source range it shows; source between placed nodes is hidden syntax. */
 export interface PlacedNode {
   node: Node;
@@ -72,8 +66,6 @@ export interface TypstParseContext {
   textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node;
   /** A node that prints `attrs.src` while untouched (a task item: its marker, then its only child). */
   unchangedNode(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
-  /** Verbatim inline Typst: a raw inline box. */
-  raw(src: string, marks?: readonly Mark[]): Node;
   /** Counts up from 0 within the textblock being parsed (equal neighbouring marks stay apart by such an `id`). */
   serial(): number;
 }
@@ -192,8 +184,6 @@ export interface TypstSerializeState {
   closing(src: string): void;
   /** Source right after the syntax printed last, mapping where that syntax maps (e.g. a block's label). */
   after(src: string): void;
-  /** Prints with every line of the output but empty ones indented by `by` (default: two spaces) more. */
-  indented(print: () => void, by?: string): void;
   /** Prints the children of `container`, whose content starts at document position `start`, `defaultSep` between new ones. */
   blocks(container: Node, start: number, defaultSep: string): void;
   /** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */

@@ -75,7 +75,6 @@ export class WorkspaceHost implements Workspace {
         if (!this.#properties.has(id) && !(id in this.#values)) return defaultValue;
         return this.#effective(id, this.#values) as T | undefined;
       },
-      has: (key) => this.#properties.has(full(key)) || full(key) in this.#values,
       inspect: <T>(key: string): ConfigurationInspect<T> | undefined => {
         const id = full(key);
         const property = this.#properties.get(id);

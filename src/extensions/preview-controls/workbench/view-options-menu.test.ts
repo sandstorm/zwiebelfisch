@@ -9,7 +9,7 @@ import { registerViewOptionsMenu } from './view-options-menu';
 
 function setup(saved: Record<string, unknown> = {}) {
   const stored = new Map<string, unknown>(Object.entries(saved));
-  const state = { keys: () => [...stored.keys()], get: (key: string) => stored.get(key), update: async (key: string, value: unknown) => void stored.set(key, value) } as Memento;
+  const state = { get: (key: string) => stored.get(key), update: async (key: string, value: unknown) => void stored.set(key, value) } as Memento;
   const options: PreviewViewOption[] = [];
   const changed = new EventEmitter<void>();
   const values: Record<string, boolean>[] = [];

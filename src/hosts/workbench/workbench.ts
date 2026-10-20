@@ -216,8 +216,6 @@ export interface SidePanel {
  * outside (check its shape). Without storage (blocked, private window) nothing is kept and nothing fails.
  */
 export interface Memento {
-  /** The keys that have a value. */
-  keys(): readonly string[];
   /** The value stored under `key`, else `defaultValue`. */
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;

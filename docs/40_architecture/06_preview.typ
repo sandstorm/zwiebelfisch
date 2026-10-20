@@ -18,8 +18,8 @@
   table.header[Member][What][Built-in users],
   [`registerToolbarItem(item, { group, order, renderer })`], [A toolbar control. Groups `1_sync`, `2_view`, `3_export`. `renderer`: shown only while that renderer is active.], [`previewSync`, `previewControls`, `pdfExport`],
   [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (switch: `previewControls`)],
-  [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports.], [`comments`],
-  [`registerViewOption(option, { priority })`], [Typst run before the main file, in the preview only (pages, or also HTML).], [`previewGuides`, `comments`],
+  [`registerPdfExportOption(option)`], [A checkbox offered with PDF exports.], [`comments`],
+  [`registerViewOption(option)`], [Typst run before the main file, in the preview only (pages, or also HTML).], [`previewGuides`, `comments`],
   [`createPageOverlay(className)`], [Boxes drawn over the pages as elements of the caller's class, `set(boxes)`, drawn again after every render; the boxes come from `boxesFor(path, ranges, text)` or a `PageClick`.], [`previewSync` (click outline, selection shading)],
   [`registerPaneOverlay(element)`], [An element over the whole pane below the toolbar, placed by the caller's CSS; with `onDidLoad` (engine download, ready or failed, a new engine `starting`, packages and fonts), `onDidCrash` and `isEmpty`.], [`previewProgress` (the loading note)],
 )

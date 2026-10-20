@@ -12,7 +12,7 @@ import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
 import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
-import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, ProgressReport, Progress, StatusBarPlacement, FileDecoration, FileDecorationProvider, CustomEditorOptions, CustomEditorProvider, CustomDocument, TextEditor, TextEditorSelectionChangeEvent, WindowOptions } from './window';
+import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, StatusBarPlacement, FileDecoration, FileDecorationProvider, CustomEditorOptions, CustomEditorProvider, CustomDocument, TextEditor, TextEditorSelectionChangeEvent, WindowOptions } from './window';
 
 /** The `WindowApi` of one widget. The workbench decides what is shown in the editing area (`showCustomEditor`). */
 export class WindowHost implements WindowApi {
@@ -36,7 +36,7 @@ export class WindowHost implements WindowApi {
     this.#quickInput = new QuickInput(options.host);
     this.#contextMenu = new ContextMenu(options.host, { items: options.menuItems, executeCommand: options.executeCommand });
     this.#statusBar = new StatusBar(options.statusBar);
-    this.#progress = new ProgressIndicators({ statusBar: this.#statusBar, editingArea: options.editingArea });
+    this.#progress = new ProgressIndicators(options.editingArea);
     this.#customEditors = new CustomEditors(options.editingArea);
     this.#fileChanges = options.onDidChangeFile((change) => this.#customEditors.followFileChange(change));
     this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
@@ -59,9 +59,7 @@ export class WindowHost implements WindowApi {
     return this.#quickInput.showInputBox(options);
   }
 
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions & { canPickMany: true }): Promise<T[] | undefined>;
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
-  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | T[] | undefined> {
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined> {
     return this.#quickInput.showQuickPick(items, options);
   }
 
@@ -77,7 +75,7 @@ export class WindowHost implements WindowApi {
     this.#contextMenu.show(menuId, options);
   }
 
-  withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R> {
+  withProgress<R>(options: ProgressOptions, task: () => Promise<R>): Promise<R> {
     return this.#progress.run(options, task);
   }
 

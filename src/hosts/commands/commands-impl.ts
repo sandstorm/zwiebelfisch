@@ -40,11 +40,6 @@ export class CommandsHost implements Commands {
     }
   }
 
-  /** Whether command `id` is registered now. */
-  has(id: string): boolean {
-    return this.#handlers.has(id);
-  }
-
   registerKeybinding(key: string, command: string, args?: unknown): Disposable {
     const tapped = DOUBLE_TAP.exec(key)?.[1];
     const binding = { key, matches: tapped ? () => false : parseKey(key, this.#mac), command, args: args === undefined ? [] : [args] };

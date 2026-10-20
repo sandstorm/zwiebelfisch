@@ -56,12 +56,12 @@ describe('Preview.registerPdfExportOption', () => {
   let preview: Preview;
   afterEach(() => preview.dispose());
 
-  it('lists the options by priority, equal priorities in registration order, until disposed', () => {
+  it('lists the options in registration order, until disposed', () => {
     preview = new Preview(document.createElement('div'));
     preview.registerPdfExportOption(option('a.first'));
-    const late = preview.registerPdfExportOption(option('b.urgent'), { priority: 110 });
+    const late = preview.registerPdfExportOption(option('b.late'));
     preview.registerPdfExportOption(option('c.second'));
-    expect(preview.pdfExportOptions().map((o) => o.id)).toEqual(['b.urgent', 'a.first', 'c.second']);
+    expect(preview.pdfExportOptions().map((o) => o.id)).toEqual(['a.first', 'b.late', 'c.second']);
     late.dispose();
     expect(preview.pdfExportOptions().map((o) => o.id)).toEqual(['a.first', 'c.second']);
   });
@@ -240,17 +240,17 @@ describe('Preview view options', () => {
     expect(Object.keys(last().files)).toEqual(['/main.typ']);
   });
 
-  it('compiles a file of its own with the prelude of the options that are on, by priority, then the main file included', async () => {
+  it('compiles a file of its own with the prelude of the options that are on, in registration order, then the main file included', async () => {
     const { compiled, last } = setup();
+    preview.registerViewOption(view('b.import', '#import "x.typ": y', true));
     preview.registerViewOption(view('a.first', '#set block(stroke: red)', true));
-    preview.registerViewOption(view('b.urgent', '#import "x.typ": y', true), { priority: 110 });
     preview.registerViewOption(view('c.off', '#set page(fill: red)'));
     preview.update({ '/main.typ': 'Hi' }, '/main.typ');
     await vi.waitFor(() => expect(compiled).not.toHaveLength(0));
     const { main, files } = last();
     expect(files['/main.typ']).toBe('Hi');
     expect(files[main]).toBe('#import "x.typ": y\n#set block(stroke: red)\n#include "/main.typ"\n');
-    expect(preview.viewOptions().map((option) => option.id)).toEqual(['b.urgent', 'a.first', 'c.off']);
+    expect(preview.viewOptions().map((option) => option.id)).toEqual(['b.import', 'a.first', 'c.off']);
   });
 
   it('compiles again when values are set (also for options registered later) or an option goes', async () => {

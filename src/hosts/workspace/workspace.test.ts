@@ -57,8 +57,6 @@ describe('WorkspaceHost settings', () => {
     const { configuration } = setup();
     expect(configuration.getConfiguration('files').get('nope')).toBeUndefined();
     expect(configuration.getConfiguration('files').get('nope', 7)).toBe(7);
-    expect(configuration.getConfiguration('files').has('panel')).toBe(true);
-    expect(configuration.getConfiguration('files').has('nope')).toBe(false);
   });
 
   it("tells where a value comes from (inspect): the default, and the host's value if it set one", () => {

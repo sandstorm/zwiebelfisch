@@ -157,19 +157,6 @@ describe('showQuickPick', () => {
     box()!.querySelectorAll<HTMLElement>('[role=option]')[1].click();
     expect(await answer).toBe('b.png');
   });
-
-  it('with canPickMany: checkboxes (picked at first as given), OK resolves to the checked items', async () => {
-    const { quickInput, box } = setup();
-    const items = [{ label: 'Include comments', picked: true }, { label: 'Draft watermark' }];
-    const answer = quickInput.showQuickPick(items, { canPickMany: true, title: 'PDF options' });
-    await tick();
-    const boxes = [...box()!.querySelectorAll<HTMLInputElement>('input[type=checkbox]')];
-    expect(boxes.map((checkbox) => checkbox.checked)).toEqual([true, false]);
-    boxes[0].click();
-    boxes[1].click();
-    [...box()!.querySelectorAll('button')].find((button) => button.textContent === 'OK')!.click();
-    expect(await answer).toEqual([items[1]]);
-  });
 });
 
 describe('createQuickPick', () => {

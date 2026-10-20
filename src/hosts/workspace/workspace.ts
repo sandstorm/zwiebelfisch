@@ -52,8 +52,6 @@ export interface WorkspaceConfiguration {
   /** The value the host set, else the declared default; undefined (or `defaultValue`) for a setting no one declares. */
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;
-  /** Whether the setting is declared or has a value. */
-  has(key: string): boolean;
   /** Where the value comes from: the declared default, and the host's value if it set a valid one (`globalValue`). */
   inspect<T>(key: string): ConfigurationInspect<T> | undefined;
   /**

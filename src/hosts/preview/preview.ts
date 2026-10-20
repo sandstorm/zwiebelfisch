@@ -16,11 +16,10 @@ export interface PreviewContributions {
    */
   registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable;
   /**
-   * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, by `priority`
-   * (default 100, higher first; equal: registration order), each to what the ones before it made. Throws when an
-   * option with the same `id` is registered.
+   * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, in registration
+   * order, each to what the ones before it made. Throws when an option with the same `id` is registered.
    */
-  registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
+  registerPdfExportOption(option: PdfExportOption): Disposable;
   /**
    * Adds a way to show the document instead of its pages, until disposed; `setActiveRenderer` chooses which is shown.
    * Throws when a renderer with the same `id` is registered (`pages` is the built-in one's).
@@ -104,11 +103,11 @@ export interface PreviewContributions {
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
   /**
    * Offers a way to look at the document in the preview (a toggle in the View menu), until disposed. The preview
-   * applies every option with its value (as `setViewOptionValues` says, else its `default`) by `priority` (default
-   * 100, higher first; equal: registration order), each to what the ones before made. PDF exports never see them.
-   * Throws when an option with the same `id` is registered.
+   * applies every option with its value (as `setViewOptionValues` says, else its `default`) in registration order,
+   * each to what the ones before made. PDF exports never see them. Throws when an option with the same `id` is
+   * registered.
    */
-  registerViewOption(option: PreviewViewOption, options?: { priority?: number }): Disposable;
+  registerViewOption(option: PreviewViewOption): Disposable;
   /** The registered view options, in the order the preview applies them. */
   viewOptions(): readonly PreviewViewOption[];
   /** A view option was registered or disposed. */

@@ -23,16 +23,6 @@ export class StorageMemento implements Memento {
     }, prefix);
   }
 
-  keys(): readonly string[] {
-    try {
-      const storage = this.storage();
-      const all = storage ? Array.from({ length: storage.length }, (_, i) => storage.key(i) ?? '') : [];
-      return all.filter((key) => key.startsWith(this.prefix)).map((key) => key.slice(this.prefix.length));
-    } catch {
-      return [];
-    }
-  }
-
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;
   get<T>(key: string, defaultValue?: T): T | undefined {

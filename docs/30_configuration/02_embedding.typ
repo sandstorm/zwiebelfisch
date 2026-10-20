@@ -87,7 +87,6 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
   [`executeCommand(id, ...args)`], [Runs an extension's command.],
   [`exportPdf(options?)`], [The PDF as a `Blob` (@configuration-embedding-pdf).],
   [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
-  [`files-change` event], [`detail`: the `FileChange`, as `onDidChangeFiles` fires it.],
   [`main-file-change` event], [`detail: { path }`: another file became the main file, also by a collaborator.],
   [`open` event], [`detail: { path }`: another file is shown.],
 )

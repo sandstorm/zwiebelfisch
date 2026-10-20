@@ -24,10 +24,7 @@ export type {
   FileDecorationProvider,
   InputBoxOptions,
   MessageItem,
-  MessageSeverity,
-  Progress,
   ProgressOptions,
-  ProgressReport,
   QuickPickItem,
   QuickPickOptions,
   SaveDialogOptions,
@@ -90,7 +87,6 @@ export type {
 } from './hosts/visual-editor/visual-editor';
 export type {
   Around,
-  BlockLabel,
   PlacedNode,
   TypstMarkConversion,
   TypstMarkSpec,

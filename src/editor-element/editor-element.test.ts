@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { defineEditorElement, type EditorChangeDetail, type EditorElement } from './editor-element';
-import type { FileChange, Project } from '../core/project/project';
+import type { Project } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 
@@ -50,10 +50,8 @@ function element(html = '<zwiebelfisch-editor></zwiebelfisch-editor>'): EditorEl
 
 function events(el: EditorElement) {
   const changes: EditorChangeDetail[] = [];
-  const fileChanges: FileChange[] = [];
   el.addEventListener('change', (event) => changes.push((event as CustomEvent<EditorChangeDetail>).detail));
-  el.addEventListener('files-change', (event) => fileChanges.push((event as CustomEvent<FileChange>).detail));
-  return { changes, fileChanges };
+  return { changes };
 }
 
 afterEach(() => {
@@ -143,15 +141,14 @@ describe('<zwiebelfisch-editor>', () => {
     expect(opened).toEqual([{ path: '/b.typ' }]);
   });
 
-  it('fires `change` per edited file with its path and content, and `files-change` with the change', () => {
+  it('fires `change` per edited file with its path and content', () => {
     const el = element();
     el.options = { viewType: SOURCE_EDITOR, files: { '/main.typ': '= Main', '/a.typ': 'A' } };
     document.body.append(el);
-    const { changes, fileChanges } = events(el);
+    const { changes } = events(el);
     const view = EditorView.findFromDOM(el.shadowRoot!.querySelector<HTMLElement>('.cm-editor')!)!;
     view.dispatch({ changes: { from: view.state.doc.length, insert: '!' } });
     expect(changes).toEqual([{ path: '/main.typ', content: '= Main!' }]);
-    expect(fileChanges).toEqual([{ kind: 'update', path: '/main.typ', content: '= Main!' }]);
   });
 
   it('fires `main-file-change` with the path when another file becomes the main file', () => {
@@ -171,12 +168,11 @@ describe('<zwiebelfisch-editor>', () => {
     const el = element();
     el.options = { source: '= Main' };
     document.body.append(el);
-    const { changes, fileChanges } = events(el);
+    const { changes } = events(el);
     el.value = '= New';
     el.files = { '/b.typ': 'B' };
     expect(el.files).toEqual({ '/main.typ': '= New', '/b.typ': 'B' });
     expect(changes).toEqual([]);
-    expect(fileChanges).toEqual([]);
   });
 
   it('takes `options`, `value` and `files` set before the element was defined', () => {

@@ -32,12 +32,8 @@ export interface WindowApi {
   showInputBox(options?: InputBoxOptions): Promise<string | undefined>;
   /**
    * Lets the user pick one of `items` (VS Code's `window.showQuickPick`), filtered as they type, placed as
-   * `showInputBox`. Resolves to the item picked, undefined when cancelled; with `canPickMany`, to the items checked.
+   * `showInputBox`. Resolves to the item picked, undefined when cancelled.
    */
-  showQuickPick<T extends string | QuickPickItem>(
-    items: readonly T[] | Promise<readonly T[]>,
-    options: QuickPickOptions & { canPickMany: true },
-  ): Promise<T[] | undefined>;
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
   /**
    * A quick pick its owner drives (VS Code's `window.createQuickPick`): wider than `showQuickPick`'s, at the top in
@@ -62,10 +58,9 @@ export interface WindowApi {
   showContextMenu(menuId: string, options: ContextMenuOptions): void;
   /**
    * Shows that `task` runs, where `options.location` says, until the promise it returns settles (VS Code's
-   * `window.withProgress`); resolves or rejects as it does. The task tells how it goes with `progress.report({ message,
-   * increment })` (`increment`: percent done since the last report; none: no bar of known length).
+   * `window.withProgress`, without reports); resolves or rejects as it does.
    */
-  withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R>;
+  withProgress<R>(options: ProgressOptions, task: () => Promise<R>): Promise<R>;
   /**
    * Adds what `provider` finds to search everywhere (the searchEverywhere extension's, double Shift) until disposed: a
    * group of results under `provider.label`. `provider.id` is unique.
@@ -153,8 +148,6 @@ export interface QuickPickItem {
   readonly description?: string;
   /** Less prominent, on a line of its own. */
   readonly detail?: string;
-  /** Checked at first (with `canPickMany`). */
-  readonly picked?: boolean;
   /** The characters marked where the typed text matched (`createQuickPick`: its owner matched them). */
   readonly highlights?: QuickPickHighlights;
   /** The key that does the same, as people read it (`⌘⇧F`), at the row's end. */
@@ -213,8 +206,6 @@ export interface QuickPickOptions {
   title?: string;
   /** Shown in the empty filter field: what to do. */
   placeHolder?: string;
-  /** Checkboxes and OK instead of picking one; resolves to the checked items. */
-  canPickMany?: boolean;
 }
 
 /** The [start, end) offsets of the characters to highlight in an item's texts (where a query matched). */
@@ -305,11 +296,11 @@ export interface ContributedMenuItem {
 }
 
 /**
- * Where `withProgress` shows a task (VS Code's ProgressLocation): `Window`, a spinner with "title: message" in the
- * status bar; `EditingArea` (not VS Code's), a note over the editing area with the title, the message and a bar, the
- * editing area taking no input meanwhile, for a task the editors must wait for (the room's text before it is shown).
+ * Where `withProgress` shows a task (VS Code's ProgressLocation, ours): `EditingArea`, a note over the editing area
+ * with the title, the editing area taking no input meanwhile, for a task the editors must wait for (the room's text
+ * before it is shown).
  */
-export const ProgressLocation = { Window: 10, EditingArea: 20 } as const;
+export const ProgressLocation = { EditingArea: 20 } as const;
 
 export type ProgressLocation = (typeof ProgressLocation)[keyof typeof ProgressLocation];
 
@@ -318,19 +309,6 @@ export interface ProgressOptions {
   readonly location: ProgressLocation;
   /** What runs ("Connecting to the room…"). */
   readonly title?: string;
-}
-
-/** What a task reports (VS Code's `{ message, increment }`). */
-export interface ProgressReport {
-  /** How it goes ("3.1 / 6.6 MB"); replaces the one before. */
-  readonly message?: string;
-  /** Percent done since the last report; the increments add up to 100. */
-  readonly increment?: number;
-}
-
-/** Where a task reports to (VS Code's Progress). */
-export interface Progress<T> {
-  report(value: T): void;
 }
 
 /**

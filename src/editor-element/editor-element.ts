@@ -21,9 +21,9 @@ import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
  *   (common indentation removed), if any, is the main file's text.
  * - `files` (all files, the main one included) and `value` (the main file's text, a shortcut) are the
  *   current content; setting them replaces it without events, as with `<input>`.
- * - Events (bubbling, composed): `change` for every file whose content changes (`EditorChangeDetail`),
- *   `files-change` with every `FileChange` (`onDidChangeFiles`), `main-file-change` with `{ path }`
- *   (`onDidChangeMainFile`), `open` with `{ path }` (`onDidChangeActiveFile`).
+ * - Events (bubbling, composed): `change` for every file whose content changes (`EditorChangeDetail`,
+ *   from `onDidChangeFiles`), `main-file-change` with `{ path }` (`onDidChangeMainFile`), `open` with `{ path }`
+ *   (`onDidChangeActiveFile`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
  */
 export class EditorElement extends Base() {
@@ -204,7 +204,7 @@ const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { d
 
 /** The editor's events the element forwards as DOM events. */
 const EVENTS: { [Name in EventName]: Forward<EventValue<Editor[Name]>> } = {
-  onDidChangeFiles: (change, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
+  onDidChangeFiles: (change, files) => changedFiles(change, files).map((detail): [string, unknown] => ['change', detail]),
   onDidChangeMainFile: (path) => [['main-file-change', { path }]],
   onDidChangeActiveFile: (path) => [['open', { path }]],
 };
