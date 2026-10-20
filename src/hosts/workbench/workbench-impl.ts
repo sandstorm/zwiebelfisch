@@ -155,6 +155,7 @@ export class WorkbenchHost implements Workbench {
       this.#languages.declare(extension.contributes?.languages ?? []);
       this.commands.declareKeybindings(extension.contributes?.keybindings);
       this.commands.declareCommands(extension.contributes?.commands);
+      this.#menus.declareCommands(extension.contributes?.commands);
     }
     this.#workspace.check();
     this.#extensions.activate(extensions);

@@ -227,6 +227,28 @@ describe('WorkbenchHost', () => {
     expect(workbench.getMenuItems('other/menu')).toEqual([]);
   });
 
+  it("gives menu items their command's declared title and icon unless they have their own", () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const workbench = new WorkbenchHost(host, new Project(path('/main.typ'), { '/main.typ': '' }), { viewType: SOURCE_EDITOR });
+    workbench.activate([
+      {
+        id: 'test',
+        contributes: { commands: [{ command: 'test.declared', title: 'Declared…', icon: '<svg/>' }] },
+        activate: ({ commands, workbench: bench, subscriptions }) => {
+          subscriptions.push(commands.registerCommand('test.declared', () => {}), commands.registerCommand('test.plain', () => {}));
+          subscriptions.push(bench.registerMenuItem('test/menu', { command: 'test.declared' }));
+          subscriptions.push(bench.registerMenuItem('test/menu', { command: 'test.declared', title: 'Own' }));
+          subscriptions.push(bench.registerMenuItem('test/menu', { command: 'test.plain' }));
+        },
+      },
+    ]);
+    expect(workbench.getMenuItems('test/menu').map(({ title, icon }) => [title, icon])).toEqual([
+      ['Declared…', '<svg/>'],
+      ['Own', '<svg/>'],
+      ['test.plain', undefined],
+    ]);
+  });
+
   it('shows the text and takes edits while the preview still loads the compiler', () => {
     const { host, project } = setup();
     const content = host.querySelector<HTMLElement>('.zwf-editor__editor-area .cm-content')!;

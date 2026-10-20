@@ -119,19 +119,20 @@ function registerOperations({ commands, workbench, project, window }: ExtensionC
       workbench.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
       workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
     ]),
-    workbench.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', title: 'Set as main file', group: 'main', when: mainCandidate }),
+    workbench.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', group: 'main', when: mainCandidate }),
     ...CHANGE_ENTRIES.map((entry) => workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
   );
 }
 
 /** The panel's own entries: in "New" (`file/newFile`) and in a row's context menu (`explorer/context`). */
 const NEW_ENTRIES = [
-  { command: 'files.newFile', title: 'New file…', order: 10 },
-  { command: 'files.newFolder', title: 'New folder…', order: 20 },
-  { command: 'files.upload', title: 'Upload files…', order: 30 },
+  { command: 'files.newFile', order: 10 },
+  { command: 'files.newFolder', order: 20 },
+  { command: 'files.upload', order: 30 },
 ] as const;
 
+// the row's own menu says "Delete" (as VS Code's), people search for "Delete…"
 const CHANGE_ENTRIES = [
-  { command: 'files.rename', title: 'Rename…', order: 10 },
+  { command: 'files.rename', order: 10 },
   { command: 'files.delete', title: 'Delete', order: 20 },
 ] as const;

@@ -151,7 +151,10 @@ export interface Workbench {
    * documents). `C` is the context the menu is shown in, as that menu documents it.
    */
   registerMenuItem<C extends object = MenuContext>(menuId: string, item: MenuItem<C>): Disposable;
-  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for whatever shows that menu (or searches it). */
+  /**
+   * The items of `menuId` to show in `context` (those whose `when` holds), sorted, each with its title and icon (its
+   * command's unless its own), for whatever shows that menu (or searches it).
+   */
   getMenuItems<C extends object = MenuContext>(menuId: string, context?: C): readonly MenuItem<C>[];
   /** Items of a menu (its id) were registered or disposed. */
   readonly onDidChangeMenu: Event<string>;

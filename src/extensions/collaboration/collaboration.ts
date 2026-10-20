@@ -92,7 +92,7 @@ function signInOut(account: Account, { commands, window, workbench, subscription
     account,
     account.onDidChange(() => status.show()),
     window.registerStatusBarItem(status.element, { alignment: 'right', priority: 10 }),
-    workbench.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut', title: 'Sign out' }),
+    workbench.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut' }),
     commands.registerCommand('collaboration.signIn', () => view?.location.assign(account.signInUrl(view.location.href))),
     commands.registerCommand('collaboration.signOut', async () => {
       await account.signOut();

@@ -25,7 +25,7 @@ import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
-import { CommandsHost, type MenuItem } from '../hosts/commands/commands';
+import { type CommandContribution, CommandsHost, type MenuItem } from '../hosts/commands/commands';
 import { LanguagesHost } from '../hosts/languages/languages';
 import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
@@ -118,14 +118,21 @@ export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickP
 /**
  * The workbench's menus in a test (`registerMenuItem`, `getMenuItems`, `onDidChangeMenu`): the entries whose `when`
  * holds, sorted as the workbench sorts them (group `navigation` first, the others by name, then `order`, then
- * registration order).
+ * registration order), with their declared command's title and icon unless their own.
  */
 class TestMenus implements Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> {
   private readonly items: { menuId: string; item: MenuItem<any> }[] = [];
+  private readonly declared = new Map<string, CommandContribution>();
   private readonly changed = new EventEmitter<string>();
   readonly onDidChangeMenu = this.changed.event;
 
-  registerMenuItem = <C extends object>(menuId: string, item: MenuItem<C>): Disposable => {
+  declareCommands(commands: readonly CommandContribution[] = []): void {
+    for (const command of commands) this.declared.set(command.command, command);
+  }
+
+  registerMenuItem = <C extends object>(menuId: string, registered: MenuItem<C>): Disposable => {
+    const declared = this.declared.get(registered.command);
+    const item = { ...registered, title: registered.title ?? declared?.title ?? registered.command, icon: registered.icon ?? declared?.icon };
     const entry = { menuId, item };
     this.items.push(entry);
     this.changed.fire(menuId);
@@ -187,6 +194,7 @@ function activate(contributions: readonly Extension[], options: TestEditorOption
   const context = { visualEditor, subscriptions: [], ...testContext(options), commands, workbench: { registerMenuItem, getMenuItems, onDidChangeMenu, registerStyleSheet: ignored, open: () => {} } };
   for (const contribution of contributions) {
     commands.declareCommands(contribution.contributes?.commands);
+    workbench.declareCommands(contribution.contributes?.commands);
     commands.declareKeybindings(contribution.contributes?.keybindings);
     contribution.activate(context as unknown as ExtensionContext);
   }
@@ -200,7 +208,7 @@ function activate(contributions: readonly Extension[], options: TestEditorOption
 export function testHosts(options: Pick<TestEditorOptions, 'rawBoxCodeMirrorExtensions'> = {}): {
   visualEditor: VisualEditorHost;
   commands: CommandsHost;
-  workbench: Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'>;
+  workbench: Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> & Pick<TestMenus, 'declareCommands'>;
 } {
   const menus = new TestMenus();
   // keys go to the widget's root: a detached element (jsdom), or nothing to listen to (node)

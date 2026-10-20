@@ -47,7 +47,7 @@ export function spreadsheets(): Extension {
           { filenamePattern: '*.ic', displayName: 'Spreadsheet', icon: SPREADSHEET_ICON },
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
-        workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
+        workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
         languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),

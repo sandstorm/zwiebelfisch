@@ -50,6 +50,8 @@ export interface CommandContribution {
   readonly title: string;
   /** What it belongs to, shown before the title ("Comments: Add comment"). */
   readonly category?: string;
+  /** An SVG icon (markup drawn in `currentColor`), for the menu entries that run it. */
+  readonly icon?: string;
 }
 
 /**
@@ -91,11 +93,11 @@ export interface Command {
 export interface MenuItem<C extends object = MenuContext> {
   /** The command the entry runs (`commands.executeCommand`), with the arguments of the menu it is in. */
   readonly command: string;
-  /** What the entry says; default: the command id. */
+  /** What the entry says; default: its command's title (`contributes.commands`), else the command id. */
   readonly title?: string;
   /** What a button says in place of an icon, where the menu shows one without (VS Code's `shortTitle`: `25%`); default: the title. */
   readonly shortTitle?: string;
-  /** An SVG icon (markup drawn in `currentColor`) before the title, where the menu shows icons (the tab bar). */
+  /** An SVG icon (markup drawn in `currentColor`) before the title, where the menu shows icons (the tab bar); default: its command's. */
   readonly icon?: string;
   /**
    * Whether the entry shows, given the context the menu is shown in (e.g. `(context) => context.resourceKind ===

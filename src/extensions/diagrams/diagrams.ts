@@ -44,7 +44,7 @@ export function diagrams(): Extension {
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
-        workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
+        workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
         registerInsertDiagram(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),
