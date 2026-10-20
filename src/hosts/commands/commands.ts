@@ -83,4 +83,5 @@ export interface Command {
   readonly arguments?: readonly unknown[];
 }
 
-export { CommandsHost, keyLabel } from './commands-impl';
+export { CommandsHost } from './commands-impl';
+export { keyLabel } from './commands-helpers';

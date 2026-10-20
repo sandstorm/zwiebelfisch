@@ -1,13 +1,14 @@
 // See VisualEditorContributions in visual-editor.ts.
 import { Editor, type AnyExtension } from '@tiptap/core';
 import type { Extension } from '@codemirror/state';
-import type { Node, ResolvedPos } from '@tiptap/pm/model';
-import { EditorState, NodeSelection, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
+import type { Node } from '@tiptap/pm/model';
+import { EditorState, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from './typst-conversion/typst-conversion';
+import { attachGrammar, onDidChangeGrammar, posToSource, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { BlockGaps, caretAtSource } from './block-gaps';
+import { applyChanges, insertTypst } from './visual-editor-helpers';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -185,66 +186,6 @@ export class VisualEditor {
     const tr = applyTypstChanges(state.tr, parseTypst(this.document.text, state.schema));
     if (tr.docChanged) this.tiptap.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
-}
-
-/**
- * Inserts what Typst `source` is read as in the Tiptap `editor` (as the Visual editor reads any Typst: a figure of an
- * image is a figure, what no spec models a raw box), at the selection or at document position `at` (where something was
- * dropped). One paragraph's inline content (`*bold*`, `$x$`) goes into the text there, in place of the selection;
- * blocks go next to it: after the selected block, or after the paragraph or heading holding the position, an empty
- * paragraph taken over. Blocks never split or replace anything. `changes` of the editor's Typst (in its coordinates
- * before the insert, e.g. the import `source` needs) go into the same transaction, so one undo takes back both. The
- * editor gets the focus, the cursor after what was inserted. For an entry whose result is easier written as Typst than
- * built as nodes.
- */
-export function insertTypst(editor: Editor, source: string, at?: number, changes: readonly TextChange[] = []): void {
-  const { schema } = editor.state;
-  const content = parseTypst(source, schema).content;
-  const paragraph = content.childCount === 1 && content.firstChild!.type === schema.nodes.paragraph ? content.firstChild! : null;
-  editor
-    .chain()
-    .focus()
-    .command(({ tr, commands }) => {
-      const { selection, doc } = tr;
-      const $at = at === undefined ? selection.$to : doc.resolve(Math.min(at, doc.content.size));
-      const inline = paragraph !== null && $at.parent.inlineContent;
-      const range = insertionRange(at === undefined ? selection : null, $at, inline);
-      const edge = posToSource(doc, range.from);
-      const before = serializeToTypst(doc).length;
-      if (!commands.insertContentAt(range, inline ? paragraph.content : content)) return false;
-      if (changes.length === 0) return true;
-      // the changes go in after the insert: a fresh parse of the text before it has no empty paragraph to take over
-      const text = serializeToTypst(tr.doc);
-      applyTypstChanges(tr, parseTypst(applyChanges(text, shiftedPast(changes, edge, text.length - before)), schema));
-      return true;
-    })
-    .run();
-}
-
-/**
- * Where `insertTypst` puts inline content (`inline`): in place of `selection`, else (a position given) at `$at`; where
- * blocks: after the selected block, else beside the text block of `$at`.
- */
-function insertionRange(selection: Selection | null, $at: ResolvedPos, inline: boolean): { from: number; to: number } {
-  if (inline) return selection ? { from: selection.from, to: selection.to } : { from: $at.pos, to: $at.pos };
-  return selection instanceof NodeSelection && selection.node.isBlock ? { from: $at.pos, to: $at.pos } : besideTextblock($at);
-}
-
-/** `changes` with those after source offset `edge` moved by `delta` (what an edit at `edge` added). */
-function shiftedPast(changes: readonly TextChange[], edge: SourceOffset, delta: number): TextChange[] {
-  return changes.map((change) => (change.to <= edge ? change : { ...change, from: SourceOffset.of(change.from + delta), to: SourceOffset.of(change.to + delta) }));
-}
-
-/** `text` with `changes` (in its coordinates, not overlapping) applied. */
-function applyChanges(text: string, changes: readonly TextChange[]): string {
-  return [...changes].sort((a, b) => b.from - a.from).reduce((current, { from, to, insert }) => current.slice(0, from) + insert + current.slice(to), text);
-}
-
-/** Where blocks go for `$pos`: after its textblock (instead of an empty one), else right there. */
-function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
-  if (!$pos.parent.isTextblock || $pos.depth === 0) return { from: $pos.pos, to: $pos.pos };
-  const after = $pos.after();
-  return $pos.parent.content.size === 0 ? { from: $pos.before(), to: after } : { from: after, to: after };
 }
 
 /**

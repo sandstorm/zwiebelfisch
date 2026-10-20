@@ -4,29 +4,6 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
 import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpProvider, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
-/**
- * A stateless helper for whoever applies paste edits (the clipboard extension), part of the contract's `yieldTo`:
- * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
- * their order; then each after those it yields to, else in the given order. An edit putting in the same text as one
- * before is left out; the plain text one (`text.plain`) takes the place of the first with its text, so a paste with
- * formatting always offers its plain text by that name.
- */
-export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences: readonly string[] = []): DocumentPasteEdit[] {
-  const sorted = preferences.flatMap((kind) => edits.filter((edit) => edit.kind === kind));
-  const rest = edits.filter((edit) => !sorted.includes(edit));
-  while (rest.length > 0) {
-    const yields = (edit: DocumentPasteEdit) => rest.some((other) => other !== edit && edit.yieldTo?.some((kind) => containsKind(kind, other.kind)));
-    // yielding in a circle: the first
-    const next = rest.find((edit) => !yields(edit)) ?? rest[0];
-    sorted.push(next);
-    rest.splice(rest.indexOf(next), 1);
-  }
-  const plain = sorted.find((edit) => edit.kind === 'text.plain');
-  return sorted
-    .filter((edit, i) => sorted.findIndex((other) => other.insertText === edit.insertText) === i)
-    .map((edit) => (plain && edit.insertText === plain.insertText ? plain : edit));
-}
-
 /** The `Languages` of one widget. Each link remembers its provider, which resolves it on demand (`resolveDocumentLink`). */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];

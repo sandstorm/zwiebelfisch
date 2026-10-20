@@ -60,7 +60,7 @@ export interface Languages {
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, wherever an editor
    * runs the providers (the clipboard extension: the Visual and the Source editors). A paste offers the edits of every
    * provider of `metadata.providedPasteEditKinds` whose `pasteMimeTypes` the clipboard has, by the providers'
-   * `priority`, as alternatives: it goes in as the first by `yieldTo` (`sortPasteEdits`), the others may replace it.
+   * `priority`, as alternatives: it goes in as the first by `yieldTo` (the clipboard extension's `sortPasteEdits`), the others may replace it.
    * Whichever goes in, every provider's `resolveDocumentPasteEdit` changes it first, in the same order; additional
    * edits that overlap the pasted ranges or an earlier edit are dropped.
    */
@@ -70,7 +70,7 @@ export interface Languages {
   /**
    * The edits the providers give for a paste of the clipboard `dataTransfer` into `document` in place of `ranges` (VS
    * Code's paste edit providers asked by the editor), by priority: of each provider that reads a type the clipboard
-   * has, the edits of the kinds it declared. Unsorted by `yieldTo` (see `sortPasteEdits`).
+   * has, the edits of the kinds it declared. Unsorted by `yieldTo` (the clipboard extension sorts them).
    */
   provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
   /**
@@ -256,4 +256,4 @@ export interface DocumentDropEdit {
   readonly additionalEdit?: readonly TextChange[];
 }
 
-export { sortPasteEdits, LanguagesHost } from './languages-impl';
+export { LanguagesHost } from './languages-impl';

@@ -432,5 +432,6 @@ export type ToolbarItem =
       provideActions(toolbar: ToolbarContext): readonly ToolbarAction[];
     };
 
-export { VisualEditor, insertTypst, VisualEditorHost } from './visual-editor-impl';
+export { VisualEditor, VisualEditorHost } from './visual-editor-impl';
+export { insertTypst } from './visual-editor-helpers';
 export { serializeToTypst, parseTypst, escapeTypst, applyTypstChanges, typstChanges, sourceToPos, posToSource, starterKitPart, documentNodeSpec, createSchema, documentExtensions, attachGrammar, type TypstMarkSpec, type TypstNodeConversion, type TypstMarkConversion, type TypstParseContext, type TypstParseRules, type TypstSerializeState, type PlacedNode, type BlockLabel, type Around } from './typst-conversion/typst-conversion';

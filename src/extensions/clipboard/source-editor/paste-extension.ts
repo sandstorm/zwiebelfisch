@@ -4,8 +4,8 @@ import { EditorSelection, EditorState, StateEffect, StateField, type ChangeSpec,
 import { EditorView, ViewPlugin, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import type { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import { sortPasteEdits, type Languages, type TextDocument } from '../../../hosts/languages/languages';
-import type { PasteChoice, PasteChoices } from '../paste-as';
+import type { Languages, TextDocument } from '../../../hosts/languages/languages';
+import { sortPasteEdits, type PasteChoice, type PasteChoices } from '../paste-as';
 
 /** The paste edit queries a CodeMirror paste asks (the languages host's). */
 type PasteEdits = Pick<Languages, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>;

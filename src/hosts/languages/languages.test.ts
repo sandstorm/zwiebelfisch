@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
 // through their provider; the declared languages by ending; the help sheets by language; the drop edit of a dropped
-// file; the paste edit providers and the order of paste edits.
+// file; the paste edit providers.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import { type DocumentLink, type DocumentLinkProvider, LanguagesHost, sortPasteEdits } from './languages';
+import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
 
 const document = { path: ProjectPath.of('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
 
@@ -167,26 +167,5 @@ describe('LanguagesHost', () => {
     const ranges = [SourceRange.of({ from: 5, to: 9 })];
     const edit = { kind: 'typst', title: 'Typst', insertText: 'pasted' };
     expect(languages.resolveDocumentPasteEdit(edit, document, ranges, data)).toEqual({ ...edit, insertText: 'PASTED!', additionalEdit: [change(0, 0, 'top '), change(10, 12, 'cc'), change(14, 14, 'end')] });
-  });
-});
-
-describe('sortPasteEdits', () => {
-  const edit = (kind: string, insertText = kind, yieldTo?: string[]) => ({ kind, title: kind, insertText, yieldTo });
-
-  it('puts each edit after the kinds it yields to (a kind covers those below it), else keeps the order', () => {
-    const edits = [edit('text.plain', 'p', ['typst']), edit('typst', 't', ['typst.html']), edit('typst.html', 'h'), edit('typst.markdown', 'm', ['typst.code'])];
-    expect(sortPasteEdits(edits).map(({ kind }) => kind)).toEqual(['typst.html', 'typst', 'typst.markdown', 'text.plain']);
-  });
-
-  it('puts the preferred kinds (exactly those) first, and leaves out an edit putting in the same text as one before', () => {
-    const edits = [edit('typst.code', 'c'), edit('typst', 't', ['typst.code']), edit('typst.html', 'h')];
-    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['typst', 'typst.code', 'typst.html']);
-    expect(sortPasteEdits([...edits, edit('typst.markdown', 'c')]).map(({ kind }) => kind)).toEqual(['typst.code', 'typst', 'typst.html']);
-  });
-
-  it('offers the plain text by its name: it takes the place of the first edit putting in the same text', () => {
-    const edits = [edit('typst.code', 'c'), edit('typst', 't', ['typst.code']), edit('text.plain', 't', ['typst']), edit('typst.html', 'h')];
-    expect(sortPasteEdits(edits, ['text.plain']).map(({ kind }) => kind)).toEqual(['text.plain', 'typst.code', 'typst.html']);
-    expect(sortPasteEdits(edits, ['typst']).map(({ kind }) => kind)).toEqual(['text.plain', 'typst.code', 'typst.html']);
   });
 });

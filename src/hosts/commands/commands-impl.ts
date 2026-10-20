@@ -1,6 +1,7 @@
 // See Commands in commands.ts.
 import { Disposable } from '../../core/disposable/disposable';
 import type { CommandContribution, Commands, KeybindingContribution, Platform } from './commands';
+import { DOUBLE_TAP, keyLabel, LABELS, PLATFORM } from './commands-helpers';
 import { listenForDoubleTap } from './double-tap';
 
 /**
@@ -100,9 +101,6 @@ export class CommandsHost implements Commands {
   }
 }
 
-/** A modifier tapped twice (`Shift Shift`). */
-const DOUBLE_TAP = /^(Mod|Ctrl|Meta|Alt|Shift) \1$/;
-
 /** The `KeyboardEvent.key` of a modifier as a binding names it. */
 function modifierKey(modifier: string, mac: boolean): string {
   if (modifier === 'Mod') return mac ? 'Meta' : 'Control';
@@ -111,20 +109,6 @@ function modifierKey(modifier: string, mac: boolean): string {
 
 /** A command's handler (VS Code's shape): the arguments the command documents, any result (a Promise is awaited). */
 type CommandHandler = (...args: any[]) => unknown;
-
-/**
- * `key` (modifiers and a key, joined by `+`: a binding's `Mod+Alt+KeyM`, or a toolbar's `Mod+B`) as people read it:
- * on the Mac `⌘⌥M`, else `Ctrl+Alt+M`. `mac`: default as the browser says.
- */
-export function keyLabel(key: string, mac = IS_MAC): string {
-  const labels = mac ? MAC_LABELS : LABELS;
-  // a modifier tapped twice (`Shift Shift`): each press by itself
-  if (DOUBLE_TAP.test(key)) return key.split(' ').map((modifier) => labels[modifier]).join(' ');
-  const parts = key.split('+');
-  const name = parts.pop()!;
-  const keyName = KEY_NAMES[name] ?? name.replace(/^(Key|Digit)(?=.)/, '');
-  return [...parts.map((modifier) => labels[modifier] ?? modifier), keyName].join(mac ? '' : '+');
-}
 
 /** `Mod+Alt+KeyM` → a test for the event: that `code`, and exactly the named modifiers pressed. */
 function parseKey(key: string, mac: boolean): (event: KeyboardEvent) => boolean {
@@ -139,15 +123,3 @@ function parseKey(key: string, mac: boolean): (event: KeyboardEvent) => boolean 
   return (event) =>
     event.code === code && event.ctrlKey === wanted.has('Ctrl') && event.metaKey === wanted.has('Meta') && event.altKey === wanted.has('Alt') && event.shiftKey === wanted.has('Shift');
 }
-
-const PLATFORM: Platform = typeof navigator === 'undefined' ? 'linux' : /Mac|iPhone|iPad/.test(navigator.platform) ? 'mac' : /Win/.test(navigator.platform) ? 'win' : 'linux';
-
-const IS_MAC = PLATFORM === 'mac';
-
-/** The modifiers as people read them, outside the Mac and on it. */
-const LABELS: Record<string, string> = { Mod: 'Ctrl', Ctrl: 'Ctrl', Meta: 'Meta', Alt: 'Alt', Shift: 'Shift' };
-
-const MAC_LABELS: Record<string, string> = { Mod: '⌘', Ctrl: '⌃', Meta: '⌘', Alt: '⌥', Shift: '⇧' };
-
-/** Keys (`KeyboardEvent.code`) whose name is not what people read; `KeyM` and `Digit1` lose their prefix. */
-const KEY_NAMES: Record<string, string> = { Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Comma: ',', Period: '.', Slash: '/', Backslash: '\\', Semicolon: ';', Quote: "'", Backquote: '`' };
