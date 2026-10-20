@@ -178,7 +178,7 @@ describe('demo examples', () => {
   it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo, the screenshots, the diagrams, the spreadsheets, the fonts and the hosts\' contracts as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
-      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/40_architecture/07_window.typ']),
+      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/40_architecture/08_window.typ']),
     );
     expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
     expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);
@@ -202,7 +202,7 @@ describe('demo examples', () => {
     const { files, diagnostics } = await load(exampleFiles('docs')).compileHtml('/site.typ');
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
     const paths = files.map((file) => file.path);
-    expect(paths).toEqual(expect.arrayContaining(['index.html', '40_architecture/06_preview.html', 'style.css', 'assets/sandstorm-logo.svg']));
+    expect(paths).toEqual(expect.arrayContaining(['index.html', '40_architecture/07_preview.html', 'style.css', 'assets/sandstorm-logo.svg']));
     expect(files.filter((file) => file.document).length).toBeGreaterThan(10);
   }, 60_000);
 

@@ -1,88 +1,114 @@
-#import "../template.typ": api, mermaid, unreviewed
+#import "../template.typ": mermaid, unreviewed
 
 = Extensions <architecture-extensions>
 
 #unreviewed
 
-Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has contributions of its own. The host page makes the list from the built-ins (`extensions: (builtinExtensions) => […]`, @configuration-embedding-extensions) and leaves one out by its id.
+Every feature is an extension in `src/extensions/<name>/`, the built-ins too: hosts are only the mechanism of a view and contribute nothing of their own. Each following chapter ends with "How extensions hook in": what its host lets an extension register.
 
-#api("/src/hosts/extension-host/extension-host.ts", "Extension")
-#api("/src/hosts/extension-host/extension-host.ts", "ExtensionContributions", docs: "first-sentence")
-#api("/src/hosts/extension-host/extension-host.ts", "ExtensionContext", docs: "first-sentence")
+== The principle <architecture-extensions-principle>
 
-- *Factories take no options* (`markup()`, `images()`): settings and `window.user` configure them, so a host page configures every extension the same way. Only `collaboration(options)` takes the host's connection. Independence: @architecture-conventions-api, @architecture-conventions-layers.
-- *Ids:* command ids are `<extension>.<name>` (`pdfExport.export`), settings `<section>.<key>` in the extension's section.
-- *Every type an extension implements or declares* is exported from the package.
-
-== Extension host <architecture-extensions-host>
-
-`src/hosts/extension-host/` runs the extensions (VS Code's extension host) and holds the settings they declare and the file changes they ask for (`workspace/`, VS Code's `workspace`). `Widget` (`src/editor/widget/`) makes and wires the hosts and hands them to it; `createEditor` makes the widget.
-
-#figure(
-  mermaid(read("../diagrams/widget-composition.mmd"), width: 85%),
-  caption: [What `createEditor` composes.],
-)
-
-+ The widget makes every host (the window builds the frame) and adds their CSS, the frame's first.
-+ `activate(list)` declares every extension's `contributes` (settings, languages, commands, keys) before any activates, so all are readable during activation; an id listed twice throws.
-+ Extensions activate in list order.
-+ The main file is shown and compiled; views are created on demand.
-+ `dispose()` disposes the extensions in reverse order, each one's subscriptions in reverse, then the frame: what came later, and may depend on what came before, goes first.
-
-=== Memento <architecture-extensions-state>
-
-#api("/src/hosts/extension-host/extension-host.ts", "Memento")
-
-`StorageMemento` keeps `globalState` in `localStorage` and `workspaceState` in `sessionStorage`, scoped by the extension's id.
-
-== Shape of an extension <architecture-extensions-shape>
-
-```
-extensions/<name>/
-  <name>.ts       entry: the factory (images()) and the controller; activate() registers everything
-  <name>.css      its own styles, registered with window.registerStyleSheet
-  model/          pure: no DOM, no editor libraries
-  window/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
-```
-
-A host folder's part is a plain function the entry's `activate` calls (`registerReferences(visualEditor, options)` returns its `Disposable`), not an extension of its own.
-
-== Example: word count <architecture-extensions-example>
-
-The words of the shown file in the status bar, with a setting for its label and a command the host can run.
+An extension is `{ id, contributes, activate(context) }`: `contributes` declares settings, commands, keys and languages up front; `activate` registers everything else and pushes each registration into `context.subscriptions`.
 
 ```ts
-export function wordCount(): Extension {
+// simplified from src/extensions/invisibles/invisibles.ts
+const TOGGLE = 'invisibles.toggle';
+
+export function invisibles(): Extension {
   return {
-    id: 'word-count',
+    id: 'invisibles',
     contributes: {
-      configuration: { properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' } } },
-      commands: [{ command: 'wordCount.count', title: 'Count words' }],
-      keybindings: [{ command: 'wordCount.count', key: 'Mod+Alt+KeyW' }],
+      configuration: {
+        properties: {
+          'invisibles.show': { type: 'boolean', default: false, description: '…' },
+        },
+      },
+      commands: [{ command: TOGGLE, title: 'Show invisible characters on / off' }],
     },
-    activate({ project, commands, window, workspace, subscriptions }) {
-      const item = window.ownerDocument.createElement('span');
-      const count = () => (window.activeTextEditor?.document.text ?? '').split(/\s+/).filter(Boolean).length;
-      const show = () => { item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`; };
-      show();
+    activate({ commands, window, workspace, sourceEditor, subscriptions }) {
+      let shown = workspace.getConfiguration('invisibles').get('show', false);
+      let marks: Disposable | null = null;
+      const show = (on: boolean) => {
+        shown = on;
+        marks?.dispose();
+        marks = on
+          ? sourceEditor.registerCodeMirrorExtension({}, highlightWhitespace())
+          : null;
+      };
+      show(shown);
       subscriptions.push(
-        window.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
-        window.onDidChangeActiveFile(show),
-        project.onDidChangeFile(show),
-        workspace.onDidChangeConfiguration((event) => { if (event.affectsConfiguration('wordCount.label')) show(); }),
-        commands.registerCommand('wordCount.count', () => count()),
+        window.registerMenuItem('view', {
+          command: TOGGLE, title: 'Invisible characters', toggled: () => shown,
+        }),
+        commands.registerCommand(TOGGLE, () => show(!shown)),
+        new Disposable(() => marks?.dispose()),
       );
     },
   };
 }
 
-const editor = createEditor(host, { source: '= Hello\n\nSome words here.', extensions: (builtins) => [...builtins, wordCount()] });
-await editor.executeCommand<number>('wordCount.count'); // 5
+// the host page: the built-ins, this one in place of the built-in `invisibles`
+const mine = invisibles();
+createEditor(host, {
+  extensions: (builtins) => [...builtins.filter((e) => e.id !== mine.id), mine],
+});
 ```
+
+- *One list:* `createEditor({ extensions })` gets the built-ins in their order and returns the list to run: add, leave out by id, or replace (@configuration-embedding-extensions). An id listed twice throws.
+- *Order:* every extension's `contributes` is declared first, so all settings, commands and keys are readable during activation; then each `activate` runs once, in list order, before any editor exists; on dispose, the extensions in reverse list order, each one's subscriptions in reverse.
+- *Factories take no options* (`markup()`, `images()`): settings and `window.user` configure them, so a host page configures every extension the same way. Only `collaboration(options)` takes the host's connection.
+- *Ids:* command ids are `<extension>.<name>` (`pdfExport.export`), settings `<section>.<key>` in the extension's section.
+- *Extensions never import each other;* they meet at contribution points (@architecture-extensions-meeting). Every type an extension implements or declares is exported from the package.
+
+== What `activate` gets <architecture-extensions-context>
+
+`ExtensionContext` holds VS Code's namespaces plus the hosts of the editors and the preview; what is registered there applies to every editor created later.
+
+#table(
+  columns: 2,
+  table.header[Member][What it is],
+  [`commands`], [commands by id and their key bindings],
+  [`window`], [what the user sees: the shown file, menus, side panels, status bar, custom editors, messages, style sheets],
+  [`workspace`], [settings (`getConfiguration`) and the project's changes (`applyEdit`)],
+  [`languages`], [document links of texts by their language],
+  [`scm`], [the source controls],
+  [`visualEditor`], [nodes, marks, toolbar items, box renderers and Tiptap extensions for every Visual editor],
+  [`sourceEditor`], [CodeMirror extensions for every Source editor],
+  [`preview`], [the preview's toolbar, PDF export options, reveal and clicks, compile results],
+  [`project`], [the files, one `TypstDocument` per `.typ` file],
+  [`subscriptions`], [disposed with the widget],
+  [`globalState`, `workspaceState`], [values kept per viewer (`localStorage`) or per project and browser session (`sessionStorage`), scoped by the extension's id],
+)
+
+== Extension host <architecture-extensions-host>
+
+`src/hosts/extension-host/` runs the extensions (VS Code's extension host) and holds `workspace/` (settings and file changes). `Widget` (`src/editor/widget/`) makes and wires the hosts.
+
+#figure(
+  mermaid(read("../diagrams/widget-composition.mmd"), width: 100%),
+  caption: [What `createEditor` composes.],
+)
+
+- *Dispose order:* the extensions first, then the hosts: what came later, and may depend on what came before, goes first.
+- *CSS order:* the frame's, the hosts', then the extensions' (`window.registerStyleSheet`).
+- *Without storage* (blocked, private window) `globalState` and `workspaceState` keep nothing and nothing fails.
+
+== Shape of an extension <architecture-extensions-shape>
+
+```
+extensions/<name>/
+  <name>.ts       entry: the factory (images()) and the controller (activate)
+  <name>.css      its own styles, registered with window.registerStyleSheet
+  model/          pure: no DOM, no editor libraries
+  window/ visual-editor/ source-editor/ preview/
+                  one folder per host it contributes to
+```
+
+A host folder's part is a plain function that `activate` calls and that returns a `Disposable` (labels' `registerReferences`), not an extension of its own.
 
 == Settings <architecture-extensions-settings>
 
-#api("/src/hosts/extension-host/workspace/workspace.ts", "ConfigurationProperty")
+A setting is a `ConfigurationProperty` (JSON Schema's `type`, `default`, `enum`, `description`) in `contributes.configuration`, read with `workspace.getConfiguration(section).get(key)`.
 
 - *Follow `workspace.onDidChangeConfiguration`:* the host may change values any time (`editor.updateSettings`), and so may the user (search everywhere's Settings, `update`).
 - *A wrong value* (wrong type, outside `enum`) counts as unset, an undeclared setting is ignored, both with a warning: a host page's typo never breaks an extension. An id declared twice is an error.
@@ -107,7 +133,10 @@ Each has an explicit tie-breaker, so the result never depends on the list's orde
 
 == Five vocabularies <architecture-extensions-vocabularies>
 
-Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`, `onDidChange…`, `registerNode`), Tiptap's (`Node.create`, `priority`; ProseMirror only through Tiptap), CodeMirror's (`Extension`, `EditorView`), Lezer's with codemirror-lang-typst's grammar (`SyntaxNode`, `FuncCall`; for parse rules), and the Typst language (what parse rules read and `toTypst` writes).
+#figure(
+  mermaid(read("../diagrams/extensions-vocabularies.mmd"), width: 70%),
+  caption: [Every name says whose it is; ours are unprefixed, ProseMirror only through Tiptap.],
+)
 
 - *A member that takes a framework object names the framework* (`registerTiptapExtension`, `registerCodeMirrorExtension`); framework types are never renamed.
 - *Pinned versions are part of the API:* codemirror-lang-typst 0.6.0, Tiptap 3.31.
@@ -127,10 +156,10 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`wordProcessors`], [HTML from Word, Google Docs, LibreOffice cleaned before the Visual editor reads it], [Tiptap extension (`transformPastedHTML`)],
   [`documentLinks`], [every provider's document links shown and followed in every editor; file paths in Typst as links], [document links, source editor, Tiptap extension, raw box pictures, style sheet],
   [`files`], [the file panel and its commands; the read-only fallback editor], [side panel, menus, custom editor, search],
-  [`search`], [the side panel "Find in files", Replace with one Undo, matches highlighted in both editors], [side panel, commands, keys, menu, highlights, search],
-  [`searchEverywhere`], [the quick pick over every search provider; its groups Commands and Settings], [`createQuickPick`, `getSearchProviders`, command, keys, menu `workbench/rail/left`, search],
   [`fileNavigation`], [previous / next file in reading order; Back / Forward over shown files], [editor frame, commands, key bindings],
   [`help`], [the side panel "Help" with the shown file's help sheets], [side panel, commands, menu, Tiptap extension],
+  [`search`], [the side panel "Find in files", Replace with one Undo, matches highlighted in both editors], [side panel, commands, keys, menu, highlights, search],
+  [`searchEverywhere`], [the quick pick over every search provider; its groups Commands and Settings], [`createQuickPick`, `getSearchProviders`, command, keys, menu `workbench/rail/left`, search],
   [`spreadsheets`], [`.ic` in IronCalc, written also as `name.ic.gen.typ`], [custom editor, menus, toolbar, languages, help, links, drop edit],
   [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror], [custom editor, search, languages, help],
   [`diagrams`], [`.drawio.png` in diagrams.net; "New diagram…", "Insert diagram", "Edit diagram"], [custom editor, toolbar, links, drop edit],
@@ -144,7 +173,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`images`], [image boxes, "Insert image", pasted and dropped images, the image viewer], [node, toolbar, custom editor, drop edit],
   [`figures`], [`#figure(..)` around any `figureBody` node], [nodes, search],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
-  [`lists`, `pageLayout`, `outline`, `alignment`], [bulleted, numbered and task lists; page breaks, horizontal rules; `#outline(..)`; `#align(..)`, `#par(justify: ..)`], [nodes, toolbar],
+  [`outline`, `pageLayout`, `lists`, `alignment`], [`#outline(..)`; page breaks, horizontal rules; bulleted, numbered and task lists; `#align(..)`, `#par(justify: ..)`], [nodes, toolbar],
   [`blockHandle`], [the grip beside the block under the pointer; the drop cursor], [Tiptap extension],
   [`blockGaps`], [the caret before or after a box; typing there makes a paragraph], [Tiptap extension, style sheet],
   [`tabKeys`], [Tab and Shift+Tab stay in the text; Escape, then Tab leaves], [Tiptap extension],
@@ -158,8 +187,8 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`previewProgress`], [the preview's loading note and its error message (@architecture-window-loading)], [`registerPaneOverlay`, `onDidLoad`, `onDidCrash`, `isEmpty`],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source], [menu `preview/title` ("Follow cursor"), `reveal`, `createPageOverlay`, `boxesFor`, `onDidClickPage`],
   [`previewControls`], [zoom, page number, a button per renderer, a View menu entry per view option], [menus `preview/title` and `view`, commands, status bar],
-  [`previewHtml`], [the renderer `html` (@architecture-preview-renderers)], [renderer],
   [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-preview-view)], [view options],
+  [`previewHtml`], [the renderer `html` (@architecture-preview-renderers)], [renderer],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [commands, menu `preview/title`, pane overlay],
 )
 

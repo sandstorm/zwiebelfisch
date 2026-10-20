@@ -124,7 +124,7 @@ describe('track-size columns', () => {
   });
 
   describe('the extension list of the architecture docs', () => {
-    const docs = readFileSync(new URL('../../../../docs/40_architecture/08_extensions.typ', import.meta.url), 'utf8');
+    const docs = readFileSync(new URL('../../../../docs/40_architecture/02_extensions.typ', import.meta.url), 'utf8');
 
     it('is an editable table that round-trips', () => {
       const doc = parseTypst(docs);
@@ -141,7 +141,7 @@ describe('track-size columns', () => {
 
     it('editing a cell changes only that cell', () => {
       const doc = edit(parseTypst(docs), (s) => s.tr.insertText('!', after(s.doc, 'bulleted, numbered and task lists')));
-      expect(serializeToTypst(doc)).toBe(docs.replace('[bulleted, numbered and task lists;', '[bulleted, numbered and task lists!;'));
+      expect(serializeToTypst(doc)).toBe(docs.replace('bulleted, numbered and task lists;', 'bulleted, numbered and task lists!;'));
     });
   });
 });

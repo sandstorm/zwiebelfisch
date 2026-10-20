@@ -1,0 +1,10 @@
+sequenceDiagram
+  participant P as demo page
+  participant V as docsFiles (Vite)
+  participant D as docs/ on disk
+  P->>V: write, If-Match: the version it read
+  V->>D: only if still that version
+  V-->>P: saved, or 412 "Not saved"
+  D-->>V: changed by someone else (watch)
+  V-->>P: event stream: new content
+  Note over P: unsaved edits are kept

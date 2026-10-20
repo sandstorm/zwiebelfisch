@@ -1,4 +1,4 @@
-#import "../template.typ": unreviewed
+#import "../template.typ": mermaid, unreviewed
 
 = Development <architecture-development>
 
@@ -58,13 +58,14 @@ mise run server:test   # when server/ or extensions/collaboration/room-protocol.
 
 == Releasing <architecture-development-release>
 
-GitHub runs the same mise tasks as a checkout (`.github/workflows/`, tools through `jdx/mise-action`). Every push and pull request runs CI: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` kept on failure). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
+GitHub runs the same mise tasks as a checkout (`.github/workflows/`, tools through `jdx/mise-action`). Every push and pull request runs `ci.yml`; a push to `main` also publishes the site (`pages.yml`) and the image `:main` (`docker.yml`).
 
-Every push to `main` publishes the site, `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/` ("Try it" in each page's header). That demo is the static site (`build:demo -- --mode static`): the Documentation example, editable but nothing saved (a banner and ⌘S say so, a reload starts over); Collaborate and GitLab show as unavailable.
+- *CI*: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` kept on failure). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
+- *The site* `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/` ("Try it" in each page's header). That demo is the static site (`build:demo -- --mode static`): the Documentation example, editable but nothing saved (a banner and ⌘S say so); Collaborate and GitLab show as unavailable.
 
-A release is a version tag (`git tag v1.2.3 && git push origin v1.2.3`). It runs all of CI, end-to-end tests included (`release.yml` calls `ci.yml`), and only then publishes on GitHub:
+A release is a version tag (`git tag v1.2.3 && git push origin v1.2.3`); it publishes only after all of CI passed:
 
-- *Image*: `ghcr.io/<owner>/<repo>:1.2.3` (also `1.2`, `latest`), linux/amd64 and linux/arm64; every push to `main` updates `:main`. For now it is the playground image (the Go server with the fake GitLab, distroless).
+- *Image*: `ghcr.io/<owner>/<repo>`, linux/amd64 and linux/arm64. For now it is the playground image (the Go server with the fake GitLab, distroless).
 - *npm package*: `@<owner>/zwiebelfisch@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout.
 - *Release*: generated notes, the book as PDF and the package's tarball.
 
@@ -99,7 +100,7 @@ One Typst project in `docs/`, compiled from the repository root: `main.typ` (the
 - *Labels*: a chapter's label is its path without the numbers, `/` → `-` (`<architecture-window>`). A section gets a label only when something refers to it. Cross-references are `@label`.
 - *Font*: Gabarito (`fonts/`, SIL Open Font License), a project font for the editor and `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
 - *Diagrams*: Mermaid files in `diagrams/`, drawn by merman: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])`.
-- *Contracts* are shown from the code, not copied: `#api("/src/hosts/commands/commands.ts", "Commands", docs: "first-sentence", only: ("registerCommand",))` is that declaration with its doc comments as a code block. `docs:pdf` / `docs:html` compile with `--root .`; the demo's Documentation example has the hosts' contracts (`src/hosts/*/*.ts`) only. A declaration or member renamed or gone fails the build.
+- *Contracts* are shown from the code, not copied: `#api("/src/hosts/commands/commands.ts", "Commands", docs: "first-sentence", only: ("registerCommand",))` is that declaration with its doc comments as a code block. `docs:pdf` / `docs:html` compile with `--root .`; the demo's Documentation example has the hosts' contracts (`src/hosts/*/*.ts`) only. A declaration or member renamed or gone fails the build. Use it only for a contract an extension author must read; otherwise one sentence of the idea.
 - *Examples* show a Typst snippet and below it what Typst makes of it, compiled with the book (the Visual editor offers `example` in the text style menu). Each is evaluated alone, so the reader can copy it into an empty file; a `#set page(..)` shows its pages side by side.
   ````typ
   #example[```typ
@@ -113,9 +114,12 @@ One Typst project in `docs/`, compiled from the repository root: `main.typ` (the
 
 On `mise run demo` and `mise run demo preview` (the last `build:demo`), the Documentation example (`?example=docs`) edits the files in `docs/` of the checkout: write, watch the preview, commit.
 
+#figure(
+  mermaid(read("../diagrams/development-docs-sync.mmd"), width: 75%),
+  caption: [Saving to `docs/` and hearing about changes there.],
+)
+
 - *Saving*: an edit is written once typing pauses; a create, rename, delete or upload in the file panel happens on disk first. The playground bar says "Saving…", "Saved to …", or why not.
-- *Changes on disk* (a checkout, another editor) show up without a reload; unsaved edits are kept and the next edit saves over the disk.
-- *No lost writes*: each write names the version it replaces (`If-Match`); the server refuses it (412, "Not saved") when the file on disk is another.
 - *A static build* has no file API: edits stay in the page, and the bar says so (@architecture-development-release).
 
 Depth (path guard, token, protocol): `docsFiles` in `demo/docs-files/plugin.ts`.

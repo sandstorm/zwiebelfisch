@@ -1,26 +1,9 @@
 sequenceDiagram
-  participant E as project, editors
-  participant S as previewSync
+  participant E as editors
   participant P as Preview
   participant W as worker
-  E->>P: project change: update(files)
-  Note over P: LatestOnly
-  P->>W: compile
-  W-->>P: pages + diagnostics
-  Note over P: page list: swap pages whose hash changed
-  P-->>E: onDidRender, onDidChangeDiagnostics (only if no newer update)
-  Note over P: click: px → pt
-  P->>W: click
-  P->>S: onDidClickPage (range, boxes)
-  S->>E: select the source
-  S->>P: outline: overlay.set(boxes)
-  E->>S: edit, render, selection moved away
-  S->>P: outline: overlay.set([])
-  E->>S: cursor
-  S->>P: reveal
-  P->>W: cursor
-  Note over P: scroll if off-screen
-  E->>S: selection (60 ms at rest)
-  S->>P: boxesFor
-  P->>W: boxes
-  S->>P: shading: overlay.set(boxes)
+  E->>P: update(files)
+  Note over P: LatestOnly, 150 ms
+  P->>W: changed files only
+  W-->>P: pages with changed hash, diagnostics
+  P-->>E: onDidRender, onDidChangeDiagnostics

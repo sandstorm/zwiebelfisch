@@ -30,7 +30,7 @@ State at writing: HEAD `e4f7c1bf` (+ this note and the two concept notes), all u
 - **Go server** (`docs/2026_10_13_go-server.md`): decided Go + Yjs via `reearth/ygo` with our own room layer (ygo's server can't carry it), no fallback; server compile via wazero, module at the repo root, zerolog. Spike (steps 0 and 1) merged; next steps in its §6 and in 11_development "Open work" (Server), then step 2 GitLab rooms.
 - **Find in files**: should the Source editor stop recording other origins' changes in its undo (⌘Z there also undoes a replace)?
 - **Paste**: a paste provider that throws drops the whole paste silently — harden?
-- **Docs**: merge draw.io + Mermaid into one "Diagrams" chapter? `docs/diagrams/comment-card.mmd` unused — delete? The `tables` screenshot has no spec.
+- **Docs**: merge draw.io + Mermaid into one "Diagrams" chapter? The `tables` screenshot has no spec.
 - **Worktrees**: ~148 under `.claude/worktrees` (all branches merged or obsolete) — remove after a listing.
 
 ## To try / run

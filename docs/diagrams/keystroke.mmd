@@ -1,24 +1,11 @@
 flowchart TD
-  visual["`VisualEditor (Tiptap)
-  keystroke → ProseMirror transaction`"]
-  document["`TypstDocument.change(changes, visualEditor)
-  onDidChange({ contentChanges, origin }):
-  listeners in subscription order`"]
-  project["Project"]
-  widget["Widget"]
-  worker["`worker
-  compile (newest only) → changed pages swapped`"]
-  host["host"]
-  source["SourceEditor"]
-  binding["`TextBinding
+  visual["Visual editor"] -- "typstChanges(tr)" --> document["TypstDocument.change"]
+  document -- "1" --> project["Project"]
+  document -. "2: own origin, ignored" .-> visual
+  document -- "3" --> source["Source editor"]
+  document -- "4" --> binding["`Y.Text
   (collaboration)`"]
-  visual -- "`typstChanges(tr): one minimal TextChange
-  per textblock touched`" --> document
-  document -- 1 --> project
-  document -. "`2: origin is itself, ignored`" .-> visual
-  document -- "`3: dispatched with
-  fromDocument({ origin })`" --> source
-  document -- "`4: into the shared Y.Text`" --> binding
-  project -- "`onDidChangeFile({ kind: 'update', … })`" --> widget
-  project -- onDidChangeFiles --> host
-  widget -- "`preview.update(project.files(), main)`" --> worker
+  project -- "onDidChangeFile" --> widget["Widget"]
+  project -- "onDidChangeFiles" --> host["host"]
+  widget -- "preview.update" --> worker["`worker: compile,
+  swap changed pages`"]

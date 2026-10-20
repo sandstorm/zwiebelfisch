@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the widget over a slow connection — the text first, editable,
 // then what the preview still loads (in its pane only, not in the status bar), then the pages
-// (docs/40_architecture/07_window.typ, "Loading"). Requests are held back until the test lets them through.
+// (docs/40_architecture/08_window.typ, "Loading"). Requests are held back until the test lets them through.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, type Page, type Route } from '@playwright/test';

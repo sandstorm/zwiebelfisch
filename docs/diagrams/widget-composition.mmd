@@ -1,17 +1,11 @@
 flowchart TD
-  create["createEditor"] --> host["`Widget(host, project, options)
-  .activate(extensions)`"]
-  host --> namespaces["`namespaces
-  CommandsHost
-  WindowHost (the frame)
-  ScmHost
-  LanguagesHost
-  WorkspaceHost`"]
-  host --> views["`view hosts
-  VisualEditorHost
-  SourceEditorHost
-  Preview`"]
-  host --> extensions["`ExtensionHost
-  activate(context)
-  per extension,
-  in list order`"]
+  create["createEditor"] --> widget["Widget(host, project, options)"]
+  widget --> ns["`namespaces
+  commands, window, scm, languages`"]
+  widget --> views["`view hosts
+  visualEditor, sourceEditor, preview`"]
+  widget --> de["`DocumentEditors
+  *.typ as custom editors`"]
+  widget --> eh["`ExtensionHost
+  with workspace`"]
+  eh -- "activate(context) per extension" --> ext["extensions"]

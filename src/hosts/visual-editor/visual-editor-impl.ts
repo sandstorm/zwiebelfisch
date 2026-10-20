@@ -22,8 +22,8 @@ import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceH
  * widget's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
  *
  * A visual edit becomes one minimal text change on its `TypstDocument`. A change from elsewhere is applied as the
- * smallest replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code,
- * never rewritten, or shown as a picture.
+ * smallest replacement, so the cursor stays where it was. Typst that no node spec turns into a visual element
+ * shows as a raw box: its source code, edited as code and never rewritten, or shown as a picture.
  *
  * Every construct beyond paragraphs, text and raw boxes (headings, tables, labels, comments, …) is contributed through
  * `VisualEditorHost`.

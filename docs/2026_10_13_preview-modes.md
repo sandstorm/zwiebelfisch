@@ -1,10 +1,10 @@
 # Preview modes (2026-10-13)
 
 Temporary working note: concept for an HTML preview next to today's SVG pages. Distil into
-`40_architecture/06_preview.typ` once built, then delete.
+`40_architecture/07_preview.typ` once built, then delete.
 
 **Built (2026-10-13):** `compileHtml` and `elementsAtCursor` in the engine, `registerRenderer` in the preview host,
-the extension `previewHtml`, the switch in `previewControls`; distilled into `06_preview.typ` ("Renderers") and
+the extension `previewHtml`, the switch in `previewControls`; distilled into `07_preview.typ` ("Renderers") and
 `20_features/14_html-preview.typ`. Differences to the design below: the pages stay built into the host (not behind
 `create()`: their clicks, shading, snippets and zoom are host API); `reveal` gets the cursor's elements
 (`ElementLocation[]`), not a source range; the renderer buttons are `previewControls`' (it lists every renderer);

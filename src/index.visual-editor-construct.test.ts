@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for the public Visual-editor contribution API (index.ts): the example construct of
-// docs/40_architecture/04_visual-editor.typ, a `#callout(title: "…")[…]` box with a title field, written as if
+// docs/40_architecture/05_visual-editor.typ, a `#callout(title: "…")[…]` box with a title field, written as if
 // outside the package — it imports only the package entry (and Tiptap, Lezer's types) — and run in a Visual editor with the built-ins.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
@@ -13,7 +13,7 @@ import {
 } from './index';
 import { createVisualEditor } from './testing/testing';
 
-// ----- the example, as in docs/40_architecture/04_visual-editor.typ (there it imports from 'zwiebelfisch') -----
+// ----- the example, as in docs/40_architecture/05_visual-editor.typ (there it imports from 'zwiebelfisch') -----
 
 /** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
 interface CalloutLayout {
@@ -79,7 +79,7 @@ function calloutTitle(p: TypstParseContext, call: SyntaxNode): string | null {
   return args.length === 1 && title?.name === 'Str' ? decodeString(p.text(title)) : null;
 }
 
-/** As written while the title is; a new callout, or one with a changed title, gets the call written anew. */
+/** As written while the title is; a new or retitled callout gets the call written anew. */
 function calloutToTypst(state: TypstSerializeState, callout: ProseMirrorNode, pos: number): void {
   const layout: CalloutLayout | null = callout.attrs.layout;
   const title: string = callout.attrs.title;

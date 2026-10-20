@@ -1,0 +1,11 @@
+flowchart TD
+  ours["`**ours**, VS Code-shaped
+  registerCommand, registerNode`"] --> tiptap["`**Tiptap**
+  Node.create, priority`"]
+  ours --> cm["`**CodeMirror**
+  Extension, EditorView`"]
+  tiptap --> pm["ProseMirror"]
+  cm --> lezer["`**Lezer**, codemirror-lang-typst
+  SyntaxNode, FuncCall`"]
+  lezer -- parses --> typst["the Typst language"]
+  tiptap -- toTypst --> typst

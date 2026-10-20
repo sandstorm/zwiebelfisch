@@ -34,19 +34,11 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 == Layers <architecture-conventions-layers>
 
-#table(
-  columns: (auto, 1fr, 1fr),
-  table.header[Layer][May use][Must not use],
-  [`core/`], [other `core/` modules, libraries without the DOM (Lezer)], [the DOM, any library that needs it (Tiptap, prosemirror-view, CodeMirror views), Yjs, anything outside `core/`],
-  [`hosts/`], [the DOM, editor libraries, `core/`], [extensions, `editor/`, `testing/`],
-  [`extensions/<name>/`], [hosts' entries, `core/`], [other extensions],
-  [`extensions/<name>/model/`], [`core/`], [the DOM, editor libraries, hosts, the extension's view folders],
-  [`editor/`, `editor-element/`], [every module's entry], [—],
-  [`testing/`], [every module's entry], [being imported by non-test code],
-)
-
+- *Imports go down only* (`eslint.config.js`, `layers`; the picture: @architecture-overview-layers): `editor/` and `editor-element/` → `extensions/<name>/` → its `model/` → `core/`, and `hosts/` → `core/`.
+- *`core/` has no DOM*: no library that needs it (Tiptap, prosemirror-view, CodeMirror views), no Yjs. `model/` likewise uses no editor library.
+- *An extension never imports another one*; `testing/` is imported by `*.test.ts` only.
 - *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
-- *Window = everything visible; extension host = the extensions' lifecycle; `editor/` = the composition*: `hosts/window` holds what is shown and interacted with, `hosts/extension-host` activates extensions and processes their `contributes`, `editor/` makes and wires the hosts. No host composes the others.
+- *Window = everything visible; extension host = the extensions' lifecycle; `editor/` = the composition*: `hosts/window` holds what is shown and interacted with, `hosts/extension-host` activates extensions, processes their `contributes` and holds the workspace, `editor/` makes and wires the hosts (`editor/widget/`, which also registers the Visual and Source editors as the window's custom editors). No host composes the others.
 - *Hosts keep only mechanism.* For every host member ask: mechanism, or one feature's policy? Policy is an extension.
 - *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, first; at the bottom the re-exports of the implementation others construct and of its helpers.
 - *`<name>-impl.ts` is the implementation*, starting with `See <Contract> in <name>.ts`.

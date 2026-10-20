@@ -1,21 +1,13 @@
 sequenceDiagram
-  participant C as client
-  participant R as room (server)
+  participant C as clients
+  participant R as room
   participant G as GitLab
-  Note over C,G: open
-  R->>G: no meta: load the branch head<br/>(.typ as text, others as blob sha)
-  G-->>R: files, assets, meta
-  R->>G: stored room: pull upstream (merge),<br/>ignoring GitLab being unreachable
-  Note over C,G: save
-  C->>R: gitlab:save<br/>(stateless)
-  R->>G: head still the base? then one<br/>POST /repository/commits (the bot's token)
-  G-->>R: head moved (ErrConflict): merge upstream,<br/>retry (3 attempts), a conflict ends the save
-  Note over C,G: auto
-  Note over R,G: AutoCommit (10 min) after the last edit,<br/>or LeaveDelay (20 s) after the last user left<br/>(Left waits, someone back: no commit)
-  R->>G: the same commit,<br/>message naming the editors
-  Note over C,G: webhook
-  G->>R: POST /api/public/gitlab/webhook<br/>(X-Gitlab-Token)
-  Note over R: merge into the open<br/>rooms of that branch
-  Note over C,G: answers
-  R-->>C: gitlab:saved / merged / conflict<br/>to everyone
-  R-->>C: gitlab:unchanged / error to the saver<br/>(auto: errors to everyone)
+  R->>G: open: load the branch, or pull upstream
+  C->>R: gitlab:save
+  R->>G: one commit (the bot's token), if head = base
+  G-->>R: head moved: merge upstream, retry (3×)
+  Note over R: auto: AutoCommit after the last edit,<br/>LeaveDelay after the last user left
+  R->>G: the same commit
+  G->>R: webhook: a push
+  Note over R: merge into the open rooms
+  R-->>C: saved / merged / conflict / unchanged / error

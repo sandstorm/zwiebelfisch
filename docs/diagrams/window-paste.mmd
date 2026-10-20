@@ -1,0 +1,10 @@
+sequenceDiagram
+  participant E as Visual or Source editor
+  participant C as clipboard
+  participant L as languages
+  E->>C: paste
+  C->>L: providers with a matching pasteMimeTypes
+  L-->>C: edits, each resolved
+  Note over C: sortPasteEdits
+  C->>E: the first edit goes in
+  Note over E: "Paste as" chip: the others
