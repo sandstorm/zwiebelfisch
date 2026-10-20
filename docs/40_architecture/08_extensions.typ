@@ -1,10 +1,10 @@
-#import "/template.typ": unreviewed
+#import "/template.typ": mermaid, unreviewed
 
 = Extensions <architecture-extensions>
 
 #unreviewed
 
-Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `Extension` in `src/hosts/workbench/workbench.ts`.
+Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no host has built-in contributions. The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@configuration-embedding-extensions) and leaves one out by its id. The why: the doc comment of `Extension` in `src/hosts/extension-host/extension-host.ts`.
 
 ```ts
 interface Extension {
@@ -19,6 +19,25 @@ interface Extension {
 - *Command ids* are `<extension>.<name>` (`pdfExport.export`).
 - *Every type an extension implements or declares* is exported from the package.
 
+== Extension host <architecture-extensions-host>
+
+`src/hosts/extension-host/` runs the extensions (VS Code's extension host): it holds `Extension`, `ExtensionContext` and `Memento`, and gives every extension the hosts' contracts, its `subscriptions` and its storage. `src/editor/widget/` (`Widget`) makes and wires the hosts and hands them to it; `createEditor` makes the widget.
+
+#figure(
+  mermaid(read("../diagrams/widget-composition.mmd"), width: 85%),
+  caption: [What `createEditor` composes.],
+)
+
++ The widget makes every host (the window builds the frame) and adds the CSS: the frame's and the window's, then each other host's. Extensions add theirs at activation.
++ `activate(list)` declares every extension's settings, languages and commands and binds its keys (`contributes`), so they are readable during activation; a duplicate id throws.
++ Extensions activate in list order.
++ The main file is shown (in the editor `viewType` names) and compiled. Views are created later, on demand.
++ `dispose()` disposes the extensions in reverse order, then the frame.
+
+=== Memento <architecture-extensions-state>
+
+`StorageMemento` behind `globalState` (this viewer, across widgets and visits: `localStorage`) and `workspaceState` (this project, during the browser session: `sessionStorage`). Each extension has its own values. Check the shape of what `get` returns: it comes from outside. Without storage nothing is kept and nothing fails.
+
 == Shape of an extension <architecture-extensions-shape>
 
 ```
@@ -26,7 +45,7 @@ extensions/<name>/
   <name>.ts       entry: the factory (images()) and the controller; activate() registers everything
   <name>.css      its own styles, registered with window.registerStyleSheet
   model/          pure: no DOM, no editor libraries
-  workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
+  window/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
 - *A host folder's part* is a plain function the entry's `activate` calls: `registerReferences(visualEditor, options)` returns its `Disposable` (with more where the entry needs it: `registerNoteCards(..).editNote`). It is no extension of its own.
@@ -81,13 +100,13 @@ What `activate` gets (`ExtensionContext`):
 #table(
   columns: 2,
   table.header[Member][What],
-  [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-workbench-state)],
-  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-workbench-files)],
-  [`commands`], [Commands by id, key bindings (@architecture-workbench-commands)],
-  [`window`], [Everything the user sees and interacts with: `showDocument`, the active file and editor, side panels, menus, style sheets, dropped files, `user`, messages, quick input, status bar, custom editors, file decorations (@architecture-workbench-api)],
-  [`workspace`], [`applyEdit`, settings (@architecture-workbench-settings)],
-  [`scm`], [Source controls (@architecture-workbench-scm)],
-  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-links, @architecture-workbench-drop-edits, @architecture-workbench-help)],
+  [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-extensions-state)],
+  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-window-files)],
+  [`commands`], [Commands by id, key bindings (@architecture-window-commands)],
+  [`window`], [Everything the user sees and interacts with: `showDocument`, the active file and editor, side panels, menus, style sheets, dropped files, `user`, messages, quick input, status bar, custom editors, file decorations (@architecture-window-api)],
+  [`workspace`], [`applyEdit`, settings (@architecture-window-settings)],
+  [`scm`], [Source controls (@architecture-window-scm)],
+  [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-links, @architecture-window-drop-edits, @architecture-window-help)],
   [`visualEditor`], [Nodes, marks, submenus and floating bars of the toolbar (its buttons are menu entries), boxes, highlights; experimental (@architecture-visual-editor-constructs)],
   [`sourceEditor`], [CodeMirror extensions, for the Source editors or shared by every CodeMirror (@architecture-source-editor-host)],
   [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics (@architecture-preview-contributions)],
@@ -191,7 +210,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [known imports], [`mermaid`], [`imports`],
   [paste edit providers], [`clipboard`, `markdown`, `imports`, `labels`], [`clipboard` (the Visual and Source editors, the "Paste as" chip)],
-  [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`, `help`],
+  [`contributes.languages`], [`textFiles`, `spreadsheets`; the widget (`typst`)], [`textFiles`, `help`],
   [view options], [`previewGuides`, `comments`], [`previewControls`],
   [preview renderers], [`previewHtml`], [`previewControls`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],

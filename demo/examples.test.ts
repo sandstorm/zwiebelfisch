@@ -177,7 +177,7 @@ describe('demo examples', () => {
   it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo, the screenshots, the diagrams, the spreadsheets and the fonts as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
-      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/40_architecture/07_workbench.typ']),
+      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/40_architecture/07_window.typ']),
     );
     expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
     expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);

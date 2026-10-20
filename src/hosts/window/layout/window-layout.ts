@@ -1,4 +1,4 @@
-// See WindowHost in ../window-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
+// See WindowHost in ../window-impl.ts and docs/40_architecture/07_window.typ, "Concepts".
 
 import type { SidePanel, SidePanelOptions, WindowOptions } from '../window';
 import { div, restoreSideBarState, SideBar, type PanelCommands, type RailAction, type Side } from './side-bar';

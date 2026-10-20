@@ -11,7 +11,7 @@ and 15 "Open work") and delete once built. Legend: (v) verified in code or on th
 | Demo "GitLab (fake)" | `?room=gitlab:demo/report@main` in the URL (`demo/playground.ts`, `GITLAB_ROOM`). The fake GitLab is in-memory (`server/lib/fakegitlab`); another branch name starts a fresh branch from `main`. The playground bar switches modes. |
 | Auth | OpenID Connect sign-in (`server/lib/auth`), sessions in memory; GitLab rooms check Developer+ and push rights with the bot token (`server/lib/gitlab/access.go`). Built 2026-10-13 (plan step 1). |
 | GitLab access | One server-wide token with `api` scope (`ZWF_GITLAB_TOKEN`) does everything: tree, files, blobs, commits (`gitlab-api.ts`). Users never sign in to GitLab; commits name co-editors as `Co-authored-by:`. |
-| Persistence | SQLite: one Y.Doc per room, GitLab rooms included (`collab-server.ts`, `@hocuspocus/extension-sqlite`). Browser: localStorage/sessionStorage mementos for UI state (`hosts/workbench/memento`). Nothing per user on the server. |
+| Persistence | SQLite: one Y.Doc per room, GitLab rooms included (`collab-server.ts`, `@hocuspocus/extension-sqlite`). Browser: localStorage/sessionStorage mementos for UI state (`hosts/extension-host`, `StorageMemento`). Nothing per user on the server. |
 | Main file | GitLab rooms: per user (the client's `mainFile` option); other rooms share it (`project` map, `shared-main-file.ts`). |
 | Widget side | `collaboration` extension; GitLab branch shown via the `scm` API → `source-control` extension (status bar "Not in GitLab: …", "Save to GitLab…", M/A decorations). |
 | Server size | 26 files, ~2930 lines incl. ~1010 test lines; `gitlab-room.ts` (398) is the largest. Deps: Hocuspocus 4.7, yjs, node-diff3. Shares `src/core/room-protocol/` with the widget. |

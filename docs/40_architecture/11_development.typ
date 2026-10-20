@@ -65,7 +65,7 @@ The docs are one Typst project in `docs/`: `main.typ` (the book, one `#include` 
 
 - *Parts*: `10_getting-started/`, `20_features/` (for users), `30_configuration/` (for technical users), `40_architecture/` (for developers of the editor). One chapter is one file, numbered in reading order.
 - *Style*: the model is `20_features/01`–`04`. Start with one sentence, or a screenshot and then that sentence. Name sections after the sub-feature or task. Speak to the reader ("Type `/`…"), keep sentences short, compare with tools the reader knows. Leave out "Why" and settings; settings go to the configuration part.
-- *Labels*: a chapter's label is its path without the numbers, `/` → `-` (`<architecture-workbench>`). A section gets a label only when something refers to it. Cross-references are `@label`.
+- *Labels*: a chapter's label is its path without the numbers, `/` → `-` (`<architecture-window>`). A section gets a label only when something refers to it. Cross-references are `@label`.
 - *Font*: Gabarito (`fonts/`, SIL Open Font License), a project font for the editor and `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
 - *Diagrams*: Mermaid files in `diagrams/`, drawn by merman: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])`.
 

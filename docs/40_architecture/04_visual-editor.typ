@@ -39,7 +39,7 @@ The `clipboard` extension (`src/extensions/clipboard/`) makes the clipboard hold
 - *Other HTML* is read by the schema's HTML rules, printed as Typst and read back. Extensions may clean it first (`transformPastedHTML`: `wordProcessors`). Our own HTML is not read back. Raw boxes carry their Typst in it (`data-src`), so ProseMirror's own HTML clipboard keeps them.
 - *⌘⇧V* pastes plain characters, escaped. In raw boxes and code blocks the text goes in as is.
 - *Paste as:* a paste goes in as the first of its alternative edits (`sortPasteEdits`); with more than one, a chip above its end ("Paste as: Typst ▾", Mod+., `editor.action.pasteAs`) switches the kind, in one undo step: the paste is undone, then the other kind pasted, only where the undo gave back the text before the paste (never pasted twice).
-- *Paste edit providers* (@architecture-workbench-paste) change the pasted Typst and the rest of the text in the paste's transaction.
+- *Paste edit providers* (@architecture-window-paste) change the pasted Typst and the rest of the text in the paste's transaction.
 
 == Raw boxes <architecture-visual-editor-raw-boxes>
 
@@ -75,7 +75,7 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 - *`chainCommand(chain)`* is a button's command from a Tiptap chain: `run` (the handler) and `enabled` (its dry run). *`registerChainButton({ commands, window }, menuId, button)`* registers both: the command and the menu entry.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
-- *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the workbench hands them to the Visual editor host, which knows no Source editor.
+- *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the widget (editor/widget) hands them to the Visual editor host, which knows no Source editor.
 - *Links* are the `documentLinks` extension's (@architecture-source-editor-links): a Tiptap extension for the text, a raw box extension for raw boxes' pictures. The host knows no links.
 
 == Constructs <architecture-visual-editor-constructs>

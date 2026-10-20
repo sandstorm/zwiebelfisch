@@ -8,15 +8,15 @@
   columns: (auto, 1fr),
   table.header[Folder][Job],
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax (@architecture-core).],
-  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-visual-editor with its conversion @architecture-typst-conversion, @architecture-source-editor, @architecture-preview, @architecture-workbench).],
+  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-visual-editor with its conversion @architecture-typst-conversion, @architecture-source-editor, @architecture-preview, @architecture-window); the extension host runs the extensions (@architecture-extensions-host).],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …): every feature and every construct beyond paragraphs and raw Typst (@architecture-extensions-built-in).],
-  [`src/editor/`], [`createEditor`: a `Project` in the workbench host with the built-in extensions.],
+  [`src/editor/`], [`createEditor`: the composition root. `editor/widget` makes and wires the hosts for a `Project` and runs the built-in extensions in the extension host.],
   [`src/editor-element/`], [`<zwiebelfisch-editor>`: a shadow root around `createEditor`.],
   [`src/testing/`], [Test helpers composing the built-ins; only `*.test.ts` files import it.],
 )
 
 - *Model:* `core/` and each extension's `model/` folder. No DOM.
-- *View:* the hosts and an extension's view folders (`visual-editor/`, `source-editor/`, `preview/`, `workbench/`).
+- *View:* the hosts and an extension's view folders (`visual-editor/`, `source-editor/`, `preview/`, `window/`).
 - *Controller:* an extension's `activate`. It subscribes views to model events and turns input into `TextChange`s and `FileChange`s.
 
 Who may import whom, and why extensions never depend on each other: @architecture-conventions.

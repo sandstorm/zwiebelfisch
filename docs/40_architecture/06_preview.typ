@@ -54,7 +54,7 @@ preview.registerPdfExportOption({
 - *A crashed engine* (`TypstEngineCrash`) is restarted once with the newest files; crashing again before the next `update()`, it stays off until then, so a document that crashes Typst does not loop.
 - *Overlays* are in pt, placed in percent, so they survive zoom; the host only draws them, what to mark and when is the extension's. `boxesFor` waits for running compiles and answers none unless the compiled text is the `text` given.
 - *A range's boxes* (`boxesFor`, `snippet`): what its source drew, plus everything inside an element whose call lies wholly in it (a `figure` of a package's picture); never a page's header, footer or background. Raw boxes' pictures are snippets, so they show what view options draw.
-- *Loading* is told, never shown, by the host (`onDidLoad`, `onDidCrash`); without `previewProgress` the pane is empty while it loads: @architecture-workbench-loading.
+- *Loading* is told, never shown, by the host (`onDidLoad`, `onDidCrash`); without `previewProgress` the pane is empty while it loads: @architecture-window-loading.
 
 == Renderers <architecture-preview-renderers>
 

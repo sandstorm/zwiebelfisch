@@ -5,7 +5,7 @@ flowchart TD
   onDidChange({ contentChanges, origin }):
   listeners in subscription order`"]
   project["Project"]
-  workbench["Workbench"]
+  widget["Widget"]
   worker["`worker
   compile (newest only) → changed pages swapped`"]
   host["host"]
@@ -19,6 +19,6 @@ flowchart TD
   document -- "`3: dispatched with
   fromDocument({ origin })`" --> source
   document -- "`4: into the shared Y.Text`" --> binding
-  project -- "`onDidChangeFile({ kind: 'update', … })`" --> workbench
+  project -- "`onDidChangeFile({ kind: 'update', … })`" --> widget
   project -- onDidChangeFiles --> host
-  workbench -- "`preview.update(project.files(), main)`" --> worker
+  widget -- "`preview.update(project.files(), main)`" --> worker

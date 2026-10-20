@@ -22,7 +22,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 - *Code lives in the highest layer that can hold it* (extension, then host, then core), next to its consumers: a host function only one extension uses goes into that extension (`sortPasteEdits`: the clipboard's). `core/` holds only what models need or many share; core and hosts stay as small as possible.
 - *A module* is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `editor/`, `editor-element/` or `testing/`. From outside, import only its *entry file*.
-- *A sub-module* is a subfolder listed in `subModules` (eslint.config.js: `hosts/visual-editor/typst-conversion`): a module of its own with the entry `<sub>/<sub>.ts`, which everyone, its parent included, imports directly.
+- *A sub-module* is a subfolder listed in `subModules` (eslint.config.js: `hosts/visual-editor/typst-conversion`, `editor/widget`): a module of its own with the entry `<sub>/<sub>.ts`, which everyone, its parent included, imports directly.
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
 - *`*.worker.ts` runs only in a Web Worker*; files without the suffix run on the main thread or in both.
@@ -46,6 +46,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 - *Core's line is "no DOM"*: no DOM, no library that needs it (Tiptap, prosemirror-view, CodeMirror views), no Yjs.
 - *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
+- *The window is everything the user sees; the extension host is the extensions' lifecycle; `editor/` is the composition*: `hosts/window` holds what is shown and interacted with, `hosts/extension-host` activates extensions and processes their `contributes`, `editor/` (`createEditor`, `editor/widget`) makes and wires the hosts. No host composes the others.
 - *Hosts keep only mechanism.* Ask for every host member: mechanism, or one feature's policy? Policy is an extension.
 - *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its re-exports, at the bottom, are the implementation others construct and its helpers.
 - *`<name>-impl.ts` is the implementation*, starting with `See <Contract> in <name>.ts`.

@@ -13,7 +13,7 @@ What `ExtensionContext.sourceEditor` is.
 ```ts
 registerCodeMirrorExtension(selector: CodeMirrorSelector, extension: Extension | ((editor: CodeMirrorContext) => Extension)): Disposable
 codeMirrorExtensionsFor(editor: CodeMirrorContext): Extension    // for a CodeMirror made elsewhere: its contributions, live
-createEditor(parent, document, { onSelection?, path? }) → SourceEditor    // the workbench calls it
+createEditor(parent, document, { onSelection?, path? }) → SourceEditor    // the window calls it
 
 subscriptions.push(
   sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, lint(collection)),              // all Source editors
@@ -31,7 +31,7 @@ The CodeMirrors are of three kinds (`editor`):
   columns: (auto, 1fr, auto),
   table.header[`editor`][CodeMirror][`CodeMirrorContext`],
   [`source`], [a Source editor], [`languageId` `typst`, `path()`, `document`],
-  [`rawBox`], [the code of a raw box of the Visual editor (the workbench takes it from this host)], [`languageId` `typst`, `path()`, `document` (the Visual editor's)],
+  [`rawBox`], [the code of a raw box of the Visual editor (the widget takes it from this host)], [`languageId` `typst`, `path()`, `document` (the Visual editor's)],
   [`other`], [an extension's own (`codeMirrorExtensionsFor`), e.g. the text files' editor], [`languageId`, `path()`],
 )
 

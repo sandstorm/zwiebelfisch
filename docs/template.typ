@@ -5,8 +5,8 @@
 // raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ` and the numbers that order the files, `/` → `-`
-// (`40_architecture/07_workbench.typ` → `<architecture-workbench>`); a section inside appends a word
-// (`<architecture-workbench-menus>`).
+// (`40_architecture/07_window.typ` → `<architecture-window>`); a section inside appends a word
+// (`<architecture-window-menus>`).
 
 #import "@preview/merman:0.4.0"
 #import "assets/screenshots/index.typ": screenshots

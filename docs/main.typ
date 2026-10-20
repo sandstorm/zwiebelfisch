@@ -50,7 +50,7 @@
   #include "40_architecture/04_visual-editor.typ"
   #include "40_architecture/05_source-editor.typ"
   #include "40_architecture/06_preview.typ"
-  #include "40_architecture/07_workbench.typ"
+  #include "40_architecture/07_window.typ"
   #include "40_architecture/08_extensions.typ"
   #include "40_architecture/09_server.typ"
   #include "40_architecture/10_conventions.typ"
