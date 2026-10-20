@@ -6,6 +6,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from '../../hosts/languages/languages';
 import { type FollowableLink, linkFinder, linkInfo, primaryLink } from './followable-link';
+import { LinkHover } from './link-hover';
 
 const path = ProjectPath.of;
 const document = { path: path('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
@@ -15,11 +16,13 @@ const CREATE = { title: 'Create missing.typ', command: 'test.create', arguments:
 function setup() {
   const links = new LanguagesHost();
   const open = vi.fn();
+  const hover = new LinkHover(globalThis.document);
   const actions = {
     provideDocumentLinks: (text: typeof document) => links.provideDocumentLinks(text),
     resolveDocumentLink: (link: DocumentLink) => links.resolveDocumentLink(link),
     open,
     executeCommand: async () => undefined,
+    hoverLink: hover.move.bind(hover),
   };
   return { links, open, actions };
 }

@@ -91,9 +91,9 @@ const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
  */
 function diagramLinks(project: Pick<Project, 'has'>): DocumentLinkProvider {
   return {
-    provideDocumentLinks: ({ path, text }) =>
-      findFilePaths(text).flatMap(({ path: reference, from, to }) => {
-        const target = ProjectPath.resolve(path, reference);
+    provideDocumentLinks: (document) =>
+      findFilePaths(document).flatMap(({ path: reference, from, to }) => {
+        const target = ProjectPath.resolve(document.path, reference);
         return target && isDiagram(target) && project.has(target) ? [{ range: { from, to }, target, tooltip: 'Edit diagram' }] : [];
       }),
   };

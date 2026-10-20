@@ -3,7 +3,7 @@ import type { Mark, Node } from '@tiptap/pm/model';
 import { TypstConversions } from './typst-conversions';
 import type { Around, TypstSerializeState } from './typst-conversion';
 import { labelSyntax } from './labels';
-import { type InlineLayout, unchangedNodes } from './unchanged-nodes';
+import type { InlineLayout } from './unchanged-nodes';
 import { markupSource } from '../../../core/typst-syntax/typst-syntax';
 
 /**
@@ -134,9 +134,9 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
   }
 
   private unlabelled(node: Node, parent: Node, pos: number): void {
-    const unchangedLayout = unchangedNodes.get(node);
+    const unchangedLayout = this.grammar.unchanged.get(node);
     if (unchangedLayout) return this.layout(node, unchangedLayout, pos + 1);
-    if (unchangedNodes.has(node)) return this.unchangedItem(node, pos);
+    if (this.grammar.unchanged.has(node)) return this.unchangedItem(node, pos);
     if (isSourceAtom(node)) return this.shown(node.attrs.src, 'atom', pos, pos + 1);
     const toTypst = this.grammar.node(node.type)?.typst?.toTypst;
     if (toTypst) toTypst(this, node, pos, parent);

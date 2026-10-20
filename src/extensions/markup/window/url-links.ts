@@ -10,9 +10,10 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../../
  * none of this provider's.
  */
 export const urlLinks: DocumentLinkProvider = {
-  provideDocumentLinks({ text }: TextDocument): DocumentLink[] {
+  provideDocumentLinks(document: TextDocument): DocumentLink[] {
+    const { text } = document;
     const links: DocumentLink[] = [];
-    const cursor = syntaxTree(text).cursor();
+    const cursor = syntaxTree(document).cursor();
     do {
       const link = linkOf(cursor.node, text);
       if (link) links.push(link);

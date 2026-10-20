@@ -21,6 +21,16 @@ describe('TypstDocument', () => {
     expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'source-editor' });
   });
 
+  it('keeps the syntax tree of its text until the text changes', () => {
+    const doc = new TypstDocument('= Intro');
+    const tree = doc.syntaxTree;
+    expect(doc.syntaxTree).toBe(tree);
+    expect(tree.length).toBe(7);
+    doc.change([{ from: SourceOffset.of(7), to: SourceOffset.of(7), insert: '!' }], 'test');
+    expect(doc.syntaxTree).not.toBe(tree);
+    expect(doc.syntaxTree.length).toBe(8);
+  });
+
   it('stops notifying after unsubscribing', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();

@@ -3,7 +3,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, it, vi } from 'vitest';
 import { type FontInfo, TypstEngineCrash, createEngine } from './typst-engine';
-import init from './wasm.gen/typst_engine';
 
 const wasm = readFileSync(new URL('./wasm.gen/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts.gen/', import.meta.url);
@@ -12,17 +11,16 @@ const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('i
 it('keeps its memory while a document is edited and compiled again and again', async () => {
   const engine = await createEngine(wasm);
   for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
-  const { memory } = await init({ module_or_path: wasm });
   const paragraphs = Array.from({ length: 200 }, (_, i) => `== Section ${i}\nSome text about $x_${i}^2$ and *more* _words_ #lorem(40)`);
   const compile = (edit: number) => {
     engine.setSource('/main.typ', paragraphs.map((text, i) => (i === edit % paragraphs.length ? `${text} edit ${edit}` : text)).join('\n\n'));
     expect(engine.compile('/main.typ').diagnostics).toEqual([]);
   };
   for (let edit = 0; edit < 20; edit++) compile(edit);
-  const before = memory.buffer.byteLength;
+  const before = engine.memoryInUse;
   for (let edit = 20; edit < 220; edit++) compile(edit);
   // Typst's memoized results of edits long gone are dropped (without, it grew by about 1.5 GB here)
-  expect((memory.buffer.byteLength - before) / 1e6).toBeLessThan(100);
+  expect((engine.memoryInUse - before) / 1e6).toBeLessThan(100);
 }, 120_000);
 
 it('throws the panic of a crash on that call and every later one', async () => {

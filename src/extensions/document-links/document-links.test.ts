@@ -7,6 +7,7 @@ import type { ExtensionContext } from '../../hosts/extension-host/extension-host
 import type { Command } from '../../hosts/commands/commands';
 import type { DocumentLinkProvider, DocumentSelector } from '../../hosts/languages/languages';
 import { documentLinks } from './document-links';
+import { LinkHover } from './link-hover';
 
 const path = ProjectPath.of;
 
@@ -19,7 +20,7 @@ function setup() {
   const commands = new Map<string, (...args: unknown[]) => unknown>();
   const workspace = { applyEdit: vi.fn(async () => null as string | null) };
   const ignored = () => new Disposable(() => {});
-  const window = { showDocument: vi.fn(), registerStyleSheet: ignored };
+  const window = { ownerDocument: {} as Document, showDocument: vi.fn(), registerStyleSheet: ignored };
   const context = {
     project,
     languages: {
@@ -30,13 +31,13 @@ function setup() {
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,
     window,
-    subscriptions: [],
+    subscriptions: [] as { dispose(): unknown }[],
   };
   documentLinks().activate(context as unknown as ExtensionContext);
   const links = provider!.provideDocumentLinks({ path: path('/main.typ'), languageId: 'typst', text: TEXT });
   const resolved = links.map((link) => provider!.resolveDocumentLink!(link));
   const run = async (command: Command) => commands.get(command.command)!(...(command.arguments ?? []));
-  return { selector, workspace, window, links, resolved, run };
+  return { selector, workspace, window, links, resolved, run, subscriptions: context.subscriptions };
 }
 
 describe('documentLinks', () => {
@@ -64,5 +65,13 @@ describe('documentLinks', () => {
     expect(window.showDocument).toHaveBeenCalledWith(path('/missing.typ'));
     workspace.applyEdit.mockResolvedValueOnce('This change is not allowed here.');
     await expect(run(command!)).rejects.toThrow('This change is not allowed here.');
+  });
+
+  it('gives the widget its own link hover, disposed with the subscriptions', () => {
+    const first = setup().subscriptions.filter((subscription) => subscription instanceof LinkHover);
+    const second = setup().subscriptions.filter((subscription) => subscription instanceof LinkHover);
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+    expect(first[0]).not.toBe(second[0]);
   });
 });

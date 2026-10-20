@@ -40,7 +40,7 @@ export class LabelIndex implements ProjectLabels {
     for (const [path, scan] of this.scans) {
       const document = this.project.document(path);
       if (!document || document === except || !scan.references.has(from)) continue;
-      document.change(calculateReferenceRenames(document.text, from, to), RENAME_ORIGIN);
+      document.change(calculateReferenceRenames(document, from, to), RENAME_ORIGIN);
     }
   }
 
@@ -67,7 +67,8 @@ export class LabelIndex implements ProjectLabels {
 
   private rescan(path: ProjectPath): void {
     const content = this.project.content(path);
-    if (ProjectPath.isTypst(path) && typeof content === 'string') this.scans.set(path, scanTypst(content));
+    const document = ProjectPath.isTypst(path) ? this.project.document(path) : undefined;
+    if (document) this.scans.set(path, scanTypst(document));
     else if (ProjectPath.extension(path) === '.bib' && content !== undefined) {
       this.scans.set(path, scanBibliography(typeof content === 'string' ? content : new TextDecoder().decode(content)));
     }

@@ -2,6 +2,7 @@
 import type { NodeType, Schema } from '@tiptap/pm/model';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './typst-conversion';
+import { UnchangedNodes } from './unchanged-nodes';
 
 /**
  * The specs of a schema, merged by name, and the tables the framework derives from them: which syntax and calls
@@ -15,6 +16,8 @@ export class TypstConversions {
   private readonly onDidChanges: Event<void>[] = [];
   /** Attributes a fresh parse may change in place; ignored when documents are compared. */
   readonly anchors = new Set(['src', 'sep', 'lead', 'trail', 'label']);
+  /** The nodes of this schema's documents unchanged since parsed. */
+  readonly unchanged = new UnchangedNodes();
 
   constructor(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]) {
     for (const spec of nodes) this.addNode(spec);

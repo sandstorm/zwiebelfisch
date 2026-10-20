@@ -2,9 +2,9 @@
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import type { DocumentLink, TextDocument } from '../../hosts/languages/languages';
-import { FOLLOW_HINT, hoverLink, isMod } from './link-hover';
+import { FOLLOW_HINT, isMod, type HoveredLink } from './link-hover';
 
-/** Where links come from (the host's merged providers), and where following one goes. */
+/** Where links come from (the host's merged providers), where following one goes, and the hover that shows them. */
 export interface LinkActions {
   provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   resolveDocumentLink(link: DocumentLink): DocumentLink;
@@ -12,6 +12,8 @@ export interface LinkActions {
   open(target: ProjectPath | URL, selection?: SourceRange): void;
   /** Runs a link's command (`commands.executeCommand`). */
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
+  /** The pointer moved (`event`) over `hovered`, or over no link (null): the widget's `LinkHover.move`. */
+  hoverLink(event: MouseEvent, hovered: HoveredLink | null): void;
 }
 
 /** A link as something other than a CodeMirror editor follows it (a raw box's picture, the Visual editor's text). */
@@ -31,7 +33,7 @@ export interface FollowableLink {
 }
 
 /** What a link followed outside CodeMirror needs: resolving it, and its targets (its hint offers its command). */
-type FollowActions = Pick<LinkActions, 'resolveDocumentLink' | 'open' | 'executeCommand'>;
+type FollowActions = Pick<LinkActions, 'resolveDocumentLink' | 'open' | 'executeCommand' | 'hoverLink'>;
 
 /**
  * What a (resolved) link offers, as a small piece of DOM (the content of its hint): a button opening its target ("Open …", or its tooltip:
@@ -103,8 +105,8 @@ export function followableLink(link: DocumentLink, actions: FollowActions): Foll
   return {
     isFollowEvent: isMod,
     follow,
-    hover: (event, element) => hoverLink(event, { link, element, followable: true, hint: () => linkInfo(element.ownerDocument, resolved, actions) }),
-    leave: (event) => hoverLink(event, null),
+    hover: (event, element) => actions.hoverLink(event, { link, element, followable: true, hint: () => linkInfo(element.ownerDocument, resolved, actions) }),
+    leave: (event) => actions.hoverLink(event, null),
   };
 }
 

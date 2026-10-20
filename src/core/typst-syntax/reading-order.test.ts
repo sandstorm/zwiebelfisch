@@ -2,11 +2,15 @@
 import { describe, expect, it } from 'vitest';
 import { neighbours } from './typst-syntax';
 import { ProjectPath } from '../paths/paths';
+import { TypstDocument } from '../typst-document/typst-document';
 
 const path = ProjectPath.of;
 
-/** Reads from a file map, as the widget reads its project. */
-const from = (files: Record<string, string>) => (path: string) => files[path];
+/** Reads from a file map, as the widget reads its project's documents. */
+const from = (files: Record<string, string>) => {
+  const documents = new Map(Object.entries(files).map(([path, text]) => [path, new TypstDocument(text)]));
+  return (path: string) => documents.get(path);
+};
 
 const BOOK = {
   '/main.typ': '#set page(width: 12cm)\n= Book\n#include "chapters/introduction.typ"\n#include "chapters/method.typ"\n#include "/chapters/results.typ"\n',
@@ -42,14 +46,15 @@ describe('neighbours', () => {
     expect(neighbours(from(files), main, path('/missing.typ'))).toBeNull();
   });
 
-  it('follows the includes of a file as its text changes (asked after every change: only the changed file is read again)', () => {
-    const files: Record<string, string> = { '/main.typ': '#include "a.typ"\n', '/a.typ': 'A\n', '/b.typ': 'B\n' };
+  it('follows the includes of a file as its text changes', () => {
+    const files = { '/main.typ': new TypstDocument('#include "a.typ"\n'), '/a.typ': new TypstDocument('A\n'), '/b.typ': new TypstDocument('B\n') };
+    const read = (path: string) => files[path as keyof typeof files];
     const main = path('/main.typ');
-    expect(neighbours(from(files), main, path('/b.typ'))).toBeNull();
-    files['/main.typ'] = '#include "a.typ"\n#include "b.typ"\n';
-    expect(neighbours(from(files), main, path('/b.typ'))).toEqual({ previous: path('/a.typ'), next: null });
-    files['/main.typ'] = '#include "b.typ"\n';
-    expect(neighbours(from(files), main, path('/b.typ'))).toEqual({ previous: main, next: null });
+    expect(neighbours(read, main, path('/b.typ'))).toBeNull();
+    files['/main.typ'].setText('#include "a.typ"\n#include "b.typ"\n', 'test');
+    expect(neighbours(read, main, path('/b.typ'))).toEqual({ previous: path('/a.typ'), next: null });
+    files['/main.typ'].setText('#include "b.typ"\n', 'test');
+    expect(neighbours(read, main, path('/b.typ'))).toEqual({ previous: main, next: null });
   });
 
   it('is null for every file without a main file', () => {

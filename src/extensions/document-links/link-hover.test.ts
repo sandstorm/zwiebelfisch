@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 // Tests for link-hover.ts: the hint and the look of the link under the pointer, the same in every editor.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hoverLink, type HoveredLink } from './link-hover';
+import { LinkHover, type HoveredLink } from './link-hover';
 
 const MOD = { ctrlKey: true, metaKey: true };
 
+let hovers: LinkHover[] = [];
+
 function setup() {
+  const linkHover = new LinkHover(document);
+  hovers.push(linkHover);
   const widget = document.body.appendChild(document.createElement('div'));
   widget.dataset.scheme = 'light';
   const element = widget.appendChild(document.createElement('a'));
@@ -20,24 +24,25 @@ function setup() {
   const move = (over: HoveredLink | null = hovered, init: MouseEventInit = {}) => {
     const event = new MouseEvent('mousemove', { bubbles: true, ...init });
     element.dispatchEvent(event);
-    hoverLink(event, over);
+    linkHover.move(event, over);
     return event;
   };
   const shown = () => widget.querySelector<HTMLElement>('.zwf-link-hint');
-  return { widget, element, hint, hovered, move, shown };
+  return { linkHover, widget, element, hint, hovered, move, shown };
 }
 
 beforeEach(() => vi.useFakeTimers());
 
 afterEach(() => {
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  for (const linkHover of hovers) linkHover.dispose();
+  hovers = [];
   document.body.replaceChildren();
   // jsdom has none (a test may give one)
   delete (document as { elementFromPoint?: unknown }).elementFromPoint;
   vi.useRealTimers();
 });
 
-describe('hoverLink', () => {
+describe('LinkHover', () => {
   it('shows the hint after the hover delay, in the widget, as a tooltip describing the link', () => {
     const { element, hint, move, shown } = setup();
     move();
@@ -142,11 +147,50 @@ describe('hoverLink', () => {
   });
 
   it('gives an event to the first link that takes it: an outer element does not end an inner link', () => {
-    const { hovered, move, shown } = setup();
+    const { linkHover, hovered, move, shown } = setup();
     const event = move();
-    hoverLink(event, null); // the editor around it sees the same event
+    linkHover.move(event, null); // the editor around it sees the same event
     vi.advanceTimersByTime(300);
     expect(shown()).not.toBeNull();
     expect(hovered.hint).toHaveBeenCalled();
+  });
+
+  it('keeps the hovers of two widgets apart: each its own hint, and one ending leaves the other', () => {
+    const first = setup();
+    const second = setup();
+    first.move();
+    second.move();
+    vi.advanceTimersByTime(300);
+    expect(first.shown()).not.toBeNull();
+    expect(second.shown()).not.toBeNull();
+    expect(first.shown()!.id).not.toBe(second.shown()!.id);
+    first.linkHover.end();
+    expect(first.shown()).toBeNull();
+    expect(second.shown()).not.toBeNull();
+  });
+
+  it('when disposed, ends its hover (no hint comes, the look goes) and shows no more', () => {
+    const { linkHover, element, hovered, move, shown } = setup();
+    move(hovered, MOD);
+    linkHover.dispose();
+    vi.advanceTimersByTime(1000);
+    expect(shown()).toBeNull();
+    expect(element.classList.contains('zwf-link--mod')).toBe(false);
+    move(hovered, MOD);
+    vi.advanceTimersByTime(1000);
+    expect(shown()).toBeNull();
+    expect(element.classList.contains('zwf-link--mod')).toBe(false);
+  });
+
+  it('when disposed, removes its hint and stops listening to the document', () => {
+    const { linkHover, element, move, shown } = setup();
+    const removed = vi.spyOn(document, 'removeEventListener');
+    move();
+    vi.advanceTimersByTime(300);
+    linkHover.dispose();
+    expect(shown()).toBeNull();
+    expect(element.hasAttribute('aria-describedby')).toBe(false);
+    expect(removed.mock.calls.map(([type]) => type)).toEqual(['keydown', 'keyup', 'mousedown', 'scroll', 'wheel', 'mousemove']);
+    removed.mockRestore();
   });
 });

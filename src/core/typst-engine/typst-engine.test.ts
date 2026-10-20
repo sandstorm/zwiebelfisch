@@ -80,6 +80,16 @@ describe('TypstEngine', () => {
     expect(() => bare.addFont(new Uint8Array([1, 2, 3]))).toThrow(/no font/);
   });
 
+  it("runs every engine of the realm on the first call's wasm instance, each with its own files", async () => {
+    const first = await createEngine(wasm);
+    const second = await createEngine(new Uint8Array()); // not wasm: the realm's instance exists already
+    first.setSource('/main.typ', 'One');
+    second.setSource('/main.typ', 'One\n#pagebreak()\nTwo');
+    expect(first.compile('/main.typ').pages).toHaveLength(1);
+    expect(second.compile('/main.typ').pages).toHaveLength(2);
+    expect(second.memoryInUse).toBe(first.memoryInUse);
+  });
+
   it('compiles a document to one SVG per page', () => {
     engine.setSource('/main.typ', 'Hello\n#pagebreak()\nWorld');
     const { pages, diagnostics } = engine.compile('/main.typ');

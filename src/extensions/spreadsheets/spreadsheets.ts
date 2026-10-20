@@ -39,7 +39,7 @@ export function spreadsheets(): Extension {
           'spreadsheets.editor',
           {
             resolveCustomEditor(document, panel) {
-              const editor = new SpreadsheetEditor(panel.element, (path, edit) => save(context, path, edit));
+              const editor = new SpreadsheetEditor(panel.element, (path, edit) => save(context, path, edit), (css) => window.registerStyleSheet(css));
               void editor.show(document.path, document.content);
               panel.onDidDispose(() => editor.dispose());
             },
@@ -63,9 +63,9 @@ export function spreadsheets(): Extension {
  */
 function spreadsheetLinks(project: Pick<Project, 'has'>): DocumentLinkProvider {
   return {
-    provideDocumentLinks: ({ path, text }) =>
-      findFilePaths(text).flatMap(({ path: reference, from, to }) => {
-        const resolved = ProjectPath.resolve(path, reference);
+    provideDocumentLinks: (document) =>
+      findFilePaths(document).flatMap(({ path: reference, from, to }) => {
+        const resolved = ProjectPath.resolve(document.path, reference);
         const target = resolved && spreadsheetPath(resolved);
         return target && project.has(target) ? [{ range: { from, to }, target, tooltip: 'Edit spreadsheet' }] : [];
       }),

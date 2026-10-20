@@ -1,10 +1,10 @@
 import type { SyntaxNode, Tree } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
-import { SourceOffset, SourceRange, type TextChange } from '../typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument, type TextChange } from '../typst-document/typst-document';
 
 /**
- * The file paths `text` names, in order: the string of `#import "…"` / `#include "…"` and the first positional
+ * The file paths `source` names, in order: the string of `#import "…"` / `#include "…"` and the first positional
  * argument of `image`, `read`, `json`, `csv`, `yaml`, `toml`, `xml`, `cbor` and `bibliography` (each string of a
  * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
  * `from` / `to` look at a part only.
@@ -14,9 +14,10 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  * (`neighbours`), the change that imports a name (`calculateImportChange`; returned, not applied), the names imports
  * bind (`importedNames`) and helpers to read calls and strings (`calleeName`, `namedArgument`, …).
  */
-export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
+export function findFilePaths(source: TypstSource, options: { from?: number; to?: number } = {}): PathInSource[] {
+  const text = sourceText(source);
   const found: PathInSource[] = [];
-  syntaxTree(text).iterate({
+  syntaxTree(source).iterate({
     from: options.from,
     to: options.to,
     enter: (node) => {
@@ -26,16 +27,30 @@ export function findFilePaths(text: string, options: { from?: number; to?: numbe
   return found;
 }
 
+/** Typst source: a text, a TypstDocument, or a holder of a text that never changes it (a link provider's TextDocument). */
+export type TypstSource = string | { readonly text: string };
+
 /**
- * The Lezer syntax tree of `text`. The last one is kept: the link providers of an editor read the same text one after
- * the other, so it is parsed once.
+ * The Lezer syntax tree of `source`:
+ * - a text: parsed on every call
+ * - a TypstDocument: its own tree of its current text
+ * - another holder of a text: parsed once per holder (the link providers of an editor share one)
  */
-export function syntaxTree(text: string): Tree {
-  if (lastTree?.text !== text) lastTree = { text, tree: typstParser.parse(text) };
-  return lastTree.tree;
+export function syntaxTree(source: TypstSource): Tree {
+  if (typeof source === 'string') return typstParser.parse(source);
+  if (source instanceof TypstDocument) return source.syntaxTree;
+  let tree = TREES.get(source);
+  if (!tree) TREES.set(source, (tree = typstParser.parse(source.text)));
+  return tree;
 }
 
-let lastTree: { text: string; tree: Tree } | null = null;
+/** The text of `source`. */
+export function sourceText(source: TypstSource): string {
+  return typeof source === 'string' ? source : source.text;
+}
+
+/** The trees of the text holders that are no TypstDocument. */
+const TREES = new WeakMap<{ readonly text: string }, Tree>();
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
@@ -47,15 +62,15 @@ export interface PathInSource extends SourceRange {
   call: PathCall;
 }
 
-/** The text of the Typst file `path`; undefined when there is none (missing, or not a Typst file). */
-export type ReadText = (path: ProjectPath) => string | undefined;
+/** The Typst file `path`; undefined when there is none (missing, or not a Typst file). */
+export type ReadDocument = (path: ProjectPath) => TypstDocument | undefined;
 
 /**
  * The files read before and after `path` (null at the end), or null when `path` is the main file or not included
  * at all. Typst reads the main file, then every file it `#include`s, depth first (a nested include comes right
  * after the text before it); imports, missing files, a file included a second time and include cycles add nothing.
  */
-export function neighbours(read: ReadText, main: ProjectPath, path: ProjectPath): { previous: ProjectPath; next: ProjectPath | null } | null {
+export function neighbours(read: ReadDocument, main: ProjectPath, path: ProjectPath): { previous: ProjectPath; next: ProjectPath | null } | null {
   const order = readingOrder(read, main);
   const index = order.indexOf(path);
   if (index <= 0) return null;
@@ -279,13 +294,13 @@ function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
 const SYNTAX = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'LineComment', 'BlockComment']);
 
 /** The main file, then every file it `#include`s, as `neighbours` describes; empty without a main file. */
-function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
+function readingOrder(read: ReadDocument, main: ProjectPath): ProjectPath[] {
   const order: ProjectPath[] = [];
   const visit = (path: ProjectPath) => {
-    const text = read(path);
-    if (text === undefined || order.includes(path)) return;
+    const document = read(path);
+    if (document === undefined || order.includes(path)) return;
     order.push(path);
-    for (const reference of includes(path, text)) {
+    for (const reference of includes(document)) {
       const target = ProjectPath.resolve(path, reference);
       if (target !== null) visit(target);
     }
@@ -294,20 +309,16 @@ function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
   return order;
 }
 
-/**
- * The paths `text`, the text of `path`, `#include`s. The reading order is asked for after every change and reads every
- * file, but typing changes one file at a time: each path's last text is remembered with its includes, so only the
- * changed file is parsed again.
- */
-function includes(path: ProjectPath, text: string): readonly PathReference[] {
-  const known = INCLUDES.get(path);
-  if (known?.text === text) return known.includes;
-  const found = findFilePaths(text).flatMap((reference) => (reference.call === 'include' ? [reference.path] : []));
-  INCLUDES.set(path, { text, includes: found });
+/** The paths `document` `#include`s now: looked up once per syntax tree, so once per change of the document. */
+function includes(document: TypstDocument): readonly PathReference[] {
+  const tree = document.syntaxTree;
+  let found = INCLUDES.get(tree);
+  if (!found) INCLUDES.set(tree, (found = findFilePaths(document).flatMap((reference) => (reference.call === 'include' ? [reference.path] : []))));
   return found;
 }
 
-const INCLUDES = new Map<ProjectPath, { text: string; includes: readonly PathReference[] }>();
+/** The includes of the syntax trees of documents. */
+const INCLUDES = new WeakMap<Tree, readonly PathReference[]>();
 
 function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {
   const str = node.getChild('Str');

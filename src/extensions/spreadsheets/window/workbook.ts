@@ -9,12 +9,14 @@ import { typeStarterTable } from '../model/sheet-figure';
 import { spreadsheetTypst } from '../model/typst-file';
 import { followColorScheme } from './color-scheme';
 
+/** IronCalc's styles; `mountWorkbook` needs them in the container's root (`window.registerStyleSheet`). */
+export const WORKBOOK_STYLE_SHEET: string = styles;
+
 /**
  * Shows IronCalc's workbook UI in `container` for the spreadsheet `bytes`
- * (IronCalc's own format; empty: a new workbook named `name`). Its styles go
- * into the container's root (the document, or `<zwiebelfisch-editor>`'s shadow
- * root); its menus open inside the container. After every edit (cells,
- * sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
+ * (IronCalc's own format; empty: a new workbook named `name`), styled by
+ * `WORKBOOK_STYLE_SHEET`; its menus open inside the container. After every edit
+ * (cells, sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
  * `fileName` (e.g. `budget.ic`) is named in that file's header.
  */
 export async function mountWorkbook(
@@ -23,9 +25,7 @@ export async function mountWorkbook(
   fileName: string,
   onEdit: (edit: WorkbookEdit) => void,
 ): Promise<MountedWorkbook> {
-  engine ??= init();
-  await engine;
-  injectStyles(container);
+  await loadIronCalcEngine();
   const model = bytes.length > 0 ? Model.from_bytes(bytes, 'en') : new Model(fileName.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
   const edited = () => onEdit({ bytes: model.toBytes(), typst: spreadsheetTypst(model, fileName) });
   if (bytes.length === 0) edited();
@@ -72,8 +72,7 @@ export interface NewWorkbook extends WorkbookEdit {
 
 /** A new workbook for the file `fileName` (e.g. `table.ic`) with the starter table typed in (`typeStarterTable`). */
 export async function newWorkbook(fileName: string): Promise<NewWorkbook> {
-  engine ??= init();
-  await engine;
+  await loadIronCalcEngine();
   const model = new Model(fileName.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
   try {
     typeStarterTable(model);
@@ -83,19 +82,23 @@ export async function newWorkbook(fileName: string): Promise<NewWorkbook> {
   }
 }
 
-let engine: Promise<unknown> | null = null;
-
-function injectStyles(container: HTMLElement): void {
-  const root = container.getRootNode();
-  const target = root instanceof ShadowRoot ? root : container.ownerDocument.head;
-  if (target.querySelector(`#${STYLE_ID}`)) return;
-  const style = container.ownerDocument.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = styles;
-  target.append(style);
+/**
+ * IronCalc's engine, initialized once per realm (it is a WebAssembly module of the page) and shared by every widget.
+ * A failed initialization is forgotten: the next call tries again.
+ */
+function loadIronCalcEngine(): Promise<void> {
+  ironCalcEngine ??= init().then(
+    () => undefined,
+    (error: unknown) => {
+      ironCalcEngine = null;
+      throw error;
+    },
+  );
+  return ironCalcEngine;
 }
 
-const STYLE_ID = 'zwf-ironcalc-styles';
+/** The realm's singleton behind `loadIronCalcEngine`: the initialization under way or done; null before or after a failure. */
+let ironCalcEngine: Promise<void> | null = null;
 
 /**
  * Makes IronCalc's grid take up changed theme variables. The grid canvas reads them only when it is built, and the

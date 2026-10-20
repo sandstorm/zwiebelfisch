@@ -5,7 +5,7 @@ import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { PlacedNode, TypstParseContext } from './typst-conversion';
 import type { TypstConversions } from './typst-conversions';
 import { type BlockLabel, labelAfterBlock, splitTrailingLabel } from './labels';
-import { layout, unchangedNodes } from './unchanged-nodes';
+import { layout } from './unchanged-nodes';
 import { calleeName, children } from '../../../core/typst-syntax/typst-syntax';
 import { type SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 
@@ -88,14 +88,14 @@ class TypstToProseMirrorParser implements TypstParseContext {
   textblock({ type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node {
     const node = this.schema.nodes[type].create(attrs, content.map((p) => p.node));
     const to = from + attrs.src.length;
-    unchangedNodes.set(node, layout(content, from, contentTo ?? to, to));
+    this.grammar.unchanged.add(node, layout(content, from, contentTo ?? to, to));
     this.serials = 0; // the next textblock counts from 0 again
     return node;
   }
 
   unchangedNode(type: string, attrs: Record<string, unknown>, content?: Node[] | Node['content']): Node {
     const node = this.schema.nodes[type].create(attrs, content);
-    unchangedNodes.set(node, null);
+    this.grammar.unchanged.add(node);
     return node;
   }
 
@@ -169,7 +169,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     if (!segment.label) return block;
     const label: BlockLabel = { name: this.source.slice(segment.label.from + 1, segment.label.to - 1), gap: this.source.slice(segment.to, segment.label.from) };
     const labelled = block.type.create({ ...block.attrs, label }, block.content, block.marks);
-    if (unchangedNodes.has(block)) unchangedNodes.set(labelled, unchangedNodes.get(block)!);
+    this.grammar.unchanged.carryOver(block, labelled);
     return labelled;
   }
 
@@ -229,7 +229,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
       if (items.length === 0) return;
       const last = items.at(-1)!;
       items[items.length - 1] = last.type.create({ ...last.attrs, sep: null }, last.content);
-      if (unchangedNodes.has(last)) unchangedNodes.set(items.at(-1)!, unchangedNodes.get(last)!);
+      this.grammar.unchanged.carryOver(last, items.at(-1)!);
       result.push(this.schema.nodes[containerOf(items[0])!].create({ sep: last.attrs.sep }, items));
       items = [];
     };

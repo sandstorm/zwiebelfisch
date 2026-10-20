@@ -1,3 +1,5 @@
+import type { Tree } from '@lezer/common';
+import { typstParser } from 'codemirror-lang-typst/lezer';
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
@@ -18,6 +20,8 @@ export class TypstDocument {
   /** Changes made while listeners were being told about an earlier one, to tell next. */
   private readonly queued: TypstDocumentChangeEvent[] = [];
   private telling = false;
+  /** The syntax tree of `current`; null until asked for after a change. */
+  private tree: Tree | null = null;
 
   constructor(text: string) {
     this.current = text;
@@ -25,6 +29,12 @@ export class TypstDocument {
 
   get text(): string {
     return this.current;
+  }
+
+  /** The Lezer syntax tree of the current text: parsed when first asked for after a change, the same tree until the next. */
+  get syntaxTree(): Tree {
+    this.tree ??= typstParser.parse(this.current);
+    return this.tree;
   }
 
   /**
@@ -37,6 +47,7 @@ export class TypstDocument {
     for (const { from, to, insert } of [...effective].sort((a, b) => b.from - a.from)) {
       this.current = this.current.slice(0, from) + insert + this.current.slice(to);
     }
+    this.tree = null;
     this.tell({ contentChanges: effective, origin });
   }
 

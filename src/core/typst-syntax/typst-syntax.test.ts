@@ -1,7 +1,8 @@
 // Tests for typst-syntax.ts: findFilePaths and reading calls.
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { describe, expect, it } from 'vitest';
-import { callArguments, calleeName, findFilePaths, hasOnlyArguments, namedArgument, trailingContent, withHash } from './typst-syntax';
+import { callArguments, calleeName, findFilePaths, hasOnlyArguments, namedArgument, syntaxTree, trailingContent, withHash } from './typst-syntax';
+import { SourceOffset, TypstDocument } from '../typst-document/typst-document';
 
 const SOURCE = `#import "template.typ": template
 #include "chapters/intro.typ"
@@ -18,6 +19,27 @@ const SOURCE = `#import "template.typ": template
 `;
 
 const text = (from: number, to: number) => SOURCE.slice(from, to);
+
+describe('syntaxTree', () => {
+  it('parses a text on every call, keeps nothing between calls', () => {
+    expect(syntaxTree('= A')).not.toBe(syntaxTree('= A'));
+  });
+
+  it("is a TypstDocument's own tree of its current text", () => {
+    const document = new TypstDocument('= A');
+    expect(syntaxTree(document)).toBe(document.syntaxTree);
+    document.change([{ from: SourceOffset.of(3), to: SourceOffset.of(3), insert: 'B' }], 'test');
+    expect(syntaxTree(document)).toBe(document.syntaxTree);
+    expect(syntaxTree(document).length).toBe(4);
+  });
+
+  it('parses another holder of a text once, and two holders of the same text each', () => {
+    const first = { text: '= A' };
+    const second = { text: '= A' };
+    expect(syntaxTree(first)).toBe(syntaxTree(first));
+    expect(syntaxTree(second)).not.toBe(syntaxTree(first));
+  });
+});
 
 describe('findFilePaths', () => {
   it('lists the file paths of imports, includes and file-reading calls, in order', () => {

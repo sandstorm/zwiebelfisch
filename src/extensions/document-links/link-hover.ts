@@ -1,6 +1,6 @@
 // See documentLinks in document-links.ts.
 
-/** A link under the pointer, as `hoverLink` shows it. */
+/** A link under the pointer, as `LinkHover.move` shows it. */
 export interface HoveredLink {
   /** Which link: hovering the same one at the same `element` again changes nothing. */
   readonly link: object;
@@ -15,22 +15,6 @@ export interface HoveredLink {
   readonly followable: boolean;
   /** The hint: what following it does and how; null: none. */
   hint(): HTMLElement | null;
-}
-
-/**
- * The pointer moved (`event`): over `hovered`, or over no link (null; also when it left one). Every editor shows a
- * hovered link the same: after the hover delay its hint (`.zwf-link-hint`, role=tooltip), and while the modifier is
- * held (⌘ on Mac, else Ctrl) the link look. The hint stays while the pointer moves into it (it may offer buttons); a
- * click, a key other than a modifier, the wheel, a scroll that takes the link from under the pointer, or the link's
- * element leaving the page ends it (a scroll that leaves it there, e.g. a pane scrolling it into view as the pointer
- * arrives, places the hint again). One link per document is hovered: the first to see an event takes it, so a link
- * inside another's element (a raw box's code in the Visual editor) wins over the outer one.
- */
-export function hoverLink(event: MouseEvent, hovered: HoveredLink | null): void {
-  const doc = (event.target as Node | null)?.ownerDocument ?? document;
-  let hover = hovers.get(doc);
-  if (!hover) hovers.set(doc, (hover = new LinkHover(doc)));
-  hover.move(event, hovered);
 }
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -48,11 +32,24 @@ const HOVER_DELAY = 300;
 /** How long the hint stays after the pointer left its link, to move into the hint. */
 const LEAVE_GRACE = 200;
 
-const hovers = new WeakMap<Document, LinkHover>();
-let hints = 0;
-
-/** The hovered link of one document, its hint and its link look. */
-class LinkHover {
+/**
+ * The hovered link of one widget, its hint and its link look: every editor of the widget shows a hovered link the
+ * same, after the hover delay its hint (`.zwf-link-hint`, role=tooltip), and while the modifier is held (⌘ on Mac,
+ * else Ctrl) the link look. The hint stays while the pointer moves into it (it may offer buttons); a click, a key
+ * other than a modifier, the wheel, a scroll that takes the link from under the pointer, or the link's element leaving
+ * the page ends it (a scroll that leaves it there, e.g. a pane scrolling it into view as the pointer arrives, places
+ * the hint again). One link at a time is hovered: the first to see an event takes it, so a link inside another's
+ * element (a raw box's code in the Visual editor) wins over the outer one.
+ *
+ * - created by `documentLinks` at activation, disposed with its subscriptions
+ *
+ * Disposed, it ends the hover (its timers cleared, its hint and link look removed, its listeners on `doc` gone) and
+ * shows no more.
+ */
+export class LinkHover {
+  /** The hint's id (`aria-describedby`), unique among the widgets of a page: one hint at a time. */
+  readonly #hintId = `zwf-link-hint-${Math.random().toString(36).slice(2, 10)}`;
+  #disposed = false;
   #hovered: HoveredLink | null = null;
   #hint: HTMLElement | null = null;
   #showing: ReturnType<typeof setTimeout> | undefined;
@@ -77,10 +74,12 @@ class LinkHover {
     if (this.#hovered && !this.#hovered.element.isConnected) this.end();
   };
 
+  /** `doc`: the document the widget lives in; it gets the keys and the scrolls while a link is hovered. */
   constructor(private readonly doc: Document) {}
 
+  /** The pointer moved (`event`): over `hovered`, or over no link (null; also when it left one). */
   move(event: MouseEvent, hovered: HoveredLink | null): void {
-    if (event === this.#taken) return;
+    if (this.#disposed || event === this.#taken) return;
     if (hovered) {
       this.#taken = event;
       this.#pointer = { x: event.clientX, y: event.clientY };
@@ -97,6 +96,12 @@ class LinkHover {
     }
   }
 
+  dispose(): void {
+    this.end();
+    this.#disposed = true;
+  }
+
+  /** Ends the hover: the hint and the link look go. */
   end(): void {
     clearTimeout(this.#showing);
     clearTimeout(this.#leaving);
@@ -130,7 +135,7 @@ class LinkHover {
     if (!content) return;
     const hint = this.doc.createElement('div');
     hint.className = 'zwf-link-hint';
-    hint.id = `zwf-link-hint-${++hints}`;
+    hint.id = this.#hintId;
     hint.setAttribute('role', 'tooltip');
     hint.append(content);
     hint.addEventListener('mouseenter', () => clearTimeout(this.#leaving));

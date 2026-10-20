@@ -6,6 +6,7 @@ import type { Extension, ExtensionContext } from '../../hosts/extension-host/ext
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 import css from './document-links.css?inline';
 import type { LinkActions } from './followable-link';
+import { LinkHover } from './link-hover';
 import { linkExtension } from './source-editor/link-extension';
 import { pictureLink, textLinks } from './visual-editor/text-links';
 
@@ -25,9 +26,11 @@ export function documentLinks(): Extension {
     id: 'document-links',
     activate(context) {
       const { project, commands, languages, workspace, window, sourceEditor, visualEditor, subscriptions } = context;
-      const actions = linkActions(context);
+      const hover = new LinkHover(window.ownerDocument);
+      const actions = linkActions(context, hover);
       const pathOf = (document: TypstDocument) => () => project.pathOf(document) ?? null;
       subscriptions.push(
+        hover,
         window.registerStyleSheet(css),
         sourceEditor.registerCodeMirrorExtension({}, ({ languageId, path }) => linkExtension(actions, languageId, path)),
         visualEditor.registerTiptapExtension((editor) => textLinks(editor, actions, pathOf(editor.document))),
@@ -45,13 +48,14 @@ export function documentLinks(): Extension {
   };
 }
 
-/** Where the links come from (every provider, merged), and where following one goes. */
-function linkActions({ languages, window, commands }: ExtensionContext): LinkActions {
+/** Where the links come from (every provider, merged), where following one goes, and `hover` showing them. */
+function linkActions({ languages, window, commands }: ExtensionContext, hover: LinkHover): LinkActions {
   return {
     provideDocumentLinks: (document) => languages.provideDocumentLinks(document),
     resolveDocumentLink: (link) => languages.resolveDocumentLink(link),
     open: (target, selection) => (target instanceof URL ? openExternal(window.ownerDocument, target) : window.showDocument(target, { selection })),
     executeCommand: (command, ...args) => commands.executeCommand(command, ...args),
+    hoverLink: (event, hovered) => hover.move(event, hovered),
   };
 }
 
@@ -70,8 +74,9 @@ class FilePathLinks implements DocumentLinkProvider {
 
   constructor(private readonly project: Project) {}
 
-  provideDocumentLinks({ path, text }: TextDocument): DocumentLink[] {
-    return findFilePaths(text).map(({ path: reference, from, to }) => {
+  provideDocumentLinks(document: TextDocument): DocumentLink[] {
+    const { path } = document;
+    return findFilePaths(document).map(({ path: reference, from, to }) => {
       const link: DocumentLink = { range: { from, to } };
       this.#targets.set(link, ProjectPath.resolve(path, reference));
       return link;

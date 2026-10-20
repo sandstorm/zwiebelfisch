@@ -4,7 +4,7 @@ import { Decoration, type DecorationSet, EditorView, keymap, ViewPlugin, type Vi
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/languages/languages';
 import { linkInfo, type LinkActions } from '../followable-link';
-import { hoverLink, isMod } from '../link-hover';
+import { isMod } from '../link-hover';
 
 /**
  * Makes the links of a CodeMirror editor's text navigable: Mod+click or Alt+Enter on one opens its target (a file at
@@ -40,10 +40,10 @@ export function linkExtension(actions: LinkActions, languageId: string, path: ()
   const hover = (event: MouseEvent, view: EditorView) => {
     const mark = event.buttons === 0 && event.target instanceof Element ? event.target.closest('.zwf-source__path') : null;
     const link = mark && view.contentDOM.contains(mark) ? linkAt(view, view.posAtDOM(mark)) : null;
-    if (!link || !mark) return hoverLink(event, null);
+    if (!link || !mark) return actions.hoverLink(event, null);
     const resolved = actions.resolveDocumentLink(link);
     // the editor carries the link look: CodeMirror owns the mark's DOM
-    hoverLink(event, { link, element: mark, marked: view.dom, followable: Boolean(resolved.target), hint: () => linkInfo(view.dom.ownerDocument, resolved, actions) });
+    actions.hoverLink(event, { link, element: mark, marked: view.dom, followable: Boolean(resolved.target), hint: () => linkInfo(view.dom.ownerDocument, resolved, actions) });
   };
   return [
     links,
@@ -56,7 +56,7 @@ export function linkExtension(actions: LinkActions, languageId: string, path: ()
         return true;
       },
       mousemove: (event, view) => void hover(event, view),
-      mouseleave: (event) => hoverLink(event, null),
+      mouseleave: (event) => actions.hoverLink(event, null),
     }),
     keymap.of([{ key: 'Alt-Enter', run: (view) => follow(view, view.state.selection.main.head) }]),
   ];

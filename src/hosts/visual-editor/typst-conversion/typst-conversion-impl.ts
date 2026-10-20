@@ -8,7 +8,7 @@ import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../..
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
 import { escapeMarkup, forgetPrinted, printed, type Span } from './serializer';
-import { unchangedNodes } from './unchanged-nodes';
+import type { UnchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion';
 
@@ -157,7 +157,7 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
     tr.replace(start, endA, target.slice(start, endB));
   }
   copyAttrs(tr, target);
-  markUnchanged(tr.doc, target);
+  markUnchanged(TypstConversions.of(target.type.schema).unchanged, tr.doc, target);
   forgetPrinted(tr.doc);
   return tr;
 }
@@ -255,10 +255,10 @@ function copyAttrs(tr: Transaction, target: Node): void {
   });
 }
 
-function markUnchanged(node: Node, target: Node): void {
-  if (unchangedNodes.has(target)) unchangedNodes.set(node, unchangedNodes.get(target)!);
+function markUnchanged(unchanged: UnchangedNodes, node: Node, target: Node): void {
+  unchanged.carryOver(target, node);
   if (node.childCount !== target.childCount) return;
-  node.forEach((child, _offset, index) => markUnchanged(child, target.child(index)));
+  node.forEach((child, _offset, index) => markUnchanged(unchanged, child, target.child(index)));
 }
 
 /** Offsets that cut the old (`before`) and the new text (`after`) at the same place. */

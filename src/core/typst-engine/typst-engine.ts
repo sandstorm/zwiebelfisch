@@ -235,23 +235,13 @@ export interface LazyFont {
 }
 
 /**
- * Instantiates the engine from the wasm module (URL, bytes or response). The engine embeds no fonts: add them
- * with `addLazyFont` (the preview's default fonts: `DEFAULT_FONTS` in hosts/preview/worker/engine-assets) or `addFont`.
+ * A new engine on this realm's wasm instance, which the first call instantiates from `wasm` (URL, bytes or response);
+ * later calls ignore their `wasm`. The engines of a realm share that instance, so a crash of one crashes all. The engine
+ * embeds no fonts: add them with `addLazyFont` (the preview's default fonts: `DEFAULT_FONTS` in
+ * hosts/preview/worker/engine-assets) or `addFont`.
  */
 export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<TypstEngine> {
-  const { memory } = await init({ module_or_path: wasm });
-  /** Calls the wasm; a call that fails crashed the instance: it and every later one throw the same `TypstEngineCrash`. */
-  const call = <R>(task: () => R): R => {
-    if (crash) throw crash;
-    try {
-      return task();
-    } catch (error) {
-      crash = new TypstEngineCrash(panic ?? `${String(error)} (${megabytes(memory.buffer.byteLength)} MB of memory in use)`);
-      console.error(`The Typst compiler crashed: ${crash.message}`);
-      throw crash;
-    }
-  };
-  call(() => onPanic({ panicked: (message: string) => (panic = message) }));
+  const { call, memory } = await realmInstance(wasm);
   const engine = call(() => new WasmEngine());
   /** Lazy font files that failed to load since the last report: the next compile or export reports them. */
   let unloadedFonts: string[] = [];
@@ -296,10 +286,45 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
   };
 }
 
-/** The panic message the wasm told last; null while it never panicked. One wasm instance serves every engine. */
-let panic: string | null = null;
-/** What every call throws once a call failed: the instance is broken for every engine. */
-let crash: TypstEngineCrash | null = null;
+/**
+ * The wasm instance of a realm (a worker, a test file): wasm-bindgen instantiates the module once per realm, and every
+ * engine of the realm runs on it. Its first failing call crashes it for all of them.
+ */
+interface WasmInstance {
+  readonly memory: WebAssembly.Memory;
+  /** Calls the wasm; once a call failed, it and every later one throw the same `TypstEngineCrash`. */
+  call<R>(task: () => R): R;
+}
+
+/** This realm's wasm instance, once a `createEngine` started it; undefined again if instantiating failed. */
+let realm: Promise<WasmInstance> | undefined;
+
+/** This realm's wasm instance; the first call instantiates it from `wasm`, later calls ignore their `wasm`. */
+function realmInstance(wasm: InitInput | Promise<InitInput>): Promise<WasmInstance> {
+  realm ??= instantiate(wasm).catch((error: unknown) => {
+    realm = undefined;
+    throw error;
+  });
+  return realm;
+}
+
+async function instantiate(wasm: InitInput | Promise<InitInput>): Promise<WasmInstance> {
+  const { memory } = await init({ module_or_path: wasm });
+  let panic: string | null = null;
+  let crash: TypstEngineCrash | null = null;
+  const call = <R>(task: () => R): R => {
+    if (crash) throw crash;
+    try {
+      return task();
+    } catch (error) {
+      crash = new TypstEngineCrash(panic ?? `${String(error)} (${megabytes(memory.buffer.byteLength)} MB of memory in use)`);
+      console.error(`The Typst compiler crashed: ${crash.message}`);
+      throw crash;
+    }
+  };
+  call(() => onPanic({ panicked: (message: string) => (panic = message) }));
+  return { memory, call };
+}
 
 /** What `read` reads of a result the wasm made, which is freed then. */
 function consume<T extends { free(): void }, R>(made: T, read: (made: T) => R): R {

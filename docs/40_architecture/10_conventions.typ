@@ -30,6 +30,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *Folders are named after a concept*: no `utils/`, `impl/`, `helpers/`, `shared/`, `services/`.
 - *About 3 source files at a module's top level* (entry, `-impl.ts`, one more; tests and `.css` don't count); more get subfolders by concept.
 - *No cycles between modules*.
+- *Module scope holds constants and pure functions only.* State lives in an instance with a widget's lifetime: made in a host's constructor or an extension's `activate`, released by `dispose` or `subscriptions`. Two exceptions: a `WeakMap` memo on values that never change, and a singleton for what exists once per page (a wasm instance), named as such.
 
 == Layers <architecture-conventions-layers>
 

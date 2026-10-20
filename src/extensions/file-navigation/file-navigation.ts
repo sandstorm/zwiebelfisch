@@ -52,7 +52,7 @@ export function fileNavigation(): Extension {
       // recomputed on every open, every change and every new main file: an #include may have been added, moved or removed
       let typing: ReturnType<typeof setTimeout> | undefined;
       const show = () => {
-        readingOrder.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
+        readingOrder.show(neighbours((path) => project.document(path), project.main, window.activeFile));
         // the links only above supplementary files (a diagram, a spreadsheet, …): Typst files have the reading order;
         // the keys go back and forward everywhere
         const typst = ProjectPath.isTypst(window.activeFile);

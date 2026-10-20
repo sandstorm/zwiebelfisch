@@ -1,4 +1,5 @@
 // SpreadsheetEditor: a spreadsheet file in the editing area. See spreadsheets in ../spreadsheets.ts.
+import type { Disposable } from '../../../core/disposable/disposable';
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
@@ -8,19 +9,22 @@ import type { MountedWorkbook, WorkbookEdit } from './workbook';
  * loaded (with React and the engine) the first time a spreadsheet is shown.
  * Edits go to `onEdit` with the path, the new bytes and the spreadsheet's
  * Typst file (tables and values, see `spreadsheetTypst`); the host stores
- * both (the Typst file at `typstPath`).
+ * both (the Typst file at `typstPath`). IronCalc's styles are registered through
+ * `registerStyleSheet` once loaded, until the editor is disposed.
  */
 export class SpreadsheetEditor {
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;
   private mounted: MountedWorkbook | null = null;
+  private styleSheet: Disposable | null = null;
   /** Bumped by every show and by dispose: a slow load that was overtaken is dropped. */
   private generation = 0;
 
   constructor(
     parent: HTMLElement,
     private readonly onEdit: (path: ProjectPath, edit: WorkbookEdit) => void,
+    private readonly registerStyleSheet: (css: string) => Disposable,
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
@@ -40,8 +44,9 @@ export class SpreadsheetEditor {
     this.title.textContent = ProjectPath.displayName(path);
     this.body.textContent = 'Loading spreadsheet…';
     try {
-      const { mountWorkbook } = await import('./workbook');
+      const { mountWorkbook, WORKBOOK_STYLE_SHEET } = await import('./workbook');
       if (generation !== this.generation) return;
+      this.styleSheet ??= this.registerStyleSheet(WORKBOOK_STYLE_SHEET);
       this.body.textContent = '';
       const mounted = await mountWorkbook(this.body, FileContent.bytes(content), ProjectPath.name(path), (edit) => this.onEdit(path, edit));
       if (generation === this.generation) this.mounted = mounted;
@@ -53,6 +58,8 @@ export class SpreadsheetEditor {
 
   dispose(): void {
     this.unmount();
+    this.styleSheet?.dispose();
+    this.styleSheet = null;
     this.root.remove();
   }
 

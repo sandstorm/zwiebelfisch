@@ -20,8 +20,8 @@ export class LabelLinks implements DocumentLinkProvider {
     private readonly project: Pick<Project, 'document'>,
   ) {}
 
-  provideDocumentLinks({ text }: TextDocument): DocumentLink[] {
-    return findLabelLinks(text).map(({ name, range }) => {
+  provideDocumentLinks(document: TextDocument): DocumentLink[] {
+    return findLabelLinks(document).map(({ name, range }) => {
       const link: DocumentLink = { range };
       this.#names.set(link, name);
       return link;
@@ -33,7 +33,7 @@ export class LabelLinks implements DocumentLinkProvider {
     const label = name === undefined ? undefined : this.labels.labels().find((candidate) => candidate.name === name);
     if (!label) return link;
     const tooltip = `Go to ${describeLabel(label) ?? `<${label.name}>`} in ${ProjectPath.displayName(label.path)}`;
-    const at = ProjectPath.isTypst(label.path) ? findLabel(this.project.document(label.path)?.text ?? '', label.name) : null;
+    const at = ProjectPath.isTypst(label.path) ? findLabel(this.project.document(label.path) ?? '', label.name) : null;
     return { ...link, target: label.path, tooltip, ...(at === null ? {} : { selection: { from: at, to: at } }) };
   }
 }

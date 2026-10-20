@@ -44,9 +44,9 @@ const mermaidDrops: DocumentDropEditProvider = {
 /** The paths of the project's Mermaid files in Typst text as links titled "Edit diagram"; following one opens the file. */
 function mermaidLinks(project: Pick<Project, 'has'>): DocumentLinkProvider {
   return {
-    provideDocumentLinks: ({ path, text }) =>
-      findFilePaths(text).flatMap(({ path: reference, from, to }) => {
-        const target = ProjectPath.resolve(path, reference);
+    provideDocumentLinks: (document) =>
+      findFilePaths(document).flatMap(({ path: reference, from, to }) => {
+        const target = ProjectPath.resolve(document.path, reference);
         return target && isMermaid(target) && project.has(target) ? [{ range: { from, to }, target, tooltip: 'Edit diagram' }] : [];
       }),
   };

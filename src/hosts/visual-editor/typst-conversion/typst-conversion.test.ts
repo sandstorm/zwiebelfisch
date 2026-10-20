@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './typst-conversion';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
+import { TypstConversions } from './typst-conversions';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: TypstMarkSpec = {
@@ -114,5 +115,15 @@ describe('Typst ↔ ProseMirror conversion framework', () => {
     pasted.dispatch(pasted.state.tr.setSelection(new AllSelection(pasted.state.doc)));
     expect(pasted.pasteHTML(html, new Event('paste') as ClipboardEvent)).toBe(true);
     expect(serializeToTypst(pasted.state.doc)).toBe(source);
+  });
+
+  it("keeps what is unchanged since parsed with the document's schema, apart from other schemas", () => {
+    const other = createSchema([], []);
+    const doc = parseTypstWith('Sales  were\n_good_.\n', minimum);
+    expect(TypstConversions.of(minimum).unchanged.get(doc.child(0))).not.toBeNull();
+    expect(TypstConversions.of(other).unchanged.has(doc.child(0))).toBe(false);
+    const copy = other.nodeFromJSON(doc.toJSON());
+    expect(TypstConversions.of(other).unchanged.has(copy.child(0))).toBe(false);
+    expect(serializeToTypst(doc)).toBe('Sales  were\n_good_.\n');
   });
 });

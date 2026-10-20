@@ -6,6 +6,7 @@ import { type FontInfo, type TypstEngine, createEngine } from '../src/core/typst
 import { withPackages } from '../src/core/typst-packages/typst-packages';
 import { neighbours } from '../src/core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../src/core/paths/paths';
+import { TypstDocument } from '../src/core/typst-document/typst-document';
 import { Disposable } from '../src/core/disposable/disposable';
 import type { ExtensionContext, PreviewViewOption, ProjectFiles } from '../src';
 import { previewGuides } from '../src/extensions/preview-guides/preview-guides';
@@ -226,7 +227,7 @@ describe('demo examples', () => {
       .sort()
       .map(ProjectPath.of);
     expect(chapters.length).toBeGreaterThan(10);
-    const read = (path: string) => (typeof files[path] === 'string' ? (files[path] as string) : undefined);
+    const read = (path: string) => (typeof files[path] === 'string' ? new TypstDocument(files[path] as string) : undefined);
     const main = ProjectPath.of('/main.typ');
     chapters.forEach((chapter, i) => {
       expect(neighbours(read, main, chapter)).toEqual({ previous: chapters[i - 1] ?? main, next: chapters[i + 1] ?? null });

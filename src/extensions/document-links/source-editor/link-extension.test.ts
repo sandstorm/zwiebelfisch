@@ -5,6 +5,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { LinkActions } from '../followable-link';
+import { LinkHover } from '../link-hover';
 import { linkExtension } from './link-extension';
 
 const path = ProjectPath.of;
@@ -14,6 +15,7 @@ const CREATE = { title: 'Create missing.typ', command: 'test.create', arguments:
 
 /** Links on the two paths: the first resolves to its file, the second to a tooltip and a command. */
 function setup(text = TEXT) {
+  const hover = new LinkHover(document);
   const linked: LinkActions = {
     provideDocumentLinks: ({ text }) =>
       ['template.typ', 'missing.typ'].flatMap((name) => {
@@ -26,6 +28,7 @@ function setup(text = TEXT) {
         : { ...link, tooltip: 'missing.typ is not in the project', command: CREATE },
     open: vi.fn(),
     executeCommand: vi.fn(async () => undefined),
+    hoverLink: hover.move.bind(hover),
   };
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked, 'typst', () => path('/main.typ')) });

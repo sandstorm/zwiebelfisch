@@ -25,7 +25,7 @@ export function labelSearch(labels: Pick<ProjectLabels, 'labels'>, project: Pick
           label: label.name,
           description: [describeLabel(label), ProjectPath.displayName(label.path)].filter(Boolean).join(' · '),
           accept: () => {
-            const at = findLabel(project.document(label.path)?.text ?? '', label.name);
+            const at = findLabel(project.document(label.path) ?? '', label.name);
             window.showDocument(label.path, at === null ? {} : { selection: { from: at, to: at } });
           },
         })),

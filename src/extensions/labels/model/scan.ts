@@ -1,6 +1,6 @@
 // Reading labels and references out of one file: Typst source (Lezer) or a BibTeX bibliography. See ../labels.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { callArguments, calleeName, syntaxTree, withHash } from '../../../core/typst-syntax/typst-syntax';
+import { callArguments, calleeName, sourceText, syntaxTree, withHash, type TypstSource } from '../../../core/typst-syntax/typst-syntax';
 import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 
 export interface Scan {
@@ -20,9 +20,10 @@ export interface FoundLabel {
 }
 
 /** The labels and references in Typst source. */
-export function scanTypst(text: string): Scan {
+export function scanTypst(source: TypstSource): Scan {
+  const text = sourceText(source);
   const scan: Scan = { labels: [], references: new Map() };
-  const cursor = syntaxTree(text).cursor();
+  const cursor = syntaxTree(source).cursor();
   do {
     if (cursor.name === 'Label' && labels(cursor.node)) scan.labels.push(labelAt(cursor.node, text));
     if (cursor.name === 'RefMarker') {
@@ -43,9 +44,10 @@ export function scanBibliography(text: string): Scan {
  * Where Typst source refers to label `from`: one change per reference,
  * replacing just its name with `to` (supplements stay).
  */
-export function calculateReferenceRenames(text: string, from: string, to: string): TextChange[] {
+export function calculateReferenceRenames(source: TypstSource, from: string, to: string): TextChange[] {
+  const text = sourceText(source);
   const edits: TextChange[] = [];
-  const cursor = syntaxTree(text).cursor();
+  const cursor = syntaxTree(source).cursor();
   do {
     if (cursor.name === 'RefMarker' && text.slice(cursor.from + 1, cursor.to) === from) edits.push({ from: SourceOffset.of(cursor.from + 1), to: SourceOffset.of(cursor.to), insert: to });
   } while (cursor.next());
@@ -60,9 +62,10 @@ export interface LabelLink {
 }
 
 /** The references and the links to labels in Typst source, in order (a reference inside such a link after it). */
-export function findLabelLinks(text: string): LabelLink[] {
+export function findLabelLinks(source: TypstSource): LabelLink[] {
+  const text = sourceText(source);
   const found: LabelLink[] = [];
-  const cursor = syntaxTree(text).cursor();
+  const cursor = syntaxTree(source).cursor();
   do {
     if (cursor.name === 'Ref') {
       const marker = cursor.node.getChild('RefMarker');
@@ -77,8 +80,9 @@ export function findLabelLinks(text: string): LabelLink[] {
 }
 
 /** Where label `name` (`<name>`) is in Typst source; null if it is not there. */
-export function findLabel(text: string, name: string): SourceOffset | null {
-  const cursor = syntaxTree(text).cursor();
+export function findLabel(source: TypstSource, name: string): SourceOffset | null {
+  const text = sourceText(source);
+  const cursor = syntaxTree(source).cursor();
   do {
     if (cursor.name === 'Label' && labels(cursor.node) && text.slice(cursor.from + 1, cursor.to - 1) === name) return SourceOffset.of(cursor.from);
   } while (cursor.next());
