@@ -40,7 +40,7 @@ export function search(): Extension {
     },
     activate(context) {
       const { project, languages, workspace, workbench, commands, visualEditor, sourceEditor, globalState, subscriptions } = context;
-      const side = workbench.registerSidePanel('search', { label: 'Find in files', icon: magnifier(workbench.ownerDocument), order: 12 });
+      const side = workbench.registerSidePanel('search', { label: 'Find in files', icon: MAGNIFIER, order: 12 });
       const highlights = new MatchHighlights(project);
       const panel = new SearchPanel(side.body, {
         search: (query, scope) => new SearchResults({ project, query, scope, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
@@ -115,14 +115,5 @@ function findInFilesRow(commands: Commands): SearchProvider {
 }
 
 /** The rail button's icon: a magnifier. */
-function magnifier(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.4');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = '<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/>';
-  return svg;
-}
+const MAGNIFIER =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';

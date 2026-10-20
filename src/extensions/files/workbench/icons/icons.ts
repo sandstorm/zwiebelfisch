@@ -38,3 +38,6 @@ const ICONS = {
   files: '<path d="M5 1.5h5L13 4.5V12H5z"/><path d="M3 4v10h7"/>',
   add: '<path d="M8 3v10M3 8h10"/>',
 } satisfies Record<string, string>;
+
+/** The panel's rail button's icon (markup, as `registerSidePanel` takes it). */
+export const FILES_ICON = `<svg viewBox="0 0 16 16" aria-hidden="true" class="zwf-files__icon">${ICONS.files}</svg>`;

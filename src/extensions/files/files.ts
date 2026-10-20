@@ -6,7 +6,7 @@ import css from './files.css?inline';
 import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';
 import { fileSearch } from './workbench/file-search';
-import { icon } from './workbench/icons/icons';
+import { FILES_ICON } from './workbench/icons/icons';
 
 /**
  * The file panel: the project's files as a tree in the left side panel.
@@ -33,7 +33,7 @@ export function files(): Extension {
     activate(context) {
       const { project, window, workspace, workbench, subscriptions } = context;
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
-      const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files'), order: 10 });
+      const side = workbench.registerSidePanel('files', { label: 'Files', icon: FILES_ICON, order: 10 });
       const state = () => ({ paths: project.paths(), main: project.main, active: window.activeFile });
       const panel = new FilePanel(side.body, {
         onOpen: (path) => {

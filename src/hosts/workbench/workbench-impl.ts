@@ -278,7 +278,7 @@ export class WorkbenchHost implements Workbench {
    * for it to be shown.
    */
   #createPreview(): Preview {
-    const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
+    const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: PREVIEW_ICON, side: 'right' });
     return new Preview(panel.body);
   }
 
@@ -394,17 +394,9 @@ const WORKBENCH_SETTINGS = {
   },
 } as const;
 
-/** The preview's rail button: a page. */
-function previewIcon(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.3');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
-  return svg;
-}
+/** The preview's rail button's icon: a page. */
+const PREVIEW_ICON =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/></svg>';
 
 /** The sides whose rail shows a menu's items (`workbench/rail/<side>`). */
 const RAIL_MENUS = ['left', 'right'] as const;

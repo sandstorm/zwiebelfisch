@@ -140,7 +140,7 @@ window.registerSearchProvider({
   columns: 2,
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`],
-  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button; returns `SidePanel` (see the d.ts)],
+  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button (`icon`: SVG markup, as every icon); returns `SidePanel` (see the d.ts)],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--zwf-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],

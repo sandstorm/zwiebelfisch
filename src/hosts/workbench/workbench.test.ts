@@ -88,7 +88,7 @@ describe('WorkbenchHost', () => {
   it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {
     const { host, workbench } = setup(({ window, workbench, subscriptions }) => {
       const doc = workbench.ownerDocument;
-      const panel = workbench.registerSidePanel('outline', { label: 'Outline', icon: doc.createElement('span') });
+      const panel = workbench.registerSidePanel('outline', { label: 'Outline', icon: '<svg></svg>' });
       panel.body.textContent = 'outline';
       panel.setDefault(true);
       const status = doc.createElement('span');
@@ -103,7 +103,7 @@ describe('WorkbenchHost', () => {
 
   it("puts the preview into the right side's built-in panel, first on its rail and shown by default", () => {
     const { host } = setup(({ workbench }) => {
-      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
+      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: '<svg></svg>', side: 'right' });
     });
     const right = host.querySelector<HTMLElement>('.zwf-editor__side--right')!;
     expect([...right.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
@@ -115,7 +115,7 @@ describe('WorkbenchHost', () => {
 
   it('shows the right side panel the setting workbench.rightSidePanel names, none for null', () => {
     const { host, workbench } = setup(({ workbench }) => {
-      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
+      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: '<svg></svg>', side: 'right' });
     }, { settings: { 'workbench.rightSidePanel': 'devtools' } });
     const shown = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--right .zwf-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
     expect(shown()).toEqual(['devtools']);
@@ -281,8 +281,8 @@ describe('WorkbenchHost', () => {
   it('refuses a second side panel with the same id, and a second editor frame', () => {
     setup(({ workbench }) => {
       const doc = workbench.ownerDocument;
-      workbench.registerSidePanel('files', { label: 'Files', icon: doc.createElement('span') });
-      expect(() => workbench.registerSidePanel('files', { label: 'Files', icon: doc.createElement('span') })).toThrow(/already/);
+      workbench.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' });
+      expect(() => workbench.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' })).toThrow(/already/);
       const frame = { top: doc.createElement('nav'), bottom: doc.createElement('nav') };
       const registered = workbench.registerEditorFrame(frame);
       expect(() => workbench.registerEditorFrame(frame)).toThrow(/already/);
@@ -474,7 +474,7 @@ describe('WorkbenchHost: declared keys and rail menus', () => {
     expect(button.title).toBe('Count (Ctrl+Shift+C)');
     host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.click();
     expect(host.querySelector('.zwf-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
-    const panel = workbench.registerSidePanel('files', { label: 'Files', icon: workbench.ownerDocument.createElement('span') });
+    const panel = workbench.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' });
     workbench.commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'workbench.view.files' }]);
     const rail = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!;
     rail.dispatchEvent(new Event('pointerenter'));
@@ -486,9 +486,8 @@ describe('WorkbenchHost: declared keys and rail menus', () => {
 
   it("shows the items of workbench/rail/left among the left rail's panels by order, naming the key, running the command", () => {
     const { host, workbench, ran } = setupKeys();
-    const icon = () => workbench.ownerDocument.createElement('span');
-    workbench.registerSidePanel('help', { label: 'Help', icon: icon(), order: 20 });
-    workbench.registerSidePanel('files', { label: 'Files', icon: icon(), order: 10 });
+    workbench.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
+    workbench.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
     const item = workbench.registerMenuItem('workbench/rail/left', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
     const buttons = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail-button')].map((button) => button.dataset.testid ?? button.title);
     expect(buttons()).toEqual(['zwf-panel-toggle-files', 'Count words (Ctrl+Shift+C)', 'zwf-panel-toggle-help']);

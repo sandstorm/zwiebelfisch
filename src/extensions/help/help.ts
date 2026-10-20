@@ -18,7 +18,7 @@ export function help(): Extension {
     id: 'help',
     activate(context) {
       const { window, languages, workbench, commands, visualEditor, subscriptions } = context;
-      const side = workbench.registerSidePanel('help', { label: 'Help', icon: helpIcon(workbench.ownerDocument), order: 20 });
+      const side = workbench.registerSidePanel('help', { label: 'Help', icon: HELP_ICON, order: 20 });
       const panel = new HelpPanel(side.body, {
         insert: (text) => void commands.executeCommand(INSERT, text),
         showContextMenu: (text, anchor, title) => window.showContextMenu(ROW_MENU, { anchor, title, args: [text] }),
@@ -48,19 +48,6 @@ const ROW_MENU = 'help/row';
 const INSERT = 'help.insertAtCursor';
 const COPY = 'help.copy';
 
-/** The rail button's icon: a question mark in a circle. */
-function helpIcon(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.3');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = '<circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.75c-.5.22-.8.6-.8 1.15v.4"/><path d="M8 11.6v.1"/>';
-  return svg;
-}
-
 /** Puts `text` at the cursor of the shown Typst editor; with no Typst editor shown, copies it (and says so). */
 function insertAtCursor(context: ExtensionContext, text: string): Promise<void> | void {
   const editor = context.window.activeTextEditor;
@@ -77,3 +64,7 @@ async function copy({ window, workbench }: ExtensionContext, text: string, messa
     void window.showErrorMessage('The clipboard could not be written: drag the row into the text instead.');
   }
 }
+
+/** The rail button's icon: a question mark in a circle. */
+const HELP_ICON =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.75c-.5.22-.8.6-.8 1.15v.4"/><path d="M8 11.6v.1"/></svg>';

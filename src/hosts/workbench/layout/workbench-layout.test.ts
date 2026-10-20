@@ -22,7 +22,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   document.body.append(host);
   const commands = new CommandsHost(host);
   const layout = new WorkbenchLayout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`), commands);
-  const sidePanel = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
+  const sidePanel = layout.addPanel('files', { label: 'Files', icon: '<svg></svg>' });
   const body = sidePanel.body;
   body.textContent = 'tree';
   const toggle = host.querySelector<HTMLButtonElement>('[data-testid=zwf-panel-toggle-files]')!;
@@ -34,7 +34,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   /** Whether the panel is open, as people see it: its rail button pressed and its body shown. */
   const isOpen = () => toggle.getAttribute('aria-pressed') === 'true' && !panel.hidden && !body.hidden;
   /** Adds the right side's panel `id`. */
-  const right = (id = 'preview', label = 'Preview') => layout.addPanel(id, { label, icon: document.createElement('span'), side: 'right' });
+  const right = (id = 'preview', label = 'Preview') => layout.addPanel(id, { label, icon: '<svg></svg>', side: 'right' });
   return { host, layout, commands, sidePanel, body, toggle, panel, setWidth, key, isOpen, right };
 }
 
@@ -59,7 +59,7 @@ describe('WorkbenchLayout', () => {
 
   it('places rail buttons by order, equal orders in registration order', () => {
     const { host, layout } = setup();
-    const icon = () => document.createElement('span');
+    const icon = () => '<svg></svg>';
     layout.addPanel('outline', { label: 'Outline', icon: icon(), order: -10 });
     layout.addPanel('search', { label: 'Search', icon: icon(), order: 20 });
     layout.addPanel('comments', { label: 'Comments', icon: icon() });
@@ -69,7 +69,7 @@ describe('WorkbenchLayout', () => {
 
   it("places a rail action among the panels' buttons by order, and bottom-aligned panels in the rail's far-end group", () => {
     const { host, layout } = setup();
-    const icon = () => document.createElement('span');
+    const icon = () => '<svg></svg>';
     layout.addPanel('help', { label: 'Help', icon: icon(), order: 20 });
     layout.addPanel('settings', { label: 'Settings', icon: icon(), alignment: 'bottom', order: 5 });
     layout.addPanel('account', { label: 'Account', icon: icon(), alignment: 'bottom' });
@@ -293,7 +293,7 @@ describe('WorkbenchLayout', () => {
     sidePanel.show();
     expect(document.activeElement).toBe(query);
     // a panel with nothing to focus gets the focus itself
-    const preview = layout.addPanel('preview', { label: 'Preview', icon: document.createElement('span'), side: 'right' });
+    const preview = layout.addPanel('preview', { label: 'Preview', icon: '<svg></svg>', side: 'right' });
     preview.show();
     expect(document.activeElement).toBe(preview.body);
     expect(host.querySelector('[data-testid=zwf-panel-toggle-preview]')!.getAttribute('aria-pressed')).toBe('true');

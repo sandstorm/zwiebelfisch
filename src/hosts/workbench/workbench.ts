@@ -176,8 +176,8 @@ export interface OpenOptions {
 export interface SidePanelOptions {
   /** Shown on the rail button (as its tooltip and accessible name). */
   label: string;
-  /** The rail button's icon. */
-  icon: Element;
+  /** The rail button's icon: SVG markup, drawn in `currentColor`. */
+  icon: string;
   /** The side whose rail gets the button; default `'left'`. */
   side?: 'left' | 'right';
   /** The rail's group the button goes into: `'top'` (the default) or `'bottom'`, at the rail's far end. */

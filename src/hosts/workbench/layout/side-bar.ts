@@ -91,7 +91,7 @@ export class SideBar {
     button.setAttribute('aria-label', options.label);
     button.setAttribute('aria-controls', body.id);
     button.dataset.testid = `zwf-panel-toggle-${id}`;
-    button.append(options.icon);
+    button.insertAdjacentHTML('beforeend', options.icon);
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
     this.#place(button, options.order ?? 0, options.alignment === 'bottom');
     this.#panel.insertBefore(body, this.#resizer);

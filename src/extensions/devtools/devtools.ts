@@ -42,7 +42,7 @@ function devtoolsExtension(contributions: ContributionLog): Extension {
         if (!shown) return { kind: 'none', path, reason: 'No Visual editor of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
       };
-      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: icon(workbench.ownerDocument), side: 'right', alignment: 'bottom' });
+      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: ICON, side: 'right', alignment: 'bottom' });
       const panel = new DevtoolsPanel(side.body, {
         contributions,
         events,
@@ -86,18 +86,8 @@ const ENABLED_SETTING = {
   description: 'Whether the devtools panel is on the right rail: the memory of the Typst engine, the shown document, every contribution, the events while it is shown.',
 } as const;
 
-function icon(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 20 20');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.5');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = ICON;
-  return svg;
-}
-
-const ICON = '<path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.4 1.4 0 0 1-2-2l5.6-5.6a4 4 0 0 1 5.4-5.4L10 7l1 2 2 1z"/>';
+const ICON =
+  '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.4 1.4 0 0 1-2-2l5.6-5.6a4 4 0 0 1 5.4-5.4L10 7l1 2 2 1z"/></svg>';
 
 /** Logs every event of `context` into `events` while `side` is shown (`logged` after each), until disposed. */
 function logWhileVisible(side: SidePanel, context: ExtensionContext, events: EventLog, logged: () => void): { dispose(): void } {
