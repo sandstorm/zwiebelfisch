@@ -193,4 +193,19 @@ describe('createQuickPick', () => {
     key(field, 'Escape');
     expect(hidden).toBe(2);
   });
+  it("gives each box's ids their own name: two windows' quick picks on one page do not collide", () => {
+    const picks = [setup(), setup()].map(({ host, quickInput }) => {
+      const pick = quickInput.createQuickPick<{ label: string }>();
+      pick.prompt = 'Narrow';
+      pick.items = [{ label: 'one' }];
+      pick.show();
+      const field = host.querySelector<HTMLInputElement>('.zwf-quick-pick--wide input')!;
+      const listbox = host.querySelector('[role=listbox]')!;
+      expect([field.getAttribute('aria-controls'), field.getAttribute('aria-describedby')]).toEqual([listbox.id, host.querySelector('.zwf-quick-pick__hint')!.id]);
+      return [listbox.id, field.getAttribute('aria-describedby'), host.querySelector('[role=option]')!.id];
+    });
+    const ids = picks.flat();
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.map((id) => document.querySelectorAll(`[id="${id}"]`).length)).toEqual(ids.map(() => 1));
+  });
 });

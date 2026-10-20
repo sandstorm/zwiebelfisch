@@ -7,20 +7,21 @@ import type { InlineLayout } from './unchanged-nodes';
 import { markupSource } from '../../../core/typst-syntax/typst-syntax';
 
 /**
- * `doc` printed, with its position map (cached).
+ * `doc` printed, with its position map (cached in its schema's `TypstConversions.printed`).
  *
  * Untouched nodes print their source, edited ones through their specs' toTypst; every stretch of output remembers the
  * document range showing it (the position map).
  */
 export function printed(doc: Node): Printed {
-  let result = printedDocs.get(doc);
+  const grammar = TypstConversions.of(doc.type.schema);
+  let result = grammar.printed.get(doc);
   if (!result) {
-    const serializer = new ProseMirrorToTypstSerializer(TypstConversions.of(doc.type.schema));
+    const serializer = new ProseMirrorToTypstSerializer(grammar);
     serializer.hidden(doc.attrs.lead);
     serializer.blocks(doc, 0, '\n\n');
     serializer.hidden(doc.attrs.trail);
     result = serializer.finish();
-    printedDocs.set(doc, result);
+    grammar.printed.set(doc, result);
   }
   return result;
 }
@@ -43,14 +44,6 @@ export interface Printed {
   /** The last visible position, where source after it maps. */
   end: number;
 }
-
-/** Forgets the printed form of `doc` (nodes in it changed since parsed). */
-export function forgetPrinted(doc: Node): void {
-  printedDocs.delete(doc);
-}
-
-/** Docs are immutable, so their printed form is cached. */
-const printedDocs = new WeakMap<Node, Printed>();
 
 /**
  * Serializes a document: the `TypstSerializeState` the specs' toTypst functions write edited blocks through (its

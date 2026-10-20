@@ -1,7 +1,8 @@
 // See typst-conversion.ts.
-import type { NodeType, Schema } from '@tiptap/pm/model';
+import type { Node, NodeType, Schema } from '@tiptap/pm/model';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './typst-conversion';
+import type { Printed } from './serializer';
 import { UnchangedNodes } from './unchanged-nodes';
 
 /**
@@ -18,6 +19,8 @@ export class TypstConversions {
   readonly anchors = new Set(['src', 'sep', 'lead', 'trail', 'label']);
   /** The nodes of this schema's documents unchanged since parsed. */
   readonly unchanged = new UnchangedNodes();
+  /** The printed form of this schema's documents, by document; dropped when `unchanged` changes for a document's nodes. */
+  readonly printed = new WeakMap<Node, Printed>();
 
   constructor(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]) {
     for (const spec of nodes) this.addNode(spec);

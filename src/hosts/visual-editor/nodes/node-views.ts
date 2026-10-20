@@ -1,11 +1,11 @@
 // See VisualEditor in ../visual-editor-impl.ts.
-import { Extension, type AnyExtension } from '@tiptap/core';
+import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { type EditorView, type NodeView, type NodeViewConstructor } from '@tiptap/pm/view';
 import { documentExtensions, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import type { TypstNodeSpec } from '../visual-editor';
-import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
+import { rawBoxes, type RawBoxes } from './raw-box';
 
 /**
  * The Tiptap extensions of a Visual editor whose schema holds `nodes` and `marks`, with the node view each node type's
@@ -17,7 +17,8 @@ import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
  * And the raw boxes' keyboard navigation.
  */
 export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: RawBoxes): AnyExtension[] {
-  return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews(boxes)];
+  const raw = rawBoxes(boxes);
+  return [...documentExtensions(nodes, marks), raw.navigation, nodeViews(boxes.nodeViews, raw.views)];
 }
 
 /** The `view` of every node type, the base's and `nodes`', merged by name (a later spec's fields win). */
@@ -28,13 +29,13 @@ export function nodeViewSpecs(nodes: readonly TypstNodeSpec[]): Map<string, NonN
 }
 
 /** Kept DOM and raw box node views, as the specs' `view` asks. */
-function nodeViews(boxes: RawBoxes): AnyExtension {
+function nodeViews(specs: RawBoxes['nodeViews'], rawBoxViews: (tiptap: Editor) => NodeViewConstructor): AnyExtension {
   return Extension.create({
     name: 'typstNodeViews',
     addProseMirrorPlugins() {
-      const rawBox = rawBoxViews(this.editor, boxes);
+      const rawBox = rawBoxViews(this.editor);
       const nodeViews: Record<string, NodeViewConstructor> = {};
-      for (const [name, view] of boxes.nodeViews) {
+      for (const [name, view] of specs) {
         if (view.keepsDom) nodeViews[name] = keepWhileRenderedSame;
         if (view.box === 'code') nodeViews[name] = rawBox;
       }

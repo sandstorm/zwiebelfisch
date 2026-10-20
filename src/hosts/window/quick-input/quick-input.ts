@@ -237,9 +237,10 @@ function isArray<T>(items: readonly T[] | Promise<readonly T[]>): items is reado
   return Array.isArray(items);
 }
 
-let ids = 0;
-
-/** Picks one item: a listbox the filter field steers (arrows, Enter) with the active item marked; groups under headings. */
+/**
+ * Picks one item: a listbox the filter field steers (arrows, Enter) with the active item marked; groups under headings.
+ * The listbox's id (and its rows', prefixed by it) differs from every other picker's on the page.
+ */
 class OnePicker<T extends string | QuickPickItem> {
   #options: { item: T; element: HTMLElement }[] = [];
   #active = 0;
@@ -252,7 +253,7 @@ class OnePicker<T extends string | QuickPickItem> {
   ) {
     const { listbox, input } = parts;
     listbox.setAttribute('role', 'listbox');
-    listbox.id = `zwf-quick-pick-${++ids}`;
+    listbox.id = `zwf-quick-pick-${Math.random().toString(36).slice(2, 10)}`;
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-expanded', 'true');
@@ -370,12 +371,12 @@ class OwnedQuickPick<T extends QuickPickItem> implements QuickPick<T> {
     this.#empty = element(doc, 'div', 'zwf-quick-pick__empty');
     this.#empty.textContent = 'No results';
     this.#prompt = element(doc, 'div', 'zwf-quick-pick__hint');
-    this.#prompt.id = `zwf-quick-pick-hint-${++ids}`;
     this.#box.append(this.#field, this.#progress, listbox, this.#empty, this.#prompt);
     this.#picker = new OnePicker<T>(doc, { listbox, input: this.#field }, (item) => {
       this.#selected = [item];
       this.#accepted.fire();
     });
+    this.#prompt.id = `${listbox.id}-hint`;
     this.#field.addEventListener('input', () => this.#changed.fire(this.#field.value));
     this.#field.addEventListener('keydown', (event) => this.#picker.key(event));
     this.#update();

@@ -6,7 +6,7 @@ import type { CompletionItem } from '../visual-editor';
  * A `role="listbox"` of completion items in `container` (positioned by the caller). One option is the chosen one:
  * arrow keys move it, Enter or Tab accept it, a click accepts the clicked one, the mouse pointer chooses what it
  * points at. The editor keeps the focus; its element (`input`) names the chosen option (`aria-activedescendant`)
- * while the list shows.
+ * while the list shows. Its id (and its options', prefixed by it) differs from every other widget's on the page.
  *
  * @internal Extensions fill it through `visualEditor.registerCompletionItemProvider`.
  */
@@ -14,7 +14,7 @@ export class SuggestWidget {
   readonly element: HTMLElement;
   private items: readonly CompletionItem[] = [];
   private chosen = 0;
-  private readonly id = `zwf-suggest-${++widgets}`;
+  private readonly id = `zwf-suggest-${Math.random().toString(36).slice(2, 10)}`;
 
   constructor(
     container: HTMLElement,
@@ -94,8 +94,6 @@ export class SuggestWidget {
     return option ? Number(option.dataset.index) : null;
   }
 }
-
-let widgets = 0;
 
 function option(doc: Document, item: CompletionItem, id: string, index: number): HTMLElement {
   const element = doc.createElement('div');

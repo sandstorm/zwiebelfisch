@@ -165,6 +165,16 @@ describe('completion lists', () => {
     press(editor, 'Escape');
     expect(input.hasAttribute('aria-activedescendant')).toBe(false);
   });
+  it("of two editors on one page have their own ids, so each editor names only its own list's options", () => {
+    const [one, two] = [setup(), setup()];
+    type(one.editor, ' /');
+    type(two.editor, ' /');
+    expect(one.list.id).not.toBe(two.list.id);
+    for (const { editor, list } of [one, two]) {
+      expect(editor.view.dom.getAttribute('aria-controls')).toBe(list.id);
+      expect(document.getElementById(editor.view.dom.getAttribute('aria-activedescendant')!)?.parentElement).toBe(list);
+    }
+  });
 });
 
 describe('filterCompletionItems', () => {

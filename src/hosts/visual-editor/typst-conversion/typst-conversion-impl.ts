@@ -7,7 +7,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
-import { escapeMarkup, forgetPrinted, printed, type Span } from './serializer';
+import { escapeMarkup, printed, type Span } from './serializer';
 import type { UnchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion';
@@ -143,9 +143,9 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   // Diff without the anchoring attributes: a block whose `src` changed must
   // still be descended into, not replaced wholesale. Sizes are unaffected.
   // `label` is not printed from `src` but compared like an anchor: a renamed label updates the attribute in place.
-  const anchors = TypstConversions.of(target.type.schema).anchors;
-  const current = withoutAnchors(tr.doc, anchors).content;
-  const wanted = withoutAnchors(target, anchors).content;
+  const conversions = TypstConversions.of(target.type.schema);
+  const current = withoutAnchors(tr.doc, conversions.anchors).content;
+  const wanted = withoutAnchors(target, conversions.anchors).content;
   const start = current.findDiffStart(wanted);
   if (start !== null) {
     let { a: endA, b: endB } = current.findDiffEnd(wanted)!;
@@ -157,8 +157,8 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
     tr.replace(start, endA, target.slice(start, endB));
   }
   copyAttrs(tr, target);
-  markUnchanged(TypstConversions.of(target.type.schema).unchanged, tr.doc, target);
-  forgetPrinted(tr.doc);
+  markUnchanged(conversions.unchanged, tr.doc, target);
+  conversions.printed.delete(tr.doc);
   return tr;
 }
 

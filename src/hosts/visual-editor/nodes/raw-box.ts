@@ -1,7 +1,7 @@
 import { defaultKeymap, indentLess, indentMore } from '@codemirror/commands';
 import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
-import { Extension, type Editor } from '@tiptap/core';
+import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
@@ -11,7 +11,9 @@ import { posToSource } from '../typst-conversion/typst-conversion';
 import { RenderedBox } from './rendered-box';
 
 /**
- * The node views of raw boxes in `tiptap`, with what `boxes` contribute to them.
+ * The raw boxes of one editor, with what `boxes` contribute to them: their node views in its Tiptap editor (`views`)
+ * and the keyboard entry into them (`navigation`). The navigation of one `rawBoxes` reaches only the boxes its `views`
+ * made.
  *
  * A raw box holds Typst the Visual editor does not model, or a node whose spec asks for a code box (an image call, an
  * outline). It is edited as code in a nested CodeMirror, so no Typst is lost or rewritten. Contributions add the code's
@@ -21,8 +23,12 @@ import { RenderedBox } from './rendered-box';
  * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxExtension`, a node
  * spec's `view.title` and, to the code, `sourceEditor.registerCodeMirrorExtension`.
  */
-export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
-  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });
+export function rawBoxes(boxes: RawBoxes): { readonly navigation: AnyExtension; readonly views: (tiptap: Editor) => NodeViewConstructor } {
+  const open: OpenBoxes = new WeakMap();
+  return {
+    navigation: rawBoxNavigation(open),
+    views: (tiptap) => (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes, open }),
+  };
 }
 
 /** What the raw boxes of one editor get from the contributions. */
@@ -39,35 +45,40 @@ export interface RawBoxes {
 }
 
 /**
- * Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box. The
+ * Keyboard entry into the raw boxes in `open`: arrow keys at their edges, Enter on a selected box. The
  * command `editRawBox` enters a box from code (a box just inserted, the caret inside its code; a range revealed in it).
  */
-export const RawBoxNavigation = Extension.create({
-  name: 'typstRawBoxNavigation',
-  addCommands() {
-    return {
-      editRawBox:
-        (pos, from, to = from) =>
-        ({ view, dispatch }) => {
-          const box = boxAt(view, pos);
-          if (box && dispatch) box.edit(from, to);
-          return box !== undefined;
+function rawBoxNavigation(open: OpenBoxes): AnyExtension {
+  return Extension.create({
+    name: 'typstRawBoxNavigation',
+    addCommands() {
+      return {
+        editRawBox:
+          (pos, from, to = from) =>
+          ({ view, dispatch }) => {
+            const box = boxAt(open, view, pos);
+            if (box && dispatch) box.edit(from, to);
+            return box !== undefined;
+          },
+      };
+    },
+    addKeyboardShortcuts() {
+      return {
+        ArrowLeft: () => enterBox(open, this.editor, 'left'),
+        ArrowRight: () => enterBox(open, this.editor, 'right'),
+        ArrowUp: () => enterBox(open, this.editor, 'up'),
+        ArrowDown: () => enterBox(open, this.editor, 'down'),
+        Enter: () => {
+          const { selection } = this.editor.state;
+          return selection instanceof NodeSelection && focusBox(open, this.editor.view, selection.from, 1);
         },
-    };
-  },
-  addKeyboardShortcuts() {
-    return {
-      ArrowLeft: () => enterBox(this.editor, 'left'),
-      ArrowRight: () => enterBox(this.editor, 'right'),
-      ArrowUp: () => enterBox(this.editor, 'up'),
-      ArrowDown: () => enterBox(this.editor, 'down'),
-      Enter: () => {
-        const { selection } = this.editor.state;
-        return selection instanceof NodeSelection && focusBox(this.editor.view, selection.from, 1);
-      },
-    };
-  },
-});
+      };
+    },
+  });
+}
+
+/** The open raw boxes of one editor by their DOM, so arrow keys in it can move into them. */
+type OpenBoxes = WeakMap<globalThis.Node, RawBox>;
 
 /**
  * One raw box (a node whose spec has `view.box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline).
@@ -100,7 +111,7 @@ class RawBox implements NodeView {
     private node: Node,
     private readonly getPos: () => number | undefined,
     decorations: readonly Decoration[],
-    { tiptap, boxes: { editor, renderers, codeExtensions, extensions, nodeViews } }: { tiptap: Editor; boxes: RawBoxes },
+    { tiptap, boxes: { editor, renderers, codeExtensions, extensions, nodeViews }, open }: { tiptap: Editor; boxes: RawBoxes; open: OpenBoxes },
   ) {
     this.tiptap = tiptap;
     const inline = node.isInline;
@@ -113,7 +124,7 @@ class RawBox implements NodeView {
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
     wrapper.className = 'zwf-visual__code';
     this.code = this.createCode(wrapper, inline, codeExtensions);
-    boxes.set(this.dom, this);
+    open.set(this.dom, this);
     this.showDecorations(decorations);
     const extend = (picture: HTMLImageElement | null) => (this.extensions = this.extend(extensions, wrapper, picture, editor));
     this.rendered = renderer ? this.createRendered(wrapper, renderer, extend) : null;
@@ -310,9 +321,6 @@ function caretBeside(view: EditorView, $pos: ResolvedPos): Selection | null {
   return view.someProp('createSelectionBetween', (f) => f(view, $pos, $pos)) ?? null;
 }
 
-/** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
-const boxes = new WeakMap<globalThis.Node, RawBox>();
-
 type Side = -1 | 1;
 
 const sharedTheme = {
@@ -335,41 +343,41 @@ const inlineTheme = CodeView.theme({
 const blockTheme = CodeView.theme(sharedTheme);
 
 /** Arrow key handling in the outer editor: moving onto a raw box puts the cursor inside it. */
-function enterBox(editor: Editor, dir: Direction): boolean {
+function enterBox(open: OpenBoxes, editor: Editor, dir: Direction): boolean {
   if (!editor.state.selection.empty) return false;
   const side: Side = dir === 'left' || dir === 'up' ? -1 : 1;
   const horizontal = dir === 'left' || dir === 'right';
-  return (horizontal && enterInlineBox(editor, side)) || enterBlockBox(editor, dir, side);
+  return (horizontal && enterInlineBox(open, editor, side)) || enterBlockBox(open, editor, dir, side);
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
 /** Left/right next to a raw inline box. */
-function enterInlineBox({ state, view }: Editor, side: Side): boolean {
+function enterInlineBox(open: OpenBoxes, { state, view }: Editor, side: Side): boolean {
   const { $head } = state.selection;
   const neighbour = side > 0 ? $head.nodeAfter : $head.nodeBefore;
   if (neighbour?.type.name !== 'rawInline') return false;
-  return focusBox(view, side > 0 ? $head.pos : $head.pos - neighbour.nodeSize, side);
+  return focusBox(open, view, side > 0 ? $head.pos : $head.pos - neighbour.nodeSize, side);
 }
 
-function focusBox(view: EditorView, pos: number, side: Side): boolean {
-  const box = boxAt(view, pos);
+function focusBox(open: OpenBoxes, view: EditorView, pos: number, side: Side): boolean {
+  const box = boxAt(open, view, pos);
   box?.focus(side);
   return box !== undefined;
 }
 
-/** The raw box at `pos` in the outer editor, if one is shown there. */
-function boxAt(view: EditorView, pos: number): RawBox | undefined {
+/** The raw box of `open` at `pos` in the outer editor, if one is shown there. */
+function boxAt(open: OpenBoxes, view: EditorView, pos: number): RawBox | undefined {
   const dom = view.nodeDOM(pos);
-  return dom ? boxes.get(dom) : undefined;
+  return dom ? open.get(dom) : undefined;
 }
 
 /** Leaving a textblock towards a raw block (the PM "embedded code editor" arrow handler). */
-function enterBlockBox({ state, view }: Editor, dir: Direction, side: Side): boolean {
+function enterBlockBox(open: OpenBoxes, { state, view }: Editor, dir: Direction, side: Side): boolean {
   const { $head } = state.selection;
   if ($head.depth === 0 || !view.endOfTextblock(dir)) return false;
   const next = Selection.near(state.doc.resolve(side > 0 ? $head.after() : $head.before()), side);
-  return next instanceof NodeSelection && focusBox(view, next.from, side);
+  return next instanceof NodeSelection && focusBox(open, view, next.from, side);
 }
 
 declare module '@tiptap/core' {
