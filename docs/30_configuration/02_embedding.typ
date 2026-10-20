@@ -199,7 +199,7 @@ createEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.fi
 "Devtools" on the right rail shows what the editor is made of while it runs, as your browser's devtools do for a page. Switch it off with `devtools.enabled: false`.
 
 - *Typst engine memory* on top: the engine's wasm memory only grows. A long document levels off; a value that keeps growing with every edit is a leak.
-- *Document*: the shown file's ProseMirror document as a tree, each node with its source range (@architecture-prosemirror-typst).
+- *Document*: the shown file's ProseMirror document as a tree, each node with its source range (@architecture-typst-conversion).
 - *Contributions*: every `register…` call and declared setting, by extension or by contribution point.
 - *Events*: every `onDid…` event as it fires, while the panel is shown.
 

@@ -7,7 +7,7 @@ import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import { children } from '../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import { starterKitPart, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */

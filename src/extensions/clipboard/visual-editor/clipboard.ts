@@ -4,7 +4,7 @@ import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
 import { SourceRange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
 import { sortPasteEdits, type DocumentPasteEdit, type Languages, type TextDocument } from '../../../hosts/languages/languages';
-import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import type { PasteChoices } from '../paste-as';
 import { TYPST } from '../pasted-typst';
 import { pasteChoicePlugin, pasteWith, type PasteAlternative } from './paste-as';

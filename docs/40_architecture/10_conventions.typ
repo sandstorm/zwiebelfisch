@@ -9,7 +9,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 == Design <architecture-conventions-design>
 
 - *Keep overall complexity low*, measured in obviousness, not lines. Every type, helper or contribution point of ours is a concept someone must learn. Prefer the frameworks' concepts and plain code.
-- *New concepts of ours only where two areas meet*: Typst ↔ ProseMirror (`hosts/prosemirror-typst`), Typst ↔ CodeMirror (raw boxes), our extension API ↔ a framework. Inside one area, use its own concepts.
+- *New concepts of ours only where two areas meet*: Typst ↔ ProseMirror (`hosts/visual-editor/typst-conversion`), Typst ↔ CodeMirror (raw boxes), our extension API ↔ a framework. Inside one area, use its own concepts.
 - *Propose every new concept to the user first*, with what it replaces and what it brings. Renames, moves and plain functions are not new concepts.
 - *Deep modules*: a lot hidden behind a small interface, as in _A Philosophy of Software Design_. Don't split a deep class into shallow ones (`Project` stays one class).
 - *Information hiding*: expose what callers need. No member exists only for tests or one caller's convenience.
@@ -24,7 +24,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 - *The entry defines the API* and holds the most important code. Internal files import its types; they use its values at runtime only, never while modules load.
 - *Subfolders* (`model/`, `visual-editor/`, `worker/`) have no entry; their files import each other directly.
 - *`*.worker.ts` runs only in a Web Worker*; files without the suffix run on the main thread or in both.
-- *No re-exports*, except `src/index.ts` and a host entry's re-export of its implementation. When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`).
+- *No re-exports*, except `src/index.ts`, a host contract's re-export of its implementation, and a host entry's re-export of a subfolder's contract (`visual-editor.ts` forwards `typst-conversion/`). When an outside caller needs an internal name, the code belongs in the entry, or it is a module of its own (`core/typst-syntax`).
 - *Folders are named after a concept*, never `utils/`, `impl/`, `helpers/`.
 - *No cycles between modules*.
 
@@ -43,7 +43,7 @@ How code is written here. `mise run quality` checks what it can (@architecture-d
 
 - *The line between model and view is the DOM.* Pure display logic (zoom presets, tree rows) is model.
 - *Hosts keep only mechanism.* Ask for every host member: mechanism, or one feature's policy? Policy is an extension.
-- *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its only re-export, at the bottom, is the implementation others construct.
+- *A host's entry `<name>.ts` is its contract*: the interfaces and types others see, contract first; its re-exports, at the bottom, are the implementation others construct and, one line per subfolder, a subfolder's contract the host's users need (the Visual editor's `typst-conversion/`).
 - *`<name>-impl.ts` is the implementation*, starting with `See <Contract> in <name>.ts`.
 - *Extensions never depend on each other*: not through imports, services, commands or schema names. A host offers a generic contribution point instead, and the consumer reads every contribution. Another extension's schema names are read only as data (`figureBody`) and always guarded (`schema.nodes.x`, `editor.can()`).
 

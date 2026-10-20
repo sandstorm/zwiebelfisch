@@ -4,8 +4,7 @@ import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { callArguments, children, hasOnlyArguments, isClosedContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import type { TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import type { TypstSerializeState, TypstParseContext, TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 
 /** The node group of what a figure may hold as its body; a spec joins it with its node type's `group` (`block figureBody`). */
 const FIGURE_BODY = 'figureBody';

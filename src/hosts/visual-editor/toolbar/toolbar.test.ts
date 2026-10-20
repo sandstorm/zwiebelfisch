@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../../prosemirror-typst/prosemirror-typst';
+import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import { svg, VisualEditor, VisualEditorHost, type VisualEditorContribution } from '../visual-editor';
 
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */

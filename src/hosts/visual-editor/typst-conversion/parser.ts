@@ -1,13 +1,13 @@
-// Parsing Typst text into the Visual editor's document (TypstToProseMirrorParser). See prosemirror-typst.ts.
+// Parsing Typst text into the Visual editor's document (TypstToProseMirrorParser). See typst-conversion.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { PlacedNode, TypstParseContext, BlockLabel } from './prosemirror-typst';
+import type { PlacedNode, TypstParseContext, BlockLabel } from './typst-conversion';
 import type { TypstConversions } from './typst-conversions';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, unchangedNodes } from './unchanged-nodes';
-import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
-import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
+import { calleeName, children } from '../../../core/typst-syntax/typst-syntax';
+import { type SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 
 /**
  * Parses `source` into a document of `schema`, through the grammar attached to it.

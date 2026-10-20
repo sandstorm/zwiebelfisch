@@ -6,8 +6,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/visual-editor';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, codeIndent, inlineCodeDelimiters, rawCode, type RawCode } from '../model/raw-code';
 

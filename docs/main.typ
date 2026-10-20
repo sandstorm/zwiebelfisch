@@ -46,7 +46,7 @@
   #set heading(offset: 1)
   #include "40_architecture/01_overview.typ"
   #include "40_architecture/02_core.typ"
-  #include "40_architecture/03_prosemirror-typst.typ"
+  #include "40_architecture/03_typst-conversion.typ"
   #include "40_architecture/04_visual-editor.typ"
   #include "40_architecture/05_source-editor.typ"
   #include "40_architecture/06_preview.typ"

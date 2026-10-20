@@ -1,10 +1,10 @@
-// Serializing the Visual editor's document back to Typst (ProseMirrorToTypstSerializer). See prosemirror-typst.ts.
+// Serializing the Visual editor's document back to Typst (ProseMirrorToTypstSerializer). See typst-conversion.ts.
 import type { Mark, Node } from '@tiptap/pm/model';
 import { TypstConversions } from './typst-conversions';
-import type { Around, TypstSerializeState } from './prosemirror-typst';
+import type { Around, TypstSerializeState } from './typst-conversion';
 import { labelSyntax } from './labels';
 import { type InlineLayout, unchangedNodes } from './unchanged-nodes';
-import { markupSource } from '../../core/typst-syntax/typst-syntax';
+import { markupSource } from '../../../core/typst-syntax/typst-syntax';
 
 /**
  * `doc` printed, with its position map (cached).

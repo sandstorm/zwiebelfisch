@@ -2,7 +2,7 @@
 // byte while untouched and indented as written after an edit.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { after, edit, expectPreciseMap, parseTypst } from '../../../testing/testing';
 
 /** The list of docs/20_features/08_spreadsheets.typ (shortened), which showed as a raw box. */

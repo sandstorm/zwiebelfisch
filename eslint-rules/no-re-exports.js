@@ -1,8 +1,9 @@
 // ESLint rule `local/no-re-exports`: a file exports only what it defines.
 //
 // Flagged: `export * from`, `export { x } from` (also `export type`), and `export { x }` / `export default x` of an
-// imported name. Allowed: a host's entry (`hosts/<name>/<name>.ts`, its contract) forwarding its implementation
-// (`export { … } from './<name>-impl'`).
+// imported name. Allowed: a host's contract (`hosts/<name>/<name>.ts`, or `<sub>/<sub>.ts` in a host's subfolder)
+// forwarding its implementation (`export { … } from './<name>-impl'`) or, from the host's entry, a subfolder's contract
+// (`export { … } from './<sub>/<sub>'`).
 
 /** Whether the module-scope name `name` is bound by an import declaration. */
 function isImported(scope, name) {
@@ -16,10 +17,13 @@ function moduleScope(sourceCode, node) {
   return scope.childScopes.find((child) => child.type === 'module') ?? scope;
 }
 
-/** Whether `node` (an `export … from`) is the host entry `filename` forwarding its implementation. */
+/** Whether `node` (an `export … from`) is the host contract `filename` forwarding its implementation or a subfolder's contract. */
 function forwardsImplementation(filename, node) {
-  const host = /[\\/]hosts[\\/]([^\\/]+)[\\/]\1\.ts$/.exec(filename);
-  return host !== null && node.exportKind !== 'type' && node.source?.value === `./${host[1]}-impl`;
+  const contract = /[\\/]hosts[\\/](?:[^\\/]+[\\/])*([^\\/]+)[\\/]\1\.ts$/.exec(filename);
+  if (contract === null || node.exportKind === 'type') return false;
+  const source = node.source?.value;
+  const entry = /[\\/]hosts[\\/]([^\\/]+)[\\/]\1\.ts$/.test(filename);
+  return source === `./${contract[1]}-impl` || (entry && /^\.\/([^/]+)\/\1$/.test(source ?? ''));
 }
 
 /** The rule `local/no-re-exports`. The package entry (src/index.ts) is left out of it, as it is the one file that re-exports freely. */

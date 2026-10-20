@@ -5,7 +5,7 @@ import { NodeSelection, Plugin, Selection, TextSelection, type EditorState } fro
 import type { Mappable } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { SourceOffset } from '../../core/typst-document/typst-document';
-import { posToSource, sourceToPos } from '../prosemirror-typst/prosemirror-typst';
+import { posToSource, sourceToPos } from './typst-conversion/typst-conversion';
 
 /**
  * A caret between blocks, as CKEditor 5 offers beside its widgets: before or after a box (a block that is no text block,

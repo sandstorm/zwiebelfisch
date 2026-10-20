@@ -99,7 +99,7 @@ Depth (path guard, token, protocol): `docsFiles` in `demo/docs-files/plugin.ts`.
 The modules with the most complexity: a snapshot is in `docs/2026_10_13_feature-costs.md`.
 
 - *To re-measure*: `mise run quality:report 100000` lists every function; add up per `src/<layer>/<name>/`.
-- *Candidates to simplify*: page-margin rewriting in `comments`; own tests for `hosts/prosemirror-typst`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`, `registerEditorFrame`); `diagrams` and `spreadsheets` as extensions a host adds, like collaboration.
+- *Candidates to simplify*: page-margin rewriting in `comments`; own tests for `hosts/visual-editor/typst-conversion`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`, `registerEditorFrame`); `diagrams` and `spreadsheets` as extensions a host adds, like collaboration.
 
 == Open work <architecture-development-open-work>
 

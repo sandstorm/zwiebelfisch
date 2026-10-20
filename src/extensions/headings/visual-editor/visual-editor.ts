@@ -1,8 +1,7 @@
 // The heading node and its levels in the text style menu. See headings in ../headings.ts.
 import { textblockTypeInputRule, type AnyExtension, type Node as NodeExtension } from '@tiptap/core';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { type TextStyleProvider, type TypstNodeSpec, starterKitPart } from '../../../hosts/visual-editor/visual-editor';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own

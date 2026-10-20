@@ -1,10 +1,10 @@
 // The Typst ↔ ProseMirror conversion with the built-in extensions' specs: every fixture round-trips, edits stay minimal, the
 // position maps are precise (integration: src/testing composes the built-ins; the framework's own tests are in
-// hosts/prosemirror-typst/prosemirror-typst.test.ts).
+// hosts/visual-editor/typst-conversion/typst-conversion.test.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
-import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges, typstChanges } from '../hosts/prosemirror-typst/prosemirror-typst';
+import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges, typstChanges } from '../hosts/visual-editor/visual-editor';
 import { after, builtins, edit, expectPreciseMap, parseTypst, schema, schemaOf } from '../testing/testing';
 import { SourceOffset, type TextChange } from '../core/typst-document/typst-document';
 

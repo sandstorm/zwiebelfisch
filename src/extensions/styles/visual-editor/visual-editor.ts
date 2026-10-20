@@ -5,18 +5,7 @@ import type { Mark, Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import {
-  svg,
-  type TextStyle,
-  type TextStyleProvider,
-  type ToolbarAction,
-  type ToolbarContext,
-  type ToolbarGroup,
-  type TypstNodeSpec,
-  type VisualEditorContext,
-  type VisualEditorContribution,
-} from '../../../hosts/visual-editor/visual-editor';
+import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext, svg, type TextStyle, type TextStyleProvider, type ToolbarAction, type ToolbarContext, type ToolbarGroup, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
 import { StyledBlock, TypstStyleMark } from './style-nodes';

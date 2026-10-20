@@ -5,8 +5,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, type Transaction } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type TypstNodeSpec, type TypstParseContext } from '../../../hosts/visual-editor/visual-editor';
 import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
 
 const TaskLists = Extension.create({

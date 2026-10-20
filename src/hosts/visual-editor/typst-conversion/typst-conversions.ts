@@ -1,7 +1,7 @@
-// See prosemirror-typst.ts.
+// See typst-conversion.ts.
 import type { NodeType, Schema } from '@tiptap/pm/model';
-import type { Event } from '../../core/event-emitter/event-emitter';
-import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './prosemirror-typst';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './typst-conversion';
 
 /**
  * The specs of a schema, merged by name, and the tables the framework derives from them: which syntax and calls

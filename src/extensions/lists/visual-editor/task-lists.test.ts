@@ -2,7 +2,7 @@
 // Tests for task lists (task-lists.ts): their conversion and the checklist preamble an added task item brings along.
 import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE } from '../model/checklist-preamble';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { after, createEditor, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist';

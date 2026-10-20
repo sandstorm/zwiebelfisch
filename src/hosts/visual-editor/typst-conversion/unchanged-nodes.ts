@@ -1,4 +1,4 @@
-// See prosemirror-typst.ts.
+// See typst-conversion.ts.
 import type { Node } from '@tiptap/pm/model';
 
 /**

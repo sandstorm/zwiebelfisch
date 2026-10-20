@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../../prosemirror-typst/prosemirror-typst';
+import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import { VisualEditor, VisualEditorHost, type TextStyle, type TextStyleProvider } from '../visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.

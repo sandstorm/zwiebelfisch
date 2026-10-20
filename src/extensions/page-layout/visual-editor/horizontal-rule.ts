@@ -4,8 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type TypstNodeSpec, type TypstParseContext } from '../../../hosts/visual-editor/visual-editor';
 
 /**
  * The rule node. Its input rule only fires when the typed characters are all

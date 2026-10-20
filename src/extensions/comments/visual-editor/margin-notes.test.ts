@@ -4,7 +4,7 @@ import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { after, createVisualEditor, edit, expectPreciseMap, parseTypst as parseTypstWith, schemaWith } from '../../../testing/testing';
 import { marginNotes, type MarginNotesOptions } from './margin-notes';
 

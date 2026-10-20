@@ -3,7 +3,7 @@ import { Extension, type AnyExtension } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { type EditorView, type NodeView, type NodeViewConstructor } from '@tiptap/pm/view';
-import { documentExtensions, type TypstMarkSpec } from '../../prosemirror-typst/prosemirror-typst';
+import { documentExtensions, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import type { TypstNodeSpec } from '../visual-editor';
 import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
 

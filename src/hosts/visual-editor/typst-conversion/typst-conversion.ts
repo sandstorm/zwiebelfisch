@@ -1,17 +1,19 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { AnyExtension } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
-import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { Event } from '../../core/event-emitter/event-emitter';
+import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
+import type { Event } from '../../../core/event-emitter/event-emitter';
 
 /**
- * Conversion between Typst text and the Visual editor's ProseMirror document, built from specs: this one is a node type
- * of the document, its Tiptap extension (`Node.create(..)`: schema, attributes, node view, commands, keymap, priority;
- * omitted if another spec's extension defines it too) and its Typst. A second spec of the same name extends the first
- * (another `toTypst`, more parse rules).
+ * Stateless library: the Visual editor's model, the conversion between Typst text and its ProseMirror document (no
+ * registry, no per-editor state: the grammar travels with the schema). Built from specs: this one is a node type of the
+ * document, its Tiptap extension (`Node.create(..)`: schema, attributes, node view, commands, keymap, priority; omitted
+ * if another spec's extension defines it too) and its Typst. A second spec of the same name extends the first (another
+ * `toTypst`, more parse rules).
  *
  * Used by:
  * - the Visual editor (`documentExtensions`, `attachGrammar`)
+ * - its contributions, through the host's contract (`visual-editor.ts`): specs, the position map, parse and print in tests
  * - tests (`createSchema`)
  *
  * Guarantees:
@@ -207,4 +209,4 @@ export interface TypstSerializeState {
   item(item: Node, pos: number, prefix: string, indent?: string): void;
 }
 
-export { createSchema, documentExtensions, starterKitPart, parseTypst, serializeToTypst, escapeTypst, attachGrammar, documentNodeSpec, onDidChangeGrammar, sourceToPos, posToSource, applyTypstChanges, typstChanges } from './prosemirror-typst-impl';
+export { createSchema, documentExtensions, starterKitPart, parseTypst, serializeToTypst, escapeTypst, attachGrammar, documentNodeSpec, onDidChangeGrammar, sourceToPos, posToSource, applyTypstChanges, typstChanges } from './typst-conversion-impl';

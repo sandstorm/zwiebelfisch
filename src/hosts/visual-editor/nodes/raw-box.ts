@@ -8,7 +8,7 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
 import { setRawBoxDecorations, type RawBoxPictureHost, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
-import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
+import { posToSource } from '../typst-conversion/typst-conversion';
 import { blockGapAt } from '../block-gaps';
 import { RenderedBox } from './rendered-box';
 

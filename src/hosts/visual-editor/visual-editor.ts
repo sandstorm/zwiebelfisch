@@ -5,7 +5,7 @@ import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import type { DocumentNodeSpec, TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion/typst-conversion';
 
 /**
  * The Visual editor's contribution points (what `ExtensionContext.visualEditor` is). Contributions register once, at
@@ -433,3 +433,4 @@ export type ToolbarItem =
     };
 
 export { VisualEditor, insertTypst, VisualEditorHost } from './visual-editor-impl';
+export { serializeToTypst, parseTypst, escapeTypst, applyTypstChanges, typstChanges, sourceToPos, posToSource, starterKitPart, documentNodeSpec, createSchema, documentExtensions, attachGrammar, type TypstMarkSpec, type TypstNodeConversion, type TypstMarkConversion, type TypstParseContext, type TypstParseRules, type TypstSerializeState, type PlacedNode, type BlockLabel, type Around } from './typst-conversion/typst-conversion';

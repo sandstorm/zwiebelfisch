@@ -1,8 +1,8 @@
 // The Tiptap nodes and marks of the minimum schema besides StarterKit's parts. See documentExtensions in
-// prosemirror-typst.ts.
+// typst-conversion.ts.
 import { Extension, Mark, Node, type AnyExtension } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
-import type { DocumentNodeSpec } from './prosemirror-typst';
+import type { DocumentNodeSpec } from './typst-conversion';
 
 /**
  * The extension giving StarterKit's paragraphs their source anchors (`src`, their original Typst; a

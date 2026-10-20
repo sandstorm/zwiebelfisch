@@ -5,7 +5,7 @@ import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { SourceHighlight } from './visual-editor';
-import { sourceToPos } from '../prosemirror-typst/prosemirror-typst';
+import { sourceToPos } from './typst-conversion/typst-conversion';
 
 /**
  * Highlights by layer (one per provider, e.g. other users' selections) over the Visual editor,

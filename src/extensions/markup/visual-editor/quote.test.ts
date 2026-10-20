@@ -1,6 +1,6 @@
 // Tests for quotes in the Typst ↔ ProseMirror conversion (visual-editor.ts).
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

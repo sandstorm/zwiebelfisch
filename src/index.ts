@@ -92,9 +92,6 @@ export type {
   TypstNodeSpec,
   VisualEditorContext,
   VisualEditorContributions,
-} from './hosts/visual-editor/visual-editor';
-export { VISUAL_EDITOR, insertTypst, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
-export type {
   Around,
   BlockLabel,
   PlacedNode,
@@ -104,7 +101,8 @@ export type {
   TypstParseContext,
   TypstParseRules,
   TypstSerializeState,
-} from './hosts/prosemirror-typst/prosemirror-typst';
+} from './hosts/visual-editor/visual-editor';
+export { VISUAL_EDITOR, insertTypst, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
 export {
   callArguments,

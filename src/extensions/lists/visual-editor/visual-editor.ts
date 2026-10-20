@@ -3,8 +3,7 @@ import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension
 import { Extension, wrappingInputRule } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import { Fragment, type Node } from '@tiptap/pm/model';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import type { TypstParseContext, TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState } from '../../../hosts/visual-editor/visual-editor';
 import { TASK_BOX } from './task-lists';
 
 const LIST: Omit<TypstNodeSpec, 'name'> = {

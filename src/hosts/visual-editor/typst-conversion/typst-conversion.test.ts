@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
-// Tests for hosts/prosemirror-typst: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
-// here. The built-in extensions' specs are tested together in editor/editor.prosemirror-typst.test.ts.
+// Tests for hosts/visual-editor/typst-conversion: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
+// here. The built-in extensions' specs are tested together in editor/editor.typst-conversion.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { AllSelection, EditorState } from '@tiptap/pm/state';
 import { EditorView } from '@tiptap/pm/view';
 import { describe, expect, it } from 'vitest';
-import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './prosemirror-typst';
-import { SourceOffset } from '../../core/typst-document/typst-document';
+import { children, hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
+import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './typst-conversion';
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: TypstMarkSpec = {

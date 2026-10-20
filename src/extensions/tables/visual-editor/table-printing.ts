@@ -2,7 +2,7 @@
 // See tables in ../tables.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
-import type { TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import type { TypstSerializeState } from '../../../hosts/visual-editor/visual-editor';
 import { columnsSource, NEW_TABLE, sameEntries, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**

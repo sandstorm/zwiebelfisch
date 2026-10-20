@@ -19,7 +19,7 @@ new TypstDocument(text)
 ```
 
 - *Source offsets:* `SourceOffset` (branded number, UTF-16 code units) and `SourceRange` (`{ from, to }`); a `TextChange` is a `SourceRange` plus `insert`. Make them with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in.
-- *Never a ProseMirror position:* only `sourceToPos` / `posToSource` convert (@architecture-prosemirror-typst-position-map).
+- *Never a ProseMirror position:* only `sourceToPos` / `posToSource` convert (@architecture-typst-conversion-position-map).
 - *Echo suppression:* an editor passes itself as `origin` and ignores events with its own origin.
 - *Ordered delivery:* a change made by a listener is queued, so every listener sees changes in the order they were made.
 - `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo survive a whole new text.

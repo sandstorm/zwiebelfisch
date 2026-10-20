@@ -1,16 +1,16 @@
-// See DocumentNodeSpec in prosemirror-typst.ts.
+// See DocumentNodeSpec in typst-conversion.ts.
 import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
-import { Disposable } from '../../core/disposable/disposable';
-import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../../core/typst-document/typst-document';
+import { Disposable } from '../../../core/disposable/disposable';
+import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
 import { escapeMarkup, forgetPrinted, printed, type Span } from './serializer';
 import { unchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
-import type { DocumentNodeSpec, TypstMarkSpec } from './prosemirror-typst';
+import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion';
 
 /** The schema of a document: the minimum schema plus the Tiptap extensions of the specs `nodes` and `marks`, their grammar attached. */
 export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {

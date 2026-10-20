@@ -2,8 +2,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import type { TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type ToolbarGroup, type TypstNodeSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/visual-editor';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 

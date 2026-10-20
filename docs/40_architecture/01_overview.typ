@@ -8,7 +8,7 @@
   columns: (auto, 1fr),
   table.header[Folder][Job],
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax (@architecture-core).],
-  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-prosemirror-typst, @architecture-visual-editor, @architecture-source-editor, @architecture-preview, @architecture-workbench).],
+  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-visual-editor with its conversion @architecture-typst-conversion, @architecture-source-editor, @architecture-preview, @architecture-workbench).],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …): every feature and every construct beyond paragraphs and raw Typst (@architecture-extensions-built-in).],
   [`src/editor/`], [`createEditor`: a `Project` in the workbench host with the built-in extensions.],
   [`src/editor-element/`], [`<zwiebelfisch-editor>`: a shadow root around `createEditor`.],
@@ -28,7 +28,7 @@ Who may import whom, and why extensions never depend on each other: @architectur
   caption: [A keystroke in the Visual editor; the numbers are the listeners' subscription order.],
 )
 
-The Visual editor writes back only what the transaction touched: one change per edited textblock, untouched nodes printing their source verbatim (@architecture-visual-editor-class). The way back is the same: a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (`applyTypstChanges`, @architecture-prosemirror-typst-sync).
+The Visual editor writes back only what the transaction touched: one change per edited textblock, untouched nodes printing their source verbatim (@architecture-visual-editor-class). The way back is the same: a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (`applyTypstChanges`, @architecture-typst-conversion-sync).
 
 == One edit format, one source of truth <architecture-overview-truth>
 

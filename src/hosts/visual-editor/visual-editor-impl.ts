@@ -6,7 +6,7 @@ import { EditorState, NodeSelection, type Selection, TextSelection, type Transac
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { BlockGaps, caretAtSource } from './block-gaps';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';

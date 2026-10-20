@@ -1,6 +1,6 @@
 // Tests for page-break.ts and horizontal-rule.ts: `#pagebreak()` and full-width `#line(..)` as widgets.
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { after, edit, expectPreciseMap, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

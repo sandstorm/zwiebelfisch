@@ -27,11 +27,10 @@ import type { Commands } from '../hosts/commands/commands';
 import { LanguagesHost } from '../hosts/languages/languages';
 import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
-import { VisualEditor, VisualEditorHost, type ContributionContext, type VisualEditorContribution } from '../hosts/visual-editor/visual-editor';
+import { VisualEditor, VisualEditorHost, type ContributionContext, type VisualEditorContribution, attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/visual-editor';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
-import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/prosemirror-typst/prosemirror-typst';
 
 /**
  * The schema of a Visual editor with the built-ins configured from `options`.
@@ -322,7 +321,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
   return chars;
 }
 
-/** Checks the position map of `doc` exhaustively against its printed source (see editor/editor.prosemirror-typst.test.ts). */
+/** Checks the position map of `doc` exhaustively against its printed source (see editor/editor.typst-conversion.test.ts). */
 export function expectPreciseMap(doc: Node): void {
   const source = serializeToTypst(doc);
   for (const { pos, char } of visibleChars(doc)) {

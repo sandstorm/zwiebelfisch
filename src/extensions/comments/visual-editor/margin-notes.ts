@@ -7,8 +7,7 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
 import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
-import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContribution, type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../../../hosts/visual-editor/visual-editor';
 
 /**
  * `drafting` margin notes in the Visual editor, in running text:

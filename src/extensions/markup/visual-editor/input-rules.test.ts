@@ -2,7 +2,7 @@
 // Tests for the markup extension's typing shortcuts (visual-editor.ts): Typst's markup typed into the text formats it.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
-import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { serializeToTypst } from '../../../hosts/visual-editor/visual-editor';
 import { createEditor, type } from '../../../testing/testing';
 
 /** The document after typing `text` into an empty paragraph after "Text " (the cursor at its end). */

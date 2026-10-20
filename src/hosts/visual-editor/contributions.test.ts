@@ -3,7 +3,7 @@
 import { Mark, Node } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, serializeToTypst, parseTypst, starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import { createSchema, serializeToTypst, parseTypst, starterKitPart, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { type RawBoxRendererProvider, type TypstNodeSpec, VisualEditorHost } from './visual-editor';
 
 const mark = (name: string, tiptap: TypstMarkSpec['tiptap']): TypstMarkSpec => ({ name, tiptap, typst: { toTypst: () => ({ open: '', close: '' }) } });

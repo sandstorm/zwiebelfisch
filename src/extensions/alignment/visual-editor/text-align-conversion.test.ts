@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { schema } from '../../../testing/testing';
-import { posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../../../hosts/visual-editor/visual-editor';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const parseTypst = (source: string) => parseTypstWith(source, schema);
