@@ -317,10 +317,12 @@ Text #box(block[in a box]) after.
       if (path.endsWith('.typ')) engine.setSource(`/${path}`, readFileSync(file, 'utf8'));
       else engine.setBinary(`/${path}`, new Uint8Array(readFileSync(file)));
     }
-    // the hosts' contracts the docs' `#api(..)` reads, from the repository root
-    const hosts = fileURLToPath(new URL('../../hosts/', import.meta.url));
-    for (const path of readdirSync(hosts, { recursive: true, encoding: 'utf8' })) {
-      if (path.endsWith('.ts')) engine.setBinary(`/src/hosts/${path}`, new Uint8Array(readFileSync(join(hosts, path))));
+    // the core's and hosts' contracts the docs' `#api(..)` reads, from the repository root
+    for (const layer of ['core', 'hosts']) {
+      const folder = fileURLToPath(new URL(`../../${layer}/`, import.meta.url));
+      for (const path of readdirSync(folder, { recursive: true, encoding: 'utf8' })) {
+        if (path.endsWith('.ts')) engine.setBinary(`/src/${layer}/${path}`, new Uint8Array(readFileSync(join(folder, path))));
+      }
     }
     const packages = withPackages(engine, async () => new Uint8Array(readFileSync(merman)));
     const plain = await packages.compile('/main.typ');

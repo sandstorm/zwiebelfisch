@@ -156,7 +156,7 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
 
 /**
  * The files of an example folder as `createEditor` takes them: `.typ` as text, the rest as bytes. The docs also get
- * the hosts' contracts their `#api(..)` reads, at their paths from the repository root (`/src/hosts/…`).
+ * the core's and hosts' contracts their `#api(..)` reads, at their paths from the repository root (`/src/core/…`, `/src/hosts/…`).
  */
 function folderFiles(folder: string): ProjectFiles {
   const files: ProjectFiles = {};
@@ -168,7 +168,7 @@ function folderFiles(folder: string): ProjectFiles {
     }
   };
   walk(join(root, folder), join(root, folder));
-  if (folder === DOCS) walk(join(root, 'src/hosts'), root);
+  if (folder === DOCS) for (const layer of ['src/core', 'src/hosts']) walk(join(root, layer), root);
   return files;
 }
 
