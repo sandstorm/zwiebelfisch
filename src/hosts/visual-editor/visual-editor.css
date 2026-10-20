@@ -56,21 +56,6 @@
    toolbar whatever its own z-index. */
 .zwf-visual__body { flex: 1 0 auto; display: flex; position: relative; isolation: isolate; }
 .zwf-visual__body > .zwf-visual { min-width: 0; }
-/* The caret between blocks (block-gaps.ts): a blinking line across the content's width, halfway into the margin
-   above (blocks keep 0.7em below them); takes no room, so the text does not move */
-.zwf-visual__block-gap { position: relative; height: 0; pointer-events: none; }
-.zwf-visual__block-gap::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -0.35em;
-  border-top: 2px solid var(--zwf-accent);
-  animation: zwf-visual-caret-blink 1.1s steps(2, start) infinite;
-}
-.zwf-visual__block-gap:first-child::after { top: -2px; }
-.zwf-visual:not(.ProseMirror-focused) .zwf-visual__block-gap { display: none; }
-@keyframes zwf-visual-caret-blink { to { visibility: hidden; } }
 .zwf-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;

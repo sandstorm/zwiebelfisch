@@ -9,6 +9,7 @@ import { ProjectPath } from '../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../core/project/project';
 import { SourceOffset, type TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
+import { blockGaps } from '../extensions/block-gaps/block-gaps';
 import { blockHandle as blockHandleExtension } from '../extensions/block-handle/block-handle';
 import { clipboard } from '../extensions/clipboard/clipboard';
 import { tabKeys } from '../extensions/tab-keys/tab-keys';
@@ -208,7 +209,7 @@ if (typeof URL.createObjectURL !== 'function') {
 
 /** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
 export function builtins(): VisualEditorContribution[] {
-  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), tabKeys(), undoRedo(), clipboard()];
+  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), blockGaps(), tabKeys(), undoRedo(), clipboard()];
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

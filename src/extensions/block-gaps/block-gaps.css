@@ -1,0 +1,16 @@
+/* The block-gaps extension's styles: the caret between blocks, a blinking line across the content's width, halfway
+   into the margin above (blocks keep 0.7em below them); takes no room, so the text does not move. See block-gaps.ts,
+   which registers it. */
+.zwf-visual__block-gap { position: relative; height: 0; pointer-events: none; }
+.zwf-visual__block-gap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -0.35em;
+  border-top: 2px solid var(--zwf-accent);
+  animation: zwf-block-gap-blink 1.1s steps(2, start) infinite;
+}
+.zwf-visual__block-gap:first-child::after { top: -2px; }
+.zwf-visual:not(.ProseMirror-focused) .zwf-visual__block-gap { display: none; }
+@keyframes zwf-block-gap-blink { to { visibility: hidden; } }

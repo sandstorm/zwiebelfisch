@@ -7,7 +7,6 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from './typst-conversion/typst-conversion';
-import { BlockGaps, caretAtSource } from './block-gaps';
 import { applyChanges, insertTypst } from './visual-editor-helpers';
 import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
@@ -60,7 +59,6 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
         highlights,
-        BlockGaps,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
@@ -113,13 +111,30 @@ export class VisualEditor {
     const { doc } = this.tiptap.state;
     const anchor = sourceToPos(doc, from);
     const head = Math.max(anchor, sourceToPos(doc, to, -1));
-    // a caret: at the end of text ending there, in the gap whose source is there, else in the text nearest
-    const selection = to > from ? TextSelection.between(doc.resolve(anchor), doc.resolve(head)) : caretAtSource(doc, from);
+    const selection = to > from ? TextSelection.between(doc.resolve(anchor), doc.resolve(head)) : this.caretAt(from);
     // focused first: ProseMirror scrolls to the DOM's selection, which it moves only while it has the focus
     this.tiptap.view.focus();
     const tr = this.tiptap.state.tr.setSelection(selection).scrollIntoView();
     this.revealed = { selection: tr.selection, range: { from, to } };
     this.tiptap.view.dispatch(tr);
+  }
+
+  /**
+   * The caret at source offset `offset`: at the end of text ending there (a paragraph's before a code block, whose
+   * caret beside it has the same offset); else what `createSelectionBetween` makes of a position there, innermost
+   * first (the block-gaps extension's caret beside a box); else in the text nearest.
+   */
+  private caretAt(offset: SourceOffset): Selection {
+    const { view } = this.tiptap;
+    const { doc } = view.state;
+    const textEnd = sourceToPos(doc, offset, -1);
+    if (doc.resolve(textEnd).parent.inlineContent && posToSource(doc, textEnd) === offset) return TextSelection.create(doc, textEnd);
+    const $at = doc.resolve(sourceToPos(doc, offset));
+    for (let $pos = $at; ; $pos = doc.resolve($pos.before())) {
+      const between = posToSource(doc, $pos.pos) === offset ? view.someProp('createSelectionBetween', (f) => f(view, $pos, $pos)) : null;
+      if (between) return between;
+      if ($pos.depth === 0 || $pos.parentOffset > 0) return TextSelection.between($at, $at);
+    }
   }
 
   /** Inserts what Typst `source` is read as at the selection (`insertTypst`); focuses the editor. */

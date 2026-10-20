@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for the caret between blocks (hosts/visual-editor/block-gaps.ts) beside the built-ins' blocks (tables,
+// Tests for the caret between blocks (extensions/block-gaps/) beside the built-ins' blocks (tables,
 // figures, lists) in a VisualEditor (integration: src/testing composes the built-ins).
 import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';

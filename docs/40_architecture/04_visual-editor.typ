@@ -24,10 +24,10 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
   - Transactions plugins append are written back in turn. Each starts from `document.text`, so a document that prints differently converges as well.
 - *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
 - *Reveal* focuses first, then selects. Until the selection moves, `selection()` returns the range asked for, so the preview follows to where was asked (a figure's label shows as the caret below the figure).
-- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame, highlights, completion lists, the undo history, and block gaps (below). Every other construct and feature is a contribution, also:
+- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame, highlights, completion lists and the undo history. Every other construct and feature is a contribution, also:
   - *Block handle* (`blockHandle`): a grip beside the block under the pointer, as in Notion; dragging it does what ProseMirror does for a selected node, one undo step.
+  - *Block gaps* (`blockGaps`): a caret before or after a box (a block style, figure, table, raw box or code block; not a list), as CKEditor 5's widget caret. Arrow keys go one level at a time; typing there makes a paragraph. It is a selection of its own (`BlockGap`) instead of ProseMirror's gap cursor. The host asks ProseMirror's `createSelectionBetween` for a caret at a box's edge (a raw box left or deleted, `reveal` of a caret), which the extension answers with the gap; so `reveal` of its source offset gives the gap again. Without it the caret goes to the text nearest (`Selection.near`).
   - *Tab stays in the text* (`tabKeys`): in code (a text block whose spec has `code`) Tab and Shift+Tab indent and outdent the selected lines by two spaces, before lists and tables; elsewhere constructs take Tab first, a lowest-priority catch-all the rest. Escape, then Tab leaves, as in CodeMirror. Without it, a Tab no construct takes moves the focus (ProseMirror's default).
-- *Block gaps:* a caret before or after a box (a block style, figure, table, raw box or code block; not a list), as CKEditor 5's widget caret. Arrow keys go one level at a time; typing there makes a paragraph. It is a selection of its own (`BlockGap`) instead of ProseMirror's gap cursor; `reveal` of its source offset gives the gap again.
 
 == Clipboard <architecture-visual-editor-clipboard>
 

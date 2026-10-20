@@ -1,11 +1,9 @@
-// The caret between blocks. See VisualEditor in visual-editor-impl.ts.
+// The block gaps' Tiptap extension: the caret between blocks. See ../block-gaps.ts.
 import { Extension, type Editor } from '@tiptap/core';
 import { Slice, type Node, type ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, Selection, TextSelection, type EditorState } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import type { SourceOffset } from '../../core/typst-document/typst-document';
-import { posToSource, sourceToPos } from './typst-conversion/typst-conversion';
 
 /**
  * A caret between blocks, as CKEditor 5 offers beside its widgets: before or after a box (a block that is no text block,
@@ -17,10 +15,9 @@ import { posToSource, sourceToPos } from './typst-conversion/typst-conversion';
  *   deletes it), Delete the box after.
  * - A click into the space between such blocks, or below the last one, puts the caret there.
  *
- * The gap is a selection of its own (`BlockGap`), mapped through every change; a caret revealed at its source offset is
- * the gap again. It replaces ProseMirror's gap cursor.
- *
- * @internal The Visual editor's own caret beside boxes; extensions do not reach it.
+ * The gap is a selection of its own (`BlockGap`), mapped through every change. ProseMirror's `createSelectionBetween`
+ * answers with it for a caret at a gap, so the host puts one there (a raw box left, a caret revealed). It replaces
+ * ProseMirror's gap cursor.
  */
 export const BlockGaps = Extension.create({
   name: 'typstBlockGaps',
@@ -52,27 +49,6 @@ export const BlockGaps = Extension.create({
     ];
   },
 });
-
-/** The caret in the gap at `$pos` (the edge of a raw box just left); null: no gap there. */
-export function blockGapAt($pos: ResolvedPos): Selection | null {
-  return isGap($pos) ? new BlockGap($pos) : null;
-}
-
-/**
- * The caret at source offset `offset` of `doc`'s source (revealed from the Source editor, or where the editor's own
- * selection there was): at the end of the text ending there (a paragraph's before a code block, whose gap has the
- * same offset); else in the gap whose offset it is, before the text block `offset` maps to or before the boxes it
- * starts; else in the text nearest.
- */
-export function caretAtSource(doc: Node, offset: SourceOffset): Selection {
-  const textEnd = sourceToPos(doc, offset, -1);
-  if (doc.resolve(textEnd).parent.inlineContent && posToSource(doc, textEnd) === offset) return TextSelection.create(doc, textEnd);
-  const $at = doc.resolve(sourceToPos(doc, offset));
-  for (let $pos = $at; ; $pos = doc.resolve($pos.before())) {
-    if (isGap($pos) && posToSource(doc, $pos.pos) === offset) return new BlockGap($pos);
-    if ($pos.depth === 0 || $pos.parentOffset > 0) return TextSelection.between($at, $at);
-  }
-}
 
 /** The caret in a gap between blocks: `$anchor` and `$head` are the gap's position. */
 class BlockGap extends Selection {
@@ -113,7 +89,7 @@ Selection.jsonID('blockGap', BlockGap);
 /** The gap at `pos` of `doc`, or the nearest selection if there is none there (any more). */
 function selectionAt(doc: Node, pos: number): Selection {
   const $pos = doc.resolve(pos);
-  return blockGapAt($pos) ?? Selection.near($pos);
+  return isGap($pos) ? new BlockGap($pos) : Selection.near($pos);
 }
 
 /** Whether `$pos` is a gap: beside a box, where a paragraph may go, not inside a list item. */

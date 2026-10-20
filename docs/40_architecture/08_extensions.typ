@@ -159,6 +159,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
   [`lists`, `pageLayout`, `outline`, `alignment`], [bulleted, numbered and task lists; page breaks, horizontal rules; `#outline(..)` as a box, "Table of contents"; `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
   [`blockHandle`], [the grip beside the block under the pointer (drag to move, click to select); the drop cursor], [Tiptap extension],
+  [`blockGaps`], [the caret before or after a box (block style, figure, table, raw box, code block); typing there makes a paragraph], [Tiptap extension, style sheet],
   [`tabKeys`], [Tab and Shift+Tab stay in the text: indent and outdent in code, a catch-all elsewhere; Escape, then Tab leaves], [Tiptap extension],
   [`undoRedo`], [the Visual editor toolbar's Undo and Redo buttons (the history and its keys are the host's)], [toolbar],
   [`clipboard`], [copy and paste as Typst in the Visual and Source editors through the paste edit providers (its own: Typst, code block, plain text); the "Paste as" chip, `editor.action.pasteAs`], [paste edit, Tiptap extension, floating bar, source editor, command, style sheet],

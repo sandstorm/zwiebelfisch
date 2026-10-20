@@ -3,8 +3,11 @@
 import { EditorView as CodeView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Disposable } from '../../core/disposable/disposable';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost } from './visual-editor';
+import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import { blockGaps } from './block-gaps';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -18,7 +21,10 @@ const BETWEEN = SOURCE.indexOf('#set par');
 function setup(text = SOURCE) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(parent, doc, VisualEditorHost.from([]));
+  const visualEditor = new VisualEditorHost();
+  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+  blockGaps().activate({ workbench, visualEditor, subscriptions: [] } as unknown as ExtensionContext);
+  const view = new VisualEditor(parent, doc, visualEditor);
   const editable = parent.querySelector<HTMLElement>('.ProseMirror')!;
   const tiptap = (editable as HTMLElement & { editor: Editor }).editor;
   const press = (key: string) => !editable.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));

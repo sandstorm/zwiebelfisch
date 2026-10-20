@@ -89,12 +89,22 @@ describe('raw boxes', () => {
     expect(cm.state.doc.toString()).toBe('#set text(size: 12pt)');
   });
 
-  it('arrow keys at the edges leave the box, onto the caret between blocks beside it', () => {
-    const { parent, box } = setup(RAW);
+  it('arrow keys at the edges leave the box into the text beside it (no block-gaps extension: no caret between blocks)', () => {
+    const { doc, view, box } = setup(RAW);
     const cm = box('.zwf-visual__raw-block');
     cm.dispatch({ selection: { anchor: cm.state.doc.length } });
     expect(key(cm, 'ArrowDown').defaultPrevented).toBe(true);
-    expect(parent.querySelector('.zwf-visual__block-gap')).not.toBeNull();
+    expect(view.selection()).toEqual({ from: RAW.indexOf('Hello'), to: RAW.indexOf('Hello') });
+    expect(doc.text).toBe(RAW);
+  });
+
+  it('Backspace in an empty box deletes it, selecting what is nearest (no block-gaps extension: the box after)', () => {
+    const { doc, view, box } = setup('#set text(size: 12pt)\n\n#set par(justify: true)\n\nHello\n');
+    const cm = box('.zwf-visual__raw-block');
+    cm.dispatch({ changes: { from: 0, to: cm.state.doc.length } });
+    expect(key(cm, 'Backspace').defaultPrevented).toBe(true);
+    expect(doc.text).toBe('#set par(justify: true)\n\nHello\n');
+    expect(view.selection()).toEqual({ from: 0, to: '#set par(justify: true)'.length });
   });
 
   it('Tab indents a raw block\'s code and stays in an inline box', () => {

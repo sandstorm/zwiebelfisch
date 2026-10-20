@@ -37,6 +37,18 @@ describe('VisualEditor', () => {
     expect(parent.querySelector('strong')?.textContent).toBe('bold');
   });
 
+  it('reveals a caret between two boxes in the text nearest, with no block-gaps extension', () => {
+    const source = '#set text(size: 12pt)\n\n#set par(justify: true)\n\nHello\n';
+    const { doc, view, parent } = setup(source);
+    const between = source.indexOf('#set par');
+    view.reveal(SourceRange.of({ from: between, to: between }));
+    const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    // ProseMirror's own caret: in the paragraph after the boxes
+    expect(tiptap.state.selection.toJSON()).toEqual({ type: 'text', anchor: 3, head: 3 });
+    expect(parent.querySelector('.zwf-visual__block-gap')).toBeNull();
+    expect(doc.text).toBe(source);
+  });
+
   it('reveals a source range by selecting exactly what shows it', () => {
     const source = 'Title\n\nSome *bold* text.\n';
     const { view } = setup(source);

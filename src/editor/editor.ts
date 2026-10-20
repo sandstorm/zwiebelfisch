@@ -26,6 +26,7 @@ import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { invisibles } from '../extensions/invisibles/invisibles';
+import { blockGaps } from '../extensions/block-gaps/block-gaps';
 import { blockHandle } from '../extensions/block-handle/block-handle';
 import { clipboard } from '../extensions/clipboard/clipboard';
 import { tabKeys } from '../extensions/tab-keys/tab-keys';
@@ -278,6 +279,7 @@ function builtinExtensions(): Extension[] {
     lists(),
     alignment(),
     blockHandle(),
+    blockGaps(),
     tabKeys(),
     undoRedo(),
     clipboard(),

@@ -3,13 +3,12 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
 import { Extension, type Editor } from '@tiptap/core';
-import type { Node } from '@tiptap/pm/model';
+import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
 import { setRawBoxDecorations, type RawBoxPictureHost, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
 import { posToSource } from '../typst-conversion/typst-conversion';
-import { blockGapAt } from '../block-gaps';
 import { RenderedBox } from './rendered-box';
 
 /**
@@ -288,13 +287,16 @@ class RawBox implements NodeView {
     ];
   }
 
-  /** Moves the cursor into the outer editor, just before or after this box: into the gap there, else the text. */
+  /**
+   * Moves the cursor into the outer editor, just before or after this box: what `createSelectionBetween` makes of
+   * that position (the block-gaps extension's caret), else the text nearest.
+   */
   private leave(side: Side): boolean {
     const pos = this.getPos();
     if (pos === undefined) return false;
     const outer = this.tiptap.view;
     const $edge = outer.state.doc.resolve(side < 0 ? pos : pos + this.node.nodeSize);
-    outer.dispatch(outer.state.tr.setSelection(blockGapAt($edge) ?? Selection.near($edge, side)).scrollIntoView());
+    outer.dispatch(outer.state.tr.setSelection(caretBeside(outer, $edge) ?? Selection.near($edge, side)).scrollIntoView());
     outer.focus();
     return true;
   }
@@ -305,10 +307,15 @@ class RawBox implements NodeView {
     const outer = this.tiptap.view;
     const tr = outer.state.tr.delete(pos, pos + this.node.nodeSize);
     const $at = tr.doc.resolve(Math.min(pos, tr.doc.content.size));
-    outer.dispatch(tr.setSelection(blockGapAt($at) ?? Selection.near($at)).scrollIntoView());
+    outer.dispatch(tr.setSelection(caretBeside(outer, $at) ?? Selection.near($at)).scrollIntoView());
     outer.focus();
     return true;
   }
+}
+
+/** What `view`'s `createSelectionBetween` makes of a caret at `$pos` (the edge of a box); null: nothing of its own. */
+function caretBeside(view: EditorView, $pos: ResolvedPos): Selection | null {
+  return view.someProp('createSelectionBetween', (f) => f(view, $pos, $pos)) ?? null;
 }
 
 /** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
