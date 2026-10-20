@@ -57,14 +57,14 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
   [`invisibles.show`], [`true`, `false` (unset)], [Whether the editors show spaces, tabs and line breaks. Unset: the viewer's own choice in the View menu.],
   [`previewSync.followCursor`], [`true`, `false` (unset)], [Whether the preview scrolls to the cursor. Unset: the viewer's own choice, else `true`.],
   [`previewSync.highlightSelection`], [`true`, `false` (`true`)], [Whether the text selected in the editor is shaded in the preview.],
-  [`pdfExport.download`], [`true`, `false` (`true`)], [The preview's "Download PDF" button. `exportPdf` works either way.],
+  [`pdfExport.download`], [`true`, `false` (`true`)], [The preview's "Download PDF" button. The command `pdfExport.export` works either way.],
   [`diagrams.editorUrl`], [URL (`'https://embed.diagrams.net/'`)], [Where the draw.io editor comes from, e.g. your own drawio installation for use without internet access.],
   [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail (@configuration-embedding-devtools).],
 )
 
 == PDF export options <configuration-options-pdf>
 
-`editor.exportPdf(options)` and the command `pdfExport.export` take export options by id. The "Download PDF" popover shows each as a checkbox.
+The command `pdfExport.export` (`editor.executeCommand('pdfExport.export', options)`) takes export options by id. The "Download PDF" popover shows each as a checkbox.
 
 #table(
   columns: 3,
@@ -95,5 +95,5 @@ const editor = createEditor(document.getElementById('thesis')!, {
 editor.onDidChangeFiles((change) => saveChange(studentId, change));
 editor.onDidChangeActiveFile((path) => history.replaceState(null, '', `#${path}`));
 
-const finalPdf = await editor.exportPdf({ 'comments.include': false });
+const finalPdf = await editor.executeCommand<Blob>('pdfExport.export', { 'comments.include': false });
 ```

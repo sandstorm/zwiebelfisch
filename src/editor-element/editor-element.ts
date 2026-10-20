@@ -24,7 +24,7 @@ import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
  * - Events (bubbling, composed): `change` for every file whose content changes (`EditorChangeDetail`,
  *   from `onDidChangeFiles`), `main-file-change` with `{ path }` (`onDidChangeMainFile`), `open` with `{ path }`
  *   (`onDidChangeActiveFile`).
- * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
+ * - `executeCommand(id, ...args)` runs an extension's command (the PDF as a Blob: `pdfExport.export`).
  */
 export class EditorElement extends Base() {
   static readonly observedAttributes = ['value', 'settings'];
@@ -95,12 +95,6 @@ export class EditorElement extends Base() {
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T> {
     if (!this.#editor) return Promise.reject(new Error('<zwiebelfisch-editor> is not connected'));
     return this.#editor.executeCommand<T>(id, ...args);
-  }
-
-  /** The project as a PDF, with the export options as given (see `Editor.exportPdf`); rejects while not connected. */
-  exportPdf(options?: Record<string, boolean>): Promise<Blob> {
-    if (!this.#editor) return Promise.reject(new Error('<zwiebelfisch-editor> is not connected'));
-    return this.#editor.exportPdf(options);
   }
 
   connectedCallback(): void {

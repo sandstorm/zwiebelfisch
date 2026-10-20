@@ -7,7 +7,7 @@
 You embed the editor as the element `<zwiebelfisch-editor>` or with `createEditor(host, options)`. Both take the same options (@configuration-options).
 
 - *`<zwiebelfisch-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
-- *`createEditor`* gives your code a handle (commands, `exportPdf`, `dispose`) and its events.
+- *`createEditor`* gives your code a handle (commands, `dispose`) and its events.
 
 == A first editor <configuration-embedding-first-editor>
 
@@ -84,8 +84,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
   [`settings` property, `updateSettings(settings)`], [The current settings; merges, as `editor.updateSettings`.],
   [`value` property, attribute], [The main file's text. Setting it keeps cursor and undo history.],
   [`files` property], [Every file. Setting it replaces them all.],
-  [`executeCommand(id, ...args)`], [Runs an extension's command.],
-  [`exportPdf(options?)`], [The PDF as a `Blob` (@configuration-embedding-pdf).],
+  [`executeCommand(id, ...args)`], [Runs an extension's command (the PDF: @configuration-embedding-pdf).],
   [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
   [`main-file-change` event], [`detail: { path }`: another file became the main file, also by a collaborator.],
   [`open` event], [`detail: { path }`: another file is shown.],
@@ -142,8 +141,7 @@ It returns a `Editor`:
   [`updateSettings(settings)`], [Merges settings; `undefined` resets an id to its default.],
   [`activeFile`], [The path of the file shown.],
   [`open(path)`], [Shows `path`.],
-  [`executeCommand(id, ...args)`], [Runs a command and resolves to its result.],
-  [`exportPdf(options?)`], [The PDF (@configuration-embedding-pdf).],
+  [`executeCommand(id, ...args)`], [Runs a command and resolves to its result (the PDF: @configuration-embedding-pdf).],
   [`dispose()`], [Removes the editor and drops every listener.],
 )
 
@@ -174,11 +172,11 @@ editor.open('/chapters/outro.typ');
 === PDF export <configuration-embedding-pdf>
 
 ```ts
-const final = await editor.exportPdf();                              // margin notes left out
-const draft = await editor.exportPdf({ 'comments.include': true });  // margin notes kept
+const final = await editor.executeCommand<Blob>('pdfExport.export');                              // margin notes left out
+const draft = await editor.executeCommand<Blob>('pdfExport.export', { 'comments.include': true });  // margin notes kept
 ```
 
-It takes the export options (@configuration-options-pdf) and rejects when the document has errors. It is the same as `executeCommand('pdfExport.export', options)`.
+The command `pdfExport.export` resolves to the PDF as a `Blob`. It takes the export options (@configuration-options-pdf) and rejects when the document has errors.
 
 === Extensions <configuration-embedding-extensions>
 

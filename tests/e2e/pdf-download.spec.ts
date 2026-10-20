@@ -1,5 +1,5 @@
 // End-to-end tests (Playwright, against the demo build): "Download PDF" in the preview toolbar with its options
-// popover ("Include comments"), and the exportPdf API.
+// popover ("Include comments"), and the command pdfExport.export for hosts.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from './fixtures';
@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
 const pdfControls = (page: Page) => page.getByTestId('zwf-pdf');
 /** The error messages shown ("No PDF: …"). */
 const errors = (page: Page) => page.getByTestId('zwf-notifications').getByRole('alert');
-type Editor = { source: string; exportPdf(options?: Record<string, boolean>): Promise<Blob> };
+type Editor = { source: string; executeCommand<T>(id: string, ...args: unknown[]): Promise<T> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
 
@@ -75,9 +75,9 @@ test('a document with errors gives a message, not a PDF', async ({ page }) => {
   expect(downloads).toBe(0);
 });
 
-test('hosts get the PDF as a Blob from exportPdf', async ({ page }) => {
+test('hosts get the PDF as a Blob from the command pdfExport.export', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const blob = await (window as unknown as { editor: Editor }).editor.exportPdf({ 'comments.include': true });
+    const blob = await (window as unknown as { editor: Editor }).editor.executeCommand<Blob>('pdfExport.export', { 'comments.include': true });
     return { type: blob.type, head: new TextDecoder().decode((await blob.arrayBuffer()).slice(0, 5)) };
   });
   expect(result).toEqual({ type: 'application/pdf', head: '%PDF-' });

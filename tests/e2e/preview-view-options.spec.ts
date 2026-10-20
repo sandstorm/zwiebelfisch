@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 const firstPage = (page: Page) => page.getByTestId('zwf-preview').locator('.zwf-preview__page').first();
-type Editor = { source: string; exportPdf(options?: Record<string, boolean>): Promise<Blob> };
+type Editor = { source: string; executeCommand<T>(id: string, ...args: unknown[]): Promise<T> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
 
@@ -52,7 +52,7 @@ test('"Page guides" draws the text area\'s borders in the preview, remembered, n
   await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page')).toHaveCount(pages);
   // the PDF is still made (the export compiles the main file itself)
   const pdf = await page.evaluate(async () => {
-    const blob = await (window as unknown as { editor: Editor }).editor.exportPdf();
+    const blob = await (window as unknown as { editor: Editor }).editor.executeCommand<Blob>('pdfExport.export');
     return new Uint8Array(await blob.arrayBuffer()).length;
   });
   expect(pdf).toBeGreaterThan(0);

@@ -107,7 +107,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     onDidChangeMainFile: events.onDidChangeMainFile,
     onDidChangeActiveFile: events.onDidChangeActiveFile,
     executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
-    exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
     dispose: () => {
       events.dispose();
       workbench.dispose();
@@ -223,18 +222,10 @@ export interface Editor {
   /** Fires with `activeFile` when another file is shown in the editing area (e.g. to put it into the page URL). */
   readonly onDidChangeActiveFile: Event<ProjectPath>;
   /**
-   * Runs the command `id` an extension registered (e.g. `comments.addComment`), with `args`; resolves to its result,
-   * rejects for an unknown id or when the command fails.
+   * Runs the command `id` an extension registered (e.g. `comments.addComment`; the PDF as a Blob:
+   * `pdfExport.export`), with `args`; resolves to its result, rejects for an unknown id or when the command fails.
    */
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
-  /**
-   * The project as a PDF (`application/pdf`), from the current text, with the export options by id, the others at
-   * their default (`{ 'comments.include': true }`; an id no extension registered rejects). Built in:
-   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
-   * out). The one feature shortcut on the widget: the command `pdfExport.export`. Rejects with an error naming the
-   * problem when the document has errors.
-   */
-  exportPdf(options?: Record<string, boolean>): Promise<Blob>;
   /** Removes the widget; the events' listeners are dropped. */
   dispose(): void;
 }
