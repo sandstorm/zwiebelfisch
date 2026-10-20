@@ -2,8 +2,7 @@
 // ../collaboration.ts.
 import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { fromDocument } from '../../../hosts/source-editor/source-editor';
+import { fromDocument, type CodeMirrorContext } from '../../../hosts/source-editor/source-editor';
 import { REMOTE_ORIGIN } from '../remote-origin';
 import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
@@ -17,15 +16,18 @@ export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
 );
 
 /** Draws the other users' carets and selections in every Source editor, as `presences` has them; they follow edits. */
-export function sourcePresence(presences: PresenceSource): (editor: { readonly document: TypstDocument }) => Extension {
-  return (editor) => [
-    remotePresence,
-    initialPresences.of(presences.presencesIn(editor.document)),
-    ViewPlugin.define((view) => {
-      const subscription = presences.onDidChange(() => view.dispatch({ effects: setPresence.of(presences.presencesIn(editor.document)) }));
-      return { destroy: () => subscription.dispose() };
-    }),
-  ];
+export function sourcePresence(presences: PresenceSource): (editor: CodeMirrorContext) => Extension {
+  return (editor) => {
+    if (editor.editor !== 'source') return [];
+    return [
+      remotePresence,
+      initialPresences.of(presences.presencesIn(editor.document)),
+      ViewPlugin.define((view) => {
+        const subscription = presences.onDidChange(() => view.dispatch({ effects: setPresence.of(presences.presencesIn(editor.document)) }));
+        return { destroy: () => subscription.dispose() };
+      }),
+    ];
+  };
 }
 
 /** Shows these presences (offsets in the editor's text) in an editor with `remotePresence`, replacing the ones shown. */

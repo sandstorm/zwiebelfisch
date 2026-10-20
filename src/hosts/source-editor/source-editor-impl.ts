@@ -5,7 +5,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import css from './source-editor.css?inline';
-import { type SourceEditorContributions, type CodeMirrorContext, type CodeMirrorContextOf, type CodeMirrorSelector, fromDocument, type SourceEditorOptions } from './source-editor';
+import { type SourceEditorContributions, type CodeMirrorContext, type CodeMirrorSelector, fromDocument, type SourceEditorOptions } from './source-editor';
 
 /** The `SourceEditorContributions` of one widget, which makes its Source editors (`createEditor`) and applies the contributions to them. */
 export class SourceEditorHost implements SourceEditorContributions {
@@ -14,9 +14,8 @@ export class SourceEditorHost implements SourceEditorContributions {
   /** The CSS of the editors (a revealed range), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  registerCodeMirrorExtension<S extends CodeMirrorSelector>(selector: S, extension: Extension | ((editor: CodeMirrorContextOf<S>) => Extension)): Disposable {
-    // called only for the CodeMirrors `selector` selects (`selected`), whose context is CodeMirrorContextOf<S>
-    const entry = { selector, extension: extension as Extension | ((editor: CodeMirrorContext) => Extension) };
+  registerCodeMirrorExtension(selector: CodeMirrorSelector, extension: Extension | ((editor: CodeMirrorContext) => Extension)): Disposable {
+    const entry = { selector, extension };
     this.registered.push(entry);
     this.changed.fire();
     return new Disposable(() => {

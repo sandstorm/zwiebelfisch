@@ -17,7 +17,7 @@ createEditor(parent, document, { onSelection?, path? }) → SourceEditor    // t
 
 subscriptions.push(
   sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, lint(collection)),              // all Source editors
-  sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => myLint(document)), // per editor
+  sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, (e) => (e.editor === 'source' ? myLint(e.document) : [])), // per editor
   sourceEditor.registerCodeMirrorExtension({ language: 'typst' }, typstSyntax()),                // all Typst
   sourceEditor.registerCodeMirrorExtension({}, highlightWhitespace()),                           // every CodeMirror
 );
@@ -49,7 +49,7 @@ The CodeMirrors are of three kinds (`editor`):
 )
 
 - *Live:* a contribution reaches every editor, open ones included (they reconfigure a `Compartment`); disposing removes it from all. No feature tracks editors.
-- *Selectors* are as the languages' (`DocumentFilter`): `language` and `editor`, each left out matches every CodeMirror; `{}` is every CodeMirror. One language's own goes by `language`, never to every CodeMirror. Made per editor, a contribution gets its `CodeMirrorContext`; selecting one `editor` narrows it (`{ editor: 'source' }` has `document`).
+- *Selectors* are as the languages' (`DocumentFilter`): `language` and `editor`, each left out matches every CodeMirror; `{}` is every CodeMirror. One language's own goes by `language`, never to every CodeMirror. Made per editor, a contribution gets its `CodeMirrorContext`, a plain union: one that needs `document` narrows it itself (`if (editor.editor !== 'source') return [];`).
 - *Precedence* is CodeMirror's own (`Prec.highest` … `Prec.lowest`).
 - *`codeColors`* (code-editing's, `{}`) is the only look of every CodeMirror in the widget: the default highlight style colored by the `--zwf-syn-*` tokens, light or dark following the color scheme around the editor. No editor restyles on top of it. Without code-editing: CodeMirror's default light look, no history, no keymap beyond CodeMirror's defaults.
 - *Sync:* the editor's own edits become `TextChange[]` with the editor as `origin`; changes of another origin arrive annotated `fromDocument.of({ origin })` and are not written back.

@@ -86,8 +86,8 @@ describe('SourceEditor reveal', () => {
 
 describe('SourceEditorHost contributions', () => {
   /** Marks the first word of the editor's document (as it was when the extension was made). */
-  const firstWord = ({ document }: { readonly document: TypstDocument }) =>
-    EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
+  const firstWord = (editor: CodeMirrorContext) =>
+    editor.editor === 'source' ? EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, editor.document.text.search(/\s/)))) : [];
   /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all editors). */
   const drawn = StateEffect.define<readonly { anchor: number; head: number }[]>();
   const ranges = new EventEmitter<readonly { anchor: number; head: number }[]>();
@@ -132,8 +132,9 @@ describe('SourceEditorHost contributions', () => {
   it('stops applying contributions to a disposed editor', () => {
     const host = new SourceEditorHost();
     const made: string[] = [];
-    host.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => {
-      made.push(document.text);
+    host.registerCodeMirrorExtension({ editor: 'source' }, (editor) => {
+      if (editor.editor !== 'source') return [];
+      made.push(editor.document.text);
       return [];
     });
     const { view } = setup('text\n', host);

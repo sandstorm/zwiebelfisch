@@ -17,7 +17,7 @@ export interface SourceEditorContributions {
    * Adds CodeMirror extensions to every CodeMirror `selector` selects, the existing ones included, until disposed: the
    * same value for all of them, or made per CodeMirror from what it shows (`CodeMirrorContext`).
    */
-  registerCodeMirrorExtension<S extends CodeMirrorSelector>(selector: S, extension: Extension | ((editor: CodeMirrorContextOf<S>) => Extension)): Disposable;
+  registerCodeMirrorExtension(selector: CodeMirrorSelector, extension: Extension | ((editor: CodeMirrorContext) => Extension)): Disposable;
   /**
    * What a CodeMirror made elsewhere (an extension's own) includes to get the extensions registered for it, now and
    * later, until it is destroyed; `editor` says what it shows (`editor: 'other'`).
@@ -38,9 +38,6 @@ export interface CodeMirrorSelector {
 export type CodeMirrorContext =
   | (CodeMirrorText & { readonly editor: 'source' | 'rawBox'; readonly document: TypstDocument })
   | (CodeMirrorText & { readonly editor: 'other' });
-
-/** The context of the CodeMirrors `S` selects. */
-export type CodeMirrorContextOf<S extends CodeMirrorSelector> = S extends { editor: infer E } ? CodeMirrorContext & { readonly editor: E } : CodeMirrorContext;
 
 /** The text a CodeMirror shows. */
 interface CodeMirrorText {

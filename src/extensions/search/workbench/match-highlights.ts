@@ -5,6 +5,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { CodeMirrorContext } from '../../../hosts/source-editor/source-editor';
 import type { SourceHighlight, SourceHighlightProvider } from '../../../hosts/visual-editor/visual-editor';
 import type { SearchResults } from '../model/search-results';
 import type { TextMatch } from '../model/text-query';
@@ -36,7 +37,9 @@ export class MatchHighlights {
   };
 
   /** What each Source editor draws: the highlights of its document. */
-  readonly sourceExtension = ({ document }: { readonly document: TypstDocument }): Extension => {
+  readonly sourceExtension = (editor: CodeMirrorContext): Extension => {
+    if (editor.editor !== 'source') return [];
+    const { document } = editor;
     const field = StateField.define<DecorationSet>({
       create: (state) => marks(this.#highlightsOf(document), state.doc.length),
       update: (set, tr) => tr.effects.find((effect) => effect.is(setMarks))?.value ?? set.map(tr.changes),

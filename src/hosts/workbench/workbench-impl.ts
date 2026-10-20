@@ -319,7 +319,7 @@ export class WorkbenchHost implements Workbench {
       upload: (document, files) => this.#upload(document, files),
     };
     this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
-    this.#sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => sourceEditorDrops(document, drops));
+    this.#sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, (editor) => (editor.editor === 'source' ? sourceEditorDrops(editor.document, drops) : []));
   }
 
   /**

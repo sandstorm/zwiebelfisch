@@ -111,7 +111,7 @@ describe('sourceEditorDrops', () => {
     const doc = new TypstDocument(text);
     const host = new SourceEditorHost();
     host.registerCodeMirrorExtension({ editor: 'source' }, history());
-    host.registerCodeMirrorExtension({ editor: 'source' }, ({ document }) => sourceEditorDrops(document, drops));
+    host.registerCodeMirrorExtension({ editor: 'source' }, (editor) => (editor.editor === 'source' ? sourceEditorDrops(editor.document, drops) : []));
     host.createEditor(parent, doc);
     const view = CodeMirrorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
     return { doc, view };
