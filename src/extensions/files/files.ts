@@ -1,6 +1,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { ExtensionContext, MenuContext, Extension } from '../../hosts/workbench/workbench';
+import type { MenuContext } from '../../hosts/commands/commands';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
 import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';

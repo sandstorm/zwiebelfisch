@@ -10,7 +10,7 @@ import type { SaveDialogOptions } from '../../../hosts/window/window';
 import type { OpenOptions } from '../../../hosts/workbench/workbench';
 import { createVisualEditor } from '../../../testing/testing';
 import { emptyDiagram } from '../model/png';
-import { insertDiagram, type InsertContext } from './insert-diagram';
+import { registerInsertDiagram, type InsertContext } from './insert-diagram';
 
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -29,7 +29,7 @@ function setup(file: string, text: string, answer: string | undefined) {
   } as unknown as InsertContext;
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
-    contributions: [{ id: 'test', activate: ({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerToolbarItem(insertDiagram(context))) }],
+    contributions: [{ id: 'test', activate: ({ commands, workbench, subscriptions }) => subscriptions.push(registerInsertDiagram({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } })) }],
   });
   view.reveal(SourceRange.of({ from: text.length - 1, to: text.length - 1 }));
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;

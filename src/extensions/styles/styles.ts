@@ -25,7 +25,7 @@ export function styles(): Extension {
       const applier = registerStyleApplier(context.visualEditor, index);
       context.subscriptions.push(
         index,
-        registerCustomStyles(context.visualEditor, { styles: index, create: () => void addNewStyle(index, context) }),
+        registerCustomStyles(context, { styles: index, create: () => void addNewStyle(index, context) }),
         applier,
         context.window.registerSearchProvider(styleSearch(index, applier, context.window)),
       );

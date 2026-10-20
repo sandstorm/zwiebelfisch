@@ -1,3 +1,4 @@
+import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import type { Extension } from '../../hosts/workbench/workbench';
 import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual-editor/visual-editor';
 
@@ -13,12 +14,13 @@ import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual
 export function alignment(): Extension {
   return {
     id: 'alignment',
-    activate({ visualEditor, subscriptions }) {
+    activate(context) {
+      const { visualEditor, subscriptions } = context;
       subscriptions.push(
         visualEditor.registerNode(ALIGNMENT),
         visualEditor.registerNode(JUSTIFIED_PARAGRAPH),
-        visualEditor.registerToolbarGroup(ALIGN_MENU),
-        ...ALIGNMENTS.map((action, i) => visualEditor.registerToolbarItem({ group: 'align', order: 10 * (i + 1), action })),
+        visualEditor.registerSubmenu(ALIGN_MENU),
+        ...ALIGNMENTS.map((button) => registerChainButton(context, ALIGN_MENU.id, button)),
       );
     },
   };

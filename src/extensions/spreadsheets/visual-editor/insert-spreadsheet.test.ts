@@ -7,7 +7,7 @@ import { Project, type FileChange } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { SaveDialogOptions } from '../../../hosts/window/window';
 import { createVisualEditor } from '../../../testing/testing';
-import { insertSpreadsheet, type InsertContext } from './insert-spreadsheet';
+import { registerInsertSpreadsheet, type InsertContext } from './insert-spreadsheet';
 
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -32,7 +32,7 @@ function setup(text: string, answer: string | undefined, files: Record<string, s
   const newWorkbook = vi.fn(async () => WORKBOOK);
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
-    contributions: [{ id: 'test', activate: ({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerToolbarItem(insertSpreadsheet(context, newWorkbook))) }],
+    contributions: [{ id: 'test', activate: ({ commands, workbench, subscriptions }) => subscriptions.push(registerInsertSpreadsheet({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } }, newWorkbook)) }],
   });
   view.reveal(SourceRange.of({ from: text.length - 1, to: text.length - 1 }));
   const click = async () => {

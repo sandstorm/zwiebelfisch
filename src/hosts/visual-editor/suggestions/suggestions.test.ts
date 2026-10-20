@@ -3,7 +3,7 @@
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type CompletionContext, type CompletionItem, type CompletionTrigger, type ToolbarAction } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type CompletionContext, type CompletionItem, type CompletionTrigger } from '../visual-editor';
 import { filterCompletionItems } from './suggestions';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
@@ -21,14 +21,11 @@ function item(label: string, extra: Partial<CompletionItem> = {}): CompletionIte
 
 const ITEMS = [item('apple', { detail: 'Fruit', keywords: ['pome'] }), item('banana'), item('cherry', { commitCharacters: ['.'] })];
 
-const INSERT_RULE: ToolbarAction = { label: 'Rule', icon: '<svg></svg>', run: (c) => c };
-
 function setup(text = 'Text\n', items: readonly CompletionItem[] = ITEMS, trigger: CompletionTrigger = { char: '/' }) {
   const asked: CompletionContext[] = [];
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
   const visualEditor = new VisualEditorHost();
-  visualEditor.registerToolbarItem({ group: 'insert', action: INSERT_RULE });
   visualEditor.registerCompletionItemProvider(
     {
       provideCompletionItems: (context) => {
@@ -91,13 +88,12 @@ describe('completion lists', () => {
     expect(editor.state.doc.childCount).toBe(2);
   });
 
-  it('ask the provider with the query, the editor and what the toolbar offers', () => {
+  it('ask the provider with the query and the editor', () => {
     const { editor, asked } = setup();
     type(editor, ' /ch');
     const context = asked.at(-1)!;
     expect(context.query).toBe('ch');
     expect(context.editor).toBe(editor);
-    expect(context.toolbarActions('insert')).toEqual([INSERT_RULE]);
     expect(context.textStyles()).toEqual([]);
   });
 

@@ -4,7 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
@@ -76,7 +76,7 @@ export const HORIZONTAL_RULE: TypstNodeSpec = {
 const ICON = svg('<path d="M3 12h18"/>');
 
 /** "Horizontal rule" in the Insert menu. */
-export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, keywords: ['line', 'divider', 'separator'], run: (c) => c.setHorizontalRule() };
+export const INSERT_HORIZONTAL_RULE: ChainButton = { command: 'pageLayout.insertHorizontalRule', title: 'Horizontal rule', icon: ICON, keywords: ['line', 'divider', 'separator'], order: 70, chain: (c) => c.setHorizontalRule() };
 
 /** `---` (or `—-`, as some systems autocorrect it), `___ ` or `*** `: Markdown's rules, as in Tiptap. */
 const RULE_INPUT = /^(?:---|—-|___\s|\*\*\*\s)$/;

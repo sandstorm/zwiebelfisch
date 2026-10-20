@@ -4,7 +4,7 @@ import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
 import type { Extension } from '../../hosts/workbench/workbench';
 import { calculateMermaidFigure, isMermaid, MERMAN } from './model/mermaid-figure';
-import { insertMermaid } from './visual-editor/visual-editor';
+import { registerInsertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';
 
 /**
@@ -20,9 +20,9 @@ export function mermaid(): Extension {
   return {
     id: 'mermaid',
     activate(context) {
-      const { project, languages, visualEditor, subscriptions } = context;
+      const { project, languages, subscriptions } = context;
       subscriptions.push(
-        visualEditor.registerToolbarItem(insertMermaid(context)),
+        registerInsertMermaid(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, mermaidLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, mermaidDrops),
         languages.registerHelpProvider({ language: 'mermaid' }, { provideHelp: () => MERMAID_HELP }),

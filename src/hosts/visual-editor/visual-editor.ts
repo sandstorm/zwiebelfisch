@@ -5,6 +5,7 @@ import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { MenuItem } from '../commands/commands';
 import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion/typst-conversion';
 
 /**
@@ -34,10 +35,18 @@ export interface VisualEditorContributions {
    * transactions), commands not tied to a node. Their hooks see the editor's Tiptap editor (`this.editor`).
    */
   registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable;
-  /** A place for toolbar items: a group, a menu or a floating bar. */
-  registerToolbarGroup(group: ToolbarGroup): Disposable;
-  /** A button or control in a toolbar group (one the host or a contribution registered). */
-  registerToolbarItem(item: ToolbarItem): Disposable;
+  /**
+   * A menu button (VS Code's submenu) in the menu `submenu.parent` (the toolbar row, a floating bar), placed by `group`
+   * and `order` as an entry there: it opens the entries of the menu `submenu.id`, and is left out while that has none.
+   * The host's own: `visualEditor/insert` ("Insert", in the row's group `5_insert`).
+   */
+  registerSubmenu(submenu: Submenu): Disposable;
+  /**
+   * A bar floating in the text above `bar.anchor`, holding the entries of the menu `bar.id` (and the submenus placed
+   * there). Of the bars with entries, only the first (by `order`) with an anchor shows. The host's own:
+   * `visualEditor/selection` (above a text selection, order 10).
+   */
+  registerFloatingBar(bar: FloatingBar): Disposable;
   /**
    * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
    * "Normal text". The menu shows once any provider is registered.
@@ -75,6 +84,19 @@ export interface VisualEditorContributions {
  * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
  */
 export const VISUAL_EDITOR = 'visualEditor';
+
+/**
+ * What the Visual editor's menus are shown with and run their commands with (the command's one argument): the editor
+ * they are in. Its menus (`workbench.registerMenuItem`), their buttons drawn with the entry's icon (else its
+ * `shortTitle`, else its title), its title and key as the tooltip, pressed where `toggled` holds, disabled where
+ * `enabled` does not, left out where `when` does not:
+ * - `visualEditor/toolbar`: the toolbar row, a group of buttons per `group` (by name: `1_history`, `2_textStyle` the
+ *   text style menu, `3_lists`, `4_align`, `5_insert` the Insert menu, `6_comments`)
+ * - `visualEditor/insert`: the Insert menu
+ * - `visualEditor/selection`: the bar above a text selection
+ * - the menus of the submenus and floating bars that extensions add (`registerSubmenu`, `registerFloatingBar`)
+ */
+export type VisualEditorMenuContext = VisualEditorContext & { readonly editor: Editor };
 
 // The contribution points: what extensions register, and what they are given.
 
@@ -192,70 +214,37 @@ export interface RawBoxExtension {
   dispose(): void;
 }
 
-// The toolbar: buttons (actions), controls, groups, menus and floating bars.
+// The toolbar: menus of commands (`workbench.registerMenuItem`), submenus and floating bars.
 
-/** A toolbar button: how it looks, what it does, and when it shows as on. */
-export interface ToolbarAction {
-  label: string;
-  /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
-  shortcut?: string;
-  /** An `svg(..)` icon; or `text`. */
-  icon?: string;
-  /** A short text shown in place of an icon, where it says more (`25%`). */
-  text?: string;
-  /** The command; also decides, dry-run, whether the button is enabled. An action with `click` has none. */
-  run?(chain: ChainedCommands): ChainedCommands;
-  /** Instead of running a command, e.g. to ask for a value first. */
-  click?(): void;
-  /** Other words it is found by where entries are searched (the slash commands): `['grid']` for a table. */
-  readonly keywords?: readonly string[];
-  /** Whether the button is enabled, instead of the dry run of `run` (default for an action without `run`: enabled). */
-  enabled?(editor: Editor): boolean;
-  /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
-  active?(editor: Editor): boolean;
-  /** Whether the button shows (default: always): one that does not apply here is left out rather than disabled. */
-  visible?(editor: Editor): boolean;
-  /** In a floating bar: shows the bar at its anchor also without a selection (a link at the cursor). */
-  showsBar?(editor: Editor): boolean;
+/** A menu button: its menu (the entries it opens), where it is, and its icon. */
+export interface Submenu {
+  /** Its menu's id: the entries it opens (`workbench.registerMenuItem(id, ..)`), e.g. `visualEditor/align`. */
+  readonly id: string;
+  readonly label: string;
+  /** The button's icon, asked after every transaction (the selection's alignment). */
+  icon(context: VisualEditorMenuContext): string;
+  /** The menu the button is in: `visualEditor/toolbar` or a floating bar's. */
+  readonly parent: string;
+  /** Its group and place there, as an entry's. */
+  readonly group?: string;
+  readonly order?: number;
 }
 
-/** A control of its own in the toolbar (the text style `<select>`). */
-export interface ToolbarControl {
-  readonly element: HTMLElement;
-  /** Shows the selection's state; called after every transaction, focus and blur. */
-  refresh(): void;
-  dispose?(): void;
+/** A button that runs a Tiptap chain, as `registerChainButton` registers it: a menu entry, and what its command does. */
+export interface ChainButton extends Omit<MenuItem<VisualEditorMenuContext>, 'enabled'> {
+  /** Runs on the menu's editor, focused; its dry run there is whether the entry is enabled. */
+  chain(chain: ChainedCommands): ChainedCommands;
 }
 
-/**
- * A place for toolbar items: a group of buttons in the toolbar row, a menu
- * button there ("Insert ▾", its icon following the selection), or a bar
- * floating in the text above its anchor. The row is sorted by `order`; of the
- * floating bars, only the first (by `order`) with an anchor shows. The host's
- * own: `history` (for undo and redo, order 10), `text-style` (the text style menu, 20;
- * see `TextStyle`), the `insert` menu ("Insert", 50), the `selection` bar
- * (above a text selection, 10). A menu without items is left out.
- */
-export type ToolbarGroup =
-  | { readonly kind: 'group'; readonly id: string; readonly order: number }
-  | {
-      readonly kind: 'menu';
-      readonly id: string;
-      /** Its place in the row, or among the items of its `bar`. */
-      readonly order: number;
-      readonly label: string;
-      icon(editor: Editor): string;
-      /** The floating bar it is in (`selection`); none: the toolbar row. */
-      readonly bar?: string;
-    }
-  | {
-      readonly kind: 'floating';
-      readonly id: string;
-      readonly order: number;
-      readonly label: string;
-      /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `ToolbarAction.showsBar`). */
-      anchor(editor: Editor, held: boolean): Anchor;
-    };
+/** A bar floating in the text: its menu (`id`), where it floats, and its place among the bars. */
+export interface FloatingBar {
+  /** Its menu's id: the buttons it holds (`workbench.registerMenuItem(id, ..)`), e.g. `visualEditor/table`. */
+  readonly id: string;
+  readonly label: string;
+  readonly order: number;
+  /** Where it floats now (null: hidden), asked after every transaction. */
+  anchor(context: VisualEditorMenuContext): Anchor;
+}
 
 /**
  * An entry of the toolbar's text style menu: a block style (a heading level, a custom block style) the menu shows as
@@ -304,13 +293,11 @@ export interface CompletionTrigger {
   readonly allowedPrefixes?: readonly string[];
 }
 
-/** What a completion item provider is asked with: the editor, its Tiptap editor and what its toolbar offers. */
+/** What a completion item provider is asked with: the editor, its Tiptap editor and the query. */
 export interface CompletionContext extends VisualEditorContext {
   readonly editor: Editor;
   /** What is typed after the trigger character (the list filters the items by it). */
   readonly query: string;
-  /** The entries of toolbar group or menu `group` of this editor (the Insert menu: `insert`), sorted as shown. */
-  toolbarActions(group: string): readonly ToolbarAction[];
   /** The text style menu's entries of this editor, sorted as shown (without the host's "Normal text"). */
   textStyles(): readonly TextStyle[];
 }
@@ -342,30 +329,5 @@ export interface CompletionItemProvider {
 /** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
 export type Anchor = { top: number; left: number; right: number } | null;
 
-/** What an item created per editor gets: the editor, its Tiptap editor, the toolbar. */
-export interface ToolbarContext extends VisualEditorContext {
-  readonly editor: Editor;
-  /** The toolbar row's element (popovers of menu items go in here). */
-  readonly root: HTMLElement;
-  /** Disposed with the toolbar: popovers, listeners, plugins an item adds. */
-  readonly subscriptions: Disposable[];
-}
-
-/** A button (or control) in toolbar group `group`, sorted by `order` (then registration order). */
-export type ToolbarItem =
-  | { readonly group: string; readonly order?: number; readonly action: ToolbarAction }
-  | {
-      readonly group: string;
-      readonly order?: number;
-      /** The item for one editor, when it keeps state there (a popover) or is a control of its own. */
-      create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
-    }
-  | {
-      readonly group: string;
-      readonly order?: number;
-      /** In a menu: buttons that come and go while the editor lives (one per inline style), asked again as it shows and opens. */
-      provideActions(toolbar: ToolbarContext): readonly ToolbarAction[];
-    };
-
 export { VisualEditor, VisualEditorHost } from './visual-editor-impl';
-export { insertTypst, svg } from './visual-editor-helpers';
+export { chainCommand, insertTypst, registerChainButton, svg } from './visual-editor-helpers';

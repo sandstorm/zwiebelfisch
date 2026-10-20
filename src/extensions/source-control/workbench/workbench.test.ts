@@ -4,7 +4,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { ExtensionContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { MenuItem } from '../../../hosts/commands/commands';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceControl, SourceControlResourceState, SourceControlState, SourceControlStatusBarCommand } from '../../../hosts/scm/scm';
 import type { FileDecorationProvider } from '../../../hosts/window/window';

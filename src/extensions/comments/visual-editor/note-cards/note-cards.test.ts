@@ -16,7 +16,7 @@ function setup(source: string, options: NoteCardsOptions = {}) {
   const doc = new TypstDocument(source);
   let notes!: NoteCardsRegistration;
   const contributions = [
-    visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} })),
+    visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor)),
     visualEditorExtension((visualEditor) => (notes = registerNoteCards(visualEditor, options))),
   ];
   const view = Object.assign(createVisualEditor(parent, doc, { contributions }), {

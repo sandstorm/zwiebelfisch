@@ -47,18 +47,18 @@ const POINTS: Readonly<Record<string, Describer>> = {
   'visualEditor.registerNode': ([spec]) => typstSpec(spec),
   'visualEditor.registerMark': ([spec]) => typstSpec(spec),
   'visualEditor.registerTiptapExtension': ([provider]) => named(provider, 'Tiptap extensions'),
-  'visualEditor.registerToolbarGroup': ([group]) => {
-    const { id, kind, label, order } = record(group);
-    return { title: String(id), details: [String(kind), ...optional(label, (value) => `"${value}"`), `order ${num(order, 0)}`], rank: [num(order, 0)] };
-  },
-  'visualEditor.registerToolbarItem': ([item]) => {
-    const { group, order, action } = record(item);
-    const { label, shortcut } = record(action);
+  'visualEditor.registerSubmenu': ([submenu]) => {
+    const { id, label, parent, group, order } = record(submenu);
+    const place = typeof group === 'string' && group ? group : '';
     return {
-      title: typeof label === 'string' ? label : '(made per editor)',
-      details: [`in ${String(group)}`, `order ${num(order, 0)}`, ...optional(shortcut, String)],
-      rank: [String(group), num(order, 0)],
+      title: String(id),
+      details: [`"${String(label)}"`, `in ${String(parent)}`, ...optional(place || undefined, (value) => `group ${value}`), `order ${num(order, 0)}`],
+      rank: [String(parent), place === 'navigation' ? 0 : 1, place, num(order, 0)],
     };
+  },
+  'visualEditor.registerFloatingBar': ([bar]) => {
+    const { id, label, order } = record(bar);
+    return { title: String(id), details: [`"${String(label)}"`, `order ${num(order, 0)}`], rank: [num(order, 0)] };
   },
   'visualEditor.registerTextStyleProvider': ([provider]) => named(provider, 'text styles'),
   'visualEditor.registerCompletionItemProvider': ([provider, trigger]) => {
@@ -81,11 +81,11 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
   'workbench.registerEditorFrame': () => ({ title: 'editor frame', details: [] }),
   'workbench.registerMenuItem': ([menuId, item]) => {
-    const { command, title, group, order } = record(item);
+    const { command, title, group, order, keybinding } = record(item);
     const place = typeof group === 'string' && group ? group : '';
     return {
       title: typeof title === 'string' ? title : String(command),
-      details: [`menu ${String(menuId)}`, ...optional(place || undefined, (value) => `group ${value}`), `order ${num(order, 0)}`, `→ ${String(command)}`],
+      details: [`menu ${String(menuId)}`, ...optional(place || undefined, (value) => `group ${value}`), `order ${num(order, 0)}`, `→ ${String(command)}`, ...optional(keybinding, String)],
       // VS Code's menus: `navigation` first, the other groups by name
       rank: [String(menuId), place === 'navigation' ? 0 : 1, place, num(order, 0)],
     };

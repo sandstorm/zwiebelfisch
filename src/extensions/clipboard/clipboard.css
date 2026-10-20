@@ -1,5 +1,7 @@
-/* The "Paste as" chip above a paste in a Source editor (source-editor/paste-extension.ts), as the Visual editor's
-   floating bar. See clipboard.ts. Colors come from the --zwf-* tokens. */
+/* The "Paste as" chip above a paste in a Source editor (source-editor/paste-extension.ts) and in the Visual editor's
+   text column (visual-editor/paste-as.ts). See clipboard.ts. Colors come from the --zwf-* tokens. */
+.zwf-clipboard__chip-bar { position: absolute; z-index: 2; transform: translateY(-100%); }
+.zwf-clipboard__chip-bar[hidden] { display: none; }
 .cm-tooltip:has(> .zwf-paste-chip) { border: 0; background: none; }
 .zwf-paste-chip {
   height: 26px;

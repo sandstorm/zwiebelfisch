@@ -1,3 +1,4 @@
+import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './tables.css?inline';
 import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/visual-editor';
@@ -13,13 +14,14 @@ import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/vis
 export function tables(): Extension {
   return {
     id: 'tables',
-    activate({ workbench, visualEditor, subscriptions }) {
+    activate(context) {
+      const { workbench, visualEditor, subscriptions } = context;
       subscriptions.push(workbench.registerStyleSheet(css));
       subscriptions.push(
         visualEditor.registerNode(TABLE),
-        visualEditor.registerToolbarItem({ group: 'insert', order: 20, action: INSERT_TABLE }),
-        visualEditor.registerToolbarGroup(TABLE_BAR),
-        ...TABLE_EDITS.map((action, i) => visualEditor.registerToolbarItem({ group: 'table', order: 10 * (i + 1), action })),
+        registerChainButton(context, 'visualEditor/insert', INSERT_TABLE),
+        visualEditor.registerFloatingBar(TABLE_BAR),
+        ...TABLE_EDITS.map((button) => registerChainButton(context, TABLE_BAR.id, button)),
       );
     },
   };

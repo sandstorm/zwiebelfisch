@@ -2,7 +2,9 @@
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, type Selection } from '@tiptap/pm/state';
-import { svg, type Anchor, type ToolbarAction, type ToolbarGroup, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { registerChainButton, svg, type Anchor, type FloatingBar, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import type { WindowApi } from '../../../hosts/window/window';
 import { imageArg, withImageWidth } from '../model/image-call';
 
@@ -10,31 +12,34 @@ import { imageArg, withImageWidth } from '../model/image-call';
 export type ImageBarPrompts = Pick<WindowApi, 'showInputBox'>;
 
 /** The bar floating above the selected image (as the table bar above a table), before the table's. */
-export const IMAGE_BAR: ToolbarGroup = { kind: 'floating', id: 'image', order: 15, label: 'Image', anchor: (editor) => imageAnchor(editor) };
+export const IMAGE_BAR: FloatingBar = { id: 'visualEditor/image', order: 15, label: 'Image', anchor: ({ editor }) => imageAnchor(editor) };
 
 /**
  * The image bar's buttons: "Caption" (where the figures extension's commands are there; asks in the window's input
  * box) and the preset widths 25 / 50 / 75 / 100 % of the text width (the image's own pressed). Every change is one undo
  * step.
  */
-export function imageBarItems(prompts: ImageBarPrompts): ToolbarItem[] {
-  const caption = (editor: Editor): ToolbarAction => ({
-    label: 'Caption',
-    icon: CAPTION_ICON,
-    click: () => void askCaption(editor, prompts),
-    visible: () => {
-      const image = selectedImage(editor.state.selection);
-      return image !== null && captionOf(editor, image) !== undefined;
-    },
-  });
-  const widths = PRESETS.map(
-    (percent, i): ToolbarItem => ({
-      group: 'image',
-      order: 20 + i,
-      action: {
-        label: `Width ${percent}%`,
-        text: `${percent}%`,
-        run: (c) =>
+export function registerImageBarButtons(context: Pick<ExtensionContext, 'commands' | 'workbench'>, prompts: ImageBarPrompts): Disposable {
+  const { commands, workbench } = context;
+  return Disposable.from(
+    commands.registerCommand(EDIT_CAPTION, ({ editor }: VisualEditorMenuContext) => askCaption(editor, prompts)),
+    workbench.registerMenuItem<VisualEditorMenuContext>(IMAGE_BAR.id, {
+      command: EDIT_CAPTION,
+      title: 'Caption',
+      icon: CAPTION_ICON,
+      order: 10,
+      when: ({ editor }) => {
+        const image = selectedImage(editor.state.selection);
+        return image !== null && captionOf(editor, image) !== undefined;
+      },
+    }),
+    ...PRESETS.map((percent, i) =>
+      registerChainButton(context, IMAGE_BAR.id, {
+        command: `images.setWidth${percent}`,
+        title: `Width ${percent}%`,
+        shortTitle: `${percent}%`,
+        order: 20 + i,
+        chain: (c) =>
           c.command(({ tr }) => {
             const image = selectedImage(tr.selection);
             if (!image) return false;
@@ -42,15 +47,17 @@ export function imageBarItems(prompts: ImageBarPrompts): ToolbarItem[] {
             if (src !== image.node.attrs.src) tr.setNodeAttribute(image.pos, 'src', src);
             return true;
           }),
-        active: (editor) => {
+        toggled: ({ editor }) => {
           const image = selectedImage(editor.state.selection);
           return image !== null && imageArg(image.node.attrs.src, 'width') === `${percent}%`;
         },
-      },
-    }),
+      }),
+    ),
   );
-  return [{ group: 'image', order: 10, create: ({ editor }) => caption(editor) }, ...widths];
 }
+
+/** "Caption" (the command's argument: the Visual editor menu context). */
+const EDIT_CAPTION = 'images.editCaption';
 
 /** The selected image block and its position, if an image is selected. */
 function selectedImage(selection: Selection): { node: Node; pos: number } | null {

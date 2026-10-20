@@ -1,6 +1,5 @@
 // ToolbarMenu: a toolbar button that opens a menu of further buttons (Insert ▾, Align ▾, Styles ▾ in the selection
-// bar), the toolbar's `menu` groups. See Toolbar in toolbar.ts.
-import type { ToolbarControl } from '../visual-editor';
+// bar), the toolbar's submenus. See Toolbar in toolbar.ts.
 
 /**
  * A menu button of the toolbar: its trigger opens a `role="menu"` list of toolbar buttons below it.
@@ -9,9 +8,9 @@ import type { ToolbarControl } from '../visual-editor';
  * each time the menu opens, so they follow what it holds now; a menu without items hides. The trigger shows `icon()` as
  * of the last `refresh()` (e.g. the current alignment).
  *
- * @internal Extensions get one through `visualEditor.registerToolbarGroup` (`kind: 'menu'`).
+ * @internal Extensions get one through `visualEditor.registerSubmenu`.
  */
-export class ToolbarMenu implements ToolbarControl {
+export class ToolbarMenu {
   readonly element: HTMLElement;
   private readonly trigger: HTMLButtonElement;
   private readonly list: HTMLElement;

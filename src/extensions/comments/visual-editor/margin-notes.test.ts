@@ -2,13 +2,14 @@
 // Tests for margin-notes.ts: parsing and printing margin notes, and "Comment" in the Visual editor's toolbar.
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
+import type { Extension } from '../../../hosts/workbench/workbench';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { after, createVisualEditor, edit, expectPreciseMap, parseTypst as parseTypstWith, schemaWith, visualEditorExtension } from '../../../testing/testing';
-import { registerMarginNotes, type MarginNotesOptions } from './margin-notes';
+import { registerCommentButtons, registerMarginNotes } from './margin-notes';
 
-const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} }))] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor))] });
 const parseTypst = (source: string) => parseTypstWith(source, schema);
 
 const MARGIN_NOTES =
@@ -116,7 +117,7 @@ describe('margin notes', () => {
   it('syncs a note changed in the source', () => {
     const parent = document.createElement('div');
     const doc = new TypstDocument('Text#margin-note[old] and #margin-note[x][y].\n');
-    createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} }))] });
+    createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor))] });
     const target = 'Text#margin-note[new] and #margin-note[x][z].\n';
     doc.setText(target, 'test');
     const shown = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.state.doc;
@@ -125,16 +126,23 @@ describe('margin notes', () => {
   });
 });
 
-function setup(text: string, options: MarginNotesOptions = { comment: () => {} }) {
+/** A Visual editor of `text` with the margin notes and the Comment buttons, which run `comment` (a command with its key, as the comments extension's). */
+function setup(text: string, { comment }: { comment(): void } = { comment: () => {} }) {
   const parent = document.createElement('div');
   document.body.append(parent);
-  const view = createVisualEditor(parent, new TypstDocument(text), { contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, options))] });
+  const commented: Extension = {
+    id: 'test',
+    contributes: { keybindings: [{ command: 'test.comment', key: 'Mod+Alt+KeyM' }] },
+    activate: ({ visualEditor, commands, workbench, subscriptions }) =>
+      void subscriptions.push(registerMarginNotes(visualEditor), registerCommentButtons(workbench, 'test.comment'), commands.registerCommand('test.comment', () => comment())),
+  };
+  const view = createVisualEditor(parent, new TypstDocument(text), { contributions: [commented] });
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { view, button };
 }
 
 describe('Comment in the toolbar', () => {
-  it('calls the `comment` option', () => {
+  it('runs its command', () => {
     const comment = vi.fn();
     const { view, button } = setup('Hello world\n', { comment });
     view.reveal(SourceRange.of({ from: 6, to: 11 }));

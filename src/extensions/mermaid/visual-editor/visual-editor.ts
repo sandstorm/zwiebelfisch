@@ -1,6 +1,7 @@
 // The mermaid extension in the Visual editor. See mermaid in ../mermaid.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '../model/mermaid-figure';
 
@@ -10,26 +11,29 @@ import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '..
  * `#figure(mermaid(read("…"), width: 100%), caption: [ ])` after the cursor's block with the import it needs (one
  * undo step), and opens the file.
  */
-export function insertMermaid(context: InsertContext): ToolbarItem {
-  return {
-    group: 'insert',
-    order: 14,
-    create: (toolbar) => ({
-      label: 'Insert Mermaid diagram',
+export function registerInsertMermaid(context: InsertContext): Disposable {
+  return Disposable.from(
+    context.commands.registerCommand(INSERT_MERMAID, (menu: VisualEditorMenuContext) => insert(context, menu)),
+    context.workbench.registerMenuItem('visualEditor/insert', {
+      command: INSERT_MERMAID,
+      title: 'Insert Mermaid diagram',
       icon: ICON,
       keywords: ['mermaid', 'diagram', 'flowchart', 'sequence', 'chart', 'figure'],
-      click: () => void insert(context, toolbar),
+      order: 14,
     }),
-  };
+  );
 }
 
 /** What inserting a diagram uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench' | 'commands'>;
+
+/** "Insert Mermaid diagram" (the command's argument: the Visual editor menu context). */
+const INSERT_MERMAID = 'mermaid.insertDiagram';
 
 const ICON = svg('<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8.3M18 8l-5 8.3"/>');
 
-async function insert({ project, window, workspace, workbench }: InsertContext, toolbar: ToolbarContext): Promise<void> {
-  const { editor, document } = toolbar;
+async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext): Promise<void> {
+  const { editor, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
   if (!proposed) return;
@@ -46,7 +50,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   // the document may have moved meanwhile
   const at = project.pathOf(document);
   if (!at) return;
-  const { source, importChange } = calculateMermaidFigure(document.text, at, target, toolbar.selection().from);
+  const { source, importChange } = calculateMermaidFigure(document.text, at, target, menu.selection().from);
   insertTypst(editor, source, undefined, importChange ? [importChange] : []);
   workbench.open(target);
 }

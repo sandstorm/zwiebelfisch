@@ -1,7 +1,7 @@
 // See registerMenuItem in ../workbench.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { MenuContext, MenuItem } from '../workbench';
+import type { MenuItem } from '../../commands/commands';
 
 /**
  * Every menu's registered entries (`registerMenuItem`). A menu is only an id: whoever shows it (the tab bar here,
@@ -9,11 +9,12 @@ import type { MenuContext, MenuItem } from '../workbench';
  * `navigation` first, the other groups by name, within a group by `order`, then registration order.
  */
 export class Menus {
-  readonly #items = new Map<string, MenuItem[]>();
+  // each menu's items take the context its shower documents: kept as any, typed again by who asks
+  readonly #items = new Map<string, MenuItem<any>[]>();
   readonly #changed = new EventEmitter<string>();
   readonly onDidChange = this.#changed.event;
 
-  register(menuId: string, item: MenuItem): Disposable {
+  register<C extends object>(menuId: string, item: MenuItem<C>): Disposable {
     const items = this.#items.get(menuId) ?? [];
     this.#items.set(menuId, [...items, item]);
     this.#changed.fire(menuId);
@@ -26,8 +27,8 @@ export class Menus {
   }
 
   /** The entries of `menuId` whose `when` holds in `context`, sorted. */
-  items(menuId: string, context: MenuContext = {}): readonly MenuItem[] {
-    const items = this.#items.get(menuId) ?? [];
+  items<C extends object>(menuId: string, context: C = {} as C): readonly MenuItem<C>[] {
+    const items: MenuItem<C>[] = this.#items.get(menuId) ?? [];
     return items
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => item.when?.(context) ?? true)

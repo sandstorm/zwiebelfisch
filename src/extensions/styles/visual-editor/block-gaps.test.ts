@@ -46,7 +46,7 @@ const TWO_EXAMPLES = [
 function setup(text: string) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles: EXAMPLE, create: () => {} }))] });
+  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((_, context) => registerCustomStyles(context, { styles: EXAMPLE, create: () => {} }))] });
   const editable = parent.querySelector<HTMLElement>('.ProseMirror')!;
   const tiptap = (editable as HTMLElement & { editor: Editor }).editor;
   /** Presses `key` in the text; whether something took it (the browser does nothing then). */

@@ -6,7 +6,6 @@ import { PasteAs } from './paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from './pasted-typst';
 import { pasteExtension } from './source-editor/paste-extension';
 import { typstClipboard } from './visual-editor/clipboard';
-import { PASTE_BAR, pasteChip } from './visual-editor/paste-as';
 
 /**
  * Copy and paste of Typst in the Visual and the Source editors, through the paste edit providers of Typst
@@ -31,8 +30,6 @@ export function clipboard(): Extension {
         workbench.registerStyleSheet(css),
         languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA),
         visualEditor.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf(document), choices })),
-        visualEditor.registerToolbarGroup(PASTE_BAR),
-        visualEditor.registerToolbarItem(pasteChip(choices)),
         // a paste goes in as CodeMirror pastes it (the text as Typst) first
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, (editor) => {
           if (editor.editor !== 'source') return [];

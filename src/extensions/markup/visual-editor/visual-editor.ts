@@ -6,7 +6,8 @@ import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type Anchor, type ChainButton, type FloatingBar, type TypstNodeSpec, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { MenuItem } from '../../../hosts/commands/commands';
 import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, codeIndent, inlineCodeDelimiters, rawCode, type RawCode } from '../model/raw-code';
@@ -343,37 +344,63 @@ const ICONS = {
   quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
 
-/** Bold, italic, underline, strike, highlight, inline code: in the bar above the selection, their only place. */
-export const MARK_ACTIONS: Record<'bold' | 'italic' | 'underline' | 'strike' | 'highlight' | 'code', ToolbarAction> = {
-  bold: { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
-  italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
-  underline: { label: 'Underline', shortcut: 'Mod+U', icon: ICONS.underline, run: (c) => c.toggleUnderline(), active: (e) => e.isActive('underline') },
-  strike: { label: 'Strikethrough', shortcut: 'Mod+Shift+S', icon: ICONS.strike, run: (c) => c.toggleStrike(), active: (e) => e.isActive('strike') },
-  highlight: { label: 'Highlight', icon: ICONS.highlight, run: (c) => c.toggleMark('highlight'), active: (e) => e.isActive('highlight') },
-  code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
-};
+/** A button toggling mark or node `name` (pressed where the selection has it). */
+const toggle = (name: string, button: Omit<ChainButton, 'toggled'>): ChainButton => ({ ...button, toggled: ({ editor }) => editor.isActive(name) });
 
-export const INSERT_CODE_BLOCK: ToolbarAction = { label: 'Code block', icon: ICONS.codeBlock, keywords: ['listing', 'raw'], run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
-export const INSERT_QUOTE: ToolbarAction = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, keywords: ['blockquote', 'citation'], run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
+/** Bold, italic, underline, strike, highlight, inline code: in the bar above the selection, their only place. */
+export const MARK_BUTTONS: ChainButton[] = [
+  toggle('bold', { command: 'markup.toggleBold', title: 'Bold', keybinding: 'Mod+B', icon: ICONS.bold, order: 10, chain: (c) => c.toggleBold() }),
+  toggle('italic', { command: 'markup.toggleItalic', title: 'Italic', keybinding: 'Mod+I', icon: ICONS.italic, order: 15, chain: (c) => c.toggleItalic() }),
+  toggle('underline', { command: 'markup.toggleUnderline', title: 'Underline', keybinding: 'Mod+U', icon: ICONS.underline, order: 20, chain: (c) => c.toggleUnderline() }),
+  toggle('strike', { command: 'markup.toggleStrike', title: 'Strikethrough', keybinding: 'Mod+Shift+S', icon: ICONS.strike, order: 25, chain: (c) => c.toggleStrike() }),
+  toggle('highlight', { command: 'markup.toggleHighlight', title: 'Highlight', icon: ICONS.highlight, order: 30, chain: (c) => c.toggleMark('highlight') }),
+  toggle('code', { command: 'markup.toggleCode', title: 'Code', keybinding: 'Mod+E', icon: ICONS.code, order: 35, chain: (c) => c.toggleCode() }),
+];
+
+/** "Code block" and "Quote" in the Insert menu. */
+export const INSERT_BUTTONS: ChainButton[] = [
+  toggle('codeBlock', { command: 'markup.toggleCodeBlock', title: 'Code block', icon: ICONS.codeBlock, keywords: ['listing', 'raw'], order: 40, chain: (c) => c.toggleCodeBlock() }),
+  toggle('blockquote', { command: 'markup.toggleBlockquote', title: 'Quote', keybinding: 'Mod+Shift+B', icon: ICONS.quote, keywords: ['blockquote', 'citation'], order: 50, chain: (c) => c.toggleBlockquote() }),
+];
 
 /** Where "Link" asks for the URL: the window's input box. */
 export type LinkPrompt = Pick<WindowApi, 'showInputBox'>;
 
-/**
- * "Link" in the selection's bar (also Mod+K: `linkShortcut`): asks for the URL in an input box at the selection.
- * Enabled where a link may go (not in code).
- */
-export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): ToolbarAction {
-  const { editor } = toolbar;
-  return {
-    label: 'Link',
-    shortcut: 'Mod+K',
-    icon: ICONS.link,
-    click: () => void askLink(editor, prompt),
-    enabled: (e) => e.can().setMark('link'),
-    active: (e) => e.isActive('link'),
-    showsBar: (e) => e.isActive('link'),
-  };
+/** The command of "Link": asks for the URL of a link at the selection of the menu's editor (`askLink`). */
+export const LINK_COMMAND = 'markup.link';
+
+/** The command of "Link" (also Mod+K: `linkShortcut`). */
+export function linkCommand(prompt: LinkPrompt): (context: VisualEditorMenuContext) => Promise<void> {
+  return ({ editor }) => askLink(editor, prompt);
+}
+
+/** "Link" in the selection's bar and the link bar: asks for the URL in an input box; enabled where a link may go (not in code). */
+export const LINK_BUTTON: MenuItem<VisualEditorMenuContext> = {
+  command: LINK_COMMAND,
+  title: 'Link',
+  keybinding: 'Mod+K',
+  icon: ICONS.link,
+  order: 50,
+  enabled: ({ editor }) => editor.can().setMark('link'),
+  toggled: ({ editor }) => editor.isActive('link'),
+};
+
+/** The bar above a link holding the caret (no text selected: else the selection's bar shows), to edit the link. */
+export const LINK_BAR: FloatingBar = {
+  id: 'visualEditor/link',
+  order: 11,
+  label: 'Link',
+  anchor: ({ editor }) => (editor.state.selection.empty && editor.isActive('link') ? caretCoords(editor) : null),
+};
+
+/** Above the caret, or null without layout. */
+function caretCoords(editor: Editor): Anchor {
+  try {
+    const { top, left, right } = editor.view.coordsAtPos(editor.state.selection.from);
+    return { top, left, right };
+  } catch {
+    return null; // no layout (e.g. not attached)
+  }
 }
 
 /** Mod+K in the text (a raw box's code keeps its own keys): "Link", as in the selection's bar. */

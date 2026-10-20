@@ -9,7 +9,8 @@ import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import type { TextEditor } from '../../../hosts/window/window';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { localDate } from '../model/note-thread';
-import { registerMarginNotes } from '../visual-editor/margin-notes';
+import { testHosts } from '../../../testing/testing';
+import { registerCommentButtons, registerMarginNotes } from '../visual-editor/margin-notes';
 import { registerNoteCards } from '../visual-editor/note-cards/note-cards';
 import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
@@ -63,8 +64,10 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
-    const contributions = new VisualEditorHost();
-    registerMarginNotes(contributions, { comment: () => comment() });
+    const { visualEditor: contributions, commands, workbench } = testHosts();
+    registerMarginNotes(contributions);
+    registerCommentButtons(workbench, 'test.comment');
+    commands.registerCommand('test.comment', () => comment());
     const notes = registerNoteCards(contributions, { user: { name: 'Anna' } });
     const view = new VisualEditor(root.appendChild(document.createElement('div')), doc, contributions);
     view.reveal(SourceRange.of({ from: 6, to: 11 }));
@@ -128,8 +131,10 @@ describe('comments.addComment', () => {
 });
 
 /** A Visual editor host with margin notes (their "Comment" does nothing). */
+/** A Visual editor host with the margin notes and the Comment buttons. */
 function withMarginNotes(): VisualEditorHost {
-  const visualEditor = new VisualEditorHost();
-  registerMarginNotes(visualEditor, { comment: () => {} });
+  const { visualEditor, workbench } = testHosts();
+  registerMarginNotes(visualEditor);
+  registerCommentButtons(workbench, ADD_COMMENT);
   return visualEditor;
 }

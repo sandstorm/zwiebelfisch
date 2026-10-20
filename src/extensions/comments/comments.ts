@@ -1,7 +1,7 @@
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments, registerShowComments } from './preview/preview';
-import { registerMarginNotes } from './visual-editor/margin-notes';
+import { registerCommentButtons, registerMarginNotes } from './visual-editor/margin-notes';
 import { registerNoteCards } from './visual-editor/note-cards/note-cards';
 import { commentSearch } from './workbench/comment-search';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
@@ -25,14 +25,15 @@ export function comments(): Extension {
     },
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, commands, window, workbench, preview, visualEditor, subscriptions } = context;
+      const { project, window, workbench, preview, visualEditor, subscriptions } = context;
       const notes = registerNoteCards(visualEditor, {
         get user() {
           return workbench.user;
         },
       });
       subscriptions.push(
-        registerMarginNotes(visualEditor, { comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }),
+        registerMarginNotes(visualEditor),
+        registerCommentButtons(workbench, ADD_COMMENT),
         notes,
         registerAddComment(context, notes),
         registerIncludeComments(preview, project),

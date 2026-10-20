@@ -25,7 +25,7 @@ import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
-import type { Commands } from '../hosts/commands/commands';
+import { CommandsHost, type MenuItem } from '../hosts/commands/commands';
 import { LanguagesHost } from '../hosts/languages/languages';
 import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
@@ -115,7 +115,36 @@ export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickP
   };
 }
 
-// after TestPrompts: making the schema activates the built-ins, which get prompts
+/**
+ * The workbench's menus in a test (`registerMenuItem`, `getMenuItems`, `onDidChangeMenu`): the entries whose `when`
+ * holds, sorted as the workbench sorts them (group `navigation` first, the others by name, then `order`, then
+ * registration order).
+ */
+class TestMenus implements Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> {
+  private readonly items: { menuId: string; item: MenuItem<any> }[] = [];
+  private readonly changed = new EventEmitter<string>();
+  readonly onDidChangeMenu = this.changed.event;
+
+  registerMenuItem = <C extends object>(menuId: string, item: MenuItem<C>): Disposable => {
+    const entry = { menuId, item };
+    this.items.push(entry);
+    this.changed.fire(menuId);
+    return new Disposable(() => {
+      this.items.splice(this.items.indexOf(entry), 1);
+      this.changed.fire(menuId);
+    });
+  };
+
+  getMenuItems = <C extends object>(menuId: string, context: C = {} as C): readonly MenuItem<C>[] => {
+    const rank = (item: MenuItem<C>) => (item.group === 'navigation' ? '' : `~${item.group ?? ''}`);
+    return this.items
+      .filter((entry) => entry.menuId === menuId && (entry.item.when?.(context) ?? true))
+      .map((entry): MenuItem<C> => entry.item)
+      .sort((a, b) => (rank(a) < rank(b) ? -1 : rank(a) > rank(b) ? 1 : 0) || (a.order ?? 0) - (b.order ?? 0));
+  };
+}
+
+// after TestPrompts and TestMenus: making the schema activates the built-ins, which get prompts and menus
 /** The schema of a Visual editor with the built-ins. */
 export const schema: Schema = schemaWith();
 
@@ -147,16 +176,47 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
 /**
  * `contributions` activated in order, for their Visual-editor contributions, with an extension context made from
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
- * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
+ * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`, real commands (with the
+ * extensions' declared keys) and menus (the Visual editor's toolbar shows them).
  * The languages are a real registry (the clipboard's paste edits take part in a paste); other registrations than the
- * Visual editor's (style sheets, commands, custom editors, search providers, CodeMirror extensions) are accepted
- * and ignored.
+ * Visual editor's (style sheets, custom editors, search providers, CodeMirror extensions) are accepted and ignored.
  */
 function activate(contributions: readonly Extension[], options: TestEditorOptions = {}): VisualEditorHost {
-  const visualEditor = new VisualEditorHost({ rawBoxCodeMirrorExtensions: () => options.rawBoxCodeMirrorExtensions ?? [] });
-  const context = { visualEditor, subscriptions: [], ...testContext(options) };
-  for (const contribution of contributions) contribution.activate(context as unknown as ExtensionContext);
+  const { visualEditor, commands, workbench } = testHosts(options);
+  const { registerMenuItem, getMenuItems, onDidChangeMenu } = workbench;
+  const context = { visualEditor, subscriptions: [], ...testContext(options), commands, workbench: { registerMenuItem, getMenuItems, onDidChangeMenu, registerStyleSheet: ignored, open: () => {} } };
+  for (const contribution of contributions) {
+    commands.declareCommands(contribution.contributes?.commands);
+    commands.declareKeybindings(contribution.contributes?.keybindings);
+    contribution.activate(context as unknown as ExtensionContext);
+  }
   return visualEditor;
+}
+
+/**
+ * A Visual editor host whose toolbar shows the menus of `workbench` and runs the commands of `commands`, as the
+ * widget's does: for tests that register its contributions themselves.
+ */
+export function testHosts(options: Pick<TestEditorOptions, 'rawBoxCodeMirrorExtensions'> = {}): {
+  visualEditor: VisualEditorHost;
+  commands: CommandsHost;
+  workbench: Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'>;
+} {
+  const menus = new TestMenus();
+  // keys go to the widget's root: a detached element (jsdom), or nothing to listen to (node)
+  const root = typeof document === 'undefined' ? (new EventTarget() as HTMLElement) : document.createElement('div');
+  const commands = new CommandsHost(root);
+  const visualEditor = new VisualEditorHost({
+    rawBoxCodeMirrorExtensions: () => options.rawBoxCodeMirrorExtensions ?? [],
+    menus: {
+      getMenuItems: (menuId, context) => menus.getMenuItems(menuId, context),
+      onDidChangeMenu: menus.onDidChangeMenu,
+      executeCommand: (command, ...args) => commands.executeCommand(command, ...args),
+      keybindingLabel: (command) => commands.keybindingLabel(command),
+    },
+  });
+  const workbench = menus;
+  return { visualEditor, commands, workbench };
 }
 
 /** The parts of an extension context the built-ins use, made from `options`. */
@@ -166,8 +226,6 @@ function testContext(options: TestEditorOptions) {
   const added = async (change: FileChange) => (change.kind === 'create' && project.add(change.path, change.content), null);
   return {
     project,
-    workbench: { registerStyleSheet: ignored, open: () => {} } satisfies Partial<Workbench>,
-    commands: { registerCommand: ignored } satisfies Partial<Commands>,
     window: {
       registerCustomEditorProvider: ignored,
       registerSearchProvider: ignored,
@@ -215,9 +273,12 @@ export function builtins(): Extension[] {
   return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), blockGaps(), tabKeys(), undoRedo(), clipboard()];
 }
 
-/** A test's extension that registers `register`'s Visual-editor contributions (a feature's part, without its extension). */
-export function visualEditorExtension(register: (visualEditor: VisualEditorContributions) => { dispose(): unknown }): Extension {
-  return { id: 'test', activate: ({ visualEditor, subscriptions }) => void subscriptions.push(register(visualEditor)) };
+/**
+ * A test's extension that registers `register`'s Visual-editor contributions (a feature's part, without its
+ * extension); `context` for its commands and menu entries.
+ */
+export function visualEditorExtension(register: (visualEditor: VisualEditorContributions, context: ExtensionContext) => { dispose(): unknown }): Extension {
+  return { id: 'test', activate: (context) => void context.subscriptions.push(register(context.visualEditor, context)) };
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

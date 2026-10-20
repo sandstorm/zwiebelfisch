@@ -3,7 +3,7 @@ import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension
 import { Extension, wrappingInputRule } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import { Fragment, type Node } from '@tiptap/pm/model';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { type TypstParseContext, type TypstSerializeState } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { TASK_BOX } from './task-lists';
 
@@ -43,10 +43,28 @@ const ICONS = {
   ),
 };
 
-/** "Bulleted list" and "Numbered list", in the toolbar's `lists` group. */
-export const LIST_ACTIONS: ToolbarAction[] = [
-  { label: 'Bulleted list', keywords: ['bullet', 'unordered', 'list', '-'], icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
-  { label: 'Numbered list', keywords: ['numbered', 'ordered', 'enumerate', '123', '+'], icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
+/** "Bulleted list" and "Numbered list", in the toolbar's `3_lists` group. */
+export const LIST_BUTTONS: ChainButton[] = [
+  {
+    command: 'lists.toggleBulletList',
+    title: 'Bulleted list',
+    keywords: ['bullet', 'unordered', 'list', '-'],
+    icon: ICONS.bulletList,
+    group: '3_lists',
+    order: 10,
+    chain: (c) => c.toggleBulletList(),
+    toggled: ({ editor }) => editor.isActive('bulletList'),
+  },
+  {
+    command: 'lists.toggleOrderedList',
+    title: 'Numbered list',
+    keywords: ['numbered', 'ordered', 'enumerate', '123', '+'],
+    icon: ICONS.orderedList,
+    group: '3_lists',
+    order: 20,
+    chain: (c) => c.toggleOrderedList(),
+    toggled: ({ editor }) => editor.isActive('orderedList'),
+  },
 ];
 
 /** Tiptap's lists (with the source anchors, typed as in Typst), items and list keymap. */

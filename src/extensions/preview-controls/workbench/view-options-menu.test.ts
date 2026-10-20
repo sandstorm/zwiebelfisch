@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { PreviewViewOption } from '../../../hosts/preview/preview';
-import type { Memento, MenuItem } from '../../../hosts/workbench/workbench';
+import type { MenuItem } from '../../../hosts/commands/commands';
+import type { Memento } from '../../../hosts/workbench/workbench';
 import { registerViewOptionsMenu } from './view-options-menu';
 
 function setup(saved: Record<string, unknown> = {}) {
@@ -18,7 +19,7 @@ function setup(saved: Record<string, unknown> = {}) {
     preview: { viewOptions: () => options, setViewOptionValues: (each) => void values.push({ ...each }), onDidChangeViewOptions: changed.event },
     workbench: {
       registerMenuItem: (menuId, item) => {
-        const entry: [string, MenuItem] = [menuId, item];
+        const entry: [string, MenuItem] = [menuId, item as MenuItem];
         items.push(entry);
         return new Disposable(() => items.splice(items.indexOf(entry), 1));
       },

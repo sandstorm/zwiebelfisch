@@ -7,7 +7,8 @@ import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { createVisualEditor, TestPrompts, visualEditorExtension } from '../../../testing/testing';
 import { LabelIndex } from '../model/label-index';
-import { registerReferences } from './visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { registerLabelButtons, registerReferences } from './visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -21,7 +22,9 @@ async function setup(text: string, prompts: TestPrompts) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': text, '/other.typ': '#figure(image("x.png")) <fig:cat-mat>\n' });
-  createVisualEditor(parent, doc, { files: { '/cat.png': new Uint8Array([1]) }, prompts, contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: new LabelIndex(project), prompts }))] });
+  const options = { labels: new LabelIndex(project), prompts };
+  const labels = visualEditorExtension((visualEditor, context) => Disposable.from(registerReferences(visualEditor, options), registerLabelButtons(context, options)));
+  createVisualEditor(parent, doc, { files: { '/cat.png': new Uint8Array([1]) }, prompts, contributions: [labels] });
   await settle();
   const click = async (name: string) => {
     parent.querySelector('img.zwf-visual__rendering')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));

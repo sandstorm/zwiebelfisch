@@ -7,7 +7,8 @@ import { createVisualEditor, opened, TestPrompts, visualEditorExtension } from '
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { registerReferences } from './visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { registerLabelButtons, registerReferences } from './visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -18,9 +19,13 @@ function setup(text: string) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': text });
-  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: new LabelIndex(project), prompts: new TestPrompts() }))] });
+  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor, context) => {
+        const options = { labels: new LabelIndex(project), prompts: new TestPrompts() };
+        return Disposable.from(registerReferences(visualEditor, options), registerLabelButtons(context, options));
+      })] });
   const item = parent.querySelector<HTMLButtonElement>('[aria-label="Formatting"] button[aria-label="Add label"]')!;
-  const barItem = parent.querySelector<HTMLButtonElement>('[aria-label="Selection"] button[aria-label="Add label"]')!;
+  // in the selection's bar only where it applies
+  const barItem = () => parent.querySelector<HTMLButtonElement>('[aria-label="Selection"] button[aria-label="Add label"]');
   const draft = () => parent.querySelector<HTMLInputElement>('.ProseMirror input[aria-label="New label"]');
   const key = (input: HTMLInputElement, name: string) => input.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
   /** Starts a new label, types `name` into the draft tag and presses Enter; returns what the field started with. */
@@ -84,17 +89,17 @@ describe('Add label', () => {
   it('the selection bar has it where the selection\'s block can take a new label, and nothing where it has one', () => {
     const { doc, view, barItem, draft, key } = setup('= Intro\n\n= Method <sec:method>\n');
     view.reveal(SourceRange.of({ from: 2, to: 5 }));
-    expect(barItem.hidden).toBe(false);
-    barItem.click();
+    expect(barItem()).not.toBeNull();
+    barItem()!.click();
     const input = draft()!;
     expect(input.value).toBe('sec:');
     input.value = 'sec:intro';
     key(input, 'Enter');
     expect(doc.text).toBe('= Intro <sec:intro>\n\n= Method <sec:method>\n');
     view.reveal(SourceRange.of({ from: 2, to: 5 }));
-    expect(barItem.hidden).toBe(true);
+    expect(barItem()).toBeNull();
     const method = doc.text.indexOf('Method');
     view.reveal(SourceRange.of({ from: method, to: method + 3 }));
-    expect(barItem.hidden).toBe(true);
+    expect(barItem()).toBeNull();
   });
 });

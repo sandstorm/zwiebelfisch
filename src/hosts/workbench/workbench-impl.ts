@@ -6,7 +6,7 @@ import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { User } from '../../core/user/user';
-import { CommandsHost } from '../commands/commands';
+import { CommandsHost, keyLabel } from '../commands/commands';
 import { LanguagesHost } from '../languages/languages';
 import { Preview } from '../preview/preview';
 import { ScmHost } from '../scm/scm';
@@ -25,7 +25,8 @@ import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
 import { DocumentEditors } from './document-editors/document-editors';
 import css from './workbench.css?inline';
-import type { Extension, Workbench, MenuItem, MenuContext, OpenOptions, SidePanelOptions, SidePanel, WorkbenchOptions } from './workbench';
+import type { MenuItem } from '../commands/commands';
+import type { Extension, Workbench, OpenOptions, SidePanelOptions, SidePanel, WorkbenchOptions } from './workbench';
 
 /**
  * The frame of the widget on `host`: shows the project's files in custom editors (Typst files in the Visual and the
@@ -57,10 +58,16 @@ export class WorkbenchHost implements Workbench {
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
   readonly #sourceEditors = new SourceEditorHost();
-  /** Its raw boxes' code takes the CodeMirror contributions (`editor: 'rawBox'`, as Typst in its file). */
+  /** Its raw boxes' code takes the CodeMirror contributions (`editor: 'rawBox'`, as Typst in its file); its toolbar the menus. */
   readonly #visualEditor = new VisualEditorHost({
     rawBoxCodeMirrorExtensions: ({ document }) =>
       this.#sourceEditors.codeMirrorExtensionsFor({ editor: 'rawBox', languageId: 'typst', path: () => this.project.pathOf(document) ?? null, document }),
+    menus: {
+      getMenuItems: (menuId, context) => this.#menus.items(menuId, context),
+      onDidChangeMenu: this.#menus.onDidChange,
+      executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
+      keybindingLabel: (command) => this.commands.keybindingLabel(command),
+    },
   });
   readonly #preview: Preview;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
@@ -207,11 +214,11 @@ export class WorkbenchHost implements Workbench {
     });
   }
 
-  registerMenuItem(menuId: string, item: MenuItem): Disposable {
+  registerMenuItem<C extends object>(menuId: string, item: MenuItem<C>): Disposable {
     return this.#menus.register(menuId, item);
   }
 
-  getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[] {
+  getMenuItems<C extends object>(menuId: string, context?: C): readonly MenuItem<C>[] {
     return this.#menus.items(menuId, context);
   }
 
@@ -257,7 +264,7 @@ export class WorkbenchHost implements Workbench {
       onDidChangeActiveFile: this.#shown.event,
       activeTextEditor: () => this.#documentEditors.activeTextEditor,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
-      menuItems: (menuId, context) => this.#menus.items(menuId, context).map((item) => ({ ...item, keybinding: this.commands.keybindingLabel(item.command) })),
+      menuItems: (menuId, context) => this.#menus.items(menuId, context).map((item) => ({ ...item, keybinding: this.commands.keybindingLabel(item.command) ?? (item.keybinding && keyLabel(item.keybinding)) })),
       executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
     });
     this.#documentEditors.register(window);

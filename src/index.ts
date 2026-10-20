@@ -13,8 +13,8 @@ export type { User } from './core/user/user';
 export { type ElementLocation, HTML_ELEMENT_ATTRIBUTE, type HtmlFile, PageIndex, type PdfEntry, Pt } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
-export type { ExtensionContext, ExtensionContributions, Memento, MenuContext, MenuItem, OpenOptions, SidePanel, SidePanelOptions, Extension, Workbench } from './hosts/workbench/workbench';
-export type { Command, Commands } from './hosts/commands/commands';
+export type { ExtensionContext, ExtensionContributions, Memento, OpenOptions, SidePanel, SidePanelOptions, Extension, Workbench } from './hosts/workbench/workbench';
+export type { Command, Commands, MenuContext, MenuItem } from './hosts/commands/commands';
 export type {
   CustomDocument,
   CustomEditorOptions,
@@ -68,12 +68,13 @@ export type {
 } from './hosts/preview/preview';
 export { SOURCE_EDITOR, type CodeMirrorContext, type CodeMirrorSelector, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {
-  ToolbarAction,
   Anchor,
+  ChainButton,
   CompletionContext,
   CompletionItem,
   CompletionItemProvider,
   CompletionTrigger,
+  FloatingBar,
   RawBoxContext,
   RawBoxExtension,
   RawBoxPicture,
@@ -81,15 +82,13 @@ export type {
   RawBoxRendererProvider,
   SourceHighlight,
   SourceHighlightProvider,
+  Submenu,
   TextStyle,
   TextStyleProvider,
-  ToolbarContext,
-  ToolbarControl,
-  ToolbarGroup,
-  ToolbarItem,
   TypstNodeSpec,
   VisualEditorContext,
   VisualEditorContributions,
+  VisualEditorMenuContext,
 } from './hosts/visual-editor/visual-editor';
 export type {
   Around,
@@ -102,7 +101,7 @@ export type {
   TypstParseRules,
   TypstSerializeState,
 } from './hosts/visual-editor/typst-conversion/typst-conversion';
-export { VISUAL_EDITOR, insertTypst, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
+export { VISUAL_EDITOR, chainCommand, insertTypst, registerChainButton, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
 export {
   callArguments,

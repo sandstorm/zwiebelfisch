@@ -8,8 +8,8 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from './core/typst-document/typst-document';
 import {
-  callArguments, decodeString, namedArgument, quote, trailingContent, withHash,
-  type ToolbarItem, type Extension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
+  callArguments, decodeString, namedArgument, quote, registerChainButton, trailingContent, withHash,
+  type ChainButton, type Extension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
 } from './index';
 import { createVisualEditor } from './testing/testing';
 
@@ -95,10 +95,12 @@ const CALLOUT: TypstNodeSpec = {
 };
 
 /** "Callout" in the Insert menu: the selected blocks into a callout. */
-const INSERT_CALLOUT: ToolbarItem = {
-  group: 'insert',
+const INSERT_CALLOUT: ChainButton = {
+  command: 'callout.insert',
+  title: 'Callout',
+  icon: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor"/></svg>',
   order: 80,
-  action: { label: 'Callout', icon: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor"/></svg>', run: (c) => c.wrapIn('callout') },
+  chain: (c) => c.wrapIn('callout'),
 };
 
 const CSS = '.callout { border-left: 3px solid var(--zwf-accent); padding: 4px 12px; } .callout input { font-weight: 600; border: none; }';
@@ -106,8 +108,9 @@ const CSS = '.callout { border-left: 3px solid var(--zwf-accent); padding: 4px 1
 export function callout(): Extension {
   return {
     id: 'callout',
-    activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), visualEditor.registerToolbarItem(INSERT_CALLOUT));
+    activate(context) {
+      const { workbench, visualEditor, subscriptions } = context;
+      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
     },
   };
 }

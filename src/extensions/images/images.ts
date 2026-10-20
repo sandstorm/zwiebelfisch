@@ -26,14 +26,14 @@ export function images(): Extension {
   return {
     id: 'images',
     activate(context) {
-      const { project, workspace, window, languages, workbench, preview, visualEditor, subscriptions } = context;
+      const { project, workspace, window, languages, workbench, preview, subscriptions } = context;
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyEdit: (change) => workspace.applyEdit(change) });
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
         window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops(project)),
-        registerImages(visualEditor, {
+        registerImages(context, {
           assets: (document) => projectImages.forDocument(document).assets,
           imageUrls: (document) => projectImages.forDocument(document).urls,
           prompts: window,

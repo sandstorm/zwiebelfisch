@@ -7,7 +7,7 @@ import { after, parseTypst as parseTypstWith, schemaWith, visualEditorExtension 
 import { registerMarginNotes } from '../margin-notes';
 import { SourceOffset } from '../../../../core/typst-document/typst-document';
 
-const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} }))] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor))] });
 const parseTypst = (source: string) => parseTypstWith(source, schema);
 
 const SOURCE = 'A #margin-note[key claim][first] and b#margin-note[second].\n\n#margin-note[#margin-note[x][inner]][outer] y\n';

@@ -1,5 +1,5 @@
 import type { Extension } from '../../hosts/workbench/workbench';
-import { insertDisplayMath, insertInlineMath, MathInput } from './visual-editor/visual-editor';
+import { MathInput, registerInsertMath } from './visual-editor/visual-editor';
 
 /**
  * Typing math in the Visual editor.
@@ -13,12 +13,8 @@ import { insertDisplayMath, insertInlineMath, MathInput } from './visual-editor/
 export function math(): Extension {
   return {
     id: 'math',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerTiptapExtension(() => MathInput),
-        visualEditor.registerToolbarItem({ group: 'insert', order: 44, create: ({ editor }) => insertInlineMath(editor) }),
-        visualEditor.registerToolbarItem({ group: 'insert', order: 46, create: ({ editor }) => insertDisplayMath(editor) }),
-      );
+    activate(context) {
+      context.subscriptions.push(context.visualEditor.registerTiptapExtension(() => MathInput), registerInsertMath(context));
     },
   };
 }

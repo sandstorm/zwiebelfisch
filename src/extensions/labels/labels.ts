@@ -2,7 +2,7 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';
 import { renamePastedLabels } from './model/pasted-labels';
-import { registerReferences } from './visual-editor/visual-editor';
+import { registerLabelButtons, registerReferences } from './visual-editor/visual-editor';
 import { LabelLinks } from './workbench/label-links';
 import { labelSearch } from './workbench/label-search';
 
@@ -33,6 +33,7 @@ export function labels(): Extension {
           { providedPasteEditKinds: [] },
         ),
         registerReferences(context.visualEditor, { labels: index, prompts: context.window }),
+        registerLabelButtons(context, { labels: index, prompts: context.window }),
       );
     },
   };

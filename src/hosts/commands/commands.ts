@@ -1,7 +1,8 @@
 import type { Disposable } from '../../core/disposable/disposable';
 
 /**
- * commands and key bindings (VS Code's `commands` namespace).
+ * commands and key bindings (VS Code's `commands` namespace), and the menu entries that run commands
+ * (`MenuItem`, registered with `workbench.registerMenuItem`).
  *
  * A command is how one extension offers an action to the others: it registers a handler
  * under an id, and anyone who knows the id runs it, so it's called from:
@@ -82,6 +83,53 @@ export interface Command {
   /** The arguments it is run with. */
   readonly arguments?: readonly unknown[];
 }
+
+/**
+ * One entry of a menu (VS Code's `contributes.menus` entry): a command by its id, shown while `when` holds. `C`: the
+ * context of the menu it is in (what `when`, `enabled` and `toggled` are asked with).
+ */
+export interface MenuItem<C extends object = MenuContext> {
+  /** The command the entry runs (`commands.executeCommand`), with the arguments of the menu it is in. */
+  readonly command: string;
+  /** What the entry says; default: the command id. */
+  readonly title?: string;
+  /** What a button says in place of an icon, where the menu shows one without (VS Code's `shortTitle`: `25%`); default: the title. */
+  readonly shortTitle?: string;
+  /** An SVG icon (markup drawn in `currentColor`) before the title, where the menu shows icons (the tab bar). */
+  readonly icon?: string;
+  /**
+   * Whether the entry shows, given the context the menu is shown in (e.g. `(context) => context.resourceKind ===
+   * 'folder'`); default: always. Asked each time the menu is shown.
+   */
+  readonly when?: (context: C) => boolean;
+  /**
+   * Whether the entry can be chosen now (VS Code's `enablement`), where the menu shows entries disabled (the Visual
+   * editor's); default: always. Asked each time the menu is shown.
+   */
+  readonly enabled?: (context: C) => boolean;
+  /**
+   * Whether the entry is checked (VS Code's `toggled`), for an entry that turns something on or off; asked each time
+   * the menu is shown. A menu shows it as a check mark (`role="menuitemcheckbox"`), a toolbar as pressed; default: not
+   * a checkbox.
+   */
+  readonly toggled?: (context: C) => boolean;
+  /**
+   * A key of the editor showing the menu that does the same (its own keymap's, `Mod+B`), shown with the entry while the
+   * command has no key binding of its own (`registerKeybinding`).
+   */
+  readonly keybinding?: string;
+  /** What it belongs to, where a menu shows that (the Visual editor's text style menu: a section's title). */
+  readonly category?: string;
+  /** Other words it is found by where entries are searched (the slash commands): `['grid']` for a table. */
+  readonly keywords?: readonly string[];
+  /** Entries are grouped by this: `navigation` first, the others by name, a separator between groups; default ''. */
+  readonly group?: string;
+  /** The place in its group (lower first; equal: registration order); default 0. */
+  readonly order?: number;
+}
+
+/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ activeCustomEditorId: 'sourceEditor', resource: '/main.typ' }`. */
+export type MenuContext = Readonly<Record<string, unknown>>;
 
 export { CommandsHost } from './commands-impl';
 export { keyLabel } from './commands-helpers';

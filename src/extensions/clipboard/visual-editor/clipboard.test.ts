@@ -10,7 +10,6 @@ import { starterKitPart, type TypstMarkSpec } from '../../../hosts/visual-editor
 import type { PasteChoice, PasteChoices } from '../paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from '../pasted-typst';
 import { typstClipboard } from './clipboard';
-import { PASTE_BAR, pasteChip } from './paste-as';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
@@ -42,8 +41,6 @@ function setup(text: string, choices: PasteChoices = UNSEEN, provider?: Document
   host.registerMark(STRONG);
   const textOf = () => ({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: doc.text });
   host.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf, choices }));
-  host.registerToolbarGroup(PASTE_BAR);
-  host.registerToolbarItem(pasteChip(choices));
   const view = new VisualEditor(parent, doc, host);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   const select = (from: number, to = from) => view.reveal(SourceRange.of({ from, to }));

@@ -2,21 +2,20 @@
 import type { Anchor } from '../visual-editor';
 
 /**
- * A small toolbar floating just above an anchor in the Visual editor's text (the selection, a table): the toolbar's
- * `floating` groups.
+ * A small toolbar floating just above an anchor in the Visual editor's text (the selection, a table): a floating bar's
+ * buttons (`registerFloatingBar`).
  *
  * It sits in `container` (the scrolling text column), so it scrolls with the text, centred over the anchor and kept
  * inside the container. Mouse presses on it keep the focus and the selection in the text.
  *
- * @internal Extensions get one through `visualEditor.registerToolbarGroup` (`kind: 'floating'`).
+ * @internal Extensions get one through `visualEditor.registerFloatingBar`.
  */
-export class FloatingBar {
+export class FloatingBarView {
   readonly element: HTMLElement;
 
   constructor(
     private readonly container: HTMLElement,
     label: string,
-    buttons: HTMLElement[],
   ) {
     const doc = container.ownerDocument;
     this.element = doc.createElement('div');
@@ -27,8 +26,13 @@ export class FloatingBar {
     this.element.addEventListener('mousedown', (event) => {
       if ((event.target as HTMLElement).closest('button')) event.preventDefault();
     });
-    this.element.append(...buttons);
     container.append(this.element);
+  }
+
+  /** Puts `entries` in the bar, unless they are the ones there. */
+  setEntries(entries: readonly HTMLElement[]): void {
+    const shown = this.element.children;
+    if (shown.length !== entries.length || entries.some((entry, i) => entry !== shown[i])) this.element.replaceChildren(...entries);
   }
 
   show(anchor: Anchor): void {

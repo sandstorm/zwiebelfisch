@@ -1,6 +1,7 @@
 // "Insert diagram" in the Visual editor's Insert menu (and so among the slash commands). See diagrams in ../diagrams.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { DIAGRAM_EDITOR, diagramFigure } from '../model/model';
 import { createDiagram } from '../workbench/new-diagram';
@@ -10,25 +11,28 @@ import { createDiagram } from '../workbench/new-diagram';
  * document), creates the empty diagram (as "New diagram…"), inserts `#figure(image("…"), caption: [ ])` after the
  * cursor's block and opens the diagram in the diagram editor, where it is drawn.
  */
-export function insertDiagram(context: InsertContext): ToolbarItem {
-  return {
-    group: 'insert',
-    order: 12,
-    create: (toolbar) => ({
-      label: 'Insert diagram',
+export function registerInsertDiagram(context: InsertContext): Disposable {
+  return Disposable.from(
+    context.commands.registerCommand(INSERT_DIAGRAM, (menu: VisualEditorMenuContext) => insert(context, menu)),
+    context.workbench.registerMenuItem('visualEditor/insert', {
+      command: INSERT_DIAGRAM,
+      title: 'Insert diagram',
       icon: ICON,
       keywords: ['drawio', 'draw.io', 'diagrams.net', 'drawing', 'chart', 'figure'],
-      click: () => void insert(context, toolbar),
+      order: 12,
     }),
-  };
+  );
 }
 
 /** What inserting a diagram uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench' | 'commands'>;
+
+/** "Insert diagram" (the command's argument: the Visual editor menu context). */
+const INSERT_DIAGRAM = 'diagrams.insertDiagram';
 
 const ICON = svg('<rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v9H14"/>');
 
-async function insert(context: InsertContext, { editor, document }: ToolbarContext): Promise<void> {
+async function insert(context: InsertContext, { editor, document }: VisualEditorMenuContext): Promise<void> {
   const { project, workbench } = context;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);

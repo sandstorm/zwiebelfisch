@@ -3,7 +3,7 @@
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { CommandsHost } from '../../commands/commands';
 import type { ContextMenuOptions } from '../../window/window';
-import type { MenuContext } from '../workbench';
+import type { MenuContext } from '../../commands/commands';
 import type { Menus } from './menus';
 
 /**

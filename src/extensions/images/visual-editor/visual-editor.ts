@@ -1,15 +1,17 @@
 // Images in the Visual editor. See images in ../images.ts.
-import { Node } from '@tiptap/core';
+import { Extension, Node, type Editor } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference } from '../../../core/paths/paths';
 import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type RawBoxRenderer, type TypstNodeSpec, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { imageFilePastes, insertImages } from './image-insertion';
 import { imagePath } from './image-syntax';
-import { IMAGE_BAR, imageBarItems } from './image-bar';
+import { IMAGE_BAR, registerImageBarButtons } from './image-bar';
 import { ImageTools } from './image-tools';
 import { IMAGE_ACCEPT } from '../model/image-files';
 
@@ -21,12 +23,24 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * - "Insert image": a path, or the project's images and uploads
  * - image files pasted into the text, uploaded and inserted
  */
-export function registerImages(visualEditor: VisualEditorContributions, options: ImagesOptions): Disposable {
+export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 'commands' | 'workbench'>, options: ImagesOptions): Disposable {
+  const { visualEditor, commands, workbench } = context;
+  // each editor's file picker, for "Upload image…"
+  const pickers = new WeakMap<Editor, HTMLInputElement>();
   return Disposable.from(
     visualEditor.registerNode(imageSpec()),
-    visualEditor.registerToolbarGroup(IMAGE_BAR),
-    ...imageBarItems(options.prompts).map((item) => visualEditor.registerToolbarItem(item)),
-    visualEditor.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
+    visualEditor.registerFloatingBar(IMAGE_BAR),
+    registerImageBarButtons(context, options.prompts),
+    visualEditor.registerTiptapExtension((editor) => imageUploads(options.assets(editor.document), options.prompts, pickers)),
+    commands.registerCommand(INSERT_IMAGE, ({ editor, document }: VisualEditorMenuContext) => chooseImage(editor, options.assets(document), options.prompts, pickers.get(editor))),
+    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+      command: INSERT_IMAGE,
+      title: 'Insert image',
+      icon: ICON,
+      keywords: ['picture', 'photo', 'figure'],
+      order: 10,
+      enabled: ({ editor }) => editor.can().insertContent({ type: 'image' }),
+    }),
     // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
     visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
     visualEditor.registerRawBoxExtension((box) => (box.node().type.name === 'image' ? new ImageTools(box) : null)),
@@ -102,42 +116,48 @@ const Image = Node.create({
   },
 });
 
+/** "Insert image" (the command's argument: the Visual editor menu context). */
+const INSERT_IMAGE = 'images.insertImage';
+
 /**
- * "Insert image": a quick pick of the project's images, "Upload image…" and "Enter a path…" (an input box). Image
- * files pasted into the text are uploaded and inserted too; refused uploads are error messages.
+ * What an editor needs for "Insert image": its file picker (in `pickers`, for "Upload image…"), in the editor's
+ * frame; image files pasted into the text are uploaded and inserted too. Refused uploads are error messages.
  */
-function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): ToolbarAction {
-  const { editor, root } = toolbar;
-  const upload = async (files: File[]) => {
-    const { paths, errors } = await uploadImages(assets, files);
-    if (paths.length > 0) insertImages(editor, paths);
-    for (const error of errors) void prompts.showErrorMessage(error);
-  };
-  const picker = root.appendChild(imagePicker(root.ownerDocument, (files) => void upload(files)));
-  const pastes = imageFilePastes((files) => void upload(files));
-  editor.registerPlugin(pastes);
-  toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(pastes.spec.key!), picker.remove())));
-  const enterPath = async () => {
+function imageUploads(assets: ImageAssets, prompts: ImagePrompts, pickers: WeakMap<Editor, HTMLInputElement>): Extension {
+  return Extension.create({
+    name: 'typstImageUploads',
+    addProseMirrorPlugins() {
+      const editor = this.editor;
+      const upload = async (files: File[]) => {
+        const { paths, errors } = await uploadImages(assets, files);
+        if (paths.length > 0) insertImages(editor, paths);
+        for (const error of errors) void prompts.showErrorMessage(error);
+      };
+      // a plugin view lives exactly as long as the editor's view
+      const picker = new Plugin({
+        view: (view) => {
+          const input = (view.dom.parentElement ?? view.dom).appendChild(imagePicker(view.dom.ownerDocument, (files) => void upload(files)));
+          pickers.set(editor, input);
+          return { destroy: () => input.remove() };
+        },
+      });
+      return [imageFilePastes((files) => void upload(files)), picker];
+    },
+  });
+}
+
+/** "Insert image": a quick pick of the project's images, "Upload image…" (the editor's `picker`) and "Enter a path…" (an input box). */
+async function chooseImage(editor: Editor, assets: ImageAssets, prompts: ImagePrompts, picker: HTMLInputElement | undefined): Promise<void> {
+  const images: ImageChoice[] = assets.list().map((path) => ({ label: path, path }));
+  const choice = await prompts.showQuickPick([...images, UPLOAD, ENTER_PATH], { title: 'Insert image', placeHolder: 'Choose an image, upload one or enter a path' });
+  // the picker opens within the user's gesture (choosing the entry), as browsers require
+  if (choice === UPLOAD) picker?.click();
+  else if (choice === ENTER_PATH) {
     const path = await prompts.showInputBox({ title: 'Insert image', prompt: 'Image path', placeHolder: 'images/figure.png' });
     if (path?.trim()) insertImages(editor, [PathReference.of(path.trim())]);
     else editor.commands.focus();
-  };
-  const choose = async () => {
-    const images: ImageChoice[] = assets.list().map((path) => ({ label: path, path }));
-    const choice = await prompts.showQuickPick([...images, UPLOAD, ENTER_PATH], { title: 'Insert image', placeHolder: 'Choose an image, upload one or enter a path' });
-    // the picker opens within the user's gesture (choosing the entry), as browsers require
-    if (choice === UPLOAD) picker.click();
-    else if (choice === ENTER_PATH) await enterPath();
-    else if (choice?.path) insertImages(editor, [choice.path]);
-    else editor.commands.focus();
-  };
-  return {
-    label: 'Insert image',
-    icon: ICON,
-    keywords: ['picture', 'photo', 'figure'],
-    run: (c) => c.insertContent({ type: 'image' }),
-    click: () => void choose(),
-  };
+  } else if (choice?.path) insertImages(editor, [choice.path]);
+  else editor.commands.focus();
 }
 
 /** An entry of the "Insert image" pick: one of the project's images, or what else to do. */

@@ -1,9 +1,12 @@
 // Stateless helpers of the Visual editor host, for whoever holds a Tiptap editor of it. See visual-editor.ts.
-import type { Editor } from '@tiptap/core';
+import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, type Selection } from '@tiptap/pm/state';
 import { SourceOffset, type TextChange } from '../../core/typst-document/typst-document';
 import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from './typst-conversion/typst-conversion';
+import { Disposable } from '../../core/disposable/disposable';
+import type { Commands, MenuItem } from '../commands/commands';
+import type { ChainButton, VisualEditorMenuContext } from './visual-editor';
 
 /**
  * Inserts what Typst `source` is read as in the Tiptap `editor` (as the Visual editor reads any Typst: a figure of an
@@ -74,4 +77,37 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
  */
 export function svg(body: string): string {
   return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}
+
+/**
+ * A Visual editor menu entry's command from a Tiptap chain: `run` (the command's handler) runs `chain` on the menu's
+ * editor, focused; `enabled` (the entry's) is its dry run there, so the button is disabled where the chain cannot
+ * apply.
+ *
+ * @helper Stateless: no registry, no per-widget state.
+ */
+export function chainCommand(chain: (chain: ChainedCommands) => ChainedCommands): {
+  run(context: VisualEditorMenuContext): boolean;
+  enabled(context: VisualEditorMenuContext): boolean;
+} {
+  return {
+    run: ({ editor }) => chain(editor.chain().focus()).run(),
+    enabled: ({ editor }) => chain(editor.can().chain()).run(),
+  };
+}
+
+/**
+ * Registers `button` as an entry of the Visual editor menu `menuId` and its command (`chainCommand(button.chain)`),
+ * until disposed: for a button that only runs a Tiptap chain (Bold, Undo, Insert table).
+ *
+ * @helper Stateless: no registry, no per-widget state.
+ */
+export function registerChainButton(
+  { commands, workbench }: { commands: Pick<Commands, 'registerCommand'>; workbench: { registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>): Disposable } },
+  menuId: string,
+  button: ChainButton,
+): Disposable {
+  const { chain, ...item } = button;
+  const { run, enabled } = chainCommand(chain);
+  return Disposable.from(commands.registerCommand(item.command, run), workbench.registerMenuItem(menuId, { ...item, enabled }));
 }

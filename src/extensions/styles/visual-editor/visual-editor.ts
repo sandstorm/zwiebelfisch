@@ -6,7 +6,8 @@ import { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type TextStyle, type TextStyleProvider, type ToolbarAction, type ToolbarContext, type ToolbarGroup, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type Submenu, type TextStyle, type TextStyleProvider, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext, Workbench } from '../../../hosts/workbench/workbench';
 import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
@@ -23,7 +24,8 @@ import { StyledBlock, TypstStyleMark } from './style-nodes';
  * used. The inline styles are also the "Styles" menu of the bar above a text
  * selection, toggled there as in the text style menu.
  */
-export function registerCustomStyles(visualEditor: VisualEditorContributions, options: StylesOptions): Disposable {
+export function registerCustomStyles(context: Pick<ExtensionContext, 'visualEditor' | 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, options: StylesOptions): Disposable {
+  const { visualEditor } = context;
   const declared = declaredStyles(options.styles);
   // a style declared or removed: every Visual editor parses its document again
   const onDidChange = options.styles.onDidChange;
@@ -48,8 +50,8 @@ export function registerCustomStyles(visualEditor: VisualEditorContributions, op
       },
     }),
     visualEditor.registerTextStyleProvider(textStyles(options)),
-    visualEditor.registerToolbarGroup(INLINE_STYLES_MENU),
-    visualEditor.registerToolbarItem({ group: INLINE_STYLES_MENU.id, provideActions: (toolbar) => inlineStyleActions(options.styles, toolbar) }),
+    visualEditor.registerSubmenu(INLINE_STYLES_MENU),
+    registerInlineStyleButtons(context, options.styles),
   );
 }
 
@@ -57,7 +59,7 @@ export function registerCustomStyles(visualEditor: VisualEditorContributions, op
 const STYLE_ICON = svg('<path d="m7 15 5-11 5 11"/><path d="M9 11h6"/><path d="M5 20h14"/>');
 
 /** "Styles ▾" in the bar above a text selection, after the marks: the inline styles (left out while there are none). */
-const INLINE_STYLES_MENU: ToolbarGroup = { kind: 'menu', id: 'inline-styles', bar: 'selection', order: 40, label: 'Styles', icon: () => STYLE_ICON };
+const INLINE_STYLES_MENU: Submenu = { id: 'visualEditor/inlineStyles', parent: 'visualEditor/selection', order: 40, label: 'Styles', icon: () => STYLE_ICON };
 
 export interface StylesOptions {
   /** The project's styles: their calls show as styled, editable text. */
@@ -103,17 +105,39 @@ export function registerStyleApplier(visualEditor: VisualEditorContributions, so
 }
 
 /**
- * The inline styles as buttons of the Styles menu in the selection bar: pressed where the selection has the style; a
- * click toggles it as the text style menu's entry does.
+ * The inline styles as entries of the Styles menu in the selection bar, each with its command, anew whenever the
+ * styles change: pressed where the selection has the style; a click toggles it as the text style menu's entry does.
  */
-function inlineStyleActions(source: ProjectStyles, toolbar: ToolbarContext): ToolbarAction[] {
-  return source
-    .styles()
-    .filter((style) => style.kind === 'inline')
-    .map((style) => {
-      const entry = textStyle(style, toolbar, source);
-      return { label: entry.label, icon: STYLE_ICON, enabled: entry.enabled, active: entry.isActive, click: () => void applyTextStyle(entry, toolbar.editor) };
-    });
+function registerInlineStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, source: ProjectStyles): Disposable {
+  const register = () =>
+    Disposable.from(
+      ...source
+        .styles()
+        .filter((style) => style.kind === 'inline')
+        .map((style) => {
+          const command = `styles.toggleInlineStyle.${style.name}`;
+          const entry = (context: VisualEditorMenuContext) => textStyle(style, context, source);
+          return Disposable.from(
+            commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.editor)),
+            workbench.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, {
+              command,
+              title: style.label,
+              icon: STYLE_ICON,
+              enabled: (context) => entry(context).enabled?.(context.editor) ?? true,
+              toggled: (context) => entry(context).isActive?.(context.editor) ?? false,
+            }),
+          );
+        }),
+    );
+  let registered = register();
+  const subscription = source.onDidChange(() => {
+    registered.dispose();
+    registered = register();
+  });
+  return new Disposable(() => {
+    subscription.dispose();
+    registered.dispose();
+  });
 }
 
 /** Applies a text style menu `entry` to the selection of `tiptap` (with what follows, the import); false where it does not apply. */

@@ -1,7 +1,7 @@
 // What the outline extension contributes to the Visual editor. See outline in ../outline.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 
 const Outline = Node.create({
   name: 'outline',
@@ -35,4 +35,11 @@ export const OUTLINE: TypstNodeSpec = {
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');
 
 /** "Table of contents" in the Insert menu: an `#outline()` block. */
-export const INSERT_OUTLINE: ToolbarAction = { label: 'Table of contents', icon: ICON, keywords: ['outline', 'toc'], run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };
+export const INSERT_OUTLINE: ChainButton = {
+  command: 'outline.insertOutline',
+  title: 'Table of contents',
+  icon: ICON,
+  keywords: ['outline', 'toc'],
+  order: 30,
+  chain: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }),
+};

@@ -81,7 +81,7 @@ contributes: {
 
 === Menus <architecture-workbench-menus>
 
-A button is a menu entry: `workbench.registerMenuItem(menuId, item)`; `window.showContextMenu(menuId, { anchor, title, context, args })` pops a menu up (its command gets `args`; nothing shows while no entry applies). An entry with `toggled?(context)` is a checkbox. `when` and `toggled` are asked each time the menu shows; `getMenuItems` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" without any).
+A button is a menu entry: `workbench.registerMenuItem(menuId, item)`; `window.showContextMenu(menuId, { anchor, title, context, args })` pops a menu up (its command gets `args`; nothing shows while no entry applies). An entry with `toggled?(context)` is a checkbox. `when` and `toggled` (and `enabled`, where the menu shows entries disabled) are asked each time the menu shows, with the context the menu documents (`MenuItem<C>`; the Visual editor's: @architecture-visual-editor-toolbar); `getMenuItems` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" without any). `shortTitle`, `keybinding` (the editor's own key, shown while the command has no binding), `category` and `keywords` serve menus that show or search them. The types live with the commands (`MenuItem`, `MenuContext` in `hosts/commands`).
 
 #table(
   columns: 4,

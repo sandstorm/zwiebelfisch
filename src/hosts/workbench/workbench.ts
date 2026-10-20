@@ -4,7 +4,7 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { User } from '../../core/user/user';
-import type { CommandContribution, Commands, KeybindingContribution } from '../commands/commands';
+import type { CommandContribution, Commands, KeybindingContribution, MenuContext, MenuItem } from '../commands/commands';
 import type { LanguageContribution, Languages } from '../languages/languages';
 import type { PreviewContributions } from '../preview/preview';
 import type { Scm } from '../scm/scm';
@@ -147,44 +147,18 @@ export interface Workbench {
    * `resource` (the shown file); no arguments); `workbench/rail/left` and `workbench/rail/right`, a button per item
    * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
    * arguments). Other ids are menus that extensions show (`window.showContextMenu`), documented there (the file
-   * panel: `file/newFile`, `explorer/context`).
+   * panel: `file/newFile`, `explorer/context`; the Visual editor's: `visualEditor/toolbar` and the others its host
+   * documents). `C` is the context the menu is shown in, as that menu documents it.
    */
-  registerMenuItem(menuId: string, item: MenuItem): Disposable;
-  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a side panel or editor that shows that menu. */
-  getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[];
+  registerMenuItem<C extends object = MenuContext>(menuId: string, item: MenuItem<C>): Disposable;
+  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for whatever shows that menu (or searches it). */
+  getMenuItems<C extends object = MenuContext>(menuId: string, context?: C): readonly MenuItem<C>[];
   /** Items of a menu (its id) were registered or disposed. */
   readonly onDidChangeMenu: Event<string>;
 
   /** Whether the user works in the editing area (the focus is inside it). */
   isEditorFocused(): boolean;
 }
-
-/** One entry of a menu (VS Code's `contributes.menus` entry): a command by its id, shown while `when` holds. */
-export interface MenuItem {
-  /** The command the entry runs (`commands.executeCommand`), with the arguments of the menu it is in. */
-  readonly command: string;
-  /** What the entry says; default: the command id. */
-  readonly title?: string;
-  /** An SVG icon (markup drawn in `currentColor`) before the title, where the menu shows icons (the tab bar). */
-  readonly icon?: string;
-  /**
-   * Whether the entry shows, given the context the menu is shown in (e.g. `(context) => context.resourceKind ===
-   * 'folder'`); default: always. Asked each time the menu is shown.
-   */
-  readonly when?: (context: MenuContext) => boolean;
-  /**
-   * Whether the entry is checked (VS Code's `toggled`), for an entry that turns something on or off; asked each time
-   * the menu is shown. A menu shows it as a check mark (`role="menuitemcheckbox"`); default: not a checkbox.
-   */
-  readonly toggled?: (context: MenuContext) => boolean;
-  /** Entries are grouped by this: `navigation` first, the others by name, a separator between groups; default ''. */
-  readonly group?: string;
-  /** The place in its group (lower first; equal: registration order); default 0. */
-  readonly order?: number;
-}
-
-/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ activeCustomEditorId: 'sourceEditor', resource: '/main.typ' }`. */
-export type MenuContext = Readonly<Record<string, unknown>>;
 
 export interface OpenOptions {
   /** A range of the file to reveal (offsets into its text). */

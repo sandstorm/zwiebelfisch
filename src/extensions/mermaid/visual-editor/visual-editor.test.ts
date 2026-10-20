@@ -8,7 +8,7 @@ import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { SaveDialogOptions } from '../../../hosts/window/window';
 import { createVisualEditor } from '../../../testing/testing';
 import { STARTER_FLOWCHART } from '../model/mermaid-figure';
-import { insertMermaid, type InsertContext } from './visual-editor';
+import { registerInsertMermaid, type InsertContext } from './visual-editor';
 
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -30,8 +30,8 @@ function setup(text: string, answer: string | undefined) {
     contributions: [
       {
         id: 'test',
-        activate: ({ visualEditor, subscriptions }) =>
-          subscriptions.push(visualEditor.registerToolbarItem(insertMermaid(context))),
+        activate: ({ commands, workbench, subscriptions }) =>
+          subscriptions.push(registerInsertMermaid({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } })),
       },
     ],
   });

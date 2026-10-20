@@ -1,7 +1,8 @@
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';
-import { BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';
-import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lists';
+import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
+import { BULLET_LIST, LIST_BUTTONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';
+import { TASK_ITEM, TASK_LIST, TASK_LIST_BUTTON } from './visual-editor/task-lists';
 
 /**
  * Bulleted, numbered and task lists in the Visual editor, with their toolbar buttons.
@@ -11,7 +12,8 @@ import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lis
 export function lists(): Extension {
   return {
     id: 'lists',
-    activate({ workbench, visualEditor, subscriptions }) {
+    activate(context) {
+      const { workbench, visualEditor, subscriptions } = context;
       subscriptions.push(workbench.registerStyleSheet(css));
       subscriptions.push(
         visualEditor.registerNode(BULLET_LIST),
@@ -19,8 +21,7 @@ export function lists(): Extension {
         visualEditor.registerNode(LIST_ITEM),
         visualEditor.registerNode(TASK_LIST),
         visualEditor.registerNode(TASK_ITEM),
-        visualEditor.registerToolbarGroup({ kind: 'group', id: 'lists', order: 30 }),
-        ...[...LIST_ACTIONS, TASK_LIST_ACTION].map((action, i) => visualEditor.registerToolbarItem({ group: 'lists', order: 10 * (i + 1), action })),
+        ...[...LIST_BUTTONS, TASK_LIST_BUTTON].map((button) => registerChainButton(context, 'visualEditor/toolbar', button)),
       );
     },
   };

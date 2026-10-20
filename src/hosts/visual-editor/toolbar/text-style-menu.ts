@@ -2,7 +2,7 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Disposable } from '../../../core/disposable/disposable';
-import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext } from '../visual-editor';
+import type { TextStyle, TextStyleProvider, VisualEditorContext } from '../visual-editor';
 
 /**
  * The text style `<select>`: *Normal text*, then the providers' entries by `order`, a section's under its title.
@@ -12,7 +12,7 @@ import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext 
  *
  * @internal Extensions add to it through `visualEditor.registerTextStyleProvider`.
  */
-export class TextStyleMenu implements ToolbarControl {
+export class TextStyleMenu {
   readonly element: HTMLSelectElement;
   private entries: readonly TextStyle[] = [];
   private readonly subscriptions: Disposable[];

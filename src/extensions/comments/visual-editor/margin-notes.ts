@@ -1,5 +1,4 @@
-// Margin notes in the text: point notes and range notes, and the "Comment" toolbar action. See comments in
-// ../comments.ts.
+// Margin notes in the text: point notes and range notes, and the "Comment" buttons. See comments in ../comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
@@ -8,7 +7,9 @@ import type { NodeView } from '@tiptap/pm/view';
 import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { Disposable } from '../../../core/disposable/disposable';
-import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type TypstNodeSpec, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { MenuItem } from '../../../hosts/commands/commands';
+import type { Workbench } from '../../../hosts/workbench/workbench';
 import { type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
@@ -19,36 +20,29 @@ import { type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../
  * Both keep `head` (the source before the first `[`, as written) and `note` (the note's markup). Other `margin-note`
  * calls stay raw.
  */
-export function registerMarginNotes(visualEditor: VisualEditorContributions, options: MarginNotesOptions): Disposable {
-  const action = commentAction(options.comment);
-  return Disposable.from(
-    visualEditor.registerNode(POINT_NOTE),
-    visualEditor.registerMark(NOTE_RANGE),
-    visualEditor.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
-    visualEditor.registerToolbarItem({ group: 'comments', action }),
-    visualEditor.registerToolbarItem({ group: 'selection', order: 50, action }),
-  );
+export function registerMarginNotes(visualEditor: VisualEditorContributions): Disposable {
+  return Disposable.from(visualEditor.registerNode(POINT_NOTE), visualEditor.registerMark(NOTE_RANGE));
 }
 
-export interface MarginNotesOptions {
-  /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
-  comment(): void;
-}
-
-/** "Comment": enabled with a caret or selection in text (not in a code block or on a selected box). */
-function commentAction(comment: () => void): ToolbarAction {
-  return {
-    label: 'Comment',
-    shortcut: 'Mod+Alt+M',
+/**
+ * "Comment" in the toolbar's `6_comments` group and in the selection's bar: runs `command` (adds a comment at the
+ * selection), enabled with a caret or selection in text (not in a code block or on a selected box).
+ */
+export function registerCommentButtons(workbench: Pick<Workbench, 'registerMenuItem'>, command: string): Disposable {
+  const button: MenuItem<VisualEditorMenuContext> = {
+    command,
+    title: 'Comment',
     icon: COMMENT_ICON,
-    run: (c) => c,
-    click: () => comment(),
-    enabled: (editor) => {
+    enabled: ({ editor }) => {
       const { selection } = editor.state;
       const { parent } = selection.$from;
       return selection instanceof TextSelection && parent.inlineContent && !parent.type.spec.code;
     },
   };
+  return Disposable.from(
+    workbench.registerMenuItem('visualEditor/toolbar', { ...button, group: '6_comments' }),
+    workbench.registerMenuItem('visualEditor/selection', { ...button, order: 50 }),
+  );
 }
 
 const COMMENT_ICON = svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>');

@@ -1,9 +1,7 @@
 // The "Paste as" chip of the Visual editor. See clipboard.ts.
-import type { Editor } from '@tiptap/core';
 import { closeHistory, undo } from '@tiptap/pm/history';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import type { Anchor, ToolbarControl, ToolbarGroup, ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { PasteChoice, PasteChoices } from '../paste-as';
 
 /** A way a paste can go in: its kind and name, and its transaction from the state before it (in place of the selection). */
@@ -15,20 +13,12 @@ export interface PasteAlternative {
 
 /**
  * Pastes the first of `alternatives`, as one undo step. With more than one, the paste's choice opens: a chip floats
- * above its end (the toolbar's `paste` bar, "Paste as: Typst ▾"), whose click (or Mod+.) asks `choices` which kind it
+ * above its end ("Paste as: Typst ▾", as in the Source editor), whose click (or Mod+.) asks `choices` which kind it
  * goes in as; changing it undoes the paste and pastes the one picked, so one undo still takes all back. It closes on
  * the next edit, a selection outside the pasted range, or Escape.
  */
 export function pasteWith(view: EditorView, alternatives: readonly PasteAlternative[]): void {
   pasteAs(view, alternatives, alternatives[0]);
-}
-
-/** The toolbar's floating bar of the chip (`paste`): above a paste's end while its choice is open, before every other bar. */
-export const PASTE_BAR: ToolbarGroup = { kind: 'floating', id: 'paste', order: 1, label: 'Paste as', anchor: (editor) => anchorOf(editor) };
-
-/** The chip in `PASTE_BAR`: the kind the paste went in as ("Paste as: Typst ▾"); a click asks `choices` for another. */
-export function pasteChip(choices: PasteChoices): ToolbarItem {
-  return { group: PASTE_BAR.id, create: ({ editor }) => chip(editor, choices) };
 }
 
 /** The open choice: the pasted range and what it may go in as. */
@@ -66,7 +56,7 @@ function pasteAs(view: EditorView, alternatives: readonly PasteAlternative[], al
 
 /**
  * The paste choice of one editor: keeps the open one (mapped through changes), tells `choices` when one opens or
- * closes, and takes its keys (Mod+. asks, Escape closes). `pasteWith` opens one.
+ * closes, shows its chip, and takes its keys (Mod+. asks, Escape closes). `pasteWith` opens one.
  */
 export function pasteChoicePlugin(choices: PasteChoices): Plugin {
   return new Plugin<Pasted | null>({
@@ -95,51 +85,80 @@ export function pasteChoicePlugin(choices: PasteChoices): Plugin {
         return pick;
       },
     },
-    view: (view) => ({
-      update: (_view, previous) => {
-        const before = key.getState(previous)?.choice;
-        const now = key.getState(view.state)?.choice;
-        if (before === now) return;
-        if (before) choices.closePasteChoice(before);
-        if (now) choices.openPasteChoice(now);
-      },
-      destroy: () => {
-        const open = key.getState(view.state)?.choice;
-        if (open) choices.closePasteChoice(open);
-      },
-    }),
+    view: (view) => {
+      const chip = new PasteChip(view, choices);
+      return {
+        update: (_view, previous) => {
+          chip.show();
+          const before = key.getState(previous)?.choice;
+          const now = key.getState(view.state)?.choice;
+          if (before === now) return;
+          if (before) choices.closePasteChoice(before);
+          if (now) choices.openPasteChoice(now);
+        },
+        destroy: () => {
+          chip.dispose();
+          const open = key.getState(view.state)?.choice;
+          if (open) choices.closePasteChoice(open);
+        },
+      };
+    },
   });
 }
 
-/** Above the end of the pasted range, while a choice is open. */
-function anchorOf(editor: Editor): Anchor {
-  const pasted = key.getState(editor.state);
-  if (!pasted) return null;
-  try {
-    const { top, left } = editor.view.coordsAtPos(pasted.to);
-    return { top, left, right: left };
-  } catch {
-    return null; // no layout (e.g. not attached)
+/**
+ * The chip of an open choice: the kind the paste went in as ("Paste as: Typst ▾"), floating above the paste's end in
+ * the text column (which scrolls with the text); a click asks `choices` for another. Presses keep the focus in the text.
+ */
+class PasteChip {
+  private readonly bar: HTMLElement;
+  private readonly button: HTMLButtonElement;
+
+  constructor(
+    private readonly view: EditorView,
+    choices: PasteChoices,
+  ) {
+    const doc = view.dom.ownerDocument;
+    this.bar = doc.createElement('div');
+    this.bar.className = 'zwf-clipboard__chip-bar';
+    this.bar.setAttribute('role', 'toolbar');
+    this.bar.setAttribute('aria-label', 'Paste as');
+    this.bar.hidden = true;
+    this.bar.addEventListener('mousedown', (event) => event.preventDefault());
+    this.button = this.bar.appendChild(doc.createElement('button'));
+    this.button.type = 'button';
+    this.button.className = 'zwf-paste-chip';
+    this.button.addEventListener('click', () => {
+      const pasted = key.getState(view.state);
+      if (pasted) choices.pickPasteKind(pasted.choice);
+    });
+    (view.dom.parentElement ?? view.dom).append(this.bar);
+  }
+
+  /** Shows the open choice's kind above the paste's end; hidden while none is open. */
+  show(): void {
+    const pasted = key.getState(this.view.state);
+    this.bar.hidden = !pasted;
+    if (!pasted) return;
+    const title = pasted.choice.kinds.find(({ kind }) => kind === pasted.choice.kind)?.title ?? '';
+    this.button.textContent = `Paste as: ${title} ▾`;
+    this.button.setAttribute('aria-label', `Pasted as ${title}: paste as…`);
+    this.button.title = `Pasted as ${title}: paste as… (Mod+.)`;
+    const container = this.bar.parentElement!;
+    try {
+      const { top, left } = this.view.coordsAtPos(pasted.to);
+      const box = container.getBoundingClientRect();
+      const width = this.bar.offsetWidth;
+      this.bar.style.left = `${Math.max(0, Math.min(left - box.left - width / 2, container.clientWidth - width))}px`;
+      // the chip's bottom 6px above the paste's end (translateY(-100%) in CSS)
+      this.bar.style.top = `${top - box.top - 6}px`;
+    } catch {
+      // no layout (e.g. not attached): where it was
+    }
+  }
+
+  dispose(): void {
+    this.bar.remove();
   }
 }
 
-/** The chip: the kind the paste went in as, a click asks for another. */
-function chip(editor: Editor, choices: PasteChoices): ToolbarControl {
-  const button = editor.view.dom.ownerDocument.createElement('button');
-  button.type = 'button';
-  button.className = 'zwf-toolbar__button zwf-toolbar__button--text';
-  button.addEventListener('click', () => {
-    const pasted = key.getState(editor.state);
-    if (pasted) choices.pickPasteKind(pasted.choice);
-  });
-  return {
-    element: button,
-    refresh: () => {
-      const choice = key.getState(editor.state)?.choice;
-      const title = choice?.kinds.find(({ kind }) => kind === choice.kind)?.title ?? '';
-      button.textContent = `Paste as: ${title} ▾`;
-      button.setAttribute('aria-label', `Pasted as ${title}: paste as…`);
-      button.title = `Pasted as ${title}: paste as… (Mod+.)`;
-    },
-  };
-}

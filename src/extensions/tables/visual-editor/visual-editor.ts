@@ -1,7 +1,7 @@
 // What the tables extension contributes to the Visual editor. See tables in ../tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
-import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type Anchor, type ChainButton, type FloatingBar, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { tableToTypst } from './table-printing';
 import { parseTable } from './table-parser';
 
@@ -46,19 +46,26 @@ const ICONS = {
 };
 
 /** "Insert table" in the Insert menu: a 2 × 2 table without header row. */
-export const INSERT_TABLE: ToolbarAction = { label: 'Insert table', icon: ICONS.table, keywords: ['grid', 'spreadsheet'], run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
+export const INSERT_TABLE: ChainButton = {
+  command: 'tables.insertTable',
+  title: 'Insert table',
+  icon: ICONS.table,
+  keywords: ['grid', 'spreadsheet'],
+  order: 20,
+  chain: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }),
+};
 
 /** The bar floating above the table that holds the cursor. */
-export const TABLE_BAR: ToolbarGroup = { kind: 'floating', id: 'table', order: 20, label: 'Table', anchor: (editor) => tableAnchor(editor) };
+export const TABLE_BAR: FloatingBar = { id: 'visualEditor/table', order: 20, label: 'Table', anchor: ({ editor }) => tableAnchor(editor) };
 
 /** The table bar's buttons: rows, columns, header row. */
-export const TABLE_EDITS: ToolbarAction[] = [
-  { label: 'Add row', icon: ICONS.addRow, run: (c) => c.addRowAfter() },
-  { label: 'Add column', icon: ICONS.addColumn, run: (c) => c.addColumnAfter() },
-  { label: 'Delete row', icon: ICONS.deleteRow, run: (c) => c.deleteRow() },
-  { label: 'Delete column', icon: ICONS.deleteColumn, run: (c) => c.deleteColumn() },
+export const TABLE_EDITS: ChainButton[] = [
+  { command: 'tables.addRowAfter', title: 'Add row', icon: ICONS.addRow, order: 10, chain: (c) => c.addRowAfter() },
+  { command: 'tables.addColumnAfter', title: 'Add column', icon: ICONS.addColumn, order: 20, chain: (c) => c.addColumnAfter() },
+  { command: 'tables.deleteRow', title: 'Delete row', icon: ICONS.deleteRow, order: 30, chain: (c) => c.deleteRow() },
+  { command: 'tables.deleteColumn', title: 'Delete column', icon: ICONS.deleteColumn, order: 40, chain: (c) => c.deleteColumn() },
   // makes the first row a `table.header(..)`, or a normal row again
-  { label: 'Header row', icon: ICONS.headerRow, run: (c) => c.toggleHeaderRow(), active: inHeaderTable },
+  { command: 'tables.toggleHeaderRow', title: 'Header row', icon: ICONS.headerRow, order: 50, chain: (c) => c.toggleHeaderRow(), toggled: ({ editor }) => inHeaderTable(editor) },
 ];
 
 /** A cell's attributes: Tiptap's, and `track`: its column's entry of `columns: (..)` (`2fr`), as written. */

@@ -61,8 +61,8 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
   [Contribution point], [What],
   [`registerNode(spec)`, `registerMark(spec)`], [A construct: `TypstNodeSpec`, `TypstMarkSpec` (below)],
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands],
-  [`registerToolbarGroup(group)`], [A `group` in the row, a `menu` button, or a `floating` bar],
-  [`registerToolbarItem(item)`], [A button: an `action` (`run(chain)` or `click()`), `create(toolbar)` for per-editor state, or `provideActions(toolbar)` in a menu. `keywords` feed the slash commands],
+  [`registerSubmenu(submenu)`], [A menu button (`{ id, label, icon(context), parent, group?, order? }`) in the row or a floating bar, opening the entries of menu `id` (@architecture-visual-editor-toolbar)],
+  [`registerFloatingBar(bar)`], [A bar floating above `anchor(context)` in the text (`{ id, label, order, anchor }`), holding the entries of menu `id`],
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles)],
   [`registerCompletionItemProvider(provider, trigger)`], [A list after a trigger character (@architecture-visual-editor-completion)],
   [`registerHighlights(layer, provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
@@ -71,8 +71,9 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 )
 
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
-- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). Toolbar items made per editor also get Tiptap's `editor`.
+- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). The toolbar's menus are shown with the `VisualEditorMenuContext`: that, plus Tiptap's `editor`.
 - *`svg(body)`* makes a toolbar icon (24×24 outline strokes in the text colour).
+- *`chainCommand(chain)`* is a button's command from a Tiptap chain: `run` (the handler) and `enabled` (its dry run). *`registerChainButton({ commands, workbench }, menuId, button)`* registers both: the command and the menu entry.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
 - *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the workbench hands them to the Visual editor host, which knows no Source editor.
@@ -109,9 +110,20 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
 
 == Toolbar <architecture-visual-editor-toolbar>
 
-- *The host's own groups:* `history` (10; its Undo / Redo buttons are `undoRedo`'s, the history itself the host's), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar. Empty groups are left out.
-- *Buttons* are `ToolbarAction`s: a Tiptap chain command, dry-run to disable the button. They never take the focus from the text.
-- *Menus in a bar:* a menu with `bar` sits among that bar's items; `provideActions` builds its items each time it opens.
+Buttons are VS Code's menus and commands: a command (`commands.registerCommand`) and an entry of a Visual editor menu (`workbench.registerMenuItem`). The host draws the menus and runs an entry's command with the `VisualEditorMenuContext` (the editor, its Tiptap `editor`) as its one argument.
+
+```ts
+commands.registerCommand('callout.insert', ({ editor }: VisualEditorMenuContext) => editor.chain().focus().wrapIn('callout').run());
+workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+  command: 'callout.insert', title: 'Callout', icon, order: 80,
+  enabled: ({ editor }) => editor.can().wrapIn('callout'),
+});
+```
+
+- *Menus:* `visualEditor/toolbar` (the row, a group of buttons per `group` by name: `1_history`, `2_textStyle` the text style menu, `3_lists`, `4_align`, `5_insert`, `6_comments`), `visualEditor/insert` (the host's "Insert" submenu), `visualEditor/selection` (the host's bar above a text selection, order 10). Extensions add submenus (`visualEditor/align`, `visualEditor/inlineStyles` in the selection bar) and floating bars (`visualEditor/table`, `visualEditor/image`, `visualEditor/link`); of the bars with entries only the first by `order` with an anchor shows.
+- *State per editor:* the entry's `when`, `enabled` and `toggled` are functions of the menu context, where VS Code has context keys: the state lives in the Tiptap editor the menu is shown for, so the entry asks it each time the menu shows (the row: after every transaction; a submenu or a bar: only while open or shown). `when` leaves a button out, `enabled` disables it, `toggled` shows it pressed.
+- *How a button looks:* the entry's `icon`, else its `shortTitle` (`25%`), else its title; the title and the key as tooltip: the command's key binding, else the entry's `keybinding` (the editor's own key, `Mod+B`). Buttons never take the focus from the text. `keywords` feed the slash commands.
+- *A submenu's icon* is a function of the context (the Align menu shows the selection's alignment); a submenu without entries is left out.
 
 == Completion lists <architecture-visual-editor-completion>
 
@@ -127,7 +139,7 @@ visualEditor.registerCompletionItemProvider(
 
 - *Where:* `char` at the start of a text block or after one of `allowedPrefixes` (default: a space); never in code or raw boxes.
 - *Asked synchronously on every keystroke*, filtered by the host. A list without matches is closed, so its keys go to the editor.
-- *Providers get* `editor`, `query`, `toolbarActions(group)` and `textStyles()`: the slash commands offer what other extensions registered without knowing them.
+- *Providers get* `editor`, `query` and `textStyles()`. The slash commands read the menus with `workbench.getMenuItems(menuId, context)` and run an entry's command: they offer what other extensions registered without knowing them.
 - One Tiptap `Suggestion` plugin per provider and editor, with a `SuggestWidget` (`listbox`); keys as in VS Code.
 
 == Example: a callout <architecture-visual-editor-callout>
@@ -153,8 +165,9 @@ const CALLOUT: TypstNodeSpec = {
 export function callout(): Extension {
   return {
     id: 'callout',
-    activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), visualEditor.registerToolbarItem(INSERT_CALLOUT));
+    activate(context) {
+      const { workbench, visualEditor, subscriptions } = context;
+      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
     },
   };
 }

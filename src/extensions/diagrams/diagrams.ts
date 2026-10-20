@@ -6,7 +6,7 @@ import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, diagramFigure, isDiagram } from './model/model';
-import { insertDiagram } from './visual-editor/insert-diagram';
+import { registerInsertDiagram } from './visual-editor/insert-diagram';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
 
@@ -38,14 +38,14 @@ export function diagrams(): Extension {
       },
     },
     activate(context) {
-      const { project, commands, window, languages, workspace, workbench, visualEditor, subscriptions } = context;
+      const { project, commands, window, languages, workspace, workbench, subscriptions } = context;
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
-        visualEditor.registerToolbarItem(insertDiagram(context)),
+        registerInsertDiagram(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),
       );

@@ -1,8 +1,9 @@
-import { Extension as TiptapExtension, type Editor } from '@tiptap/core';
+import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { CompletionItem, CompletionItemProvider, TextStyle, ToolbarAction } from '../../hosts/visual-editor/visual-editor';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Commands, MenuItem } from '../../hosts/commands/commands';
+import type { CompletionItem, CompletionItemProvider, TextStyle, VisualEditorMenuContext } from '../../hosts/visual-editor/visual-editor';
+import type { Extension, Workbench } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
 /**
@@ -15,10 +16,10 @@ import css from './slash-commands.css?inline';
 export function slashCommands(): Extension {
   return {
     id: 'slash-commands',
-    activate({ workbench, visualEditor, subscriptions }) {
+    activate({ commands, workbench, visualEditor, subscriptions }) {
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        visualEditor.registerCompletionItemProvider(SLASH_COMMANDS, { char: '/' }),
+        visualEditor.registerCompletionItemProvider(slashCommandItems(workbench, commands), { char: '/' }),
         visualEditor.registerTiptapExtension(() => SlashCommandsHint),
       );
     },
@@ -27,49 +28,42 @@ export function slashCommands(): Extension {
 
 /**
  * The Insert menu's entries, the list and alignment buttons, then the text style menu's, that are enabled where the
- * cursor is; found by label and keywords. Choosing one removes the `/query` and runs it as its menu would.
+ * cursor is (the menus' entries as the workbench has them); found by label and keywords. Choosing one removes the
+ * `/query` and runs it as its menu would.
  */
-const SLASH_COMMANDS: CompletionItemProvider = {
-  provideCompletionItems: ({ editor, toolbarActions, textStyles }) => [
-    ...SLASH_GROUPS.flatMap(([group, detail]) =>
-      toolbarActions(group)
-        .filter((action) => actionEnabled(action, editor))
-        .map((action) => toolbarItem(action, detail)),
-    ),
-    ...textStyles()
-      .filter((style) => (style.enabled ? style.enabled(editor) : style.apply(editor.can().chain(), editor).run()))
-      .map(textStyleItem),
-  ],
-};
-
-/** As the toolbar decides: `enabled`, else the dry run of `run`, else enabled. */
-function actionEnabled(action: ToolbarAction, editor: Editor): boolean {
-  if (action.enabled) return action.enabled(editor);
-  return action.run ? action.run(editor.can().chain()).run() : true;
+function slashCommandItems(workbench: Pick<Workbench, 'getMenuItems'>, commands: Pick<Commands, 'executeCommand'>): CompletionItemProvider {
+  return {
+    provideCompletionItems: (context) => [
+      ...SLASH_MENUS.flatMap(({ menuId, group, detail }) =>
+        workbench
+          .getMenuItems<VisualEditorMenuContext>(menuId, context)
+          .filter((item) => (group === undefined || item.group === group) && (item.enabled?.(context) ?? true))
+          .map((item) => menuItem(item, detail, context, commands)),
+      ),
+      ...context
+        .textStyles()
+        .filter((style) => (style.enabled ? style.enabled(context.editor) : style.apply(context.editor.can().chain(), context.editor).run()))
+        .map(textStyleItem),
+    ],
+  };
 }
 
-/** The toolbar groups the slash list offers, and how a row names its group. */
-const SLASH_GROUPS: readonly (readonly [group: string, detail: string])[] = [
-  ['insert', 'Insert'],
-  ['lists', 'List'],
-  ['align', 'Align'],
+/** The menus the slash list offers (of the row: one group), and how a row names its menu. */
+const SLASH_MENUS: readonly { readonly menuId: string; readonly group?: string; readonly detail: string }[] = [
+  { menuId: 'visualEditor/insert', detail: 'Insert' },
+  { menuId: 'visualEditor/toolbar', group: '3_lists', detail: 'List' },
+  { menuId: 'visualEditor/align', detail: 'Align' },
 ];
 
-function toolbarItem(action: ToolbarAction, detail: string): CompletionItem {
+function menuItem(item: MenuItem<VisualEditorMenuContext>, detail: string, context: VisualEditorMenuContext, commands: Pick<Commands, 'executeCommand'>): CompletionItem {
   return {
-    label: action.label,
+    label: item.title ?? item.command,
     detail,
-    icon: action.icon,
-    keywords: action.keywords,
+    icon: item.icon,
+    keywords: item.keywords,
     command: ({ editor, range }) => {
-      const chain = editor.chain().focus().deleteRange(range);
-      // as its button: `click` (asking first) instead of `run`
-      if (action.click || !action.run) {
-        chain.run();
-        action.click?.();
-      } else {
-        action.run(chain).run();
-      }
+      editor.chain().focus().deleteRange(range).run();
+      commands.executeCommand(item.command, context).catch((error: unknown) => console.error(`Command ${item.command} failed:`, error));
     },
   };
 }

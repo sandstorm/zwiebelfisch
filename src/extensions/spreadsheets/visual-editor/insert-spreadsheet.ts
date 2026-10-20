@@ -1,7 +1,8 @@
 // "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands). See spreadsheets in ../spreadsheets.ts.
 import type { FileChange } from '../../../core/project/project';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { calculateSheetFigure } from '../model/sheet-figure';
 import { typstPath } from '../model/typst-file';
@@ -13,26 +14,29 @@ import type { NewWorkbook } from '../workbench/workbook';
  * `#figure(sheets.Sheet1, caption: [ ])` after the cursor's block with the import it needs (one undo step), and opens
  * the spreadsheet. `newWorkbook` makes the spreadsheet.
  */
-export function insertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): ToolbarItem {
-  return {
-    group: 'insert',
-    order: 25,
-    create: (toolbar) => ({
-      label: 'Insert spreadsheet',
+export function registerInsertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Disposable {
+  return Disposable.from(
+    context.commands.registerCommand(INSERT_SPREADSHEET, (menu: VisualEditorMenuContext) => insert(context, menu, newWorkbook)),
+    context.workbench.registerMenuItem('visualEditor/insert', {
+      command: INSERT_SPREADSHEET,
+      title: 'Insert spreadsheet',
       icon: ICON,
       keywords: ['spreadsheet', 'sheet', 'ironcalc', 'excel', 'calc', 'data', 'figure'],
-      click: () => void insert(context, toolbar, newWorkbook),
+      order: 25,
     }),
-  };
+  );
 }
 
 /** What inserting a spreadsheet uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench' | 'commands'>;
+
+/** "Insert spreadsheet" (the command's argument: the Visual editor menu context). */
+const INSERT_SPREADSHEET = 'spreadsheets.insertSpreadsheet';
 
 const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11M15 9v11"/>');
 
-async function insert({ project, window, workspace, workbench }: InsertContext, toolbar: ToolbarContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
-  const { editor, document } = toolbar;
+async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
+  const { editor, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
   if (!proposed) return;
@@ -57,7 +61,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   // the document may have moved meanwhile
   const at = project.pathOf(document);
   if (!at) return;
-  const { source, importChange } = calculateSheetFigure(document.text, { file: at, spreadsheet: target, sheet: workbook.sheet, use: toolbar.selection().from });
+  const { source, importChange } = calculateSheetFigure(document.text, { file: at, spreadsheet: target, sheet: workbook.sheet, use: menu.selection().from });
   insertTypst(editor, source, undefined, importChange ? [importChange] : []);
   workbench.open(target);
 }

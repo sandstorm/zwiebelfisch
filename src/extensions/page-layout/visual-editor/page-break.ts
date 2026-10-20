@@ -1,7 +1,7 @@
 // The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See pageLayout in ../page-layout.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 
 const PageBreak = Node.create({
   name: 'pageBreak',
@@ -46,7 +46,7 @@ export const PAGE_BREAK: TypstNodeSpec = {
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');
 
 /** "Insert page break" in the Insert menu (also Mod+Enter in the text). */
-export const INSERT_PAGE_BREAK: ToolbarAction = { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, keywords: ['new page'], run: (c) => c.setPageBreak() };
+export const INSERT_PAGE_BREAK: ChainButton = { command: 'pageLayout.insertPageBreak', title: 'Insert page break', keybinding: 'Mod+Enter', icon: ICON, keywords: ['new page'], order: 60, chain: (c) => c.setPageBreak() };
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

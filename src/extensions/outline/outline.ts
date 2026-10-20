@@ -1,3 +1,4 @@
+import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import type { Extension } from '../../hosts/workbench/workbench';
 import { INSERT_OUTLINE, OUTLINE } from './visual-editor/visual-editor';
 
@@ -10,8 +11,8 @@ import { INSERT_OUTLINE, OUTLINE } from './visual-editor/visual-editor';
 export function outline(): Extension {
   return {
     id: 'outline',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(visualEditor.registerNode(OUTLINE), visualEditor.registerToolbarItem({ group: 'insert', order: 30, action: INSERT_OUTLINE }));
+    activate(context) {
+      context.subscriptions.push(context.visualEditor.registerNode(OUTLINE), registerChainButton(context, 'visualEditor/insert', INSERT_OUTLINE));
     },
   };
 }

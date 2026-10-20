@@ -5,7 +5,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, type Transaction } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
 
@@ -40,14 +40,17 @@ export const TASK_BOX = /^\[([ x])\](?: |$)/;
 
 const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');
 
-/** "Task list", after the other lists in the toolbar's `lists` group. */
-export const TASK_LIST_ACTION: ToolbarAction = {
-  label: 'Task list',
+/** "Task list", after the other lists in the toolbar's `3_lists` group. */
+export const TASK_LIST_BUTTON: ChainButton = {
+  command: 'lists.toggleTaskList',
+  title: 'Task list',
   keywords: ['checklist', 'todo', 'checkbox', 'task'],
-  shortcut: 'Mod+Shift+9',
+  keybinding: 'Mod+Shift+9',
   icon: ICON,
-  run: (c) => c.toggleTaskList(),
-  active: (e) => e.isActive('taskList'),
+  group: '3_lists',
+  order: 30,
+  chain: (c) => c.toggleTaskList(),
+  toggled: ({ editor }) => editor.isActive('taskList'),
 };
 
 /**

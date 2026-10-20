@@ -30,14 +30,19 @@ describe('describeContribution', () => {
     expect(describeAt('commands.registerKeybinding', 'Ctrl+Alt+M', 'comments.addComment').title).toBe('Ctrl+Alt+M → comments.addComment');
   });
 
-  it('toolbar groups and items, menu items, side panels, status bar items: where they go and in which order', () => {
-    expect(describeAt('visualEditor.registerToolbarGroup', { kind: 'menu', id: 'insert', order: 50, label: 'Insert', icon: () => '' })).toEqual({ title: 'insert', details: ['menu', '"Insert"', 'order 50'], rank: [50] });
-    expect(describeAt('visualEditor.registerToolbarItem', { group: 'insert', order: 20, action: { label: 'Table', icon: '', shortcut: 'Mod-Alt-t' } })).toEqual({
-      title: 'Table',
-      details: ['in insert', 'order 20', 'Mod-Alt-t'],
-      rank: ['insert', 20],
+  it('submenus, floating bars, menu items, side panels, status bar items: where they go and in which order', () => {
+    expect(describeAt('visualEditor.registerSubmenu', { id: 'visualEditor/align', label: 'Align', parent: 'visualEditor/toolbar', group: '4_align', icon: () => '' })).toEqual({
+      title: 'visualEditor/align',
+      details: ['"Align"', 'in visualEditor/toolbar', 'group 4_align', 'order 0'],
+      rank: ['visualEditor/toolbar', 1, '4_align', 0],
     });
-    expect(describeAt('visualEditor.registerToolbarItem', { group: 'text-style', create: () => ({}) }).title).toBe('(made per editor)');
+    expect(describeAt('visualEditor.registerFloatingBar', { id: 'visualEditor/table', label: 'Table', order: 20, anchor: () => null })).toEqual({ title: 'visualEditor/table', details: ['"Table"', 'order 20'], rank: [20] });
+    expect(describeAt('workbench.registerMenuItem', 'visualEditor/insert', { command: 'tables.insertTable', title: 'Insert table', order: 20, keybinding: 'Mod+Alt+T' }).details).toEqual([
+      'menu visualEditor/insert',
+      'order 20',
+      '→ tables.insertTable',
+      'Mod+Alt+T',
+    ]);
     expect(describeAt('workbench.registerMenuItem', 'files/context', { command: 'files.rename', title: 'Rename…', group: 'navigation', order: 2 })).toEqual({
       title: 'Rename…',
       details: ['menu files/context', 'group navigation', 'order 2', '→ files.rename'],

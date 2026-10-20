@@ -12,10 +12,10 @@ import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
-import { Toolbar } from './toolbar/toolbar';
+import { Toolbar, type ToolbarMenus } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, TextStyleProvider, CompletionTrigger, CompletionItemProvider, Submenu, FloatingBar } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -63,7 +63,6 @@ export class VisualEditor {
           ...editor,
           editor: tiptap,
           query,
-          toolbarActions: (group) => this.toolbar.actions(group),
           textStyles: () => this.toolbar.textStyles(),
         })),
         ...contributed.tiptapExtensions.flatMap((provider) => provider(editor)),
@@ -86,7 +85,13 @@ export class VisualEditor {
         plugins: this.tiptap.state.plugins,
       }),
     );
-    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
+    this.toolbar = new Toolbar(parent, this.tiptap, {
+      context: { ...editor, editor: this.tiptap },
+      menus: contributions.menus,
+      submenus: contributed.submenus,
+      floatingBars: contributed.floatingBars,
+      textStyles: contributed.textStyles,
+    });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -213,8 +218,8 @@ export class VisualEditorHost implements VisualEditorContributions {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
     tiptapExtensions: [] as ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[],
-    toolbarGroups: [] as ToolbarGroup[],
-    toolbarItems: [] as ToolbarItem[],
+    submenus: [] as Submenu[],
+    floatingBars: [] as FloatingBar[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
     textStyles: [] as TextStyleProvider[],
@@ -223,8 +228,16 @@ export class VisualEditorHost implements VisualEditorContributions {
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  /** `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the workbench's: its CodeMirror contributions); default: none. */
-  constructor(private readonly options: { rawBoxCodeMirrorExtensions?(editor: VisualEditorContext): Extension } = {}) {}
+  /** The toolbar's menus and their commands (the workbench's); default: none, an empty toolbar. */
+  readonly menus: ToolbarMenus;
+
+  /**
+   * `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the workbench's: its CodeMirror
+   * contributions); default: none. `menus`: see `menus`.
+   */
+  constructor(private readonly options: { rawBoxCodeMirrorExtensions?(editor: VisualEditorContext): Extension; menus?: ToolbarMenus } = {}) {
+    this.menus = options.menus ?? NO_MENUS;
+  }
 
   registerNode(spec: TypstNodeSpec): Disposable {
     return this.add(this.lists.nodes, spec);
@@ -238,12 +251,12 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.tiptapExtensions, provider);
   }
 
-  registerToolbarGroup(group: ToolbarGroup): Disposable {
-    return this.add(this.lists.toolbarGroups, group);
+  registerSubmenu(submenu: Submenu): Disposable {
+    return this.add(this.lists.submenus, submenu);
   }
 
-  registerToolbarItem(item: ToolbarItem): Disposable {
-    return this.add(this.lists.toolbarItems, item);
+  registerFloatingBar(bar: FloatingBar): Disposable {
+    return this.add(this.lists.floatingBars, bar);
   }
 
   registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable {
@@ -278,8 +291,8 @@ export class VisualEditorHost implements VisualEditorContributions {
       nodes: [...lists.nodes],
       marks: [...lists.marks],
       tiptapExtensions: [...lists.tiptapExtensions],
-      toolbarGroups: [...lists.toolbarGroups],
-      toolbarItems: [...lists.toolbarItems],
+      submenus: [...lists.submenus],
+      floatingBars: [...lists.floatingBars],
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxExtensions: [...lists.rawBoxExtensions],
@@ -302,8 +315,8 @@ export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
   readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
-  readonly toolbarGroups: readonly ToolbarGroup[];
-  readonly toolbarItems: readonly ToolbarItem[];
+  readonly submenus: readonly Submenu[];
+  readonly floatingBars: readonly FloatingBar[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxExtensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
@@ -321,6 +334,14 @@ function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews:
     nodeViews,
   };
 }
+
+/** Without a workbench: no menu has entries. */
+const NO_MENUS: ToolbarMenus = {
+  getMenuItems: () => [],
+  onDidChangeMenu: () => new Disposable(() => {}),
+  executeCommand: (command) => Promise.reject(new Error(`No command ${command}`)),
+  keybindingLabel: () => undefined,
+};
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'zwf-from-document';

@@ -2,7 +2,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ChainButton, type Submenu, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
@@ -21,12 +21,13 @@ export const JUSTIFIED_PARAGRAPH: TypstNodeSpec = {
 };
 
 /** Radio-like: the button of the selection's (effective) alignment is pressed. */
-const alignAction = (label: string, alignment: TextAlignment, shortcut: string, icon: string): ToolbarAction => ({
-  label,
-  shortcut,
+const alignButton = (title: string, alignment: TextAlignment, keybinding: string, icon: string): ChainButton => ({
+  command: `alignment.align.${alignment}`,
+  title,
+  keybinding,
   icon,
-  run: (c) => c.setTextAlign(alignment),
-  active: (e) => textAlignAt(e.state) === alignment,
+  chain: (c) => c.setTextAlign(alignment),
+  toggled: ({ editor }) => textAlignAt(editor.state) === alignment,
 });
 
 const ICONS = {
@@ -36,21 +37,21 @@ const ICONS = {
   alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
 };
 
-/** The Align menu's buttons: left, center, right, justify. */
-export const ALIGNMENTS: ToolbarAction[] = [
-  alignAction('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
-  alignAction('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
-  alignAction('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),
-  alignAction('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
-];
+/** The Align menu's entries (`visualEditor/align`): left, center, right, justify. */
+export const ALIGNMENTS: ChainButton[] = [
+  alignButton('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
+  alignButton('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
+  alignButton('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),
+  alignButton('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
+].map((button, i) => ({ ...button, order: 10 * (i + 1) }));
 
-/** The Align menu in the toolbar; its icon is the selection's current alignment. */
-export const ALIGN_MENU: ToolbarGroup = {
-  kind: 'menu',
-  id: 'align',
-  order: 40,
+/** The Align menu in the toolbar's `4_align` group; its icon is the selection's current alignment. */
+export const ALIGN_MENU: Submenu = {
+  id: 'visualEditor/align',
   label: 'Align',
-  icon: (editor) => ALIGNMENTS.find((a) => a.active!(editor))?.icon ?? ICONS.alignLeft,
+  parent: 'visualEditor/toolbar',
+  group: '4_align',
+  icon: (context) => ALIGNMENTS.find((button) => button.toggled!(context))?.icon ?? ICONS.alignLeft,
 };
 
 /** `#align(<literal alignment>)[..]`: an alignment block whose content is parsed like the document's. */

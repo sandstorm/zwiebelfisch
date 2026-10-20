@@ -6,7 +6,7 @@ import type { ExtensionContext, Extension } from '../../hosts/workbench/workbenc
 import css from './spreadsheets.css?inline';
 import { calculateSheetFigure, droppedSpreadsheet, firstSheet } from './model/sheet-figure';
 import { spreadsheetPath, typstPath } from './model/typst-file';
-import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
+import { registerInsertSpreadsheet } from './visual-editor/insert-spreadsheet';
 import { SpreadsheetEditor } from './workbench/spreadsheet-editor';
 import { SPREADSHEET_HELP } from './workbench/spreadsheet-help';
 import type { WorkbookEdit } from './workbench/workbook';
@@ -32,7 +32,7 @@ export function spreadsheets(): Extension {
       languages: [{ id: 'ironcalc', extensions: ['.ic'] }],
     },
     activate(context) {
-      const { project, commands, window, workbench, visualEditor, languages, subscriptions } = context;
+      const { project, commands, window, workbench, languages, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(
@@ -51,7 +51,7 @@ export function spreadsheets(): Extension {
         languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),
-        visualEditor.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
+        registerInsertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName)),
       );
     },
   };

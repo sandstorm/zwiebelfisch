@@ -5,12 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import { testHosts } from '../../testing/testing';
 import { undoRedo } from './undo-redo';
 
 /** A Visual editor host with undo and redo. */
 function withUndoRedo(): VisualEditorHost {
-  const visualEditor = new VisualEditorHost();
-  undoRedo().activate({ visualEditor, subscriptions: [] } as unknown as ExtensionContext);
+  const { visualEditor, commands, workbench } = testHosts();
+  undoRedo().activate({ visualEditor, commands, workbench, subscriptions: [] } as unknown as ExtensionContext);
   return visualEditor;
 }
 

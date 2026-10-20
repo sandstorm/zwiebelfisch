@@ -1,8 +1,10 @@
 // What the math extension contributes to the Visual editor. See math in ../math.ts.
-import { Extension, InputRule, type Editor } from '@tiptap/core';
+import { Extension, InputRule } from '@tiptap/core';
 import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
-import { svg, type ToolbarAction } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 
 /**
  * The closing `$` of `$…$` typed in the text: the opening `$` not after a backslash or another `$`, something between
@@ -19,38 +21,44 @@ export const MathInput = Extension.create({
 });
 
 /**
- * "Inline math": a `$$` box at the cursor, its code edited between the dollars. Found by the slash commands as math,
- * equation, formula.
+ * Insert → "Inline math": a `$$` box at the cursor, its code edited between the dollars; "Display math": a `$  $`
+ * block box after the cursor's paragraph (instead of an empty one), its code edited inside. Found by the slash
+ * commands as math, equation, formula.
  */
-export function insertInlineMath(editor: Editor): ToolbarAction {
-  const box = { type: 'rawInline', attrs: { src: '$$' } };
-  return {
-    label: 'Inline math',
-    icon: ICONS.inline,
-    keywords: ['math', 'equation', 'formula', 'inline'],
-    enabled: (e) => e.can().insertContent(box),
-    click: () => {
-      if (!editor.chain().focus().insertContent(box).run()) return;
+export function registerInsertMath({ commands, workbench }: Pick<ExtensionContext, 'commands' | 'workbench'>): Disposable {
+  const inline = { type: 'rawInline', attrs: { src: '$$' } };
+  const display = { type: 'rawBlock', attrs: { src: '$  $' } };
+  return Disposable.from(
+    commands.registerCommand(INLINE_MATH, ({ editor }: VisualEditorMenuContext) => {
+      if (!editor.chain().focus().insertContent(inline).run()) return;
       const { $from } = editor.state.selection;
       if ($from.nodeBefore?.type.name === 'rawInline') editor.commands.editRawBox($from.pos - $from.nodeBefore.nodeSize, 1);
-    },
-  };
+    }),
+    commands.registerCommand(DISPLAY_MATH, ({ editor }: VisualEditorMenuContext) => {
+      const at = besideTextblock(editor.state.selection.$to);
+      if (editor.chain().focus().insertContentAt(at, display).run()) editor.commands.editRawBox(at.from, 2);
+    }),
+    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+      command: INLINE_MATH,
+      title: 'Inline math',
+      icon: ICONS.inline,
+      keywords: ['math', 'equation', 'formula', 'inline'],
+      order: 44,
+      enabled: ({ editor }) => editor.can().insertContent(inline),
+    }),
+    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+      command: DISPLAY_MATH,
+      title: 'Display math',
+      icon: ICONS.display,
+      keywords: ['math', 'equation', 'formula', 'block'],
+      order: 46,
+      enabled: ({ editor }) => editor.can().insertContentAt(besideTextblock(editor.state.selection.$to), display),
+    }),
+  );
 }
 
-/** "Display math": a `$  $` block box after the cursor's paragraph (instead of an empty one), its code edited inside. */
-export function insertDisplayMath(editor: Editor): ToolbarAction {
-  const box = { type: 'rawBlock', attrs: { src: '$  $' } };
-  return {
-    label: 'Display math',
-    icon: ICONS.display,
-    keywords: ['math', 'equation', 'formula', 'block'],
-    enabled: (e) => e.can().insertContentAt(besideTextblock(e.state.selection.$to), box),
-    click: () => {
-      const at = besideTextblock(editor.state.selection.$to);
-      if (editor.chain().focus().insertContentAt(at, box).run()) editor.commands.editRawBox(at.from, 2);
-    },
-  };
-}
+const INLINE_MATH = 'math.insertInlineMath';
+const DISPLAY_MATH = 'math.insertDisplayMath';
 
 /**
  * Makes `typed` (`$…$`, ending at `end`, `content` between the dollars) the raw box the parser makes for it, in `tr`:
