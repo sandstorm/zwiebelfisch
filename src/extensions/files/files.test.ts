@@ -41,7 +41,7 @@ function setup(more: Extension[] = [], { mainLocked = false } = {}) {
 describe('files', () => {
   it('fills the panel\'s menus with its commands: "New" and the context menu of a row', () => {
     const { host, workbench, contextMenu } = setup();
-    expect(workbench.getMenuItems('file/newFile').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
+    expect(workbench.window.getMenuItems('file/newFile').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
     host.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
     expect([...host.querySelectorAll('[role=menu] [role=menuitem]')].map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…']);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…', 'Rename…', 'Delete']);
@@ -63,10 +63,10 @@ describe('files', () => {
     const seen: unknown[] = [];
     const { contextMenu } = setup([{
       id: 'test',
-      activate: ({ commands, workbench, subscriptions }) =>
+      activate: ({ commands, window, subscriptions }) =>
         subscriptions.push(
           commands.registerCommand('test.copyPath', (resource) => seen.push(resource)),
-          workbench.registerMenuItem('explorer/context', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
+          window.registerMenuItem('explorer/context', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
         ),
     }]);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).not.toContain('Copy path');
@@ -78,12 +78,12 @@ describe('files', () => {
   it('opens a file no other editor opens read-only: its name, size and type', () => {
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/fonts/Serif.otf'), content: new Uint8Array(2048) });
-    workbench.open(path('/fonts/Serif.otf'));
+    workbench.window.showDocument(path('/fonts/Serif.otf'));
     const info = host.querySelector<HTMLElement>('[data-view-type="files.file"] [data-testid=zwf-file-info]')!;
     expect(info.querySelector('h2')?.textContent).toBe('fonts/Serif.otf');
     expect([...info.querySelectorAll('dt, dd')].map((cell) => cell.textContent)).toEqual(['Size', '2.0 KB', 'Type', 'OTF file']);
     project.apply({ kind: 'create', path: path('/LICENSE'), content: 'MIT' });
-    workbench.open(path('/LICENSE'));
+    workbench.window.showDocument(path('/LICENSE'));
     expect([...host.querySelectorAll('[data-testid=zwf-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
   });
 

@@ -18,8 +18,8 @@ export function headings(): Extension {
   return {
     id: 'headings',
     contributes: { commands: [{ command: TOGGLE_NUMBERING, title: 'Number headings on / off', category: 'Headings' }] },
-    activate({ project, commands, window, workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), window.registerSearchProvider(headingSearch(project, workbench)));
+    activate({ project, commands, window, visualEditor, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css), window.registerSearchProvider(headingSearch(project, window)));
       subscriptions.push(
         commands.registerCommand(TOGGLE_NUMBERING, () => {
           const document = window.activeTextEditor?.document;
@@ -28,7 +28,7 @@ export function headings(): Extension {
       );
       subscriptions.push(
         visualEditor.registerNode(HEADING),
-        ...HEADING_STYLES.map((style) => registerChainButton({ commands, workbench }, 'visualEditor/textStyle', style)),
+        ...HEADING_STYLES.map((style) => registerChainButton({ commands, window }, 'visualEditor/textStyle', style)),
         visualEditor.registerTiptapExtension(HeadingNumbers),
       );
     },

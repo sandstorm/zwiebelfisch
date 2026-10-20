@@ -1,8 +1,7 @@
 // The figures of every Typst file in search everywhere. See figures in ../figures.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
-import type { SearchProvider } from '../../../hosts/window/window';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import { findFigures, type FoundFigure } from '../model/find-figures';
 
 /**
@@ -10,7 +9,7 @@ import { findFigures, type FoundFigure } from '../model/find-figures';
  * label, with kind, label and file (the label matches as well); picking one opens its file at the figure. A file is
  * read again only when it changed.
  */
-export function figureSearch(project: Pick<Project, 'paths' | 'document'>, workbench: Pick<Workbench, 'open'>): SearchProvider {
+export function figureSearch(project: Pick<Project, 'paths' | 'document'>, window: Pick<WindowApi, 'showDocument'>): SearchProvider {
   let scans = new Map<ProjectPath, { text: string; figures: FoundFigure[] }>();
   return {
     id: 'figures.figures',
@@ -29,7 +28,7 @@ export function figureSearch(project: Pick<Project, 'paths' | 'document'>, workb
         figures.map(({ caption, kind, label, at }) => ({
           label: caption ?? `<${label}>`,
           description: [kind, caption && label ? `<${label}>` : null, ProjectPath.displayName(path)].filter(Boolean).join(' · '),
-          accept: () => workbench.open(path, { selection: { from: at, to: at } }),
+          accept: () => window.showDocument(path, { selection: { from: at, to: at } }),
         })),
       );
     },

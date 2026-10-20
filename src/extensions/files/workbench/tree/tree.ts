@@ -1,7 +1,7 @@
 // The project's files as an expandable tree (keyboard, drag & drop, decorations). See FilePanel in ../file-panel.ts.
 import { ProjectPath } from '../../../../core/paths/paths';
-import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
-import type { FileDecoration } from '../../../../hosts/window/window';
+import type { Memento } from '../../../../hosts/workbench/workbench';
+import { type FileDecoration, PROJECT_PATH_TYPE } from '../../../../hosts/window/window';
 import { textColorOn } from '../../../../core/color-scheme/color-scheme';
 import { icon, markupIcon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type TreeKeyMove, navigate, type Row, visibleRows } from '../../model/tree-model';

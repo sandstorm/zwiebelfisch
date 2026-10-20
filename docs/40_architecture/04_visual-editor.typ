@@ -72,7 +72,7 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
 - *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). The toolbar's menus are shown with the `VisualEditorMenuContext`: that, plus its Tiptap editor `tiptap` (so is a completion list's `CompletionContext`; `editor` is always the `VisualEditorContext`).
 - *`svg(body)`* makes a toolbar icon (24×24 outline strokes in the text colour).
-- *`chainCommand(chain)`* is a button's command from a Tiptap chain: `run` (the handler) and `enabled` (its dry run). *`registerChainButton({ commands, workbench }, menuId, button)`* registers both: the command and the menu entry.
+- *`chainCommand(chain)`* is a button's command from a Tiptap chain: `run` (the handler) and `enabled` (its dry run). *`registerChainButton({ commands, window }, menuId, button)`* registers both: the command and the menu entry.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
 - *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the workbench hands them to the Visual editor host, which knows no Source editor.
@@ -109,11 +109,11 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
 
 == Toolbar <architecture-visual-editor-toolbar>
 
-Buttons are VS Code's menus and commands: a command (`commands.registerCommand`) and an entry of a Visual editor menu (`workbench.registerMenuItem`). The host draws the menus and runs an entry's command with the `VisualEditorMenuContext` (the editor, its Tiptap editor `tiptap`) as its one argument.
+Buttons are VS Code's menus and commands: a command (`commands.registerCommand`) and an entry of a Visual editor menu (`window.registerMenuItem`). The host draws the menus and runs an entry's command with the `VisualEditorMenuContext` (the editor, its Tiptap editor `tiptap`) as its one argument.
 
 ```ts
 commands.registerCommand('callout.insert', ({ tiptap }: VisualEditorMenuContext) => tiptap.chain().focus().wrapIn('callout').run());
-workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+window.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
   command: 'callout.insert', title: 'Callout', icon, order: 80,
   enabled: ({ tiptap }) => tiptap.can().wrapIn('callout'),
 });
@@ -139,7 +139,7 @@ visualEditor.registerCompletionItemProvider(
 
 - *Where:* `char` at the start of a text block or after one of `allowedPrefixes` (default: a space); never in code or raw boxes.
 - *Asked synchronously on every keystroke*, filtered by the host. A list without matches is closed, so its keys go to the editor.
-- *Providers get* `editor` and `query`. The slash commands read the menus with `workbench.getMenuItems(menuId, context)` and run an entry's command: they offer what other extensions registered without knowing them.
+- *Providers get* `editor` and `query`. The slash commands read the menus with `window.getMenuItems(menuId, context)` and run an entry's command: they offer what other extensions registered without knowing them.
 - One Tiptap `Suggestion` plugin per provider and editor, with a `SuggestWidget` (`listbox`); keys as in VS Code.
 
 == Example: a callout <architecture-visual-editor-callout>
@@ -166,8 +166,8 @@ export function callout(): Extension {
   return {
     id: 'callout',
     activate(context) {
-      const { workbench, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
+      const { window, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
     },
   };
 }

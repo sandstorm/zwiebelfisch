@@ -1,8 +1,8 @@
 import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import type { Commands } from '../../hosts/commands/commands';
-import type { SearchProvider } from '../../hosts/window/window';
-import type { ExtensionContext, SidePanel, Extension } from '../../hosts/workbench/workbench';
+import type { SearchProvider, SidePanel } from '../../hosts/window/window';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import { Replacement } from './model/replace';
 import { SearchResults } from './model/search-results';
 import css from './search.css?inline';
@@ -39,13 +39,13 @@ export function search(): Extension {
       ],
     },
     activate(context) {
-      const { project, languages, workspace, workbench, commands, visualEditor, sourceEditor, globalState, subscriptions } = context;
-      const side = workbench.registerSidePanel('search', { label: 'Find in files', icon: MAGNIFIER, order: 12 });
+      const { project, languages, workspace, window, commands, visualEditor, sourceEditor, globalState, subscriptions } = context;
+      const side = window.registerSidePanel('search', { label: 'Find in files', icon: MAGNIFIER, order: 12 });
       const highlights = new MatchHighlights(project);
       const panel = new SearchPanel(side.body, {
         search: (query, scope) => new SearchResults({ project, query, scope, isTextFile: (path) => languages.getLanguageId(path) !== undefined }),
         open: (path, match) => {
-          workbench.open(path, { selection: SourceRange.of(match) });
+          window.showDocument(path, { selection: SourceRange.of(match) });
           side.dismiss();
         },
         view: side,
@@ -61,7 +61,7 @@ export function search(): Extension {
         ],
       });
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         side,
         panel,
         highlights,
@@ -73,7 +73,7 @@ export function search(): Extension {
           side.show(true);
           panel.find({}, { scope: { kind: 'folder', path: folder } });
         }),
-        workbench.registerMenuItem('explorer/context', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
+        window.registerMenuItem('explorer/context', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
         context.window.registerSearchProvider(findInFilesRow(commands)),
       );
     },

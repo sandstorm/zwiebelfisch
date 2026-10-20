@@ -16,12 +16,12 @@ import { figureSearch } from './workbench/figure-search';
 export function figures(): Extension {
   return {
     id: 'figures',
-    activate({ project, window, workbench, visualEditor, subscriptions }) {
+    activate({ project, window, visualEditor, subscriptions }) {
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         visualEditor.registerNode(FIGURE),
         visualEditor.registerNode(FIGURE_CAPTION),
-        window.registerSearchProvider(figureSearch(project, workbench)),
+        window.registerSearchProvider(figureSearch(project, window)),
       );
     },
   };

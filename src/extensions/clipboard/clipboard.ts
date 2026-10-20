@@ -20,7 +20,7 @@ import { typstClipboard } from './visual-editor/clipboard';
 export function clipboard(): Extension {
   return {
     id: 'clipboard',
-    activate({ project, languages, window, commands, workbench, visualEditor, sourceEditor, subscriptions }) {
+    activate({ project, languages, window, commands, visualEditor, sourceEditor, subscriptions }) {
       const choices = new PasteAs(window);
       const pasteEdits = new PasteEdits(languages);
       const textOf = (document: TypstDocument) => (): TextDocument | null => {
@@ -28,7 +28,7 @@ export function clipboard(): Extension {
         return path ? { path, languageId: 'typst', text: document.text } : null;
       };
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         // priority 0: its edits after the other providers' (default 100)
         languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA, { priority: 0 }),
         visualEditor.registerTiptapExtension(({ document }) => typstClipboard(document, { pasteEdits, document: textOf(document), choices })),

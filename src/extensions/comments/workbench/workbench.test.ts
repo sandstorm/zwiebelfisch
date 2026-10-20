@@ -16,18 +16,17 @@ import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } 
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 
-/** A workbench showing `editor`, with comments.addComment registered: `comment()` runs the command. */
+/** A window showing `editor`, with comments.addComment registered: `comment()` runs the command. */
 function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => false }) {
   const commands = new Map<string, () => unknown>();
   const context: CommentContext = {
-    window: { activeTextEditor: editor },
+    window: { activeTextEditor: editor, registerMenuItem: () => new Disposable(() => {}) },
     commands: {
       registerCommand: (id, handler) => {
         commands.set(id, handler);
         return new Disposable(() => commands.delete(id));
       },
     },
-    workbench: { registerMenuItem: () => new Disposable(() => {}) },
   };
   registerAddComment(context, cards);
   return { comment: () => commands.get(ADD_COMMENT)!() };
@@ -64,9 +63,9 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
-    const { visualEditor: contributions, commands, workbench } = testHosts();
+    const { visualEditor: contributions, commands, window } = testHosts();
     registerMarginNotes(contributions);
-    registerCommentButtons(workbench, 'test.comment');
+    registerCommentButtons(window, 'test.comment');
     commands.registerCommand('test.comment', () => comment());
     const notes = registerNoteCards(contributions, { user: { name: 'Anna' } });
     const view = new VisualEditor(root.appendChild(document.createElement('div')), doc, contributions);
@@ -133,8 +132,8 @@ describe('comments.addComment', () => {
 /** A Visual editor host with margin notes (their "Comment" does nothing). */
 /** A Visual editor host with the margin notes and the Comment buttons. */
 function withMarginNotes(): VisualEditorHost {
-  const { visualEditor, workbench } = testHosts();
+  const { visualEditor, window } = testHosts();
   registerMarginNotes(visualEditor);
-  registerCommentButtons(workbench, ADD_COMMENT);
+  registerCommentButtons(window, ADD_COMMENT);
   return visualEditor;
 }

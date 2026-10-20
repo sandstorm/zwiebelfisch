@@ -19,7 +19,7 @@ import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceH
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
- * workbench's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
+ * window's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
  *
  * A visual edit becomes one minimal text change on its `TypstDocument`. A change from elsewhere is applied as the
  * smallest replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code,
@@ -223,7 +223,7 @@ export class VisualEditorHost implements VisualEditorContributions {
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  /** The toolbar's menus and their commands (the workbench's); default: none, an empty toolbar. */
+  /** The toolbar's menus and their commands (the window's); default: none, an empty toolbar. */
   readonly menus: ToolbarMenus;
 
   /**
@@ -327,7 +327,7 @@ function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews:
   };
 }
 
-/** Without a workbench: no menu has entries. */
+/** Without a window: no menu has entries. */
 const NO_MENUS: ToolbarMenus = {
   getMenuItems: () => [],
   onDidChangeMenu: () => new Disposable(() => {}),

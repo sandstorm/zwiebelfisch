@@ -15,8 +15,8 @@ function setup(viewType: string) {
   const document = project.document(ProjectPath.of('/main.typ'))!;
   const open = vi.fn();
   const editNote = vi.fn(() => true);
-  const window = { activeTextEditor: { document, viewType } as TextEditor };
-  const search = commentSearch({ project, workbench: { open }, window }, { editNote });
+  const window = { activeTextEditor: { document, viewType } as TextEditor, showDocument: open };
+  const search = commentSearch({ project, window }, { editNote });
   return { search, open, editNote, document };
 }
 

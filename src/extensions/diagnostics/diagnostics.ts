@@ -20,11 +20,11 @@ import { DiagnosticsStatus } from './workbench/workbench';
 export function diagnostics(): Extension {
   return {
     id: 'diagnostics',
-    activate({ project, window, workbench, sourceEditor, visualEditor, preview, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ project, window, sourceEditor, visualEditor, preview, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
-      const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
-        if (project.document(target.path)) workbench.open(target.path, { selection: target, viewType: SOURCE_EDITOR });
+      const status = new DiagnosticsStatus(window.ownerDocument, (target) => {
+        if (project.document(target.path)) window.showDocument(target.path, { selection: target, viewType: SOURCE_EDITOR });
       });
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;

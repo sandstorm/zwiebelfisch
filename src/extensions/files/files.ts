@@ -31,18 +31,18 @@ export function files(): Extension {
       keybindings: [{ command: 'workbench.view.files', key: 'Alt+Digit1', mac: 'Ctrl+Digit1', linux: '' }],
     },
     activate(context) {
-      const { project, window, workspace, workbench, subscriptions } = context;
+      const { project, window, workspace, subscriptions } = context;
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
-      const side = workbench.registerSidePanel('files', { label: 'Files', icon: FILES_ICON, order: 10 });
+      const side = window.registerSidePanel('files', { label: 'Files', icon: FILES_ICON, order: 10 });
       const state = () => ({ paths: project.paths(), main: project.main, active: window.activeFile });
       const panel = new FilePanel(side.body, {
         onOpen: (path) => {
-          workbench.open(path);
+          window.showDocument(path);
           side.dismiss();
         },
         onChange: (change) => workspace.applyEdit(change),
         prompts: window,
-        hasMenuItems: (menuId, menuContext) => workbench.getMenuItems(menuId, menuContext).length > 0,
+        hasMenuItems: (menuId, menuContext) => window.getMenuItems(menuId, menuContext).length > 0,
         state: context.workspaceState,
         decorations: (path) => window.getFileDecorations(path),
         icon: (path) => window.getFileIcon(path),
@@ -57,21 +57,21 @@ export function files(): Extension {
         panel.render(state());
         if ((shown !== 'hide') === (drops !== null)) return;
         drops?.dispose();
-        drops = shown === 'hide' ? null : workbench.onDidDropFiles((dropped) => void panel.uploadFiles(dropped));
+        drops = shown === 'hide' ? null : window.onDidDropFiles((dropped) => void panel.uploadFiles(dropped));
       };
       render();
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         side,
         panel,
         window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*', displayName: 'File', priority: 'fallback' }),
         new Disposable(() => drops?.dispose()),
         registerOperations(context, panel),
-        window.registerSearchProvider(fileSearch(project, workbench)),
+        window.registerSearchProvider(fileSearch(project, window)),
         window.onDidChangeActiveFile(render),
         project.onDidChangeMain(() => panel.render(state())),
         window.onDidChangeFileDecorations(() => panel.render(state())),
-        workbench.onDidChangeMenu((menuId) => menuId === NEW_FILE_MENU && panel.render(state())),
+        window.onDidChangeMenu((menuId) => menuId === NEW_FILE_MENU && panel.render(state())),
         workspace.onDidChangeConfiguration((event) => {
           if (event.affectsConfiguration('files.panel')) render();
         }),
@@ -101,7 +101,7 @@ const PANEL_SETTING = {
 type PanelMode = 'auto' | 'show' | 'hide';
 
 /** The panel's operations as commands, and its own entries in "New" and in a row's context menu. */
-function registerOperations({ commands, workbench, project, window }: ExtensionContext, panel: FilePanel): Disposable {
+function registerOperations({ commands, project, window }: ExtensionContext, panel: FilePanel): Disposable {
   // a .typ file that is not the main file yet, while the host lets the main file change
   const mainCandidate = (context: MenuContext) =>
     !project.mainLocked && context.resourceKind === 'file' && !context.resourceIsMain && ProjectPath.isTypst(context.resource as ProjectPath);
@@ -116,11 +116,11 @@ function registerOperations({ commands, workbench, project, window }: ExtensionC
       if (problem) void window.showErrorMessage(problem);
     }),
     ...NEW_ENTRIES.flatMap((entry) => [
-      workbench.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
-      workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
+      window.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
+      window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
     ]),
-    workbench.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', group: 'main', when: mainCandidate }),
-    ...CHANGE_ENTRIES.map((entry) => workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
+    window.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', group: 'main', when: mainCandidate }),
+    ...CHANGE_ENTRIES.map((entry) => window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
   );
 }
 

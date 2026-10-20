@@ -1,5 +1,5 @@
 /* Messages (show…Message), input boxes and quick picks, menus (showContextMenu), a custom editor's panel, progress
-   (withProgress). See WindowHost in window-impl.ts, whose styleSheet the workbench adds. */
+   (withProgress). See WindowHost in window-impl.ts, which adds it after the layout's. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .zwf-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .zwf-editor__custom-editor[hidden] { display: none; }

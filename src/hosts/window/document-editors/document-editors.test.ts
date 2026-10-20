@@ -1,16 +1,15 @@
 // @vitest-environment jsdom
-// Tests for document-editors.ts, shown through the window's custom editors as the workbench does.
+// Tests for document-editors.ts, shown through the window's custom editors.
 import { history, undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { type FileChange, Project } from '../../../core/project/project';
 import { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { SOURCE_EDITOR, SourceEditorHost } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditorHost } from '../../visual-editor/visual-editor';
-import { type TextEditorSelectionChangeEvent, WindowHost } from '../../window/window';
+import { CustomEditors } from '../custom-editors/custom-editors';
 import { DocumentEditors } from './document-editors';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.
@@ -28,25 +27,14 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
   const sourceEditors = new SourceEditorHost();
   sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, history());
   const editors = new DocumentEditors(project, { visualEditor: new VisualEditorHost(), sourceEditors, onSelection: (editor) => options.onSelection?.(editor.selection) });
-  const window = new WindowHost({
-    exists: (at) => project.has(at),
-    host,
-    statusBar: host.appendChild(document.createElement('div')),
-    editingArea: area,
-    onDidChangeFile: project.onDidChangeFile,
-    activeFile: () => path('/main.typ'),
-    onDidChangeActiveFile: new EventEmitter<ProjectPath>().event,
-    activeTextEditor: () => editors.activeTextEditor,
-    onDidChangeTextEditorSelection: new EventEmitter<TextEditorSelectionChangeEvent>().event,
-    menuItems: () => [],
-    executeCommand: async () => undefined,
-  });
-  editors.register(window);
-  window.registerCustomEditorProvider('test.image', { resolveCustomEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });
-  const show = (at: string, viewType?: string) => window.showCustomEditor({ path: path(at), content: project.content(path(at))! }, viewType);
+  const customEditors = new CustomEditors(area);
+  project.onDidChangeFile((fileChange) => customEditors.followFileChange(fileChange));
+  editors.register({ registerCustomEditorProvider: (viewType, provider, options) => customEditors.register(viewType, provider, options) });
+  customEditors.register('test.image', { resolveCustomEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });
+  const show = (at: string, viewType?: string) => customEditors.show({ path: path(at), content: project.content(path(at))! }, viewType);
   const visible = () => [...area.querySelectorAll<HTMLElement>('.zwf-editor__pane')].filter((pane) => !pane.hidden);
   const change = (fileChange: FileChange) => project.apply(fileChange);
-  return { area, editors, window, show, visible, change };
+  return { area, editors, customEditors, show, visible, change };
 }
 
 describe('DocumentEditors', () => {
@@ -84,8 +72,8 @@ describe('DocumentEditors', () => {
   });
 
   it('registers the Visual editor, then the Source editor, as the editors of *.typ; the Visual editor opens by default', () => {
-    const { window, show, visible } = setup();
-    expect(window.customEditorChoices(path('/main.typ'))).toEqual([
+    const { customEditors, show, visible } = setup();
+    expect(customEditors.choicesFor(path('/main.typ'))).toEqual([
       { viewType: VISUAL_EDITOR, displayName: 'Visual' },
       { viewType: SOURCE_EDITOR, displayName: 'Source' },
     ]);

@@ -1,8 +1,8 @@
 // EditorTitleMenu: the `editor/title` menu (VS Code's id) and the "View" menu at the end of the editing area's tab bar.
-// See registerMenuItem in ../workbench.ts.
+// See registerMenuItem in ../window.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { CommandsHost } from '../../commands/commands';
-import type { ContextMenuOptions } from '../../window/window';
+import type { ContextMenuOptions } from '../window';
 import type { MenuContext } from '../../commands/commands';
 import type { Menus } from './menus';
 
@@ -12,7 +12,7 @@ import type { Menus } from './menus';
  * again on `update` (the tab or the file changed) and whenever either menu's entries change. Pressing a button keeps
  * the focus where it is, so the commands act on the editor's selection. A failing command is logged.
  *
- * @internal Extensions add to it through `workbench.registerMenuItem` (`editor/title`, `view`).
+ * @internal Extensions add to it through `window.registerMenuItem` (`editor/title`, `view`).
  */
 export class EditorTitleMenu {
   readonly element: HTMLElement;

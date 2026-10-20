@@ -13,8 +13,8 @@ import { BlockHandle } from './visual-editor/grip';
 export function blockHandle(): Extension {
   return {
     id: 'block-handle',
-    activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockHandle));
+    activate({ window, visualEditor, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockHandle));
     },
   };
 }

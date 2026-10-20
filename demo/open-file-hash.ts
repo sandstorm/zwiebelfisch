@@ -13,7 +13,7 @@ import { ProjectPath, SourceOffset, type Extension, type WindowApi } from '../sr
 export function openFileHash(): Extension {
   return {
     id: 'open-file-hash',
-    activate({ project, window, workbench, subscriptions }) {
+    activate({ project, window, subscriptions }) {
       let pending = locationFromHash(location.hash);
       let shown = window.activeFile;
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -31,11 +31,11 @@ export function openFileHash(): Extension {
         const document = project.document(path);
         const start = document && line !== null ? lineStart(document.text, line) : undefined;
         if (start === null) {
-          if (window.activeFile !== path) workbench.open(path);
+          if (window.activeFile !== path) window.showDocument(path);
           return;
         }
         pending = null;
-        workbench.open(path, start === undefined ? {} : { selection: { from: start, to: start } });
+        window.showDocument(path, start === undefined ? {} : { selection: { from: start, to: start } });
       };
       const followHash = () => {
         pending = locationFromHash(location.hash);
@@ -43,19 +43,19 @@ export function openFileHash(): Extension {
         else show();
       };
 
-      // after the workbench showed the main file (it does so once every extension is activated)
+      // after the window showed the main file (it does so once every extension is activated)
       queueMicrotask(restore);
       addEventListener('hashchange', followHash);
       subscriptions.push(
         window.onDidChangeActiveFile((path) => {
-          // the user went to another file (not the workbench showing the same one again)
+          // the user went to another file (not the window showing the same one again)
           if (pending && path !== pending.path && path !== shown) pending = null;
           shown = path;
           if (!pending) show();
         }),
         window.onDidChangeTextEditorSelection(({ textEditor }) => {
           if (textEditor !== window.activeTextEditor) return;
-          if (pending && workbench.isEditorFocused()) pending = null;
+          if (pending && window.isEditorFocused()) pending = null;
           if (pending) return restore();
           clearTimeout(timer);
           timer = setTimeout(show, 300);

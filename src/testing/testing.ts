@@ -32,7 +32,7 @@ import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualEditor, VisualEditorHost, type VisualEditorContributions } from '../hosts/visual-editor/visual-editor';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
-import type { Extension, ExtensionContext, Workbench } from '../hosts/workbench/workbench';
+import type { Extension, ExtensionContext } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
 
 /**
@@ -116,11 +116,11 @@ export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickP
 }
 
 /**
- * The workbench's menus in a test (`registerMenuItem`, `getMenuItems`, `onDidChangeMenu`): the entries whose `when`
- * holds, sorted as the workbench sorts them (group `navigation` first, the others by name, then `order`, then
+ * The window's menus in a test (`registerMenuItem`, `getMenuItems`, `onDidChangeMenu`): the entries whose `when`
+ * holds, sorted as the window sorts them (group `navigation` first, the others by name, then `order`, then
  * registration order), with their declared command's title and icon unless their own.
  */
-class TestMenus implements Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> {
+class TestMenus implements Pick<WindowApi, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> {
   private readonly items: { menuId: string; item: MenuItem<any> }[] = [];
   private readonly declared = new Map<string, CommandContribution>();
   private readonly changed = new EventEmitter<string>();
@@ -189,12 +189,14 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * Visual editor's (style sheets, custom editors, search providers, CodeMirror extensions) are accepted and ignored.
  */
 function activate(contributions: readonly Extension[], options: TestEditorOptions = {}): VisualEditorHost {
-  const { visualEditor, commands, workbench } = testHosts(options);
-  const { registerMenuItem, getMenuItems, onDidChangeMenu } = workbench;
-  const context = { visualEditor, subscriptions: [], ...testContext(options), commands, workbench: { registerMenuItem, getMenuItems, onDidChangeMenu, registerStyleSheet: ignored, open: () => {} } };
+  const { visualEditor, commands, window: menus } = testHosts(options);
+  const { registerMenuItem, getMenuItems, onDidChangeMenu } = menus;
+  const own = testContext(options);
+  const window = { ...own.window, registerMenuItem, getMenuItems, onDidChangeMenu, registerStyleSheet: ignored, open: () => {} };
+  const context = { visualEditor, subscriptions: [], ...own, window, commands };
   for (const contribution of contributions) {
     commands.declareCommands(contribution.contributes?.commands);
-    workbench.declareCommands(contribution.contributes?.commands);
+    menus.declareCommands(contribution.contributes?.commands);
     commands.declareKeybindings(contribution.contributes?.keybindings);
     contribution.activate(context as unknown as ExtensionContext);
   }
@@ -202,13 +204,13 @@ function activate(contributions: readonly Extension[], options: TestEditorOption
 }
 
 /**
- * A Visual editor host whose toolbar shows the menus of `workbench` and runs the commands of `commands`, as the
+ * A Visual editor host whose toolbar shows the menus of `window` and runs the commands of `commands`, as the
  * widget's does: for tests that register its contributions themselves.
  */
 export function testHosts(options: Pick<TestEditorOptions, 'rawBoxCodeMirrorExtensions'> = {}): {
   visualEditor: VisualEditorHost;
   commands: CommandsHost;
-  workbench: Pick<Workbench, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> & Pick<TestMenus, 'declareCommands'>;
+  window: Pick<WindowApi, 'registerMenuItem' | 'getMenuItems' | 'onDidChangeMenu'> & Pick<TestMenus, 'declareCommands'>;
 } {
   const menus = new TestMenus();
   // keys go to the widget's root: a detached element (jsdom), or nothing to listen to (node)
@@ -223,8 +225,7 @@ export function testHosts(options: Pick<TestEditorOptions, 'rawBoxCodeMirrorExte
       keybindingLabel: (command) => commands.keybindingLabel(command),
     },
   });
-  const workbench = menus;
-  return { visualEditor, commands, workbench };
+  return { visualEditor, commands, window: menus };
 }
 
 /** The parts of an extension context the built-ins use, made from `options`. */

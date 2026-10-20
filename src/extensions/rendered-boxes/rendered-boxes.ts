@@ -12,9 +12,9 @@ import { snippetRenderer } from './visual-editor/visual-editor';
 export function renderedBoxes(): Extension {
   return {
     id: 'rendered-boxes',
-    activate({ project, preview, visualEditor, workbench, subscriptions }) {
+    activate({ project, preview, visualEditor, window, subscriptions }) {
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         visualEditor.registerRawBoxRenderer(({ document }) =>
           snippetRenderer({
             snippet: async (range, text) => {

@@ -1,6 +1,6 @@
-// See WorkbenchHost in ../workbench-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
+// See WindowHost in ../window-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 
-import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
+import type { SidePanel, SidePanelOptions, WindowOptions } from '../window';
 import { div, restoreSideBarState, SideBar, type PanelCommands, type RailAction, type Side } from './side-bar';
 
 /**
@@ -12,9 +12,9 @@ import { div, restoreSideBarState, SideBar, type PanelCommands, type RailAction,
  * While the widget is narrower than 720px the left side's panel lies over the editing area and closes on Escape, a
  * click outside, or `dismiss()` (e.g. after a file was chosen in it).
  *
- * @internal Extensions fill it through `workbench.registerSidePanel` and `window.registerStatusBarItem`.
+ * @internal Extensions fill it through `window.registerSidePanel` and `window.registerStatusBarItem`.
  */
-export class WorkbenchLayout {
+export class WindowLayout {
   readonly editor: HTMLElement;
   readonly statusBar: HTMLElement;
   readonly #sides: Record<Side, SideBar>;
@@ -23,7 +23,7 @@ export class WorkbenchLayout {
   constructor(
     private readonly host: HTMLElement,
     /** Where the layout keeps its state for the browser session (key `layout`). */
-    memento: Memento,
+    memento: WindowOptions['layoutState'],
     /** Where each panel's command `workbench.view.<id>` goes, and the keys its rail button names. */
     commands: PanelCommands,
   ) {

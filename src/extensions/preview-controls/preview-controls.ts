@@ -17,8 +17,8 @@ import css from './preview-controls.css?inline';
 export function previewControls(): Extension {
   return {
     id: 'preview-controls',
-    activate({ workbench, preview, commands, globalState, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ window, preview, commands, globalState, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
       const chosen = globalState.get<unknown>(RENDERER_KEY);
       if (typeof chosen === 'string') preview.setActiveRenderer(chosen);
       const remember = (id: string) => void globalState.update(RENDERER_KEY, id);
@@ -26,7 +26,7 @@ export function previewControls(): Extension {
         preview.registerToolbarItem(rendererSwitch(preview, remember), { group: '2_view', order: 0 }),
         preview.registerToolbarItem(zoomControls, { group: '2_view', order: 10, renderer: 'pages' }),
         preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20, renderer: 'pages' }),
-        registerViewOptionsMenu({ preview, workbench, commands, state: globalState }),
+        registerViewOptionsMenu({ preview, window, commands, state: globalState }),
       );
     },
   };

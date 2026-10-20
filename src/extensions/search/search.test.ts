@@ -53,7 +53,7 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
       context.subscriptions.push(
         window.registerCustomEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }),
         // where search everywhere's rail button goes
-        context.workbench.registerMenuItem('workbench/rail/left', { command: 'probe.everywhere', title: 'Search everywhere', order: 15 }),
+        context.window.registerMenuItem('workbench/rail/left', { command: 'probe.everywhere', title: 'Search everywhere', order: 15 }),
       );
     },
   };
@@ -103,7 +103,7 @@ describe('search', () => {
       const { workbench, window, row } = setup(viewType);
       await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'round' });
       await vi.runAllTimersAsync();
-      workbench.open(path('/notes.txt'));
+      workbench.window.showDocument(path('/notes.txt'));
       row('The world is round.').click();
       expect(window.activeFile).toBe('/main.typ');
       expect(window.activeTextEditor?.viewType).toBe(viewType);
@@ -166,8 +166,8 @@ describe('search', () => {
 
   it('"Find in folder…" on a folder\'s row searches that folder and its subfolders', async () => {
     const { workbench, panel, input } = setup();
-    expect(workbench.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
-    const [entry] = workbench.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
+    expect(workbench.window.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
+    const [entry] = workbench.window.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
     input.value = 'round';
     await workbench.commands.executeCommand(entry.command, path('/chapters'));
     await vi.runAllTimersAsync();

@@ -18,7 +18,7 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
  *
  * Shows the other users, each in their color:
  * - carets and selections in the Source and Visual editors
- * - file decorations in the workbench
+ * - file decorations in the window
  *
  * Until the room's text is in the project, the editing area takes no input. Other users' edits never enter the local
  * undo history. With a server, only signed-in users connect: the status bar shows the account and offers signing in,
@@ -38,20 +38,20 @@ export function collaboration(options: CollaborationOptions): Extension {
         }
       : undefined,
     activate(context) {
-      const { project, window, scm, workbench, sourceEditor, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(css));
+      const { project, window, scm, sourceEditor, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
-      const user = workbench.user;
+      const user = window.user;
       const account = 'url' in options ? signInOut(new Account(options.url), context) : null;
       // whoever signed in at the server is the one working here: comments are signed with the name the others see
-      if (account) subscriptions.push(account.onDidChange(() => account.identity && workbench.setUser({ ...user, name: account.identity.name })));
+      if (account) subscriptions.push(account.onDidChange(() => account.identity && window.setUser({ ...user, name: account.identity.name })));
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
           const editor = window.activeTextEditor;
           const path = editor && project.pathOf(editor.document);
           return path ? { path, selection: editor.selection } : null;
         },
-        focused: () => workbench.isEditorFocused(),
+        focused: () => window.isEditorFocused(),
         onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
         tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
@@ -72,7 +72,7 @@ export function collaboration(options: CollaborationOptions): Extension {
       );
       // what is typed before the room's text is there would be replaced by it
       void window.withProgress({ location: ProgressLocation.EditingArea, title: 'Connecting to the room…' }, () => link.ready);
-      const view = workbench.ownerDocument.defaultView;
+      const view = window.ownerDocument.defaultView;
       if (view) subscriptions.push(leaveWarning(view, () => link.leavesChangesUncommitted()));
     },
   };
@@ -82,9 +82,9 @@ export function collaboration(options: CollaborationOptions): Extension {
  * The account's status bar entry and the commands `collaboration.signIn` (to the server's sign-in, back to this page)
  * and `collaboration.signOut` (then the page reloads: the room's connection was the signed-in user's).
  */
-function signInOut(account: Account, { commands, window, workbench, subscriptions }: ExtensionContext): Account {
-  const view = workbench.ownerDocument.defaultView;
-  const status = new AccountStatus(workbench.ownerDocument, account, {
+function signInOut(account: Account, { commands, window, subscriptions }: ExtensionContext): Account {
+  const view = window.ownerDocument.defaultView;
+  const status = new AccountStatus(window.ownerDocument, account, {
     signIn: () => void commands.executeCommand('collaboration.signIn'),
     showMenu: (anchor) => window.showContextMenu(ACCOUNT_MENU, { anchor, title: account.identity?.name ?? 'Account' }),
   });
@@ -92,7 +92,7 @@ function signInOut(account: Account, { commands, window, workbench, subscription
     account,
     account.onDidChange(() => status.show()),
     window.registerStatusBarItem(status.element, { alignment: 'right', priority: 10 }),
-    workbench.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut' }),
+    window.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut' }),
     commands.registerCommand('collaboration.signIn', () => view?.location.assign(account.signInUrl(view.location.href))),
     commands.registerCommand('collaboration.signOut', async () => {
       await account.signOut();

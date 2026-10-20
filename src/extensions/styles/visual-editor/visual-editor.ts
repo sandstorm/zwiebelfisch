@@ -7,7 +7,8 @@ import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Submenu, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext, Workbench } from '../../../hosts/workbench/workbench';
+import type { WindowApi } from '../../../hosts/window/window';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
@@ -24,7 +25,7 @@ import { StyledBlock, TypstStyleMark } from './style-nodes';
  * used. The inline styles are also the "Styles" menu of the bar above a text
  * selection, toggled there as in the text style menu.
  */
-export function registerCustomStyles(context: Pick<ExtensionContext, 'visualEditor' | 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, options: StylesOptions): Disposable {
+export function registerCustomStyles(context: Pick<ExtensionContext, 'visualEditor' | 'commands'> & { window: Pick<WindowApi, 'registerMenuItem'> }, options: StylesOptions): Disposable {
   const { visualEditor } = context;
   const declared = declaredStyles(options.styles);
   // a style declared or removed: every Visual editor parses its document again
@@ -109,7 +110,7 @@ export function registerStyleApplier(visualEditor: VisualEditorContributions, so
  * off), the inline styles (toggles on a selection, `#key[..]`; also the Styles menu of the selection bar), and "New
  * style…". Applying a style imports it into the editor's document where needed.
  */
-function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, { styles: source, create }: StylesOptions): Disposable {
+function registerStyleButtons({ commands, window }: Pick<ExtensionContext, 'commands'> & { window: Pick<WindowApi, 'registerMenuItem'> }, { styles: source, create }: StylesOptions): Disposable {
   const register = () =>
     Disposable.from(
       ...source.styles().map((style) => {
@@ -123,15 +124,15 @@ function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'c
             commands.registerCommand(command, (context: VisualEditorMenuContext) =>
               toggled(context) ? context.tiptap.chain().focus().unsetBlockStyle().run() : applyTextStyle(entry(context), context.tiptap),
             ),
-            workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { command, title: style.label, category: 'Block styles', group: 'block', toggled, enabled: (context) => toggled(context) || enabled(context) }),
+            window.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { command, title: style.label, category: 'Block styles', group: 'block', toggled, enabled: (context) => toggled(context) || enabled(context) }),
           );
         }
         const command = `styles.toggleInlineStyle.${style.name}`;
         const item = { command, title: style.label, enabled, toggled };
         return Disposable.from(
           commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.tiptap)),
-          workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { ...item, category: 'Inline styles', group: 'inline' }),
-          workbench.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, { ...item, icon: STYLE_ICON }),
+          window.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { ...item, category: 'Inline styles', group: 'inline' }),
+          window.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, { ...item, icon: STYLE_ICON }),
         );
       }),
     );
@@ -146,7 +147,7 @@ function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'c
       registered.dispose();
     }),
     commands.registerCommand(NEW_STYLE, () => create()),
-    workbench.registerMenuItem(TEXT_STYLE, { command: NEW_STYLE, title: 'New style…', group: 'new' }),
+    window.registerMenuItem(TEXT_STYLE, { command: NEW_STYLE, title: 'New style…', group: 'new' }),
   );
 }
 

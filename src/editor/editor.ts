@@ -71,7 +71,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     user: options.user,
     settings: options.settings,
     allowFileChange: options.allowFileChange,
-    // the tokens and the frame; the workbench adds the hosts', each extension its own (registerStyleSheet)
+    // the tokens and the frame; the window adds its own, the workbench the hosts', each extension its own (registerStyleSheet)
     styleSheet: widgetStyles,
   });
   const builtins = builtinExtensions();
@@ -84,7 +84,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     set files(next: ProjectFiles) {
       project.replace(next); // listeners hear about every file
       // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
-      workbench.open(workbench.window.activeFile);
+      workbench.window.showDocument(workbench.window.activeFile);
     },
     get source() {
       return project.document(project.main)!.text;
@@ -101,7 +101,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     },
     open: (path) => {
       const parsed = ProjectPath.parse(path);
-      if (parsed) workbench.open(parsed);
+      if (parsed) workbench.window.showDocument(parsed);
     },
     onDidChangeFiles: events.onDidChangeFiles,
     onDidChangeMainFile: events.onDidChangeMainFile,

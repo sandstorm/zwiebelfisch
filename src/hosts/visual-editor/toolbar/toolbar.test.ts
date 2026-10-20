@@ -13,8 +13,8 @@ import { registerChainButton, svg, VisualEditor, VisualEditorHost, type VisualEd
 const TOOLBAR = 'visualEditor/toolbar';
 
 /**
- * A Visual editor host whose toolbar shows the entries registered with `workbench` (sorted by `order`, as registered
- * on ties) and runs the commands of `commands`: the workbench's part, as small as these tests need.
+ * A Visual editor host whose toolbar shows the entries registered with `window` (sorted by `order`, as registered
+ * on ties) and runs the commands of `commands`: the window's part, as small as these tests need.
  */
 function testHosts() {
   const items: { menuId: string; item: MenuItem<VisualEditorMenuContext> }[] = [];
@@ -22,7 +22,7 @@ function testHosts() {
   const commands = new CommandsHost(document.createElement('div'));
   const getMenuItems = (menuId: string, context?: VisualEditorMenuContext) =>
     items.filter((entry) => entry.menuId === menuId && (!entry.item.when || (context !== undefined && entry.item.when(context)))).map((entry) => entry.item).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const workbench = {
+  const window = {
     registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>) {
       const entry = { menuId, item };
       items.push(entry);
@@ -34,7 +34,7 @@ function testHosts() {
   const visualEditor = new VisualEditorHost({
     menus: { getMenuItems, onDidChangeMenu: changed.event, executeCommand: (command, ...args) => commands.executeCommand(command, ...args), keybindingLabel: (command) => commands.keybindingLabel(command) },
   });
-  return { visualEditor, commands, workbench };
+  return { visualEditor, commands, window };
 }
 
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
@@ -68,9 +68,9 @@ function setup(text: string) {
 describe('Visual editor toolbar', () => {
   it("asks a menu's and a floating bar's items for their state only while they show, not after every transaction", () => {
     const asked = { menu: 0, bar: 0 };
-    const { visualEditor, workbench } = testHosts();
-    workbench.registerMenuItem('visualEditor/insert', { command: 'test.counted', title: 'Counted', icon: svg(''), enabled: () => (asked.menu++, true) });
-    workbench.registerMenuItem('visualEditor/selection', { command: 'test.counted', title: 'Counted in bar', icon: svg(''), enabled: () => (asked.bar++, true) });
+    const { visualEditor, window } = testHosts();
+    window.registerMenuItem('visualEditor/insert', { command: 'test.counted', title: 'Counted', icon: svg(''), enabled: () => (asked.menu++, true) });
+    window.registerMenuItem('visualEditor/selection', { command: 'test.counted', title: 'Counted in bar', icon: svg(''), enabled: () => (asked.bar++, true) });
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     const view = new VisualEditor(parent, doc, visualEditor);
@@ -116,18 +116,18 @@ describe('Visual editor toolbar', () => {
   });
 
   it('follows the menus: an entry registered later shows, one disposed goes', () => {
-    const { visualEditor, workbench } = testHosts();
+    const { visualEditor, window } = testHosts();
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('Hello\n'), visualEditor);
-    const later = workbench.registerMenuItem(TOOLBAR, { command: 'test.later', title: 'Later', icon: svg('') });
+    const later = window.registerMenuItem(TOOLBAR, { command: 'test.later', title: 'Later', icon: svg('') });
     expect(parent.querySelector('.zwf-toolbar button[aria-label="Later"]')).not.toBeNull();
     later.dispose();
     expect(parent.querySelector('.zwf-toolbar button[aria-label="Later"]')).toBeNull();
   });
 
   it('shows the short title where an entry has no icon, and its key in the tooltip', () => {
-    const { visualEditor, workbench } = testHosts();
-    workbench.registerMenuItem(TOOLBAR, { command: 'test.wide', title: 'Width 50%', shortTitle: '50%', keybinding: 'Mod+B' });
+    const { visualEditor, window } = testHosts();
+    window.registerMenuItem(TOOLBAR, { command: 'test.wide', title: 'Width 50%', shortTitle: '50%', keybinding: 'Mod+B' });
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('Hello\n'), visualEditor);
     const button = parent.querySelector<HTMLButtonElement>('button[aria-label="Width 50%"]')!;
@@ -139,7 +139,7 @@ describe('Visual editor toolbar', () => {
 describe('a submenu in a floating bar', () => {
   it("sits among the bar's entries by its order, holds the entries there when it opens, and is left out without any", () => {
     const hosts = testHosts();
-    const { visualEditor, workbench } = hosts;
+    const { visualEditor, window } = hosts;
     visualEditor.registerSubmenu({ id: 'test/words', parent: 'visualEditor/selection', order: 20, label: 'Words', icon: () => svg('') });
     registerChainButton(hosts, 'visualEditor/selection', { command: 'test.first', title: 'First', icon: svg(''), order: 10, chain: (c) => c });
     registerChainButton(hosts, 'visualEditor/selection', { command: 'test.last', title: 'Last', icon: svg(''), order: 30, chain: (c) => c });
@@ -159,6 +159,6 @@ describe('a submenu in a floating bar', () => {
     trigger.click();
     bar.querySelector<HTMLButtonElement>('[role="menuitem"][aria-label="Hi"]')!.click();
     expect(doc.text).toBe('Hio world\n');
-    expect(workbench.getMenuItems('test/words').map((item) => item.title)).toEqual(['Hi']);
+    expect(window.getMenuItems('test/words').map((item) => item.title)).toEqual(['Hi']);
   });
 });

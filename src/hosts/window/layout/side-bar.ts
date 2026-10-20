@@ -1,8 +1,8 @@
-// See WorkbenchLayout in workbench-layout.ts.
+// See WindowLayout in window-layout.ts.
 
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { SidePanel, SidePanelOptions } from '../workbench';
+import type { SidePanel, SidePanelOptions } from '../window';
 
 /**
  * One side of the widget (left or right): its rail (a button per panel, by `order`, in its top or bottom group) and at most one panel shown, sized
@@ -12,7 +12,7 @@ import type { SidePanel, SidePanelOptions } from '../workbench';
  * the moment only, and Escape, a click outside or `dismiss()` close the panel. Each panel's command
  * `workbench.view.<id>` picks it from the keyboard; its rail button's tooltip names the key.
  *
- * @internal Extensions add panels through `workbench.registerSidePanel`.
+ * @internal Extensions add panels through `window.registerSidePanel`.
  */
 export class SideBar {
   readonly element: HTMLElement;

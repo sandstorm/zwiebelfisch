@@ -83,9 +83,9 @@ describe('subscribeToEvents', () => {
     ]);
   });
 
-  it("leaves out the workbench's dropped files: listening would turn on the drop hint", () => {
+  it("leaves out the window's dropped files: listening would turn on the drop hint", () => {
     const drops = emitter<File[]>();
-    const context = { subscriptions: [], workbench: { onDidDropFiles: drops.event } } as unknown as ExtensionContext;
+    const context = { subscriptions: [], window: { onDidDropFiles: drops.event } } as unknown as ExtensionContext;
     subscribeToEvents(context, () => {});
     expect(drops.listened()).toBe(false);
   });

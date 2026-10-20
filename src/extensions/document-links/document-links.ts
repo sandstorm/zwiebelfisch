@@ -24,11 +24,11 @@ export function documentLinks(): Extension {
   return {
     id: 'document-links',
     activate(context) {
-      const { project, commands, languages, workspace, workbench, sourceEditor, visualEditor, subscriptions } = context;
+      const { project, commands, languages, workspace, window, sourceEditor, visualEditor, subscriptions } = context;
       const actions = linkActions(context);
       const pathOf = (document: TypstDocument) => () => project.pathOf(document) ?? null;
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         sourceEditor.registerCodeMirrorExtension({}, ({ languageId, path }) => linkExtension(actions, languageId, path)),
         visualEditor.registerTiptapExtension((editor) => textLinks(editor, actions, pathOf(editor.document))),
         visualEditor.registerRawBoxExtension((box) => pictureLink(box, actions, pathOf(box.editor.document))),
@@ -38,7 +38,7 @@ export function documentLinks(): Extension {
           if (!target) throw new Error(`Not a project path: ${path}`);
           const problem = await workspace.applyEdit({ kind: 'create', path: target, content: '' });
           if (problem !== null) throw new Error(problem);
-          workbench.open(target);
+          window.showDocument(target);
         }),
       );
     },
@@ -46,11 +46,11 @@ export function documentLinks(): Extension {
 }
 
 /** Where the links come from (every provider, merged), and where following one goes. */
-function linkActions({ languages, workbench, commands }: ExtensionContext): LinkActions {
+function linkActions({ languages, window, commands }: ExtensionContext): LinkActions {
   return {
     provideDocumentLinks: (document) => languages.provideDocumentLinks(document),
     resolveDocumentLink: (link) => languages.resolveDocumentLink(link),
-    open: (target, selection) => (target instanceof URL ? openExternal(workbench.ownerDocument, target) : workbench.open(target, { selection })),
+    open: (target, selection) => (target instanceof URL ? openExternal(window.ownerDocument, target) : window.showDocument(target, { selection })),
     executeCommand: (command, ...args) => commands.executeCommand(command, ...args),
   };
 }

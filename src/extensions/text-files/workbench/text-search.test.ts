@@ -12,7 +12,7 @@ function setup() {
     '/logo.png': new Uint8Array([1, 2]),
   });
   const open = vi.fn();
-  const search = textSearch({ project, workbench: { open }, isTextFile: (path) => path.endsWith('.csv') });
+  const search = textSearch({ project, window: { showDocument: open }, isTextFile: (path) => path.endsWith('.csv') });
   return { search, open };
 }
 

@@ -22,10 +22,10 @@ export function fileNavigation(): Extension {
   return {
     id: 'file-navigation',
     contributes: { keybindings: KEYBINDINGS },
-    activate({ project, window, workbench, commands, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
-      const doc = workbench.ownerDocument;
-      const readingOrder = new FileNavigation(doc, (path) => workbench.open(path));
+    activate({ project, window, commands, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
+      const doc = window.ownerDocument;
+      const readingOrder = new FileNavigation(doc, (path) => window.showDocument(path));
       const history = new NavigationHistory(window.activeFile);
       // the file shown, and its Typst editor (read when the user leaves it: the editor keeps its selection while hidden)
       let shown: { path: ProjectPath; editor: TextEditor | null } = { path: window.activeFile, editor: window.activeTextEditor };
@@ -41,7 +41,7 @@ export function fileNavigation(): Extension {
         const selection = target.selection && within(target.selection, project.document(target.path)?.text);
         going = true;
         try {
-          workbench.open(target.path, { viewType: target.viewType, selection });
+          window.showDocument(target.path, { viewType: target.viewType, selection });
         } finally {
           going = false;
         }
@@ -64,7 +64,7 @@ export function fileNavigation(): Extension {
         show();
       };
       subscriptions.push(
-        workbench.registerEditorFrame({ top, bottom: readingOrder.bottom }),
+        window.registerEditorFrame({ top, bottom: readingOrder.bottom }),
         window.onDidChangeActiveFile(opened),
         project.onDidChangeFile((change) => {
           history.followFileChange(change);

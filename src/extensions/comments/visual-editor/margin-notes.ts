@@ -9,7 +9,7 @@ import { children } from '../../../core/typst-syntax/typst-syntax';
 import { Disposable } from '../../../core/disposable/disposable';
 import { svg, type TypstNodeSpec, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { MenuItem } from '../../../hosts/commands/commands';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { WindowApi } from '../../../hosts/window/window';
 import { type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
@@ -28,7 +28,7 @@ export function registerMarginNotes(visualEditor: VisualEditorContributions): Di
  * "Comment" in the toolbar's `6_comments` group and in the selection's bar: runs `command` (adds a comment at the
  * selection), enabled with a caret or selection in text (not in a code block or on a selected box).
  */
-export function registerCommentButtons(workbench: Pick<Workbench, 'registerMenuItem'>, command: string): Disposable {
+export function registerCommentButtons(window: Pick<WindowApi, 'registerMenuItem'>, command: string): Disposable {
   const button: MenuItem<VisualEditorMenuContext> = {
     command,
     title: 'Comment',
@@ -40,8 +40,8 @@ export function registerCommentButtons(workbench: Pick<Workbench, 'registerMenuI
     },
   };
   return Disposable.from(
-    workbench.registerMenuItem('visualEditor/toolbar', { ...button, group: '6_comments' }),
-    workbench.registerMenuItem('visualEditor/selection', { ...button, order: 50 }),
+    window.registerMenuItem('visualEditor/toolbar', { ...button, group: '6_comments' }),
+    window.registerMenuItem('visualEditor/selection', { ...button, order: 50 }),
   );
 }
 

@@ -39,9 +39,9 @@ function setup(settings = {}) {
 describe('diagrams', () => {
   it('opens a .drawio.png in the embedded editor from the setting diagrams.editorUrl', () => {
     const { workbench, frame } = setup({ 'diagrams.editorUrl': 'https://drawio.example.com/app/' });
-    workbench.open(path('/img/flow.drawio.png'));
+    workbench.window.showDocument(path('/img/flow.drawio.png'));
     expect(frame()!.src.startsWith('https://drawio.example.com/app/?embed=1&proto=json')).toBe(true);
-    workbench.open(path('/main.typ'));
+    workbench.window.showDocument(path('/main.typ'));
     expect(frame()).toBeNull();
   });
 
@@ -49,18 +49,18 @@ describe('diagrams', () => {
     const { workbench, project, send } = setup();
     const changes: string[] = [];
     project.onDidChangeFile((change) => changes.push(`${change.kind} ${change.path}`));
-    workbench.open(path('/img/flow.drawio.png'));
+    workbench.window.showDocument(path('/img/flow.drawio.png'));
     send({ event: 'init' });
     send({ event: 'autosave', xml: '<mxfile>a</mxfile>' });
     send({ event: 'export', format: 'xmlpng', xml: '<mxfile>a</mxfile>', data: toDataUri(writeDiagramXml(emptyDiagram(), '<mxfile>a</mxfile>')) });
-    workbench.open(path('/main.typ'));
+    workbench.window.showDocument(path('/main.typ'));
     await vi.waitFor(() => expect(changes).toEqual(['update /img/flow.drawio.png']));
     expect(readDiagramXml(project.content(path('/img/flow.drawio.png')) as Uint8Array)).toBe('<mxfile>a</mxfile>');
   });
 
   it('"New diagram…" in the file panel\'s "New" asks for a name in the row\'s folder, creates an empty diagram and opens it', async () => {
     const { host, workbench, project, frame } = setup();
-    expect(workbench.getMenuItems('file/newFile').map((item) => [item.command, item.title])).toEqual([['diagrams.newDiagram', 'New diagram…']]);
+    expect(workbench.window.getMenuItems('file/newFile').map((item) => [item.command, item.title])).toEqual([['diagrams.newDiagram', 'New diagram…']]);
     const done = workbench.commands.executeCommand('diagrams.newDiagram', path('/img/flow.drawio.png'));
     const form = host.querySelector<HTMLFormElement>('form[aria-label="New diagram"]')!;
     const input = form.querySelector('input')!;

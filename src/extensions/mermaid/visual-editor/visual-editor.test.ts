@@ -21,17 +21,19 @@ function setup(text: string, answer: string | undefined) {
   const opened: ProjectPath[] = [];
   const context = {
     project,
-    window: { showSaveDialog: async (options: SaveDialogOptions) => (asked.push(options), answer === undefined ? undefined : path(answer)) },
+    window: {
+      showSaveDialog: async (options: SaveDialogOptions) => (asked.push(options), answer === undefined ? undefined : path(answer)),
+      showDocument: (target: ProjectPath) => void opened.push(target),
+    },
     workspace: { applyEdit: async (change: FileChange) => (project.apply(change), null) },
-    workbench: { open: (target: ProjectPath) => void opened.push(target) },
   } as unknown as InsertContext;
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
     contributions: [
       {
         id: 'test',
-        activate: ({ commands, workbench, subscriptions }) =>
-          subscriptions.push(registerInsertMermaid({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } })),
+        activate: ({ commands, window, subscriptions }) =>
+          subscriptions.push(registerInsertMermaid({ ...context, commands, window: { ...context.window, registerMenuItem: window.registerMenuItem } })),
       },
     ],
   });

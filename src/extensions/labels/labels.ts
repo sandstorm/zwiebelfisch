@@ -21,11 +21,11 @@ export function labels(): Extension {
   return {
     id: 'labels',
     activate(context) {
-      context.subscriptions.push(context.workbench.registerStyleSheet(css));
+      context.subscriptions.push(context.window.registerStyleSheet(css));
       const index = new LabelIndex(context.project);
       context.subscriptions.push(
         index,
-        context.window.registerSearchProvider(labelSearch(index, context.project, context.workbench)),
+        context.window.registerSearchProvider(labelSearch(index, context.project, context.window)),
         context.languages.registerDocumentLinkProvider({ language: 'typst' }, new LabelLinks(index, context.project)),
         context.languages.registerDocumentPasteEditProvider(
           { language: 'typst' },

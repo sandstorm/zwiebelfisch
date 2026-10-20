@@ -37,7 +37,7 @@ export function registerNoteCards(visualEditor: VisualEditorContributions, optio
 export interface NoteCardsOptions {
   /**
    * Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). Read each
-   * time, so it may change (a getter: the workbench's user, once signed in at a server).
+   * time, so it may change (a getter: the window's user, once signed in at a server).
    */
   readonly user?: { name: string };
 }

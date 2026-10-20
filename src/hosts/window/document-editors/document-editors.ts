@@ -1,10 +1,10 @@
-// See WorkbenchHost in ../workbench-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
+// See WindowHost in ../window-impl.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { SOURCE_EDITOR, type SourceEditor, SourceEditorHost } from '../../source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../visual-editor/visual-editor';
-import type { CustomEditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../window/window';
+import type { CustomEditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../window';
 
 /**
  * The Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`, `sourceEditor`), the

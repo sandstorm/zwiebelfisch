@@ -72,14 +72,14 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { language, editor } = record(selector);
     return { ...named(extension, 'CodeMirror extensions'), details: [`language ${String(language ?? '*')}`, `editor ${String(editor ?? '*')}`] };
   },
-  'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
-  'workbench.registerSidePanel': ([id, options]) => {
+  'window.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
+  'window.registerSidePanel': ([id, options]) => {
     const { label, side, order } = record(options);
     const where = side === 'right' ? 'right' : 'left';
     return { title: String(id), details: [`"${String(label)}"`, where, `order ${num(order, 0)}`], rank: [where, num(order, 0)] };
   },
-  'workbench.registerEditorFrame': () => ({ title: 'editor frame', details: [] }),
-  'workbench.registerMenuItem': ([menuId, item]) => {
+  'window.registerEditorFrame': () => ({ title: 'editor frame', details: [] }),
+  'window.registerMenuItem': ([menuId, item]) => {
     const { command, title, group, order, keybinding } = record(item);
     const place = typeof group === 'string' && group ? group : '';
     return {

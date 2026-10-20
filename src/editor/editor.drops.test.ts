@@ -9,7 +9,7 @@ import { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
-import { PROJECT_PATH_TYPE } from '../hosts/workbench/workbench';
+import { PROJECT_PATH_TYPE } from '../hosts/window/window';
 import { createEditor } from './editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({

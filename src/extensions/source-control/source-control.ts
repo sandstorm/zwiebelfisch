@@ -16,16 +16,16 @@ export function sourceControl(): Extension {
   return {
     id: 'source-control',
     activate(context) {
-      const { commands, scm, window, workbench, subscriptions } = context;
+      const { commands, scm, window, subscriptions } = context;
       const followed = new Map<SourceControl, Disposable>();
       const changed = new EventEmitter<void>();
-      const status = new SourceControlStatus(workbench.ownerDocument, (control) => void commit(context, control));
+      const status = new SourceControlStatus(window.ownerDocument, (control) => void commit(context, control));
       let entry: Disposable | null = null;
       let statusItem: Disposable | null = null;
       const show = () => {
         const controls = scm.sourceControls;
         entry?.dispose();
-        entry = controls.length === 0 ? null : workbench.registerMenuItem('editor/title', { command: 'sourceControl.commit', title: commitTitle(controls), group: 'sourceControl' });
+        entry = controls.length === 0 ? null : window.registerMenuItem('editor/title', { command: 'sourceControl.commit', title: commitTitle(controls), group: 'sourceControl' });
         status.show(controls);
         const hasStatus = controls.some((control) => control.statusBarItems?.length);
         if (hasStatus && !statusItem) statusItem = window.registerStatusBarItem(status.element, { alignment: 'left', priority: 200 });
@@ -48,7 +48,7 @@ export function sourceControl(): Extension {
         show();
       };
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         window.registerFileDecorationProvider(resourceDecorations(scm, changed.event)),
         commands.registerCommand('sourceControl.commit', () => commit(context)),
         scm.onDidChangeSourceControls(update),

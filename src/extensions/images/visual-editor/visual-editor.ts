@@ -23,8 +23,8 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * - "Insert image": a path, or the project's images and uploads
  * - image files pasted into the text, uploaded and inserted
  */
-export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 'commands' | 'workbench'>, options: ImagesOptions): Disposable {
-  const { visualEditor, commands, workbench } = context;
+export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 'commands' | 'window'>, options: ImagesOptions): Disposable {
+  const { visualEditor, commands, window } = context;
   // each editor's file picker, for "Upload image…"
   const pickers = new WeakMap<Editor, HTMLInputElement>();
   return Disposable.from(
@@ -33,7 +33,7 @@ export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 
     registerImageBarButtons(context, options.prompts),
     visualEditor.registerTiptapExtension((editor) => imageUploads(options.assets(editor.document), options.prompts, pickers)),
     commands.registerCommand(INSERT_IMAGE, ({ tiptap, document }: VisualEditorMenuContext) => chooseImage(tiptap, options.assets(document), options.prompts, pickers.get(tiptap))),
-    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+    window.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: INSERT_IMAGE,
       title: 'Insert image',
       icon: ICON,

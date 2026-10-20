@@ -11,10 +11,10 @@ import css from './preview-progress.css?inline';
 export function previewProgress(): Extension {
   return {
     id: 'preview-progress',
-    activate({ preview, window, workbench, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ preview, window, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
       const state = new LoadState();
-      const loader = new Loader(workbench.ownerDocument);
+      const loader = new Loader(window.ownerDocument);
       let failed = false;
       const changed = () => {
         const progress = state.current();

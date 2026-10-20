@@ -13,8 +13,8 @@ export function lists(): Extension {
   return {
     id: 'lists',
     activate(context) {
-      const { workbench, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(css));
+      const { window, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(css));
       subscriptions.push(
         visualEditor.registerNode(BULLET_LIST),
         visualEditor.registerNode(ORDERED_LIST),

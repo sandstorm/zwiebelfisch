@@ -2,14 +2,15 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Commands } from '../../../hosts/commands/commands';
 import type { PreviewContributions, PreviewViewOption } from '../../../hosts/preview/preview';
-import type { Memento, Workbench } from '../../../hosts/workbench/workbench';
+import type { WindowApi } from '../../../hosts/window/window';
+import type { Memento } from '../../../hosts/workbench/workbench';
 
 /**
  * An entry per registered view option (page guides, box outlines, comments) in the View menu (menu `view`, group
  * `preview`), checked while the option is on. Choosing one turns the option over at once. Each option starts as this
  * viewer left it last time (kept in `state`), else at its default, also an option registered later.
  */
-export function registerViewOptionsMenu({ preview, workbench, commands, state }: ViewOptionsMenuContext): Disposable {
+export function registerViewOptionsMenu({ preview, window, commands, state }: ViewOptionsMenuContext): Disposable {
   preview.setViewOptionValues(remembered(state));
   const entry = (option: PreviewViewOption, order: number): Disposable => {
     const command = `${TOGGLE}.${option.id}`;
@@ -20,7 +21,7 @@ export function registerViewOptionsMenu({ preview, workbench, commands, state }:
         void state.update(VALUES_KEY, values);
         preview.setViewOptionValues(values);
       }),
-      workbench.registerMenuItem('view', { command, title: option.label, group: 'preview', order, toggled: on }),
+      window.registerMenuItem('view', { command, title: option.label, group: 'preview', order, toggled: on }),
     );
   };
   let entries = Disposable.from();
@@ -38,7 +39,7 @@ export function registerViewOptionsMenu({ preview, workbench, commands, state }:
 
 export interface ViewOptionsMenuContext {
   readonly preview: Pick<PreviewContributions, 'viewOptions' | 'setViewOptionValues' | 'onDidChangeViewOptions'>;
-  readonly workbench: Pick<Workbench, 'registerMenuItem'>;
+  readonly window: Pick<WindowApi, 'registerMenuItem'>;
   readonly commands: Pick<Commands, 'registerCommand'>;
   /** Where this viewer's choices are kept (the extension's `globalState`). */
   readonly state: Memento;

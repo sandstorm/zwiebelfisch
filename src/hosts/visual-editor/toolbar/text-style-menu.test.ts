@@ -37,7 +37,7 @@ const LOUD: ChainButton = {
 
 const TEXT_STYLE = 'visualEditor/textStyle';
 
-/** The workbench's menus and commands, as small as these tests need: entries by group (`inline` after ''), then `order`. */
+/** The window's menus and commands, as small as these tests need: entries by group (`inline` after ''), then `order`. */
 function testHosts() {
   const items: { menuId: string; item: MenuItem<VisualEditorMenuContext> }[] = [];
   const changed = new EventEmitter<string>();
@@ -48,7 +48,7 @@ function testHosts() {
       .filter((entry) => entry.menuId === menuId)
       .map((entry) => entry.item)
       .sort((a, b) => (rank(a) < rank(b) ? -1 : rank(a) > rank(b) ? 1 : 0) || (a.order ?? 0) - (b.order ?? 0));
-  const workbench = {
+  const window = {
     registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>) {
       const entry = { menuId, item };
       items.push(entry);
@@ -59,7 +59,7 @@ function testHosts() {
   const visualEditor = new VisualEditorHost({
     menus: { getMenuItems, onDidChangeMenu: changed.event, executeCommand: (command, ...args) => commands.executeCommand(command, ...args), keybindingLabel: () => undefined },
   });
-  return { visualEditor, commands, workbench };
+  return { visualEditor, commands, window };
 }
 
 function setup(text: string, entries: readonly ChainButton[]) {
@@ -86,7 +86,7 @@ describe('the text style menu', () => {
   it('looks at its options when pressed, not after every transaction', () => {
     const enabled = vi.fn(() => true);
     const { view, menu, hosts } = setup('Hello world\n', []);
-    hosts.workbench.registerMenuItem(TEXT_STYLE, { command: 'test.counted', title: 'Counted', enabled });
+    hosts.window.registerMenuItem(TEXT_STYLE, { command: 'test.counted', title: 'Counted', enabled });
     view.reveal(SourceRange.of({ from: 0, to: 5 }));
     expect(enabled).not.toHaveBeenCalled();
     menu()!.dispatchEvent(new MouseEvent('mousedown'));

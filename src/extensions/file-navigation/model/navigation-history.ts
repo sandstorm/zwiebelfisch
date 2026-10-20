@@ -50,7 +50,7 @@ export class NavigationHistory {
 
   /**
    * Keeps the places with their files: a renamed file under its new name, a deleted one gone (but the current place:
-   * the workbench shows another file then, which `open` records).
+   * the window shows another file then, which `open` records).
    */
   followFileChange(change: FileChange): void {
     if (change.kind === 'rename') {

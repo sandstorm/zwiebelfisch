@@ -10,7 +10,7 @@ import { DIAGRAM_EDITOR, DIAGRAM_EXTENSION } from '../model/model';
  */
 export async function newDiagram(context: ExtensionContext, resource = context.window.activeFile): Promise<void> {
   const target = await createDiagram(context, 'New diagram', resource);
-  if (target) context.workbench.open(target, { viewType: DIAGRAM_EDITOR });
+  if (target) context.window.showDocument(target, { viewType: DIAGRAM_EDITOR });
 }
 
 /**

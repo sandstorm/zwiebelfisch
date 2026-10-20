@@ -1,4 +1,5 @@
-import type { ExtensionContext, SidePanel, Extension } from '../../hosts/workbench/workbench';
+import type { SidePanel } from '../../hosts/window/window';
+import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
 import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
 import { EngineMemoryLog } from './model/engine-memory';
@@ -29,7 +30,7 @@ function devtoolsExtension(contributions: ContributionLog): Extension {
     id: 'devtools',
     contributes: { configuration: { properties: { 'devtools.enabled': ENABLED_SETTING } } },
     activate(context) {
-      const { project, window, workbench, workspace, visualEditor, preview, subscriptions } = context;
+      const { project, window, workspace, visualEditor, preview, subscriptions } = context;
       const events = new EventLog();
       const memory = new EngineMemoryLog();
       // told after activation only: editors are made once a file is shown
@@ -42,13 +43,13 @@ function devtoolsExtension(contributions: ContributionLog): Extension {
         if (!shown) return { kind: 'none', path, reason: 'No Visual editor of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
       };
-      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: ICON, side: 'right', alignment: 'bottom' });
+      const side = window.registerSidePanel('devtools', { label: 'Devtools', icon: ICON, side: 'right', alignment: 'bottom' });
       const panel = new DevtoolsPanel(side.body, {
         contributions,
         events,
         memory,
         document: shownDocument,
-        reveal: (selection) => workbench.open(window.activeFile, { selection }),
+        reveal: (selection) => window.showDocument(window.activeFile, { selection }),
       });
       const enabled = () => workspace.getConfiguration('devtools').get<boolean>('enabled', true);
       // drawn only while shown; when shown again, with all that was recorded meanwhile
@@ -63,7 +64,7 @@ function devtoolsExtension(contributions: ContributionLog): Extension {
       if (preview.engineMemory > 0) recordMemory();
       side.setAvailable(enabled());
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         side,
         panel,
         visualEditor.registerTiptapExtension(visualEditors.tiptapExtension),

@@ -10,8 +10,8 @@ import { undoRedo } from './undo-redo';
 
 /** A Visual editor host with undo and redo. */
 function withUndoRedo(): VisualEditorHost {
-  const { visualEditor, commands, workbench } = testHosts();
-  undoRedo().activate({ visualEditor, commands, workbench, subscriptions: [] } as unknown as ExtensionContext);
+  const { visualEditor, commands, window } = testHosts();
+  undoRedo().activate({ visualEditor, commands, window, subscriptions: [] } as unknown as ExtensionContext);
   return visualEditor;
 }
 

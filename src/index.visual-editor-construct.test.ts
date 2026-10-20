@@ -109,8 +109,8 @@ export function callout(): Extension {
   return {
     id: 'callout',
     activate(context) {
-      const { workbench, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
+      const { window, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(CSS), visualEditor.registerNode(CALLOUT), registerChainButton(context, 'visualEditor/insert', INSERT_CALLOUT));
     },
   };
 }

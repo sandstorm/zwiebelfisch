@@ -19,7 +19,7 @@ function setup() {
   const commands = new Map<string, (...args: unknown[]) => unknown>();
   const workspace = { applyEdit: vi.fn(async () => null as string | null) };
   const ignored = () => new Disposable(() => {});
-  const workbench = { open: vi.fn(), registerStyleSheet: ignored };
+  const window = { showDocument: vi.fn(), registerStyleSheet: ignored };
   const context = {
     project,
     languages: {
@@ -29,14 +29,14 @@ function setup() {
     visualEditor: { registerTiptapExtension: ignored, registerRawBoxExtension: ignored },
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,
-    workbench,
+    window,
     subscriptions: [],
   };
   documentLinks().activate(context as unknown as ExtensionContext);
   const links = provider!.provideDocumentLinks({ path: path('/main.typ'), languageId: 'typst', text: TEXT });
   const resolved = links.map((link) => provider!.resolveDocumentLink!(link));
   const run = async (command: Command) => commands.get(command.command)!(...(command.arguments ?? []));
-  return { selector, workspace, workbench, links, resolved, run };
+  return { selector, workspace, window, links, resolved, run };
 }
 
 describe('documentLinks', () => {
@@ -55,13 +55,13 @@ describe('documentLinks', () => {
   });
 
   it('offers to create a missing Typst file (a command), and opens it once created', async () => {
-    const { resolved, workspace, workbench, run } = setup();
+    const { resolved, workspace, window, run } = setup();
     const { tooltip, command } = resolved[1];
     expect(tooltip).toBe('missing.typ is not in the project');
     expect(command).toEqual({ title: 'Create missing.typ', command: 'documentLinks.createFile', arguments: ['/missing.typ'] });
     await run(command!);
     expect(workspace.applyEdit).toHaveBeenCalledWith({ kind: 'create', path: path('/missing.typ'), content: '' });
-    expect(workbench.open).toHaveBeenCalledWith(path('/missing.typ'));
+    expect(window.showDocument).toHaveBeenCalledWith(path('/missing.typ'));
     workspace.applyEdit.mockResolvedValueOnce('This change is not allowed here.');
     await expect(run(command!)).rejects.toThrow('This change is not allowed here.');
   });

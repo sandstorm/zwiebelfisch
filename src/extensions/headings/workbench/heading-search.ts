@@ -1,15 +1,14 @@
 // The headings of every Typst file in search everywhere. See headings in ../headings.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
-import type { SearchProvider } from '../../../hosts/window/window';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import { findHeadings, type FoundHeading } from '../model/find-headings';
 
 /**
  * "Headings" (prefix `#`): the headings of every Typst file, in reading order of the project's files, with their level
  * and file; picking one opens its file with the cursor at the heading. A file is read again only when it changed.
  */
-export function headingSearch(project: Pick<Project, 'paths' | 'document'>, workbench: Pick<Workbench, 'open'>): SearchProvider {
+export function headingSearch(project: Pick<Project, 'paths' | 'document'>, window: Pick<WindowApi, 'showDocument'>): SearchProvider {
   let scans = new Map<ProjectPath, { text: string; headings: FoundHeading[] }>();
   return {
     id: 'headings.headings',
@@ -28,7 +27,7 @@ export function headingSearch(project: Pick<Project, 'paths' | 'document'>, work
         headings.map(({ level, title, range }) => ({
           label: title,
           description: `H${level} · ${ProjectPath.displayName(path)}`,
-          accept: () => workbench.open(path, { selection: { from: range.from, to: range.from } }),
+          accept: () => window.showDocument(path, { selection: { from: range.from, to: range.from } }),
         })),
       );
     },

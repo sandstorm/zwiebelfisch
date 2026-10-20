@@ -17,7 +17,7 @@ import type { NewWorkbook } from '../workbench/workbook';
 export function registerInsertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Disposable {
   return Disposable.from(
     context.commands.registerCommand(INSERT_SPREADSHEET, (menu: VisualEditorMenuContext) => insert(context, menu, newWorkbook)),
-    context.workbench.registerMenuItem('visualEditor/insert', {
+    context.window.registerMenuItem('visualEditor/insert', {
       command: INSERT_SPREADSHEET,
       title: 'Insert spreadsheet',
       icon: ICON,
@@ -28,14 +28,14 @@ export function registerInsertSpreadsheet(context: InsertContext, newWorkbook: (
 }
 
 /** What inserting a spreadsheet uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench' | 'commands'>;
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'window' | 'commands'>;
 
 /** "Insert spreadsheet" (the command's argument: the Visual editor menu context). */
 const INSERT_SPREADSHEET = 'spreadsheets.insertSpreadsheet';
 
 const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11M15 9v11"/>');
 
-async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
+async function insert({ project, window, workspace }: InsertContext, menu: VisualEditorMenuContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
   const { tiptap, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
@@ -63,7 +63,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   if (!at) return;
   const { source, importChange } = calculateSheetFigure(document.text, { file: at, spreadsheet: target, sheet: workbook.sheet, use: menu.selection().from });
   insertTypst(tiptap, source, undefined, importChange ? [importChange] : []);
-  workbench.open(target);
+  window.showDocument(target);
 }
 
 /** Where a new spreadsheet is proposed, relative to the document. */

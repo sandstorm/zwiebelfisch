@@ -22,12 +22,12 @@ export function textFiles(): Extension {
     id: 'text-files',
     contributes: { languages: TEXT_LANGUAGES },
     activate(context) {
-      const { project, window, workbench, languages, subscriptions } = context;
+      const { project, window, languages, subscriptions } = context;
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
         languages.registerHelpSheet({ language: 'bibtex' }, BIBTEX_HELP),
-        window.registerSearchProvider(textSearch({ project, workbench, isTextFile: (path) => isTextFile(path) })),
+        window.registerSearchProvider(textSearch({ project, window, isTextFile: (path) => isTextFile(path) })),
       );
     },
   };
@@ -35,7 +35,7 @@ export function textFiles(): Extension {
 
 /**
  * A TextFileEditor per opened file, saving into the project, following the file's changes from elsewhere and
- * selecting what is to be revealed (`workbench.open(path, { selection })`).
+ * selecting what is to be revealed (`window.showDocument(path, { selection })`).
  */
 function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext): CustomEditorProvider {
   return {

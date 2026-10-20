@@ -12,7 +12,7 @@ describe('figureSearch', () => {
       '/a.typ': '#figure(image("x.png")) <fig:x>\n',
     });
     const open = vi.fn();
-    const items = await figureSearch(project, { open }).provideItems('', new CancellationTokenSource().token);
+    const items = await figureSearch(project, { showDocument: open }).provideItems('', new CancellationTokenSource().token);
     expect(items.map(({ label, description }) => [label, description])).toEqual([
       ['Runs', 'Table · <tab:runs> · main.typ'],
       ['<fig:x>', 'Figure · a.typ'],

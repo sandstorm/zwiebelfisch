@@ -5,7 +5,6 @@ import type { Commands } from '../../../hosts/commands/commands';
 import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';
 import type { TextEditor, WindowApi } from '../../../hosts/window/window';
-import type { Workbench } from '../../../hosts/workbench/workbench';
 import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /**
@@ -13,13 +12,13 @@ import { calculateMarginNoteChanges } from '../model/add-margin-note';
  * it: `contributes.keybindings`), and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual editor has "Comment" in its own
  * toolbar).
  */
-export function registerAddComment({ commands, window, workbench }: CommentContext, cards: NoteCards): Disposable {
+export function registerAddComment({ commands, window }: CommentContext, cards: NoteCards): Disposable {
   return Disposable.from(
     commands.registerCommand(ADD_COMMENT, () => {
       const editor = window.activeTextEditor;
       if (editor) addComment(editor, cards);
     }),
-    workbench.registerMenuItem('editor/title', {
+    window.registerMenuItem('editor/title', {
       command: ADD_COMMENT,
       title: 'Comment',
       icon: COMMENT_ICON,
@@ -41,8 +40,7 @@ export interface NoteCards {
 /** What "Comment" uses of the extension API: where to register, and the editor the user works in. */
 export interface CommentContext {
   readonly commands: Pick<Commands, 'registerCommand'>;
-  readonly window: Pick<WindowApi, 'activeTextEditor'>;
-  readonly workbench: Pick<Workbench, 'registerMenuItem'>;
+  readonly window: Pick<WindowApi, 'activeTextEditor' | 'registerMenuItem'>;
 }
 
 /**

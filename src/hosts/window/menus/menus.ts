@@ -1,4 +1,4 @@
-// See registerMenuItem in ../workbench.ts.
+// See registerMenuItem in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { CommandContribution, MenuItem } from '../../commands/commands';

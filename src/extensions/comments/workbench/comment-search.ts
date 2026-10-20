@@ -3,7 +3,6 @@ import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';
 import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
-import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findNotes, type FoundNote } from '../model/find-notes';
 import { firstWords } from '../model/note-thread';
 import type { NoteCards } from './workbench';
@@ -13,10 +12,10 @@ import type { NoteCards } from './workbench';
  * (matched too) and the file; picking one opens the file at the note and, in the Visual editor, its card. A file is read
  * again only when it changed.
  */
-export function commentSearch({ project, workbench, window }: CommentSearchContext, cards: NoteCards): SearchProvider {
+export function commentSearch({ project, window }: CommentSearchContext, cards: NoteCards): SearchProvider {
   let scans = new Map<ProjectPath, { text: string; notes: FoundNote[] }>();
   const open = (path: ProjectPath, { at }: FoundNote) => {
-    workbench.open(path, { selection: { from: at, to: at } });
+    window.showDocument(path, { selection: { from: at, to: at } });
     const editor = window.activeTextEditor;
     // only a Visual editor has cards; its reveal cannot tell itself apart from the user moving the caret
     if (editor?.viewType === VISUAL_EDITOR) cards.editNote(editor.document, at);
@@ -47,8 +46,7 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
 
 export interface CommentSearchContext {
   readonly project: Pick<Project, 'paths' | 'document'>;
-  readonly workbench: Pick<Workbench, 'open'>;
-  readonly window: Pick<WindowApi, 'activeTextEditor'>;
+  readonly window: Pick<WindowApi, 'activeTextEditor' | 'showDocument'>;
 }
 
 /** Longer first messages are cut (at a word) in the list. */

@@ -103,11 +103,11 @@ export function chainCommand(chain: (chain: ChainedCommands) => ChainedCommands)
  * @helper Stateless: no registry, no per-widget state.
  */
 export function registerChainButton(
-  { commands, workbench }: { commands: Pick<Commands, 'registerCommand'>; workbench: { registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>): Disposable } },
+  { commands, window }: { commands: Pick<Commands, 'registerCommand'>; window: { registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>): Disposable } },
   menuId: string,
   button: ChainButton,
 ): Disposable {
   const { chain, ...item } = button;
   const { run, enabled } = chainCommand(chain);
-  return Disposable.from(commands.registerCommand(item.command, run), workbench.registerMenuItem(menuId, { ...item, enabled }));
+  return Disposable.from(commands.registerCommand(item.command, run), window.registerMenuItem(menuId, { ...item, enabled }));
 }

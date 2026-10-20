@@ -22,8 +22,8 @@ function setup(text = SOURCE) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
   const visualEditor = new VisualEditorHost();
-  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
-  blockGaps().activate({ workbench, visualEditor, subscriptions: [] } as unknown as ExtensionContext);
+  const window = { registerStyleSheet: () => new Disposable(() => {}) };
+  blockGaps().activate({ window, visualEditor, subscriptions: [] } as unknown as ExtensionContext);
   const view = new VisualEditor(parent, doc, visualEditor);
   const editable = parent.querySelector<HTMLElement>('.ProseMirror')!;
   const tiptap = (editable as HTMLElement & { editor: Editor }).editor;

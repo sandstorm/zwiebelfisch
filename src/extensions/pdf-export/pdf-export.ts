@@ -30,8 +30,8 @@ export function pdfExport(): Extension {
         },
       },
     },
-    activate({ project, commands, window, workspace, workspaceState, workbench, preview, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ project, commands, window, workspace, workspaceState, preview, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
       subscriptions.push(commands.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
       const download = downloadPdf(pdfs, workspaceState, window);

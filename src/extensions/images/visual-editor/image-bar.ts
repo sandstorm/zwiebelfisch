@@ -19,11 +19,11 @@ export const IMAGE_BAR: FloatingBar = { id: 'visualEditor/image', order: 15, lab
  * box) and the preset widths 25 / 50 / 75 / 100 % of the text width (the image's own pressed). Every change is one undo
  * step.
  */
-export function registerImageBarButtons(context: Pick<ExtensionContext, 'commands' | 'workbench'>, prompts: ImageBarPrompts): Disposable {
-  const { commands, workbench } = context;
+export function registerImageBarButtons(context: Pick<ExtensionContext, 'commands' | 'window'>, prompts: ImageBarPrompts): Disposable {
+  const { commands, window } = context;
   return Disposable.from(
     commands.registerCommand(EDIT_CAPTION, ({ tiptap }: VisualEditorMenuContext) => askCaption(tiptap, prompts)),
-    workbench.registerMenuItem<VisualEditorMenuContext>(IMAGE_BAR.id, {
+    window.registerMenuItem<VisualEditorMenuContext>(IMAGE_BAR.id, {
       command: EDIT_CAPTION,
       title: 'Caption',
       icon: CAPTION_ICON,

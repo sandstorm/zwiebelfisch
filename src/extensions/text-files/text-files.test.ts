@@ -46,47 +46,47 @@ describe('text files', () => {
     const { host, project, workbench, window } = setup();
     for (const name of ['data.csv', 'data.json', 'conf.yaml', 'conf.yml', 'Cargo.toml', 'feed.xml', 'notes.txt', 'README.md', 'flow.mmd']) {
       project.apply({ kind: 'create', path: path(`/${name}`), content: `${name}\n` });
-      workbench.open(path(`/${name}`));
+      workbench.window.showDocument(path(`/${name}`));
       const editor = host.querySelector('[data-view-type="textFiles.editor"] [data-testid=zwf-text-file]');
       expect(editor?.querySelector('.cm-content')?.textContent, name).toBe(name);
       expect(window.getFileIcon(path(`/${name}`)), name).toContain('<svg');
     }
     project.apply({ kind: 'create', path: path('/logo.svg'), content: '<svg/>' });
-    workbench.open(path('/logo.svg'));
+    workbench.window.showDocument(path('/logo.svg'));
     expect(host.querySelector('[data-testid=zwf-text-file]')).toBeNull();
   });
 
   it('saves an edit of a .bib into the project, at once when the file is closed', async () => {
     vi.useFakeTimers();
     const { project, workbench, view } = setup();
-    workbench.open(path('/refs.bib'));
+    workbench.window.showDocument(path('/refs.bib'));
     view().dispatch({ changes: { from: view().state.doc.length, insert: '@book{b}\n' } });
     vi.advanceTimersByTime(SAVE_DELAY);
     await vi.waitFor(() => expect(project.content(path('/refs.bib'))).toBe('@book{a}\n@book{b}\n'));
     view().dispatch({ changes: { from: 0, insert: '% refs\n' } });
-    workbench.open(path('/main.typ'));
+    workbench.window.showDocument(path('/main.typ'));
     await vi.waitFor(() => expect(project.content(path('/refs.bib'))).toBe('% refs\n@book{a}\n@book{b}\n'));
   });
 
   it('takes the CodeMirror extensions for every CodeMirror (the look), also those registered while it is open', () => {
     const { workbench, sourceEditor, view } = setup();
-    workbench.open(path('/refs.bib'));
+    workbench.window.showDocument(path('/refs.bib'));
     expect(view().state.facet(EditorView.darkTheme)).toBe(false);
     sourceEditor.registerCodeMirrorExtension({}, EditorView.darkTheme.of(true));
     expect(view().state.facet(EditorView.darkTheme)).toBe(true);
   });
 
-  it('selects the range opened with (workbench.open with a selection), in a new editor and in the shown one', () => {
+  it('selects the range opened with (workbench.window.showDocument with a selection), in a new editor and in the shown one', () => {
     const { workbench, view } = setup();
-    workbench.open(path('/refs.bib'), { selection: SourceRange.of({ from: 1, to: 5 }) });
+    workbench.window.showDocument(path('/refs.bib'), { selection: SourceRange.of({ from: 1, to: 5 }) });
     expect(view().state.selection.main).toMatchObject({ from: 1, to: 5 });
-    workbench.open(path('/refs.bib'), { selection: SourceRange.of({ from: 6, to: 7 }) });
+    workbench.window.showDocument(path('/refs.bib'), { selection: SourceRange.of({ from: 6, to: 7 }) });
     expect(view().state.selection.main).toMatchObject({ from: 6, to: 7 });
   });
 
   it('shows changes made elsewhere (bytes as UTF-8) in the open editor', () => {
     const { project, workbench, view } = setup();
-    workbench.open(path('/refs.bib'));
+    workbench.window.showDocument(path('/refs.bib'));
     project.apply({ kind: 'update', path: path('/refs.bib'), content: new TextEncoder().encode('@book{ä}\n') });
     expect(view().state.doc.toString()).toBe('@book{ä}\n');
   });
@@ -103,14 +103,14 @@ describe('text files', () => {
         activate: ({ sourceEditor, subscriptions }) => subscriptions.push(sourceEditor.registerCodeMirrorExtension({}, ({ editor, languageId, path }) => (seen.push(`${editor} ${languageId} ${path()}`), []))),
       },
     ]);
-    workbench.open(path('/refs.bib'));
+    workbench.window.showDocument(path('/refs.bib'));
     expect(seen).toContain('other bibtex /refs.bib');
   });
 
   it('a refused save is an error message', async () => {
     vi.useFakeTimers();
     const { host, workbench, view } = setup(() => false);
-    workbench.open(path('/refs.bib'));
+    workbench.window.showDocument(path('/refs.bib'));
     view().dispatch({ changes: { from: 0, insert: 'x' } });
     vi.advanceTimersByTime(SAVE_DELAY);
     await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications] [role=alert]')?.textContent).toContain('refs.bib not saved'));

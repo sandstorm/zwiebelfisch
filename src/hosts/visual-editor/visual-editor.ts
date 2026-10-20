@@ -76,14 +76,14 @@ export interface VisualEditorContributions {
 }
 
 /**
- * The view type of the Visual editor's custom editor, for `workbench.open(path, { viewType })`,
+ * The view type of the Visual editor's custom editor, for `window.showDocument(path, { viewType })`,
  * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
  */
 export const VISUAL_EDITOR = 'visualEditor';
 
 /**
  * What the Visual editor's menus are shown with and run their commands with (the command's one argument): the editor
- * they are in. Its menus (`workbench.registerMenuItem`), their buttons drawn with the entry's icon (else its
+ * they are in. Its menus (`window.registerMenuItem`), their buttons drawn with the entry's icon (else its
  * `shortTitle`, else its title), its title and key as the tooltip, pressed where `toggled` holds, disabled where
  * `enabled` does not, left out where `when` does not:
  * - `visualEditor/toolbar`: the toolbar row, a group of buttons per `group` (by name: `1_history`, `2_textStyle` the
@@ -214,11 +214,11 @@ export interface RawBoxExtension {
   dispose(): void;
 }
 
-// The toolbar: menus of commands (`workbench.registerMenuItem`), submenus and floating bars.
+// The toolbar: menus of commands (`window.registerMenuItem`), submenus and floating bars.
 
 /** A menu button: its menu (the entries it opens), where it is, and its icon. */
 export interface Submenu {
-  /** Its menu's id: the entries it opens (`workbench.registerMenuItem(id, ..)`), e.g. `visualEditor/align`. */
+  /** Its menu's id: the entries it opens (`window.registerMenuItem(id, ..)`), e.g. `visualEditor/align`. */
   readonly id: string;
   readonly label: string;
   /** The button's icon, asked after every transaction (the selection's alignment). */
@@ -238,7 +238,7 @@ export interface ChainButton extends Omit<MenuItem<VisualEditorMenuContext>, 'en
 
 /** A bar floating in the text: its menu (`id`), where it floats, and its place among the bars. */
 export interface FloatingBar {
-  /** Its menu's id: the buttons it holds (`workbench.registerMenuItem(id, ..)`), e.g. `visualEditor/table`. */
+  /** Its menu's id: the buttons it holds (`window.registerMenuItem(id, ..)`), e.g. `visualEditor/table`. */
   readonly id: string;
   readonly label: string;
   readonly order: number;

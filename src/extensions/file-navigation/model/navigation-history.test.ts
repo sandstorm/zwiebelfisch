@@ -55,7 +55,7 @@ describe('NavigationHistory', () => {
     const history = visited();
     history.followFileChange({ kind: 'rename', from: path('/a.typ'), path: path('/chapters/a.typ') });
     expect(history.back).toEqual(at('/chapters/a.typ', 2));
-    // the workbench shows the shown file under its new name: recorded as an open, merged with the rename
+    // the window shows the shown file under its new name: recorded as an open, merged with the rename
     history.open(at('/b.typ', 4), path('/c.typ'));
     history.followFileChange({ kind: 'rename', from: path('/b.typ'), path: path('/c.typ') });
     expect(history.back).toEqual(at('/chapters/a.typ', 2));
@@ -71,7 +71,7 @@ describe('NavigationHistory', () => {
     expect(history.forward?.path).toBe('/a.typ');
   });
 
-  it('keeps the shown place when its file is deleted (the workbench shows another, recorded as an open)', () => {
+  it('keeps the shown place when its file is deleted (the window shows another, recorded as an open)', () => {
     const history = visited();
     history.open(at('/b.typ'), path('/main.typ'));
     history.followFileChange({ kind: 'delete', path: path('/b.typ') });

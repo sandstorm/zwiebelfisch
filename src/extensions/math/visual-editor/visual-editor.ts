@@ -25,7 +25,7 @@ export const MathInput = Extension.create({
  * block box after the cursor's paragraph (instead of an empty one), its code edited inside. Found by the slash
  * commands as math, equation, formula.
  */
-export function registerInsertMath({ commands, workbench }: Pick<ExtensionContext, 'commands' | 'workbench'>): Disposable {
+export function registerInsertMath({ commands, window }: Pick<ExtensionContext, 'commands' | 'window'>): Disposable {
   const inline = { type: 'rawInline', attrs: { src: '$$' } };
   const display = { type: 'rawBlock', attrs: { src: '$  $' } };
   return Disposable.from(
@@ -38,7 +38,7 @@ export function registerInsertMath({ commands, workbench }: Pick<ExtensionContex
       const at = besideTextblock(tiptap.state.selection.$to);
       if (tiptap.chain().focus().insertContentAt(at, display).run()) tiptap.commands.editRawBox(at.from, 2);
     }),
-    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+    window.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: INLINE_MATH,
       title: 'Inline math',
       icon: ICONS.inline,
@@ -46,7 +46,7 @@ export function registerInsertMath({ commands, workbench }: Pick<ExtensionContex
       order: 44,
       enabled: ({ tiptap }) => tiptap.can().insertContent(inline),
     }),
-    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
+    window.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: DISPLAY_MATH,
       title: 'Display math',
       icon: ICONS.display,

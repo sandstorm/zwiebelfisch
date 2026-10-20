@@ -1,4 +1,4 @@
-// See WorkbenchHost in ../workbench-impl.ts.
+// See WindowHost in ../window-impl.ts.
 import { EditorTitleMenu, type EditorTitleMenuOptions } from '../menus/editor-title-menu';
 import type { Menus } from '../menus/menus';
 

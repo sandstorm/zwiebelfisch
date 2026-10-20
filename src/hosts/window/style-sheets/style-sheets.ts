@@ -1,5 +1,5 @@
 // StyleSheets: the widget's CSS in the root node it renders into (the page's <head>, or the shadow root of a
-// <zwiebelfisch-editor>). See registerStyleSheet in ../workbench.ts.
+// <zwiebelfisch-editor>). See registerStyleSheet in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 
 /**

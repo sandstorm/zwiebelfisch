@@ -25,14 +25,14 @@ function setup(text: string, answer: string | undefined, files: Record<string, s
     window: {
       showSaveDialog: async (options: SaveDialogOptions) => (asked.push(options), answer === undefined ? undefined : path(answer)),
       showErrorMessage: async (message: string) => void told.push(message),
+      showDocument: (target: ProjectPath) => void opened.push(target),
     },
     workspace: { applyEdit: async (change: FileChange) => (project.apply(change), null) },
-    workbench: { open: (target: ProjectPath) => void opened.push(target) },
   } as unknown as InsertContext;
   const newWorkbook = vi.fn(async () => WORKBOOK);
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
-    contributions: [{ id: 'test', activate: ({ commands, workbench, subscriptions }) => subscriptions.push(registerInsertSpreadsheet({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } }, newWorkbook)) }],
+    contributions: [{ id: 'test', activate: ({ commands, window, subscriptions }) => subscriptions.push(registerInsertSpreadsheet({ ...context, commands, window: { ...context.window, registerMenuItem: window.registerMenuItem } }, newWorkbook)) }],
   });
   view.reveal(SourceRange.of({ from: text.length - 1, to: text.length - 1 }));
   const click = async () => {

@@ -134,7 +134,7 @@ describe('devtools', () => {
   it('lists the contributions by extension in their points\' terms, settings included, each with its details as tooltip', () => {
     const contributions = mount().tab('Contributions');
     const text = contributions.textContent;
-    for (const expected of ['files', 'contributes.configuration', 'files.panel', 'default "auto"', 'commands.registerCommand', 'files.newFile', 'visualEditor.registerNode', 'heading', 'parses Heading', 'Mod+Alt+KeyM → comments.addComment', 'devtools', 'workbench.registerSidePanel']) {
+    for (const expected of ['files', 'contributes.configuration', 'files.panel', 'default "auto"', 'commands.registerCommand', 'files.newFile', 'visualEditor.registerNode', 'heading', 'parses Heading', 'Mod+Alt+KeyM → comments.addComment', 'devtools', 'window.registerSidePanel']) {
       expect(text).toContain(expected);
     }
     const heading = [...contributions.querySelectorAll<HTMLElement>('.zwf-devtools__contribution')].find((row) => row.textContent?.startsWith('visualEditor.registerNodeheading'))!;

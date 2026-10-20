@@ -2,8 +2,7 @@
 import { ProjectPath } from '../../../core/paths/paths';
 import type { FileContent, Project } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import type { SearchItem, SearchProvider } from '../../../hosts/window/window';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { SearchItem, SearchProvider, WindowApi } from '../../../hosts/window/window';
 import { findText, type TextMatch } from '../model/find-text';
 
 /**
@@ -38,7 +37,7 @@ export function textSearch(options: TextSearchOptions): SearchProvider {
 
 export interface TextSearchOptions {
   readonly project: Pick<Project, 'paths' | 'content'>;
-  readonly workbench: Pick<Workbench, 'open'>;
+  readonly window: Pick<WindowApi, 'showDocument'>;
   /** Whether `path` is a text file (searched besides the Typst files). */
   isTextFile(path: ProjectPath): boolean;
 }
@@ -57,11 +56,11 @@ function textOf(content: FileContent | undefined): string {
 /** Lines listed at most. */
 const LIMIT = 200;
 
-function textItem(path: ProjectPath, match: TextMatch, { workbench }: TextSearchOptions): SearchItem {
+function textItem(path: ProjectPath, match: TextMatch, { window }: TextSearchOptions): SearchItem {
   return {
     label: match.preview,
     description: `${ProjectPath.displayName(path)}:${match.line}`,
     highlights: { label: match.highlights },
-    accept: () => workbench.open(path, { selection: SourceRange.of(match) }),
+    accept: () => window.showDocument(path, { selection: SourceRange.of(match) }),
   };
 }

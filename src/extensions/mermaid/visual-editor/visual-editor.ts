@@ -14,7 +14,7 @@ import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '..
 export function registerInsertMermaid(context: InsertContext): Disposable {
   return Disposable.from(
     context.commands.registerCommand(INSERT_MERMAID, (menu: VisualEditorMenuContext) => insert(context, menu)),
-    context.workbench.registerMenuItem('visualEditor/insert', {
+    context.window.registerMenuItem('visualEditor/insert', {
       command: INSERT_MERMAID,
       title: 'Insert Mermaid diagram',
       icon: ICON,
@@ -25,14 +25,14 @@ export function registerInsertMermaid(context: InsertContext): Disposable {
 }
 
 /** What inserting a diagram uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench' | 'commands'>;
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'window' | 'commands'>;
 
 /** "Insert Mermaid diagram" (the command's argument: the Visual editor menu context). */
 const INSERT_MERMAID = 'mermaid.insertDiagram';
 
 const ICON = svg('<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8.3M18 8l-5 8.3"/>');
 
-async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext): Promise<void> {
+async function insert({ project, window, workspace }: InsertContext, menu: VisualEditorMenuContext): Promise<void> {
   const { tiptap, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
@@ -52,7 +52,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   if (!at) return;
   const { source, importChange } = calculateMermaidFigure(document.text, at, target, menu.selection().from);
   insertTypst(tiptap, source, undefined, importChange ? [importChange] : []);
-  workbench.open(target);
+  window.showDocument(target);
 }
 
 /** Where a new diagram is proposed, relative to the document. */

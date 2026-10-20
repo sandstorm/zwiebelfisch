@@ -2,28 +2,28 @@
 // Tests for search-pick.ts (SearchPick) over a window: groups, matching, prefixes, async providers and picking.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CancellationToken } from '../../../core/cancellation/cancellation';
-import { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
+import { Project } from '../../../core/project/project';
+import { CommandsHost } from '../../../hosts/commands/commands';
+import { SourceEditorHost } from '../../../hosts/source-editor/source-editor';
+import { VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { type SearchItem, type SearchProvider, WindowHost } from '../../../hosts/window/window';
+import { WorkspaceHost } from '../../../hosts/workspace/workspace';
 import { SearchPick } from './search-pick';
 
 afterEach(() => document.body.replaceChildren());
 
 function setup(...providers: SearchProvider[]) {
   const host = document.body.appendChild(document.createElement('div'));
-  const never = () => new Disposable(() => {});
+  const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' });
   const window = new WindowHost({
-    exists: () => false,
     host,
-    statusBar: host.appendChild(document.createElement('div')),
-    editingArea: host.appendChild(document.createElement('div')),
-    onDidChangeFile: never,
-    activeFile: () => ProjectPath.of('/main.typ'),
-    onDidChangeActiveFile: never,
-    activeTextEditor: () => null,
-    onDidChangeTextEditorSelection: never,
-    menuItems: () => [],
-    executeCommand: async () => undefined,
+    project,
+    commands: new CommandsHost(host),
+    workspace: new WorkspaceHost(project),
+    visualEditor: new VisualEditorHost(),
+    sourceEditor: new SourceEditorHost(),
+    layoutState: { get: () => undefined, update: async () => {} },
   });
   const search = new SearchPick(window);
   for (const provider of providers) window.registerSearchProvider(provider);

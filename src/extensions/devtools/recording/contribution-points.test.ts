@@ -37,19 +37,19 @@ describe('describeContribution', () => {
       rank: ['visualEditor/toolbar', 1, '4_align', 0],
     });
     expect(describeAt('visualEditor.registerFloatingBar', { id: 'visualEditor/table', label: 'Table', order: 20, anchor: () => null })).toEqual({ title: 'visualEditor/table', details: ['"Table"', 'order 20'], rank: [20] });
-    expect(describeAt('workbench.registerMenuItem', 'visualEditor/insert', { command: 'tables.insertTable', title: 'Insert table', order: 20, keybinding: 'Mod+Alt+T' }).details).toEqual([
+    expect(describeAt('window.registerMenuItem', 'visualEditor/insert', { command: 'tables.insertTable', title: 'Insert table', order: 20, keybinding: 'Mod+Alt+T' }).details).toEqual([
       'menu visualEditor/insert',
       'order 20',
       '→ tables.insertTable',
       'Mod+Alt+T',
     ]);
-    expect(describeAt('workbench.registerMenuItem', 'files/context', { command: 'files.rename', title: 'Rename…', group: 'navigation', order: 2 })).toEqual({
+    expect(describeAt('window.registerMenuItem', 'files/context', { command: 'files.rename', title: 'Rename…', group: 'navigation', order: 2 })).toEqual({
       title: 'Rename…',
       details: ['menu files/context', 'group navigation', 'order 2', '→ files.rename'],
       rank: ['files/context', 0, 'navigation', 2],
     });
-    expect(describeAt('workbench.registerSidePanel', 'outline', { label: 'Outline', icon: {}, order: 20 })).toEqual({ title: 'outline', details: ['"Outline"', 'left', 'order 20'], rank: ['left', 20] });
-    expect(describeAt('workbench.registerSidePanel', 'devtools', { label: 'Devtools', icon: {}, side: 'right' })).toEqual({ title: 'devtools', details: ['"Devtools"', 'right', 'order 0'], rank: ['right', 0] });
+    expect(describeAt('window.registerSidePanel', 'outline', { label: 'Outline', icon: {}, order: 20 })).toEqual({ title: 'outline', details: ['"Outline"', 'left', 'order 20'], rank: ['left', 20] });
+    expect(describeAt('window.registerSidePanel', 'devtools', { label: 'Devtools', icon: {}, side: 'right' })).toEqual({ title: 'devtools', details: ['"Devtools"', 'right', 'order 0'], rank: ['right', 0] });
     expect(describeAt('window.registerStatusBarItem', { textContent: ' 12 words ', nodeName: 'SPAN' }, { alignment: 'right', priority: 5 })).toEqual({
       title: '12 words',
       details: ['right', 'priority 5'],
@@ -88,7 +88,7 @@ describe('describeContribution', () => {
   });
 
   it('a style sheet by its size; an unknown point by the generic summary', () => {
-    expect(describeAt('workbench.registerStyleSheet', '.a {}'.repeat(500)).details).toEqual(['2.4 kB']);
+    expect(describeAt('window.registerStyleSheet', '.a {}'.repeat(500)).details).toEqual(['2.4 kB']);
     expect(describeAt('somewhere.registerThing', 'thing.id', { priority: 3 })).toEqual({ title: 'thing.id · priority 3', details: [] });
   });
 });

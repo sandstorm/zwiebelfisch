@@ -9,7 +9,7 @@ describe('fileSearch', () => {
   it('lists every file by name, with the path of those in folders, and opens the one picked', async () => {
     const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': '', '/chapters/intro.typ': '', '/logo.png': new Uint8Array() });
     const open = vi.fn();
-    const items = await fileSearch(project, { open }).provideItems('', new CancellationTokenSource().token);
+    const items = await fileSearch(project, { showDocument: open }).provideItems('', new CancellationTokenSource().token);
     expect(items.map(({ label, description }) => [label, description])).toEqual([
       ['main.typ', undefined],
       ['intro.typ', 'chapters/intro.typ'],

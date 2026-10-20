@@ -1,4 +1,4 @@
-// FileDrops: files from the computer dropped anywhere on the widget. See onDidDropFiles in ../workbench.ts.
+// FileDrops: files from the computer dropped anywhere on the widget. See onDidDropFiles in ../window.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 
 /**

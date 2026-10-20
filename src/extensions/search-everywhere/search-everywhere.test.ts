@@ -79,8 +79,8 @@ describe('searchEverywhere', () => {
 
   it("puts its rail button among the left rail's panels by order 15: after Files (10), before Help (20)", () => {
     const { host, workbench } = setupSearch();
-    workbench.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
-    workbench.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
+    workbench.window.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
+    workbench.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
     const left = host.querySelector<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail')!;
     expect([...left.querySelectorAll<HTMLElement>('.zwf-editor__rail-button')].map((button) => button.dataset.testid ?? button.title)).toEqual([
       'zwf-panel-toggle-files',

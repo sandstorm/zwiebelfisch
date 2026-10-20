@@ -1,5 +1,7 @@
 // See WindowApi in ../window.ts.
-import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../window';
+import { type CommandsHost, keyLabel } from '../../commands/commands';
+import type { ContextMenuOptions, MenuAnchor } from '../window';
+import type { Menus } from './menus';
 
 /**
  * What `showContextMenu` shows. One menu at a time over the widget `host` (a new one closes the open one): a
@@ -9,27 +11,29 @@ import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../win
  * elsewhere closes the menu and gives the focus back to the element that had it; a chosen entry's command runs after
  * that (a failing one is logged: it tells the user itself). A menu without entries is not shown.
  *
- * @internal Extensions use it through `window.showContextMenu`, with entries from `workbench.registerMenuItem`.
+ * @internal Extensions use it through `window.showContextMenu`, with entries from `window.registerMenuItem`.
  */
 export class ContextMenu {
   #open: MenuList | null = null;
 
   constructor(
     private readonly host: HTMLElement,
-    private readonly sources: ContextMenuSources,
+    private readonly menus: Menus,
+    /** Runs a chosen entry's command with the menu's arguments; names the entries' keys. */
+    private readonly commands: Pick<CommandsHost, 'executeCommand' | 'keybindingLabel'>,
   ) {}
 
   show(menuId: string, options: ContextMenuOptions): void {
     this.#open?.close();
     this.#open = null;
-    const items = this.sources.items(menuId, options.context ?? {});
+    const context = options.context ?? {};
+    const items = this.menus.items(menuId, context);
     if (items.length === 0) return;
     const args = options.args ?? [];
-    const context = options.context ?? {};
     const entries = items.map((item) => ({
       label: item.title ?? item.command,
       group: item.group,
-      keybinding: item.keybinding,
+      keybinding: this.commands.keybindingLabel(item.command) ?? (item.keybinding && keyLabel(item.keybinding)),
       checked: item.toggled?.(context),
       run: () => this.#run(item.command, args),
     }));
@@ -42,15 +46,8 @@ export class ContextMenu {
   }
 
   #run(command: string, args: readonly unknown[]): void {
-    this.sources.executeCommand(command, ...args).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
+    this.commands.executeCommand(command, ...args).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
   }
-}
-
-export interface ContextMenuSources {
-  /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus). */
-  items(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];
-  /** Runs an entry's command with the menu's arguments. */
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
 /** The menu's element in `container` while it is open. */

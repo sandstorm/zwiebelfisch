@@ -16,8 +16,8 @@ export function pageLayout(): Extension {
   return {
     id: 'page-layout',
     activate(context) {
-      const { workbench, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(css));
+      const { window, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(css));
       subscriptions.push(
         visualEditor.registerNode(PAGE_BREAK),
         visualEditor.registerNode(HORIZONTAL_RULE),

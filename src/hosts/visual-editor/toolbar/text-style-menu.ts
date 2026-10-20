@@ -6,7 +6,7 @@ import type { VisualEditorMenuContext } from '../visual-editor';
 import type { ToolbarMenus } from './toolbar';
 
 /**
- * The text style `<select>`: *Normal text*, then the entries of the menu `visualEditor/textStyle` as the workbench
+ * The text style `<select>`: *Normal text*, then the entries of the menu `visualEditor/textStyle` as the window
  * sorts them, consecutive ones of one `category` under its title.
  *
  * Its value is the first entry whose `toggled` holds, outside the group `inline`: those are toggles on the selection's
@@ -16,7 +16,7 @@ import type { ToolbarMenus } from './toolbar';
  * value's entry (an entry chosen where it is on takes itself off, as a heading level or a block style) and makes the
  * blocks paragraphs.
  *
- * @internal Extensions add to it through `workbench.registerMenuItem('visualEditor/textStyle', ..)`.
+ * @internal Extensions add to it through `window.registerMenuItem('visualEditor/textStyle', ..)`.
  */
 export class TextStyleMenu {
   readonly element: HTMLSelectElement;

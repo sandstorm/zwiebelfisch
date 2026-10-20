@@ -22,8 +22,8 @@ export function previewSync(): Extension {
   return {
     id: 'preview-sync',
     contributes,
-    activate({ project, globalState, window, workspace, workbench, preview, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ project, globalState, window, workspace, preview, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css));
       let following = configuredFollow(workspace, globalState);
       const outline = new ClickOutline(preview.createPageOverlay('zwf-preview-sync__click'));
       const highlight = new SelectionShading(preview, preview.createPageOverlay('zwf-preview-sync__selection'), () => {
@@ -61,13 +61,13 @@ export function previewSync(): Extension {
         window.onDidChangeTextEditorSelection(({ textEditor }) => {
           if (!outline.marks(textEditor.selection)) outline.clear();
           if (textEditor === window.activeTextEditor) highlight.update();
-          if (following && textEditor === window.activeTextEditor && workbench.isEditorFocused()) revealSelection();
+          if (following && textEditor === window.activeTextEditor && window.isEditorFocused()) revealSelection();
         }),
         preview.onDidClickPage((click) => {
           if (!project.document(click.path)) return;
           // opening selects the click's source: that selection is the click's, not a move away from it
           outline.clear();
-          workbench.open(click.path, { selection: click });
+          window.showDocument(click.path, { selection: click });
           outline.show(window.activeTextEditor?.selection ?? null, click.boxes);
           highlight.update();
         }),

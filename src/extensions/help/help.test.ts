@@ -78,12 +78,12 @@ describe('help', () => {
 
   it('switches the sheet with the shown file; a file without one says so', () => {
     const { workbench, panel } = setup();
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     expect(panel.querySelector('h2')?.textContent).toBe('Mermaid basics');
-    workbench.open(path('/logo.png'));
+    workbench.window.showDocument(path('/logo.png'));
     expect(panel.querySelector('h2')).toBeNull();
     expect(panel.textContent).toBe('No help for this file type.');
-    workbench.open(path('/main.typ'));
+    workbench.window.showDocument(path('/main.typ'));
     expect(panel.querySelector('h2')?.textContent).toBe('Typst basics');
   });
 
@@ -129,7 +129,7 @@ describe('help', () => {
     };
     expect(row('= Heading').draggable).toBe(true);
     expect(drag(row('= Heading'))).toEqual({ 'text/plain': '= Heading\n', 'application/x-typst-snippet': '= Heading\n' });
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     expect(drag(row('A --> B'))).toEqual({ 'text/plain': 'A --> B' });
   });
 
@@ -138,7 +138,7 @@ describe('help', () => {
     const menu = () => [...host.querySelectorAll('[role=menuitem]')].map((item) => item.textContent);
     row('*strong*').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 6 }));
     expect(menu()).toEqual(['Insert at cursor', 'Copy']);
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     press(row('A --> B'), 'F10', { shiftKey: true });
     expect(menu()).toEqual(['Copy']);
   });
@@ -147,7 +147,7 @@ describe('help', () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const { host, workbench, row, press } = setup();
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     press(row('A --> B'), 'Enter');
     expect(writeText).toHaveBeenCalledWith('A --> B');
     await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications]')?.textContent).toContain('Copied'));

@@ -2,18 +2,34 @@ import type { CancellationToken } from '../../core/cancellation/cancellation';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { FileChange, FileContent } from '../../core/project/project';
+import type { FileContent, Project } from '../../core/project/project';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { User } from '../../core/user/user';
+import type { CommandsHost, MenuContext, MenuItem } from '../commands/commands';
+import type { SourceEditorHost } from '../source-editor/source-editor';
+import type { VisualEditorHost } from '../visual-editor/visual-editor';
+import type { WorkspaceHost } from '../workspace/workspace';
 
 /**
- * The window (VS Code's `window` namespace): how extensions talk to the user, and the places they fill.
+ * The window (VS Code's `window` namespace): everything the user sees and interacts with.
  *
  * Extensions use it to:
  * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
- * - fill places: the status bar, the editing area (custom editors), file decorations, search providers
- * - follow which file and which Typst editor the user works in
+ * - fill places: side panels, the status bar, the editing area (custom editors), the editor frame, menus, file
+ *   decorations, search providers, style sheets
+ * - open files, and follow which file and which Typst editor the user works in
  */
 export interface WindowApi {
+  /** The document the widget lives in, to create elements for it. */
+  readonly ownerDocument: Document;
+  /**
+   * Who works in the widget: as the host said (`createEditor({ user })`), until an extension knows better
+   * (`setUser`); undefined: anonymous. Read it when it is needed: it may change.
+   */
+  readonly user: User | undefined;
+  /** Replaces `user`, e.g. with the account signed in at a server (the collaboration extension's): others see that name. */
+  setUser(user: User): void;
+
   /**
    * Shows `message` in the widget's notification area (VS Code's `window.showInformationMessage`), with a button per
    * item. Resolves to the item chosen, or undefined once it is closed (an information message without items closes
@@ -50,7 +66,7 @@ export interface WindowApi {
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined>;
   /**
    * Pops up the menu `menuId` at `options.anchor` (as VS Code's workbench shows a contributed menu, e.g.
-   * `explorer/context`): the entries registered for it (`workbench.registerMenuItem`) whose `when` holds in
+   * `explorer/context`): the entries registered for it (`registerMenuItem`) whose `when` holds in
    * `options.context`, sorted, a separator between groups, a check mark at the entries whose `toggled` holds. Choosing one runs its command with `options.args`, after
    * the menu closed and gave the focus back. Nothing is shown while no entry applies. One at a time: a new menu closes
    * the open one; so do Escape and a press elsewhere.
@@ -78,7 +94,7 @@ export interface WindowApi {
    * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
    * area, until disposed (VS Code's custom editors; the Typst files' Visual and Source editors are two of them,
    * `visualEditor` and `sourceEditor`). `viewType` names the editor (unique; an extension's `<extension>.<name>`),
-   * e.g. for `workbench.open(path, { viewType })`. When several match a file, the editing area's tabs switch between them
+   * e.g. for `showDocument(path, { viewType })`. When several match a file, the editing area's tabs switch between them
    * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
    * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
    * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen.
@@ -100,6 +116,14 @@ export interface WindowApi {
    */
   getFileIcon(path: ProjectPath): string | undefined;
 
+  /**
+   * Shows `path` in the editing area (VS Code's `window.showTextDocument`, for any file the project has), in a custom
+   * editor (`registerCustomEditorProvider`; a Typst file's are the Visual and the Source editor): the one `viewType`
+   * names, else the one the user chose last, else the default one; nothing without one. Showing the shown file again shows it again (an editor without
+   * `retainContextWhenHidden` gets the current content in a new panel). `selection` is revealed in that editor
+   * (offsets into the file's text; a custom editor gets it as `onDidRequestReveal`).
+   */
+  showDocument(path: ProjectPath, options?: DocumentShowOptions): void;
   /** The file shown in the editing area. */
   readonly activeFile: ProjectPath;
   /** After a file was shown in the editing area (also when the same file is shown again). */
@@ -111,7 +135,113 @@ export interface WindowApi {
    * the new one already). Any document's editor, not only the active one: a hidden editor follows the text, too.
    */
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
+  /** Whether the user works in the editing area (the focus is inside it). */
+  isEditorFocused(): boolean;
+
+  /**
+   * Adds a side panel with its rail button on `options.side` (one panel per side is shown at a time); disposing removes
+   * both. Ids are unique across both sides; the right side has the preview (`preview`) built in. Each panel has a
+   * command `workbench.view.<id>` (VS Code's `workbench.view.explorer`): it shows and focuses the panel, or hides it
+   * when it is shown and has the focus (the focus back where it was). The rail button's tooltip names its key.
+   */
+  registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
+  /**
+   * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: in a
+   * Typst file's editor inside its content (in the Visual editor below its toolbar), scrolling with it; around any other
+   * editor's panel, not scrolling. Detached while no editor is shown. One frame at a time.
+   */
+  registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
+  /**
+   * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<zwiebelfisch-editor>`), after the
+   * widget's own stylesheet, until disposed. An extension styles what it adds this way, under class names of its own,
+   * with the colors of the `--zwf-*` tokens (light and dark). Widgets in one root share each stylesheet.
+   */
+  registerStyleSheet(css: string): Disposable;
+  /**
+   * Files from the computer dropped anywhere on the widget and not taken by an editor inside (the Typst editors upload
+   * the files dropped into their text themselves). The widget never lets the browser open a dropped file; it shows the
+   * drop hint while anyone listens.
+   */
+  readonly onDidDropFiles: Event<File[]>;
+
+  /**
+   * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
+   * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
+   * arguments. The window shows these: `editor/title`, buttons at the right end of the editing area's tab bar, and
+   * `view`, the "View" menu after them (context of both: `activeCustomEditorId` (the view type of the editor shown),
+   * `resource` (the shown file); no arguments); `workbench/rail/left` and `workbench/rail/right`, a button per item
+   * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
+   * arguments). Other ids are menus that extensions show (`showContextMenu`), documented there (the file panel:
+   * `file/newFile`, `explorer/context`; the Visual editor's: `visualEditor/toolbar` and the others its host
+   * documents). `C` is the context the menu is shown in, as that menu documents it.
+   */
+  registerMenuItem<C extends object = MenuContext>(menuId: string, item: MenuItem<C>): Disposable;
+  /**
+   * The items of `menuId` to show in `context` (those whose `when` holds), sorted, each with its title and icon (its
+   * command's unless its own), for whatever shows that menu (or searches it).
+   */
+  getMenuItems<C extends object = MenuContext>(menuId: string, context?: C): readonly MenuItem<C>[];
+  /** Items of a menu (its id) were registered or disposed. */
+  readonly onDidChangeMenu: Event<string>;
 }
+
+/** How `showDocument` shows a file (VS Code's `TextDocumentShowOptions`). */
+export interface DocumentShowOptions {
+  /** A range of the file to reveal (offsets into its text). */
+  selection?: SourceRange;
+  /**
+   * The custom editor to open the file in, if it matches the file (its view type, e.g. `sourceEditor`); it is
+   * then the user's choice for later opens, too. Default: the one chosen last, else the one its name picks.
+   */
+  viewType?: string;
+}
+
+export interface SidePanelOptions {
+  /** Shown on the rail button (as its tooltip and accessible name). */
+  label: string;
+  /** The rail button's icon: SVG markup, drawn in `currentColor`. */
+  icon: string;
+  /** The side whose rail gets the button; default `'left'`. */
+  side?: 'left' | 'right';
+  /** The rail's group the button goes into: `'top'` (the default) or `'bottom'`, at the rail's far end. */
+  alignment?: 'top' | 'bottom';
+  /** The rail button's place among the others of its side and group (lower first; equal: registration order); default 0. */
+  order?: number;
+}
+
+/** A registered side panel: the element its content goes into, how it opens, and whether it is shown. */
+export interface SidePanel {
+  readonly body: HTMLElement;
+  /**
+   * Whether it is shown now: its side shows it (an overlay over the narrow widget's editing area while it is open,
+   * too). An unavailable panel is not.
+   */
+  readonly visible: boolean;
+  /** Fires when `visible` changes, e.g. to do work for the panel only while it is seen. */
+  readonly onDidChangeVisibility: Event<void>;
+  /**
+   * Shows it by default: unless the viewer picked a panel of its side (or hid the side) this session, the side names
+   * another default (the right side's: the setting `workbench.rightSidePanel`), or the widget is narrow (left side).
+   */
+  setDefault(open: boolean): void;
+  /** Shows or removes it and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
+  setAvailable(available: boolean): void;
+  /**
+   * Shows it as if the viewer picked it on the rail (VS Code's `WebviewView.show`), and focuses it unless
+   * `preserveFocus`: its element marked `autofocus` (as a dialog's), else its first focusable one, else the panel
+   * itself. Nothing while it is unavailable.
+   */
+  show(preserveFocus?: boolean): void;
+  /** Closes it if it lies over the editing area (narrow widget, left side), e.g. after something was chosen in it. */
+  dismiss(): void;
+  dispose(): void;
+}
+
+/**
+ * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
+ * data is its path. Any editor may take such a drop (the Typst editors insert what the drop edit providers make of it).
+ */
+export const PROJECT_PATH_TYPE = 'application/x-zwf-project-path';
 
 /** A button of a message (VS Code's MessageItem); the message resolves to the one chosen. */
 export interface MessageItem {
@@ -278,21 +408,10 @@ export interface ContextMenuOptions {
   readonly anchor: MenuAnchor;
   /** What the menu is for: its accessible name (a row's name, "New"). */
   readonly title: string;
-  /** What the entries' `when` is asked with (the workbench's `MenuContext`); default: nothing. */
-  readonly context?: Readonly<Record<string, unknown>>;
+  /** What the entries' `when` and `toggled` are asked with; default: nothing. */
+  readonly context?: MenuContext;
   /** The chosen entry's command gets these (e.g. the row's path); default: none. */
   readonly args?: readonly unknown[];
-}
-
-/** An entry of a menu as `showContextMenu` shows it (of the workbench's `MenuItem`). */
-export interface ContributedMenuItem {
-  readonly command: string;
-  readonly title?: string;
-  readonly group?: string;
-  /** Whether it is checked, asked with the menu's context; without: not a checkbox. */
-  readonly toggled?: (context: Readonly<Record<string, unknown>>) => boolean;
-  /** The key of its command as people read it, at the entry's end. */
-  readonly keybinding?: string;
 }
 
 /**
@@ -355,7 +474,7 @@ export interface CustomEditorOptions {
   /**
    * Who opens a file several editors match: a number (higher first), `'default'` (100, the default), `'fallback'`
    * (opens only files no other editor matches, and gets no tab) or `'option'` (never by default, only when chosen: a
-   * tab, `workbench.open(path, { viewType })`).
+   * tab, `showDocument(path, { viewType })`).
    */
   readonly priority?: 'default' | 'fallback' | 'option' | number;
   /**
@@ -395,7 +514,7 @@ export interface CustomEditorPanel {
   /** `visible` changed. */
   readonly onDidChangeViewState: Event<void>;
   /**
-   * A range of the file is to be shown (`workbench.open(path, { selection })`, offsets into its text), right after the
+   * A range of the file is to be shown (`showDocument(path, { selection })`, offsets into its text), right after the
    * panel is shown: the editor selects it, scrolls it into view and takes the focus.
    */
   readonly onDidRequestReveal: Event<SourceRange>;
@@ -445,30 +564,29 @@ export interface TextEditorSelectionChangeEvent {
   readonly textEditor: TextEditor;
 }
 
-/** Where the window's parts go in the workbench's frame, the editors it reports on, and the files there are. */
+/** What the window shows and works with: the project, the widget's element, and the hosts it shows. */
 export interface WindowOptions {
-  /** Whether the project has a file at `path` (`showSaveDialog` refuses those). */
-  exists(path: ProjectPath): boolean;
-  /** The widget's element: messages and input boxes are shown over it. */
+  /** The widget's element: the window builds its regions (sides, editing area, status bar) in it. */
   readonly host: HTMLElement;
-  /** The status bar's region. */
-  readonly statusBar: HTMLElement;
-  /** The editing area: a custom editor's panel goes into it. */
-  readonly editingArea: HTMLElement;
-  /** Every change of a project file (retained panels follow renames and go with deleted files). */
-  readonly onDidChangeFile: Event<FileChange>;
-  /** The file shown in the editing area (the workbench decides). */
-  activeFile(): ProjectPath;
-  /** A file was shown in the editing area (fired by the workbench). */
-  readonly onDidChangeActiveFile: Event<ProjectPath>;
-  /** The editor of the Typst file shown now (the workbench's editors). */
-  activeTextEditor(): TextEditor | null;
-  /** The selection in any editor changed (fired by the workbench's editors). */
-  readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
-  /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus, for `showContextMenu`). */
-  menuItems(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];
-  /** Runs a command (a chosen menu entry's). */
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
+  /** The files it shows (the main file first); it keeps the editing area on an existing file as they change. */
+  readonly project: Project;
+  /** Runs the menus' commands and names their keys; gets the side panels' commands `workbench.view.<id>`. */
+  readonly commands: CommandsHost;
+  /** Its settings (`workbench.theme`, `workbench.rightSidePanel`), declared there. */
+  readonly workspace: WorkspaceHost;
+  /** The Visual editors of Typst files (the custom editor `visualEditor`) are made with it. */
+  readonly visualEditor: VisualEditorHost;
+  /** The Source editors of Typst files (the custom editor `sourceEditor`) are made with it. */
+  readonly sourceEditor: SourceEditorHost;
+  /** Where the layout keeps its sizes and the panels picked for the session (key `layout`). */
+  readonly layoutState: { get<T>(key: string): T | undefined; update(key: string, value: unknown): Promise<void> };
+  /** Who works here (`user`) until `setUser`. */
+  readonly user?: User;
+  /**
+   * The widget's color tokens and frame (CSS), put where it renders before anything is built (the color scheme reads
+   * the resolved colors), as `<style id="zwf-editor-styles">` together with the layout's own CSS.
+   */
+  readonly styleSheet?: string;
 }
 
 export { WindowHost } from './window-impl';

@@ -6,8 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project, type FileChange } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import type { SaveDialogOptions } from '../../../hosts/window/window';
-import type { OpenOptions } from '../../../hosts/workbench/workbench';
+import type { SaveDialogOptions, DocumentShowOptions } from '../../../hosts/window/window';
 import { createVisualEditor } from '../../../testing/testing';
 import { emptyDiagram } from '../model/png';
 import { registerInsertDiagram, type InsertContext } from './insert-diagram';
@@ -20,16 +19,18 @@ function setup(file: string, text: string, answer: string | undefined) {
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', [file]: text, '/chapters/diagrams/diagram.drawio.png': emptyDiagram() });
   const document = project.document(path(file))!;
   const asked: SaveDialogOptions[] = [];
-  const opened: [ProjectPath, OpenOptions | undefined][] = [];
+  const opened: [ProjectPath, DocumentShowOptions | undefined][] = [];
   const context = {
     project,
-    window: { showSaveDialog: async (options: SaveDialogOptions) => (asked.push(options), answer === undefined ? undefined : path(answer)) },
+    window: {
+      showSaveDialog: async (options: SaveDialogOptions) => (asked.push(options), answer === undefined ? undefined : path(answer)),
+      showDocument: (target: ProjectPath, options?: DocumentShowOptions) => void opened.push([target, options]),
+    },
     workspace: { applyEdit: async (change: FileChange) => (project.apply(change), null) },
-    workbench: { open: (target: ProjectPath, options?: OpenOptions) => void opened.push([target, options]) },
   } as unknown as InsertContext;
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
-    contributions: [{ id: 'test', activate: ({ commands, workbench, subscriptions }) => subscriptions.push(registerInsertDiagram({ ...context, commands, workbench: { ...context.workbench, registerMenuItem: workbench.registerMenuItem } })) }],
+    contributions: [{ id: 'test', activate: ({ commands, window, subscriptions }) => subscriptions.push(registerInsertDiagram({ ...context, commands, window: { ...context.window, registerMenuItem: window.registerMenuItem } })) }],
   });
   view.reveal(SourceRange.of({ from: text.length - 1, to: text.length - 1 }));
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;

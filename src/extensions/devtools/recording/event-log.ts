@@ -44,12 +44,12 @@ export interface LoggedEvent {
 
 /**
  * Subscribes `listener` to every event of `context`: each `onDid…` member of its namespaces and objects (`project`,
- * `window`, `preview`, …), own or inherited, except `workbench.onDidDropFiles`: listening to it is what turns on the
+ * `window`, `preview`, …), own or inherited, except `window.onDidDropFiles`: listening to it is what turns on the
  * widget's drop hint. Disposing the result unsubscribes all of them.
  */
 export function subscribeToEvents(context: ExtensionContext, listener: (event: string, value: unknown) => void): { dispose(): void } {
   const subscriptions = Object.entries(context).flatMap(([name, namespace]) =>
-    eventNames(namespace).filter((key) => `${name}.${key}` !== 'workbench.onDidDropFiles').map((key) => {
+    eventNames(namespace).filter((key) => `${name}.${key}` !== 'window.onDidDropFiles').map((key) => {
       const event = Reflect.get(namespace as object, key) as Event<unknown>;
       return event.call(namespace, (value) => listener(`${name}.${key}`, value));
     }),

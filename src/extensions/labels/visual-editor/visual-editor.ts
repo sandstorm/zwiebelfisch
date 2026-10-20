@@ -28,15 +28,15 @@ export function registerReferences(visualEditor: VisualEditorContributions, opti
  * "Add label" (in the Insert menu and, where the selection's block can take a label, in the selection's bar) and
  * "Label" in the bar above a selected image (add, rename, remove).
  */
-export function registerLabelButtons({ commands, workbench }: Pick<ExtensionContext, 'commands' | 'workbench'>, options: ReferencesOptions): Disposable {
+export function registerLabelButtons({ commands, window }: Pick<ExtensionContext, 'commands' | 'window'>, options: ReferencesOptions): Disposable {
   return Disposable.from(
     commands.registerCommand(ADD_LABEL, ({ tiptap }: VisualEditorMenuContext) => startNewLabel(tiptap.view)),
     commands.registerCommand(EDIT_LABEL, ({ tiptap, document }: VisualEditorMenuContext) => editLabel(tiptap.view, { ...options, document })),
-    workbench.registerMenuItem('visualEditor/insert', { ...ADD_LABEL_BUTTON, order: 80 }),
+    window.registerMenuItem('visualEditor/insert', { ...ADD_LABEL_BUTTON, order: 80 }),
     // after the marks and the link, before the comment (50); only where it applies, so the bar stays small
-    workbench.registerMenuItem('visualEditor/selection', { ...ADD_LABEL_BUTTON, order: 45, when: ADD_LABEL_BUTTON.enabled }),
+    window.registerMenuItem('visualEditor/selection', { ...ADD_LABEL_BUTTON, order: 45, when: ADD_LABEL_BUTTON.enabled }),
     // the images extension's bar above a selected image (an extension that is left out takes the bar along)
-    workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/image', {
+    window.registerMenuItem<VisualEditorMenuContext>('visualEditor/image', {
       command: EDIT_LABEL,
       title: 'Label',
       icon: ICON,

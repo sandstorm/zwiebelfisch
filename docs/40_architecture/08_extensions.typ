@@ -15,7 +15,7 @@ interface Extension {
 ```
 
 - *`activate` runs once*, in list order. Every `Disposable` goes into `context.subscriptions`; they are disposed with the editor, in reverse order.
-- *Factories take no options* (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection. Factories and independence: @architecture-conventions-api, @architecture-conventions-layers.
+- *Factories take no options* (`markup()`, `images()`): settings and `window.user` configure them. Only `collaboration(options)` takes the host's connection. Factories and independence: @architecture-conventions-api, @architecture-conventions-layers.
 - *Command ids* are `<extension>.<name>` (`pdfExport.export`).
 - *Every type an extension implements or declares* is exported from the package.
 
@@ -24,7 +24,7 @@ interface Extension {
 ```
 extensions/<name>/
   <name>.ts       entry: the factory (images()) and the controller; activate() registers everything
-  <name>.css      its own styles, registered with workbench.registerStyleSheet
+  <name>.css      its own styles, registered with window.registerStyleSheet
   model/          pure: no DOM, no editor libraries
   workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
@@ -46,8 +46,8 @@ export function wordCount(): Extension {
         properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' } },
       },
     },
-    activate({ project, commands, window, workspace, workbench, subscriptions }) {
-      const item = workbench.ownerDocument.createElement('span');
+    activate({ project, commands, window, workspace, subscriptions }) {
+      const item = window.ownerDocument.createElement('span');
       const count = () => (window.activeTextEditor?.document.text ?? '').split(/\s+/).filter(Boolean).length;
       const show = () => {
         item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`;
@@ -84,9 +84,8 @@ What `activate` gets (`ExtensionContext`):
   [`globalState`, `workspaceState`], [Values the extension keeps (@architecture-workbench-state)],
   [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile` (@architecture-workbench-files)],
   [`commands`], [Commands by id, key bindings (@architecture-workbench-commands)],
-  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor (@architecture-workbench-api)],
+  [`window`], [Everything the user sees and interacts with: `showDocument`, the active file and editor, side panels, menus, style sheets, dropped files, `user`, messages, quick input, status bar, custom editors, file decorations (@architecture-workbench-api)],
   [`workspace`], [`applyEdit`, settings (@architecture-workbench-settings)],
-  [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user` (@architecture-workbench-api)],
   [`scm`], [Source controls (@architecture-workbench-scm)],
   [`languages`], [Document links, drop and paste edits, help sheets, the language of a file (@architecture-source-editor-links, @architecture-workbench-drop-edits, @architecture-workbench-help)],
   [`visualEditor`], [Nodes, marks, submenus and floating bars of the toolbar (its buttons are menu entries), boxes, highlights; experimental (@architecture-visual-editor-constructs)],
@@ -169,7 +168,7 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`labels`], [`LabelIndex`, reference chips, label tags, the `@` list; pasted labels renamed], [nodes, toolbar, completion, search, links, paste edit],
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; "New style…"], [node, mark, commands and entries per style (text style menu, Styles submenu), search],
   [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, source editor, menu, command],
-  [`slashCommands`], [`/` lists the Insert menu, the lists and the Align menu and the text style menu (`workbench.getMenuItems`); the hint "Type / for commands"], [completion, Tiptap decoration],
+  [`slashCommands`], [`/` lists the Insert menu, the lists and the Align menu and the text style menu (`window.getMenuItems`); the hint "Type / for commands"], [completion, Tiptap decoration],
   [`previewProgress`], [the preview's loading note over its empty pane ("Loading the Typst compiler… 3.1 / 6.6 MB", "Compiling…", downloads); a compiler that cannot load or crashed as an error message], [`registerPaneOverlay`, `onDidLoad`, `onDidCrash`, `isEmpty`],
   [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source and is outlined], [preview toolbar, `reveal`, `createPageOverlay`, `boxesFor`, `onDidClickPage`],
   [`previewControls`], [zoom, page number (pages only); the switch "Pages | HTML" between the renderers, remembered per viewer; a View menu entry per view option], [preview toolbar, menu `view`, commands],

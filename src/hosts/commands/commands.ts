@@ -2,7 +2,7 @@ import type { Disposable } from '../../core/disposable/disposable';
 
 /**
  * commands and key bindings (VS Code's `commands` namespace), and the menu entries that run commands
- * (`MenuItem`, registered with `workbench.registerMenuItem`).
+ * (`MenuItem`, registered with `window.registerMenuItem`).
  *
  * A command is how one extension offers an action to the others: it registers a handler
  * under an id, and anyone who knows the id runs it, so it's called from:

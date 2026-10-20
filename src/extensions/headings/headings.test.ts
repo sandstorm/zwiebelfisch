@@ -9,12 +9,16 @@ import { headings, TOGGLE_NUMBERING } from './headings';
 /** `headings` activated with a window whose active editor shows `document` (null: none); runs a registered command. */
 function activate(document: TypstDocument | null): (id: string) => void {
   const registered = new Map<string, () => void>();
-  const workbench = { registerStyleSheet: () => new Disposable(() => {}), registerMenuItem: () => new Disposable(() => {}) };
   const commands = {
     registerCommand: (id: string, handler: () => void) => (registered.set(id, handler), new Disposable(() => registered.delete(id))),
   };
-  const window = { activeTextEditor: document && { document }, registerSearchProvider: () => new Disposable(() => {}) };
-  headings().activate({ workbench, commands, window, visualEditor: new VisualEditorHost(), subscriptions: [] } as unknown as ExtensionContext);
+  const window = {
+    activeTextEditor: document && { document },
+    registerSearchProvider: () => new Disposable(() => {}),
+    registerStyleSheet: () => new Disposable(() => {}),
+    registerMenuItem: () => new Disposable(() => {}),
+  };
+  headings().activate({ commands, window, visualEditor: new VisualEditorHost(), subscriptions: [] } as unknown as ExtensionContext);
   return (id) => registered.get(id)!();
 }
 

@@ -20,7 +20,7 @@ export function styles(): Extension {
   return {
     id: 'styles',
     activate(context) {
-      context.subscriptions.push(context.workbench.registerStyleSheet(css));
+      context.subscriptions.push(context.window.registerStyleSheet(css));
       const index = new TypstStyleIndex(context.project);
       const applier = registerStyleApplier(context.visualEditor, index);
       context.subscriptions.push(
@@ -38,7 +38,7 @@ export function styles(): Extension {
  * most styles (else `/styles.typ`, created when missing; a refusal is an error message) and shows it in the Source
  * editor.
  */
-async function addNewStyle(index: TypstStyleIndex, { project, window, workspace, workbench }: ExtensionContext): Promise<void> {
+async function addNewStyle(index: TypstStyleIndex, { project, window, workspace }: ExtensionContext): Promise<void> {
   const label = await window.showInputBox({
     title: 'New style',
     prompt: 'Name of the block style',
@@ -54,5 +54,5 @@ async function addNewStyle(index: TypstStyleIndex, { project, window, workspace,
     const problem = await workspace.applyEdit({ kind: 'create', path, content: change.insert });
     if (problem !== null) return void window.showErrorMessage(`The style was not added: ${problem}`);
   }
-  workbench.open(path, { selection: definition, viewType: SOURCE_EDITOR });
+  window.showDocument(path, { selection: definition, viewType: SOURCE_EDITOR });
 }

@@ -1,4 +1,4 @@
-// Files dropped into the Typst editors. See #extendEditors in ../workbench.ts.
+// Files dropped into the Typst editors. See #extendEditors in ../workbench-impl.ts.
 import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { EditorSelection, type Extension } from '@codemirror/state';
@@ -8,7 +8,7 @@ import { SourceOffset, type TypstDocument } from '../../../core/typst-document/t
 import type { DocumentDropEdit } from '../../languages/languages';
 import { insertTypst } from '../../visual-editor/visual-editor';
 import { posToSource } from '../../visual-editor/typst-conversion/typst-conversion';
-import { PROJECT_PATH_TYPE } from '../workbench';
+import { PROJECT_PATH_TYPE } from '../../window/window';
 
 /** What the Typst editors do with dropped files: what a project file becomes, and how files from the computer get into the project. */
 export interface DocumentDrops {

@@ -17,7 +17,7 @@ function setup(saved: Record<string, unknown> = {}) {
   const handlers = new Map<string, () => unknown>();
   const registration = registerViewOptionsMenu({
     preview: { viewOptions: () => options, setViewOptionValues: (each) => void values.push({ ...each }), onDidChangeViewOptions: changed.event },
-    workbench: {
+    window: {
       registerMenuItem: (menuId, item) => {
         const entry: [string, MenuItem] = [menuId, item as MenuItem];
         items.push(entry);

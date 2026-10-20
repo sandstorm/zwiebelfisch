@@ -8,7 +8,8 @@ import { type PageRect, type TypstDiagnostic, PageIndex, Pt } from '../core/typs
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
-import type { Extension, Workbench } from '../hosts/workbench/workbench';
+import type { WindowApi } from '../hosts/window/window';
+import type { Extension } from '../hosts/workbench/workbench';
 import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
@@ -383,10 +384,10 @@ describe('the built-in extensions', () => {
   });
 
   it('signs replies as the user an extension set since (the account signed in at a server), not as the host said', () => {
-    let workbench: Workbench | undefined;
-    const account: Extension = { id: 'test.account', activate: (context) => void (workbench = context.workbench) };
+    let window: WindowApi | undefined;
+    const account: Extension = { id: 'test.account', activate: (context) => void (window = context.window) };
     const { host, editor } = setup({ viewType: VISUAL_EDITOR, source: 'A #margin-note[] b.\n', user: { name: 'Demo user' }, extensions: (builtins) => [...builtins, account] });
-    workbench!.setUser({ name: 'Ann' });
+    window!.setUser({ name: 'Ann' });
     host.querySelector('[data-testid="zwf-note-marker"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
     const field = host.querySelector<HTMLTextAreaElement>('[data-testid="zwf-note-card"] .zwf-comments__card-reply')!;
     field.value = 'Hi';
@@ -680,17 +681,17 @@ describe('collaboration', () => {
     expect(source().state.doc.toString()).toBe('Room text');
   });
 
-  it('makes the account signed in at the server the workbench\'s user (comments are signed with the name the others see)', async () => {
+  it('makes the account signed in at the server the window\'s user (comments are signed with the name the others see)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ provider: 'gitlab', id: '2', name: 'Ann' }))));
-    let workbench: Workbench | undefined;
-    const probe: Extension = { id: 'test.probe', activate: (context) => void (workbench = context.workbench) };
+    let window: WindowApi | undefined;
+    const probe: Extension = { id: 'test.probe', activate: (context) => void (window = context.window) };
     const { editor } = setup({
       source: '',
       user: { name: 'Demo user', color: '#123456' },
       extensions: (builtins) => [...builtins, collaboration({ url: 'ws://127.0.0.1:9', room: 'r1' }), probe],
     });
     try {
-      await vi.waitFor(() => expect(workbench!.user).toEqual({ name: 'Ann', color: '#123456' }));
+      await vi.waitFor(() => expect(window!.user).toEqual({ name: 'Ann', color: '#123456' }));
     } finally {
       editor.dispose();
       vi.unstubAllGlobals();

@@ -2,7 +2,7 @@
    .zwf-editor. createEditor adds it before the hosts' and extensions' stylesheets, which use the tokens. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
-   (data-theme). What light-dark() cannot express selects on data-scheme (hosts/workbench/color-scheme/). */
+   (data-theme). What light-dark() cannot express selects on data-scheme (hosts/window/color-scheme/). */
 .zwf-editor[data-theme='light'] { color-scheme: light; }
 .zwf-editor[data-theme='dark'] { color-scheme: dark; }
 .zwf-editor[data-theme='auto'] { color-scheme: light dark; }
@@ -64,7 +64,7 @@
   background: var(--zwf-bg);
   color: var(--zwf-text);
   display: grid;
-  /* left side | editing area | right side (hosts/workbench/workbench.css). An open right side is a share of the
+  /* left side | editing area | right side (hosts/window/layout/window-layout.css). An open right side is a share of the
      widget (half; its separator sets --zwf-right-side), so opening or resizing the left side narrows only the editing
      area (it keeps min(20rem, 25%), then the right side gives way too); a closed side is only its rail. */
   grid-template-columns: auto minmax(min(20rem, 25%), 1fr) var(--zwf-right-side, auto);

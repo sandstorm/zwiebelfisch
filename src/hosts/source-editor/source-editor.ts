@@ -62,7 +62,7 @@ export interface SourceEditorOptions {
 }
 
 /**
- * The view type of the Source editor's custom editor, for `workbench.open(path, { viewType })`,
+ * The view type of the Source editor's custom editor, for `window.showDocument(path, { viewType })`,
  * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
  */
 export const SOURCE_EDITOR = 'sourceEditor';

@@ -32,9 +32,9 @@ export function spreadsheets(): Extension {
       languages: [{ id: 'ironcalc', extensions: ['.ic'] }],
     },
     activate(context) {
-      const { project, commands, window, workbench, languages, subscriptions } = context;
+      const { project, commands, window, languages, subscriptions } = context;
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         window.registerCustomEditorProvider(
           'spreadsheets.editor',
           {
@@ -47,7 +47,7 @@ export function spreadsheets(): Extension {
           { filenamePattern: '*.ic', displayName: 'Spreadsheet', icon: SPREADSHEET_ICON },
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
-        workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
+        window.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
         languages.registerHelpSheet({ language: 'ironcalc' }, SPREADSHEET_HELP),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),
@@ -110,10 +110,10 @@ const SPREADSHEET_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentCo
  * (`window.showSaveDialog`) and creates that empty spreadsheet (an empty workbook, saved by the editor on opening),
  * then opens it.
  */
-async function newSpreadsheet({ window, workspace, workbench }: ExtensionContext, resource = window.activeFile): Promise<void> {
+async function newSpreadsheet({ window, workspace }: ExtensionContext, resource = window.activeFile): Promise<void> {
   const target = await window.showSaveDialog({ title: 'New spreadsheet', defaultUri: resource, filters: { Spreadsheets: ['ic'] } });
   if (!target) return;
   const problem = await workspace.applyEdit({ kind: 'create', path: target, content: new Uint8Array() });
   if (problem) void window.showErrorMessage(`${ProjectPath.displayName(target)} not created: ${problem}`);
-  else workbench.open(target);
+  else window.showDocument(target);
 }

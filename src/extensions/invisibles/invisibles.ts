@@ -20,7 +20,7 @@ export function invisibles(): Extension {
   return {
     id: 'invisibles',
     contributes,
-    activate({ commands, workbench, workspace, globalState, visualEditor, sourceEditor, subscriptions }) {
+    activate({ commands, window, workspace, globalState, visualEditor, sourceEditor, subscriptions }) {
       let shown = configuredShown(workspace, globalState);
       const changed = new EventEmitter<boolean>();
       let codeMirror: Disposable | null = null;
@@ -32,8 +32,8 @@ export function invisibles(): Extension {
       };
       show(shown);
       subscriptions.push(
-        workbench.registerStyleSheet(css),
-        workbench.registerMenuItem('view', { command: TOGGLE, title: 'Invisible characters', group: 'editor', toggled: () => shown }),
+        window.registerStyleSheet(css),
+        window.registerMenuItem('view', { command: TOGGLE, title: 'Invisible characters', group: 'editor', toggled: () => shown }),
         visualEditor.registerTiptapExtension(invisibleMarks({ shown: () => shown, onDidChange: changed.event })),
         commands.registerCommand(TOGGLE, () => {
           void globalState.update(SHOWN_KEY, !shown);

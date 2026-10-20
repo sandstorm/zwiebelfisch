@@ -3,7 +3,7 @@ flowchart TD
   .activate(extensions)`"]
   host --> namespaces["`namespaces
   CommandsHost
-  WindowHost
+  WindowHost (the frame)
   ScmHost
   LanguagesHost
   WorkspaceHost`"]
@@ -11,14 +11,6 @@ flowchart TD
   VisualEditorHost
   SourceEditorHost
   Preview`"]
-  host --> frame["`frame
-  WorkbenchLayout
-  EditorTabs
-  DocumentEditors
-  Menus
-  StyleSheets
-  FileDrops
-  ColorScheme`"]
   host --> extensions["`ExtensionHost
   activate(context)
   per extension,

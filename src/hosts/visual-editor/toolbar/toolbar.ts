@@ -21,7 +21,7 @@ import { svg } from '../visual-editor-helpers';
  * Buttons reflect the selection (pressed, disabled, left out) after every transaction, focus and blur, and never take
  * the focus away from the text; a click runs the entry's command with the menu context.
  *
- * @internal Extensions fill it through `workbench.registerMenuItem`, `visualEditor.registerSubmenu` and
+ * @internal Extensions fill it through `window.registerMenuItem`, `visualEditor.registerSubmenu` and
  * `registerFloatingBar`.
  */
 export class Toolbar {
@@ -80,7 +80,7 @@ export class Toolbar {
   }
 
   /**
-   * What menu `menuId` shows now, sorted as the workbench sorts menus: its entries whose `when` holds (the buttons of
+   * What menu `menuId` shows now, sorted as the window sorts menus: its entries whose `when` holds (the buttons of
    * the others hidden), the submenus placed in it, and `extras`.
    */
   private entries(menuId: string, extras: readonly Placed[] = []): Placed[] {
@@ -190,9 +190,9 @@ export class Toolbar {
   }
 }
 
-/** Where the toolbar's menus come from: the workbench's menus and commands. */
+/** Where the toolbar's menus come from: the window's menus and commands. */
 export interface ToolbarMenus {
-  /** The entries of `menuId` whose `when` holds in `context`, sorted (`workbench.getMenuItems`). */
+  /** The entries of `menuId` whose `when` holds in `context`, sorted (`window.getMenuItems`). */
   getMenuItems(menuId: string, context: VisualEditorMenuContext): readonly MenuItem<VisualEditorMenuContext>[];
   readonly onDidChangeMenu: Event<string>;
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
@@ -224,7 +224,7 @@ const HOST_SUBMENUS: Submenu[] = [{ id: 'visualEditor/insert', label: 'Insert', 
 /** The host's own bar: above a text selection. */
 const HOST_BARS: FloatingBar[] = [{ id: 'visualEditor/selection', order: 10, label: 'Selection', anchor: ({ tiptap }) => (hasTextSelection(tiptap) ? selectionCoords(tiptap) : null) }];
 
-/** `entries` as the workbench sorts a menu's: group `navigation` first, the others by name, then by order, then as given. */
+/** `entries` as the window sorts a menu's: group `navigation` first, the others by name, then by order, then as given. */
 function sortPlaced(entries: readonly Placed[]): Placed[] {
   const rank = (group: string) => (group === 'navigation' ? '' : `~${group}`);
   return entries

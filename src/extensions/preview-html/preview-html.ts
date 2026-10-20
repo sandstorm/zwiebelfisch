@@ -16,9 +16,9 @@ import css from './preview-html.css?inline';
 export function previewHtml(): Extension {
   return {
     id: 'preview-html',
-    activate({ project, preview, workbench, subscriptions }) {
+    activate({ project, preview, window, subscriptions }) {
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         preview.registerRenderer({ id: 'html', label: 'HTML', output: 'html', create: (container) => new HtmlView(container, projectBytes(project)) }),
       );
     },

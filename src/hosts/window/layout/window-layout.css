@@ -1,5 +1,5 @@
 /* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
-   editors' panels, the editor/title menu) and the status bar. See WorkbenchHost in workbench-impl.ts, which puts it in
+   editors' panels, the editor/title menu) and the status bar. See WindowHost in ../window-impl.ts, which puts it in
    first, after the tokens and the frame of editor.css. */
 .zwf-editor__side {
   grid-row: 1;
@@ -89,7 +89,7 @@
 .zwf-editor__status-bar[hidden] { display: none; }
 .zwf-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
 .zwf-editor__status-bar-right { display: flex; }
-/* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
+/* The window's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .zwf-editor { position: relative; }
 /* The editing area: the tab bar (the shown file's editors), the Visual / Source editors' panels, a dragged file over the widget. */
 .zwf-editor__editor-area .cm-editor { flex: 1; min-height: 0; }

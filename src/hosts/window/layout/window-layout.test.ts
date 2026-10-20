@@ -1,12 +1,22 @@
 // @vitest-environment jsdom
-// Tests for workbench-layout.ts (WorkbenchLayout) and its two sides (side-bar.ts).
+// Tests for window-layout.ts (WindowLayout) and its two sides (side-bar.ts).
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CommandsHost } from '../../commands/commands';
-import { StorageMemento } from '../memento/memento';
-import { WorkbenchLayout } from './workbench-layout';
+import { WindowLayout } from './window-layout';
 
 let resize: (() => void) | null = null;
+
+/** The layout's state in the session storage under `prefix`, as JSON (as the workbench keeps it). */
+function sessionMemento(prefix: string) {
+  return {
+    get: <T>(key: string): T | undefined => {
+      const text = sessionStorage.getItem(prefix + key);
+      return text == null ? undefined : (JSON.parse(text) as T);
+    },
+    update: async (key: string, value: unknown) => sessionStorage.setItem(prefix + key, JSON.stringify(value)),
+  };
+}
 
 function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   if (observe) {
@@ -21,7 +31,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   const host = document.createElement('div');
   document.body.append(host);
   const commands = new CommandsHost(host);
-  const layout = new WorkbenchLayout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`), commands);
+  const layout = new WindowLayout(host, sessionMemento(`${key}:`), commands);
   const sidePanel = layout.addPanel('files', { label: 'Files', icon: '<svg></svg>' });
   const body = sidePanel.body;
   body.textContent = 'tree';
@@ -44,7 +54,7 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe('WorkbenchLayout', () => {
+describe('WindowLayout', () => {
   it('puts the left side, the editing area, the right side and the status bar into the host', () => {
     const { host, layout } = setup();
     expect([...host.children].map((c) => c.className)).toEqual([

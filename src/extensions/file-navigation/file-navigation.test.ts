@@ -64,9 +64,9 @@ describe('file navigation: back and forward', () => {
 
   it('offers the way back above a supplementary file; back restores the file with its selection, then forward', async () => {
     const { workbench, context, history, links, click } = setup();
-    workbench.open(path('/chapter.typ'));
+    workbench.window.showDocument(path('/chapter.typ'));
     context.window.activeTextEditor!.revealRange(SourceRange.of({ from: 3, to: 10 }));
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     expect(links()).toEqual(['← Back to chapter.typ']);
     // above the test editor's panel, in the editing area
     expect(history().closest('.zwf-file-navigation__top')!.nextElementSibling?.querySelector('.probe-text')).not.toBeNull();
@@ -82,15 +82,15 @@ describe('file navigation: back and forward', () => {
 
   it('restores the editor the file was shown in', async () => {
     const { workbench, context } = setup();
-    workbench.open(path('/chapter.typ'), { viewType: 'visualEditor' });
-    workbench.open(path('/main.typ'), { viewType: 'sourceEditor' });
+    workbench.window.showDocument(path('/chapter.typ'), { viewType: 'visualEditor' });
+    workbench.window.showDocument(path('/main.typ'), { viewType: 'sourceEditor' });
     await context.commands.executeCommand('fileNavigation.back');
     expect(context.window.activeTextEditor!.viewType).toBe(VISUAL_EDITOR);
   });
 
   it('runs as the commands and by VS Code’s keys', async () => {
     const { host, workbench, context } = setup();
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/flow.mmd'));
     await context.commands.executeCommand('fileNavigation.back');
     expect(context.window.activeFile).toBe('/main.typ');
     const mac = /Mac/.test(navigator.platform);
@@ -102,8 +102,8 @@ describe('file navigation: back and forward', () => {
 
   it('follows a renamed file and drops a deleted one', async () => {
     const { workbench, context, links } = setup();
-    workbench.open(path('/chapter.typ'));
-    workbench.open(path('/flow.mmd'));
+    workbench.window.showDocument(path('/chapter.typ'));
+    workbench.window.showDocument(path('/flow.mmd'));
     await context.workspace.applyEdit({ kind: 'rename', from: path('/chapter.typ'), path: path('/part.typ') });
     expect(links()).toEqual(['← Back to part.typ']);
     await context.workspace.applyEdit({ kind: 'delete', path: path('/part.typ') });
@@ -121,7 +121,7 @@ describe('file navigation: reading order', () => {
     vi.useFakeTimers();
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/appendix.typ'), content: '= Appendix\n' });
-    workbench.open(path('/chapter.typ'));
+    workbench.window.showDocument(path('/chapter.typ'));
     const links = () => [...host.querySelectorAll<HTMLElement>('nav.zwf-file-navigation--bottom button')].map((button) => button.textContent);
     expect(links()).toEqual(['← main.typ']);
     project.document(path('/main.typ'))!.setText('= Main\n#include "chapter.typ"\n#include "appendix.typ"\n', 'typing');
@@ -134,7 +134,7 @@ describe('file navigation: reading order', () => {
   it('reads the order from a new main file at once', () => {
     const { host, project, workbench } = setup();
     project.apply({ kind: 'create', path: path('/book.typ'), content: '= Book\n#include "chapter.typ"\n' });
-    workbench.open(path('/chapter.typ'));
+    workbench.window.showDocument(path('/chapter.typ'));
     const links = () => [...host.querySelectorAll<HTMLElement>('nav.zwf-file-navigation--bottom button')].map((button) => button.textContent);
     expect(links()).toEqual(['← main.typ']);
     expect(project.setMain(path('/book.typ'))).toBeNull();

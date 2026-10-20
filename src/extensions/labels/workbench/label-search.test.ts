@@ -11,7 +11,7 @@ describe('labelSearch', () => {
     const main = '= Introduction <intro>\n$ x = 1 $ <eq>\n#figure(table(columns: 1)[a], caption: [Runs]) <tab:runs>\n#include "a.typ"\n';
     const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': main, '/a.typ': 'See @intro. <note>\n', '/refs.bib': '@book{knuth, title={T}}\n' });
     const open = vi.fn();
-    const items = await labelSearch(new LabelIndex(project), project, { open }).provideItems('', new CancellationTokenSource().token);
+    const items = await labelSearch(new LabelIndex(project), project, { showDocument: open }).provideItems('', new CancellationTokenSource().token);
     expect(items.map(({ label, description }) => [label, description])).toEqual([
       ['intro', 'Section · Introduction · main.typ'],
       ['eq', 'Equation · main.typ'],

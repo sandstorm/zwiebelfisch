@@ -46,8 +46,8 @@ describe('entry-imports', () => {
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {
     expect(lint('src/editor/editor.ts', "import { x } from '../hosts/workbench/workbench';")).toEqual([]);
-    expect(lint('src/editor/editor.ts', "import { x } from '../hosts/workbench/layout/workbench-layout';")).toEqual([
-      expect.stringContaining('through its entry file hosts/workbench/workbench.ts'),
+    expect(lint('src/editor/editor.ts', "import { x } from '../hosts/window/layout/window-layout';")).toEqual([
+      expect.stringContaining('through its entry file hosts/window/window.ts'),
     ]);
   });
 

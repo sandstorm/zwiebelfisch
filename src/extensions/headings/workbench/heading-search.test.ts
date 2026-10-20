@@ -10,7 +10,7 @@ describe('headingSearch', () => {
   it("lists every Typst file's headings with level and file, and opens the one picked at its heading", async () => {
     const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': '= Report\n#include "a.typ"\n', '/a.typ': 'Intro.\n\n== Method\n', '/notes.md': '# Not Typst\n' });
     const open = vi.fn();
-    const search = headingSearch(project, { open });
+    const search = headingSearch(project, { showDocument: open });
     const token = new CancellationTokenSource().token;
     const items = await search.provideItems('', token);
     expect(items.map(({ label, description }) => [label, description])).toEqual([

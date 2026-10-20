@@ -88,7 +88,7 @@ describe('commit', () => {
   });
 });
 
-/** The extension activated over a fake workbench with `controls` registered (`changed` fires when they change). */
+/** The extension activated over a fake window with `controls` registered (`changed` fires when they change). */
 function activate(controls: SourceControl[], answers: { input?: string } = {}) {
   const changed = new EventEmitter<void>();
   const menu: MenuItem[] = [];
@@ -96,16 +96,14 @@ function activate(controls: SourceControl[], answers: { input?: string } = {}) {
   const decorations: FileDecorationProvider[] = [];
   const commands = new Map<string, () => unknown>();
   const { fake, told } = ui(controls, answers);
-  const workbench = {
+  const window = {
+    ...fake.window,
     ownerDocument: document,
     registerStyleSheet: () => new Disposable(() => {}),
     registerMenuItem: vi.fn((_menuId: string, item: MenuItem) => {
       menu.push(item);
       return new Disposable(() => menu.splice(menu.indexOf(item), 1));
     }),
-  };
-  const window = {
-    ...fake.window,
     registerStatusBarItem: (element: HTMLElement) => (statusBar.push(element), new Disposable(() => statusBar.splice(statusBar.indexOf(element), 1))),
     registerFileDecorationProvider: (provider: FileDecorationProvider) => (decorations.push(provider), new Disposable(() => decorations.splice(decorations.indexOf(provider), 1))),
   };
@@ -117,22 +115,22 @@ function activate(controls: SourceControl[], answers: { input?: string } = {}) {
   };
   const registry = { registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))) };
   const subscriptions: { dispose(): unknown }[] = [];
-  sourceControlExtension().activate({ commands: registry, window, scm, workbench, subscriptions } as unknown as ExtensionContext);
+  sourceControlExtension().activate({ commands: registry, window, scm, subscriptions } as unknown as ExtensionContext);
   const dispose = () => {
     for (const subscription of subscriptions.reverse()) subscription.dispose();
   };
-  return { changed, menu, statusBar, decorations, commands, told, workbench, dispose };
+  return { changed, menu, statusBar, decorations, commands, told, window, dispose };
 }
 
 describe('sourceControl extension', () => {
   it('shows "Save to <label>…" in the tab bar while a source control is registered, and commits from it', async () => {
     const { sourceControl, committed, update } = control();
     const controls: SourceControl[] = [];
-    const { changed, menu, commands, told, workbench, dispose } = activate(controls, { input: 'Saved' });
+    const { changed, menu, commands, told, window, dispose } = activate(controls, { input: 'Saved' });
     expect(menu).toEqual([]);
     controls.push(sourceControl);
     changed.fire();
-    expect(workbench.registerMenuItem).toHaveBeenLastCalledWith('editor/title', expect.objectContaining({ command: 'sourceControl.commit' }));
+    expect(window.registerMenuItem).toHaveBeenLastCalledWith('editor/title', expect.objectContaining({ command: 'sourceControl.commit' }));
     expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
     await commands.get('sourceControl.commit')!();
     expect(committed).toEqual(['Saved']);

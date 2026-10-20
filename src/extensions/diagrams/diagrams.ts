@@ -38,13 +38,13 @@ export function diagrams(): Extension {
       },
     },
     activate(context) {
-      const { project, commands, window, languages, workspace, workbench, subscriptions } = context;
+      const { project, commands, window, languages, workspace, subscriptions } = context;
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
-        workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
+        window.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
         registerInsertDiagram(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),
@@ -64,7 +64,7 @@ const NEW_DIAGRAM = 'diagrams.newDiagram';
 const DIAGRAMS_NET = 'https://embed.diagrams.net/';
 
 /** A DiagramEditor per opened diagram, saving into the project; a refused save is an error message. */
-function diagramEditor({ window, workspace, workbench }: ExtensionContext, editorUrl: () => string): CustomEditorProvider {
+function diagramEditor({ window, workspace }: ExtensionContext, editorUrl: () => string): CustomEditorProvider {
   return {
     resolveCustomEditor({ path, content }, panel) {
       const editor = new DiagramEditor(panel.element, {
@@ -74,7 +74,7 @@ function diagramEditor({ window, workspace, workbench }: ExtensionContext, edito
         save: (png) =>
           void workspace.applyEdit({ kind: 'update', path, content: png }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
         failed: async () =>
-          (await window.showErrorMessage(`The diagram editor could not be loaded from ${new URL(editorUrl(), workbench.ownerDocument.baseURI).host}. Are you offline?`, SHOW_AS_IMAGE)) === SHOW_AS_IMAGE,
+          (await window.showErrorMessage(`The diagram editor could not be loaded from ${new URL(editorUrl(), window.ownerDocument.baseURI).host}. Are you offline?`, SHOW_AS_IMAGE)) === SHOW_AS_IMAGE,
       });
       panel.onDidDispose(() => editor.dispose());
     },

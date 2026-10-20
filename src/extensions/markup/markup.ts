@@ -22,8 +22,8 @@ export function markup(): Extension {
   return {
     id: 'markup',
     activate(context) {
-      const { window, commands, workbench, languages, visualEditor, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(css), languages.registerDocumentLinkProvider({ language: 'typst' }, urlLinks));
+      const { window, commands, languages, visualEditor, subscriptions } = context;
+      subscriptions.push(window.registerStyleSheet(css), languages.registerDocumentLinkProvider({ language: 'typst' }, urlLinks));
       subscriptions.push(
         visualEditor.registerMark(BOLD),
         visualEditor.registerMark(ITALIC),
@@ -38,9 +38,9 @@ export function markup(): Extension {
         // in the bar above a selection, their only place
         ...MARK_BUTTONS.map((button) => registerChainButton(context, 'visualEditor/selection', button)),
         commands.registerCommand(LINK_COMMAND, linkCommand(window)),
-        workbench.registerMenuItem('visualEditor/selection', LINK_BUTTON),
+        window.registerMenuItem('visualEditor/selection', LINK_BUTTON),
         visualEditor.registerFloatingBar(LINK_BAR),
-        workbench.registerMenuItem(LINK_BAR.id, LINK_BUTTON),
+        window.registerMenuItem(LINK_BAR.id, LINK_BUTTON),
         visualEditor.registerTiptapExtension(linkShortcut(window)),
         ...INSERT_BUTTONS.map((button) => registerChainButton(context, 'visualEditor/insert', button)),
       );

@@ -17,8 +17,8 @@ export function help(): Extension {
   return {
     id: 'help',
     activate(context) {
-      const { window, languages, workbench, commands, visualEditor, subscriptions } = context;
-      const side = workbench.registerSidePanel('help', { label: 'Help', icon: HELP_ICON, order: 20 });
+      const { window, languages, commands, visualEditor, subscriptions } = context;
+      const side = window.registerSidePanel('help', { label: 'Help', icon: HELP_ICON, order: 20 });
       const panel = new HelpPanel(side.body, {
         insert: (text) => void commands.executeCommand(INSERT, text),
         showContextMenu: (text, anchor, title) => window.showContextMenu(ROW_MENU, { anchor, title, args: [text] }),
@@ -30,12 +30,12 @@ export function help(): Extension {
       };
       render();
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        window.registerStyleSheet(css),
         side,
         commands.registerCommand(INSERT, (text: string) => insertAtCursor(context, text)),
         commands.registerCommand(COPY, (text: string) => copy(context, text)),
-        workbench.registerMenuItem(ROW_MENU, { command: INSERT, title: 'Insert at cursor', order: 10, when: () => window.activeTextEditor !== null }),
-        workbench.registerMenuItem(ROW_MENU, { command: COPY, title: 'Copy', order: 20 }),
+        window.registerMenuItem(ROW_MENU, { command: INSERT, title: 'Insert at cursor', order: 10, when: () => window.activeTextEditor !== null }),
+        window.registerMenuItem(ROW_MENU, { command: COPY, title: 'Copy', order: 20 }),
         visualEditor.registerTiptapExtension(snippetDrops()),
         window.onDidChangeActiveFile(render),
       );
@@ -56,9 +56,9 @@ function insertAtCursor(context: ExtensionContext, text: string): Promise<void> 
 }
 
 /** Copies `text` to the clipboard and says so (`message`); a refusal (no permission) is an error message. */
-async function copy({ window, workbench }: ExtensionContext, text: string, message = 'Copied.'): Promise<void> {
+async function copy({ window }: ExtensionContext, text: string, message = 'Copied.'): Promise<void> {
   try {
-    await workbench.ownerDocument.defaultView!.navigator.clipboard.writeText(text);
+    await window.ownerDocument.defaultView!.navigator.clipboard.writeText(text);
     void window.showInformationMessage(message);
   } catch {
     void window.showErrorMessage('The clipboard could not be written: drag the row into the text instead.');

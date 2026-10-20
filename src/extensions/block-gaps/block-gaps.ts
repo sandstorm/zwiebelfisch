@@ -11,8 +11,8 @@ import { BlockGaps } from './visual-editor/block-gaps';
 export function blockGaps(): Extension {
   return {
     id: 'block-gaps',
-    activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockGaps));
+    activate({ window, visualEditor, subscriptions }) {
+      subscriptions.push(window.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockGaps));
     },
   };
 }

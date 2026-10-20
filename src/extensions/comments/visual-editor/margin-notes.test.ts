@@ -133,8 +133,8 @@ function setup(text: string, { comment }: { comment(): void } = { comment: () =>
   const commented: Extension = {
     id: 'test',
     contributes: { keybindings: [{ command: 'test.comment', key: 'Mod+Alt+KeyM' }] },
-    activate: ({ visualEditor, commands, workbench, subscriptions }) =>
-      void subscriptions.push(registerMarginNotes(visualEditor), registerCommentButtons(workbench, 'test.comment'), commands.registerCommand('test.comment', () => comment())),
+    activate: ({ visualEditor, commands, window, subscriptions }) =>
+      void subscriptions.push(registerMarginNotes(visualEditor), registerCommentButtons(window, 'test.comment'), commands.registerCommand('test.comment', () => comment())),
   };
   const view = createVisualEditor(parent, new TypstDocument(text), { contributions: [commented] });
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;

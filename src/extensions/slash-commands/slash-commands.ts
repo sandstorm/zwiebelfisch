@@ -3,7 +3,8 @@ import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Commands, MenuItem } from '../../hosts/commands/commands';
 import type { CompletionItem, CompletionItemProvider, VisualEditorMenuContext } from '../../hosts/visual-editor/visual-editor';
-import type { Extension, Workbench } from '../../hosts/workbench/workbench';
+import type { WindowApi } from '../../hosts/window/window';
+import type { Extension } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
 /**
@@ -16,10 +17,10 @@ import css from './slash-commands.css?inline';
 export function slashCommands(): Extension {
   return {
     id: 'slash-commands',
-    activate({ commands, workbench, visualEditor, subscriptions }) {
+    activate({ commands, window, visualEditor, subscriptions }) {
       subscriptions.push(
-        workbench.registerStyleSheet(css),
-        visualEditor.registerCompletionItemProvider(slashCommandItems(workbench, commands), { char: '/' }),
+        window.registerStyleSheet(css),
+        visualEditor.registerCompletionItemProvider(slashCommandItems(window, commands), { char: '/' }),
         visualEditor.registerTiptapExtension(SlashCommandsHint),
       );
     },
@@ -28,14 +29,14 @@ export function slashCommands(): Extension {
 
 /**
  * The Insert menu's entries, the list and alignment buttons, then the text style menu's, that are enabled where the
- * cursor is (the menus' entries as the workbench has them); found by label and keywords. Choosing one removes the
+ * cursor is (the menus' entries as the window has them); found by label and keywords. Choosing one removes the
  * `/query` and runs it as its menu would.
  */
-function slashCommandItems(workbench: Pick<Workbench, 'getMenuItems'>, commands: Pick<Commands, 'executeCommand'>): CompletionItemProvider {
+function slashCommandItems(window: Pick<WindowApi, 'getMenuItems'>, commands: Pick<Commands, 'executeCommand'>): CompletionItemProvider {
   return {
     provideCompletionItems: (context) => [
       ...SLASH_MENUS.flatMap(({ menuId, group, detail }) =>
-        workbench
+        window
           .getMenuItems<VisualEditorMenuContext>(menuId, context)
           .filter((item) => (group === undefined || item.group === group) && (item.enabled?.(context) ?? true))
           .map((item) => menuItem(item, detail, context, commands)),

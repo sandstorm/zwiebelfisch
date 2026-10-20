@@ -13,13 +13,14 @@ export type { User } from './core/user/user';
 export { type ElementLocation, HTML_ELEMENT_ATTRIBUTE, type HtmlFile, PageIndex, type PdfEntry, Pt } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
-export type { ExtensionContext, ExtensionContributions, Memento, OpenOptions, SidePanel, SidePanelOptions, Extension, Workbench } from './hosts/workbench/workbench';
+export type { ExtensionContext, ExtensionContributions, Memento, Extension } from './hosts/workbench/workbench';
 export type { Command, Commands, MenuContext, MenuItem } from './hosts/commands/commands';
 export type {
   CustomDocument,
   CustomEditorOptions,
   CustomEditorPanel,
   CustomEditorProvider,
+  DocumentShowOptions,
   FileDecoration,
   FileDecorationProvider,
   InputBoxOptions,
@@ -28,6 +29,8 @@ export type {
   QuickPickItem,
   QuickPickOptions,
   SaveDialogOptions,
+  SidePanel,
+  SidePanelOptions,
   StatusBarPlacement,
   TextEditor,
   TextEditorSelectionChangeEvent,
