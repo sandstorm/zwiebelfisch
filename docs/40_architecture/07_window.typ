@@ -1,163 +1,110 @@
-#import "../template.typ": unreviewed
+#import "../template.typ": api, mermaid, unreviewed
 
 = Window <architecture-window>
 
 #unreviewed
 
-`src/hosts/window/` is everything the user sees and interacts with (VS Code's `window`): the frame, the shown file, menus, messages, side panels. VS Code's other namespaces live in `src/hosts/{commands,scm,languages,workspace}/`; this chapter covers them too. The window knows no feature by name: a feature is an `Extension`, run by the extension host (@architecture-extensions-host).
+Everything the user sees and interacts with (VS Code's `window`), in `src/hosts/window/`: the frame, the shown file, menus, messages, side panels. VS Code's other namespaces sit beside it in `src/hosts/{commands,languages,scm,workspace}/` and are covered here too. The window knows no feature by name; features are extensions (@architecture-extensions-host).
 
-#table(
-  columns: (auto, 1fr),
-  table.header[Namespace][Offers],
-  [`commands`], [commands by id, key bindings],
-  [`window`], [`showDocument`, `activeFile`, `activeTextEditor`; side panels, editor frame, menus and `showContextMenu`, style sheets, dropped files, `user`; messages, input box, quick pick, save dialog, `withProgress`, search providers, status bar items, custom editors, file decorations],
-  [`scm`], [source controls (a duplicate id throws)],
-  [`languages`], [document links (merged: `provideDocumentLinks`), drop edits, paste edits, help providers, known imports by `DocumentSelector`; `getLanguageId`],
-  [`workspace`], [`applyEdit`, settings],
+#figure(
+  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),
+  caption: [The frame: a rail and a side panel per side, the editing area between, the status bar below.],
 )
-
-Competing contributions are ordered as @architecture-extensions-rules says.
 
 == Concepts <architecture-window-concepts>
 
-- *Contributions are registered once*, at activation. Hosts apply them to every editor they create later.
-- *Namespaces are hosts*: each is a module with an interface and a host class implementing it. No facade.
-- *The frame* is the window's: `WindowLayout` (a `SideBar` left and right, the editing area between, the status bar) and `EditorTabs`. One panel shows per side, sizes kept in the session; narrower than 720 px the left panel lies over the editing area.
-- *The preview is the right side's built-in panel* (`preview`). It compiles whether shown or not.
-- *`DocumentEditors`* keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`), with cursor, scroll and undo history. One `TextEditor` per document spans both; the one shown gets the other's selection.
-- *Editors and side panels never draw menus or popups of their own*: they talk to the user through `window`.
+- *Namespaces are hosts:* each is a module with an interface and a host class implementing it; no facade. The shapes are VS Code's (#link("https://code.visualstudio.com/api/references/vscode-api")[API reference]); the doc comments say where they differ.
+- *Contributions are registered once*, at activation; the hosts apply them to every editor they create later. Competing ones are ordered as @architecture-extensions-rules says.
+- *Editors and side panels never draw menus or popups of their own:* they talk to the user through `window`, so one input, one menu and one message area serve all.
+- *One side panel per side.* Sizes and the panels picked are kept for the session; narrower than 720 px the left panel lies over the editing area. The preview is the right side's built-in panel (`preview`) and compiles whether shown or not.
+- *`DocumentEditors`* keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`: cursor, scroll, undo history). One `TextEditor` per document spans both; the one shown takes the other's selection.
 
 == Loading <architecture-window-loading>
 
-Nothing in the editing area waits for the engine.
+Nothing in the editing area waits for the engine: `createEditor` is synchronous.
 
 #table(
   columns: (auto, 1fr),
   table.header[Arrived][Shown],
-  [the JS], [the frame and the shown file's text, editable (`createEditor` is synchronous)],
+  [the JS], [the frame and the shown file's text, editable],
   [the worker, then the wasm (streamed)], [the preview's loading note (`previewProgress`): "Loading the Typst compiler… 3.1 / 6.6 MB"],
   [the engine, compiling], ["Compiling…", then packages and fonts as they download],
   [the first pages], [the pages; raw boxes swap their code for their pictures],
 )
 
-- *The preview's progress* shows in its pane only (`previewProgress`, a pane overlay); a compiler that cannot load or crashed becomes an error message.
-- *`ProgressLocation.EditingArea`* (ours, for `window.withProgress`) puts a note over the editing area, which is `inert` until the task settles (collaboration: "Connecting to the room…").
+The preview's progress shows in its pane only; a compiler that cannot load or crashed becomes an error message. `ProgressLocation.EditingArea` (ours) makes the editing area `inert` under a note until a task settles (collaboration: "Connecting to the room…").
 
 == Extension API <architecture-window-api>
 
-The shapes are VS Code's (#link("https://code.visualstudio.com/api/references/vscode-api")[VS Code API reference]): messages, `showInputBox`, `showQuickPick`, `Memento`, `getConfiguration`, menu items, providers. Here only what differs, and our own parts. Settings: @architecture-extensions-settings.
+#api("/src/hosts/window/window.ts", "WindowApi", docs: "first-sentence")
 
 === Commands and keys <architecture-window-commands>
 
-```ts
-// the word-count extension (@architecture-extensions-example), plus a key and a name for people:
-contributes: {
-  commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }],
-  keybindings: [{ command: 'wordCount.count', key: 'Mod+Alt+KeyW' }],
-},
-```
+#api("/src/hosts/commands/commands.ts", "Commands", docs: "first-sentence")
+#api("/src/hosts/commands/commands.ts", "KeybindingContribution")
 
-- *Keys* are a `KeyboardEvent.code` with exactly the modifiers named (`Mod` is ⌘ or Ctrl; Alt+1 is not AltGr+1), caught before any editor; or a modifier tapped twice, as VS Code's `shift shift` (`Shift Shift`; not in a text field). `''` in `mac` / `win` / `linux` means no key there. An extension only declares its keys (`contributes.keybindings`), as in VS Code. `commands.keybindingLabel(id)` names a command's key, for command rows, menus and tooltips.
-- *`commands.getCommands()`* lists the `contributes.commands` registered now, with titles (search everywhere's "Commands").
-- *`executeCommand`* rejects for an unknown id or a failing handler; `registerCommand` throws for an id registered twice. The host runs commands with `editor.executeCommand`.
-- *Search everywhere runs `contributes.commands` without arguments*: declare only commands that work without any.
-- *`workbench.view.<id>`*, one per side panel: shows and focuses it, or hides it when shown and focused. Extensions declare its key (`files` Alt+1, `search` Alt+3; ⌃1 / ⌃3 on the Mac).
-- *`workbench.action.searchEverywhere(text?)`* (the `searchEverywhere` extension's) opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
-- *`editor.action.pasteAs({ kind? })`* (the `clipboard` extension's) switches the last paste, while its chip shows, to `kind`, or asks.
+- *Keys are caught before any editor*, so a binding means the same everywhere; an extension only declares them (`contributes.keybindings`), never listens itself.
+- *Search everywhere runs `contributes.commands` without arguments:* declare only commands that work without any.
+- *Commands other extensions rely on:* `workbench.view.<id>` per side panel (the window's; extensions declare its key: `files` Alt+1, `search` Alt+3, ⌃1 / ⌃3 on the Mac); `workbench.action.searchEverywhere(text?)` (`searchEverywhere`); `editor.action.pasteAs({ kind? })` (`clipboard`).
 
 === Menus <architecture-window-menus>
 
-A button is a menu entry: `window.registerMenuItem(menuId, item)`; `window.showContextMenu(menuId, { anchor, title, context, args })` pops a menu up (its command gets `args`; nothing shows while no entry applies). An entry shows its command's `title` and `icon` (`contributes.commands`) unless it has its own (the file panel's row menu says "Delete" where search everywhere finds "Delete…"). An entry with `toggled?(context)` is a checkbox. `when` and `toggled` (and `enabled`, where the menu shows entries disabled) are asked each time the menu shows, with the context the menu documents (`MenuItem<C>`; the Visual editor's: @architecture-visual-editor-toolbar); `getMenuItems` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" without any). `shortTitle`, `keybinding` (the editor's own key, shown while the command has no binding), `category` and `keywords` serve menus that show or search them. The types live with the commands (`MenuItem`, `MenuContext` in `hosts/commands`).
+Every button is a menu entry: `registerMenuItem` adds it, `showContextMenu` or a host shows the menu. The types live with the commands.
+
+#api("/src/hosts/commands/commands.ts", "MenuItem", docs: "first-sentence")
 
 #table(
   columns: 4,
-  [Menu], [Where], [Context], [Command gets],
-  [`editor/title`], [Buttons at the right end of the editing area's tab bar], [`activeCustomEditorId`, `resource`], [nothing],
-  [`view`], [The View menu; groups `editor` ("Invisible characters") and `preview` (@architecture-preview-view)], [as `editor/title`], [nothing],
-  [`preview/title`], [The preview's toolbar (@architecture-preview-contributions)], [`previewRenderer`], [the context],
-  [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind`, `resourceIsMain`], [the row's path],
-  [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
-  [`help/row`], [A help row's context menu], [none], [the text the row inserts],
-  [`workbench/rail/left`, `workbench/rail/right`], [A rail button among the side's panels by `order` (search everywhere's: 15); tooltip with the key], [none], [nothing],
+  table.header[Menu][Where][Context][Command gets],
+  [`editor/title`], [the right end of the editing area's tab bar], [`activeCustomEditorId`, `resource`], [nothing],
+  [`view`], [the View menu; groups `editor`, `preview` (@architecture-preview-view)], [as `editor/title`], [nothing],
+  [`preview/title`], [the preview's toolbar (@architecture-preview-contributions)], [`previewRenderer`], [the context],
+  [`file/newFile`], ["New" in the file panel's header], [`view`, `resource`, `resourceKind`, `resourceIsMain`], [the row's path],
+  [`explorer/context`], [a file panel row's context menu], [as `file/newFile`], [the row's path],
+  [`help/row`], [a help row's context menu], [none], [the text the row inserts],
+  [`workbench/rail/left`, `…/right`], [a rail button among the side's panels by `order`], [none], [nothing],
 )
 
-=== Messages and quick input <architecture-window-messages>
-
-- *One input at a time:* a new input box or quick pick cancels the open one.
-- *`createQuickPick()`* (VS Code's, as far as needed): its owner sets `items` (with `QuickPickItemKind.Separator` headings and `highlights`) as `onDidChangeValue` fires, and hides it on `onDidAccept`; `prompt` is a line below the list.
-- *`showSaveDialog`* resolves to a new file's `ProjectPath`. It refuses existing names and names without a `filters` ending (`{ Diagrams: ['drawio.png'] }`); creating the file is your job (`workspace.applyEdit`).
+The Visual editor's menus and context: @architecture-visual-editor-toolbar.
 
 === Search everywhere <architecture-window-search>
 
-One quick pick over every `SearchProvider` (ours), a group each, as IntelliJ's: opened by Shift twice, ⌘P, ⌘⇧O (`/`), ⌘⇧A (`>`), `workbench.action.searchEverywhere` or the left rail's button. The window keeps the providers (`registerSearchProvider`, `getSearchProviders`); the `searchEverywhere` extension shows them (`window.createQuickPick`) and adds Commands and Settings. Without it the providers' results show nowhere.
+One quick pick over every `SearchProvider`, a group each (IntelliJ's). The window only keeps the providers; the `searchEverywhere` extension shows them (`createQuickPick`) and adds Commands and Settings. Without it the results show nowhere.
 
-```ts
-window.registerSearchProvider({
-  id: 'wordCount.counts', label: 'Word counts', prefix: '$', order: 80,
-  provideItems: (query, token) => project.paths().map((path) => ({
-    label: ProjectPath.name(path),
-    description: `${count(path)} words`,
-    accept: () => window.showDocument(path),
-  })),
-});
-```
-
-- *`provideItems(query, token)`* is asked on every change of the text after the prefix; when async, check `token.isCancellationRequested` between steps.
-- *Return every candidate*: the search matches them fuzzily. Items with `highlights` were matched by the provider and show as given.
-- *`accept()`* is called once the search is closed and the focus is back.
-- *A `prefix` typed first* narrows the search to the providers with that prefix.
+#api("/src/hosts/window/window.ts", "SearchProvider")
 
 #table(
   columns: 4,
-  [Group], [Prefix], [Order], [From],
-  [Files], [`/`], [10], [`files`: opens],
-  [Headings], [`#`], [20], [`headings`: opens at the heading],
-  [Labels], [`@`], [30], [`labels`: labels except figures' and bibliography keys],
-  [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption],
-  [Commands], [`>`], [40], [`searchEverywhere`: `commands.getCommands()`; runs],
-  [Styles], [`*`], [50], [`styles`: applies to the selection],
-  [Comments], [`!`], [60], [`comments`: opens at the note],
-  [Settings], [`:`], [70], [`searchEverywhere`: `workspace.getConfigurationProperties()`; switches booleans, asks for `enum` values (`WorkspaceConfiguration.update`)],
-  [Text], [`%`], [90], [`textFiles`: lines of Typst and text files; opens with the match selected],
-)
-
-=== The frame <architecture-window-frame>
-
-#table(
-  columns: 2,
-  [Member], [What],
-  [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`],
-  [`window.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button (`icon`: SVG markup, as every icon); returns `SidePanel` (see the d.ts)],
-  [`window.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor; one frame at a time],
-  [`window.registerStyleSheet(css)`], [Your CSS where the widget renders (shadow root included); use the `--zwf-*` color tokens],
-  [`window.ownerDocument`], [The document to create elements in],
-  [`window.user`], [Who works here, as the host said or an extension set since; `undefined`: anonymous. Read it when needed],
-  [`window.setUser(user)`], [Replaces it (the collaboration extension: the account signed in at the server)],
-  [`window.isEditorFocused()`], [Whether the focus is in the editing area],
+  table.header[Group][Prefix][Order][From],
+  [Files], [`/`], [10], [`files`],
+  [Headings], [`#`], [20], [`headings`],
+  [Labels, Figures], [`@`], [30, 31], [`labels`, `figures`],
+  [Commands], [`>`], [40], [`searchEverywhere`: `commands.getCommands()`],
+  [Styles], [`*`], [50], [`styles`],
+  [Comments], [`!`], [60], [`comments`],
+  [Settings], [`:`], [70], [`searchEverywhere`: `workspace.getConfigurationProperties()`],
+  [Text], [`%`], [90], [`textFiles`],
 )
 
 === Files and editors <architecture-window-files>
 
-- *Read* through `project` (`files()`, `paths()`, `has`, `document`, `content`, `onDidChangeFile`); *change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project, the host's `allowFileChange`, the project again, then applies, and resolves to the refusal in words or `null`. `FileChange`: @architecture-core-project.
-- *Show* with `window.showDocument(path, { selection?, viewType? })`; `window.activeFile` says what is shown.
-- *`window.activeTextEditor`* is the Typst editor (`revealRange`, `insertSnippet`, `edit`, …); `null` for other files.
-- *`languages.getLanguageId(path)`* goes by the longest ending in `contributes.languages`.
-- *Dropped files* no editor took go to `window.onDidDropFiles`.
+#api("/src/hosts/workspace/workspace.ts", "Workspace", docs: "first-sentence")
+#api("/src/hosts/window/window.ts", "TextEditor", docs: "first-sentence")
+
+- *Read through `project`, change through `workspace.applyEdit`*, never `project.apply`: it asks the project, the host's `allowFileChange`, the project again, then applies. So no extension changes a file the host vetoed. `FileChange`: @architecture-core-project.
+- *The window's own settings* (`workbench.theme`, `workbench.rightSidePanel`) are declared like an extension's (@architecture-extensions-settings).
 
 === Custom editors <architecture-window-custom-editors>
 
-Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by `DocumentEditors` before any extension, as VS Code's built-in text editor.
+Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by `DocumentEditors` before any extension (as VS Code's text editor). A file several editors match gets a tab each; the one picked is remembered.
 
-- *`filenamePattern`:* a case-insensitive glob over the name (`*.{png,jpg}`), over the path if it has a `/`.
-- *`priority`:* a number, `'default'` (100), `'fallback'` (files no other editor opens) or `'option'` (only when chosen).
-- *Tabs are "open with"*: a file several editors match gets a tab each (`displayName`); the one picked is remembered for later files.
-- *Every open gets a new panel.* Store edits with `workspace.applyEdit`, pending ones in `panel.onDidDispose`; `panel.onDidRequestReveal(range)` follows `window.showDocument(path, { selection })`.
+#api("/src/hosts/window/window.ts", "CustomEditorOptions", docs: "first-sentence")
+#api("/src/hosts/window/window.ts", "CustomEditorPanel", docs: "first-sentence")
 
 #table(
   columns: 3,
-  [View type], [Pattern], [Priority],
-  [`visualEditor` (`VISUAL_EDITOR`)], [`*.typ`, retained], [default (registered first)],
-  [`sourceEditor` (`SOURCE_EDITOR`)], [`*.typ`, retained], [default],
+  table.header[View type][Pattern][Priority],
+  [`visualEditor`, `sourceEditor`], [`*.typ`, retained], [default (Visual registered first)],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.editor`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
@@ -167,45 +114,31 @@ Every file opens in a custom editor, Typst files too: the Visual and Source edit
 
 === Help <architecture-window-help>
 
-`languages.registerHelpSheet(selector, sheet)` (ours) gives the help panel a cheat sheet for the shown file's language: a plain-data `HelpSheet` (sections of rows `{ snippet, description, insert? }`, links), no markup. A row drags into an editor or inserts at the cursor with Enter; rows of a `typst` sheet drop into the Visual editor as Typst. `help/row` is the row's menu. Built-in sheets: `typst`, `mermaid`, `ironcalc`, `bibtex`.
+#api("/src/hosts/languages/languages.ts", "HelpSheet")
 
-=== Known imports <architecture-window-known-imports>
-
-Pasted Typst gets the imports it needs (the built-in `imports`). For text from outside the widget, an extension says where a name comes from (ours):
-
-```ts
-languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: '@preview/merman:0.4.0' });
-```
-
-A pasted `mermaid(..)` then adds `#import "@preview/merman:0.4.0": mermaid`, or extends an import of merman already there.
+Plain data, no markup: the `help` extension renders the shown file's sheets; a row drags into an editor or inserts at the cursor, a `typst` sheet's rows as Typst; `help/row` is its menu. Sheets: `typst`, `mermaid`, `ironcalc`, `bibtex`.
 
 === Drop edits <architecture-window-drop-edits>
 
-VS Code's `DocumentDropEditProvider`, for a file dropped into a Typst file. Return `null` to let the next provider answer; the first edit wins.
+#api("/src/hosts/languages/languages.ts", "DocumentDropEditProvider")
 
-- *`insertText`* goes in at the drop; the Visual editor reads it as Typst. `additionalEdit` joins the same undo step.
-- *Desktop files* are uploaded first, to the folder `provideUploadFolder(document, file)` names (else the project's top), then dropped as project files.
+The widget (`editor/widget/document-drops.ts`) asks them for the Visual and Source editors: files from the computer are uploaded first, then dropped as project files. Dropped files no editor took go to `window.onDidDropFiles`.
 
 === Copy and paste <architecture-window-paste>
 
-VS Code's `DocumentPasteEditProvider`: `prepareDocumentPaste` on copy, `provideDocumentPasteEdits` for alternatives (each of a `kind`, shown in a "Paste as" chip), `resolveDocumentPasteEdit` for whatever goes in. `languages` keeps the providers (`getDocumentPasteEditProviders(languageId)`, by priority); the `clipboard` extension's `PasteEdits` (`paste-as.ts`) asks them in the Visual and Source editors: it filters by kind and mime type, resolves and drops colliding additional edits. Without it, no provider takes part: the editors paste as ProseMirror and CodeMirror do.
+#api("/src/hosts/languages/languages.ts", "DocumentPasteEditProvider")
+#api("/src/hosts/languages/languages.ts", "DocumentPasteEdit", docs: "first-sentence")
 
-- *Kinds* are dot-separated (`typst` covers `typst.html`). The `clipboard` extension's: `typst`, `typst.code`, `text.plain` (a provider of priority 0), and the Visual editor's `typst.html`.
-- *Order* (`sortPasteEdits`, in the clipboard extension's `paste-as.ts`): the providers' edits by their `priority` (`options`, as for links and drops; default 100, higher first; equal: registration order), so the clipboard's own come last; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
-- *`resolveDocumentPasteEdit`* of every provider runs on the edit that goes in, in the same order, whatever its kind. Built-in: `imports`, `labels` (new names for clashing labels). Overlapping additional edits are dropped.
-- *Only providers whose `pasteMimeTypes` the clipboard has are asked*, all at paste time: the clipboard can't be read later.
+`languages` only keeps the providers; the `clipboard` extension asks them in the Visual and Source editors. Without it no provider takes part: the editors paste as ProseMirror and CodeMirror do.
 
-=== File decorations <architecture-window-decorations>
-
-Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)` (the custom editor's `icon`).
-
-=== Settings <architecture-window-settings>
-
-Settings are declared by extensions and the window (`workbench.theme`, `workbench.rightSidePanel`): @architecture-extensions-settings.
+- *Order* (`sortPasteEdits` in `clipboard/paste-as.ts`): by provider `priority`, so the clipboard's own (0) come last; an edit goes after the kinds in its `yieldTo`; duplicate texts drop out, and `text.plain` takes the place of the first, so a paste with formatting always offers plain text. ⌘⇧V prefers `text.plain`, the Source editors `typst`.
+- *Every provider resolves the edit that goes in*, whatever its kind (`imports` adds imports, `labels` renames clashing labels); overlapping additional edits are dropped.
+- *All providers are asked at paste time*, only those whose `pasteMimeTypes` the clipboard has: it can't be read later.
+- *Known imports* (`languages.registerKnownImport`) tell `imports` where a name of text from outside the widget comes from (`mermaid` from `@preview/merman:0.4.0`) without knowing the extension that declares it.
 
 === Source controls <architecture-window-scm>
 
-`scm.registerSourceControl(sourceControl)` (ours) offers a place to commit the project to; `scm.sourceControls` and `onDidChangeSourceControls` are for whoever shows them. Collaboration registers a room's GitLab branch; source-control shows it. `SourceControl`: see the d.ts.
+#api("/src/hosts/scm/scm.ts", "Scm", docs: "first-sentence")
+#api("/src/hosts/scm/scm.ts", "SourceControl", docs: "first-sentence")
 
-- *`statusBarItems`* sit at the start of the status bar; a click commits, `'warning'` makes an entry stand out.
-- *The outcome* the source control reports itself, through `window.show…Message`.
+Collaboration registers a room's GitLab branch; `sourceControl` shows it (status bar, file decorations, "Save to _label_…"). Neither knows the other.

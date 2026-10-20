@@ -1,62 +1,35 @@
-#import "../template.typ": mermaid, unreviewed
+#import "../template.typ": api, mermaid, unreviewed
 
 = Typst ↔ ProseMirror: the Visual editor's conversion <architecture-typst-conversion>
 
 #unreviewed
 
-The Visual editor's model (@architecture-visual-editor): it turns Typst text into the editor's #link("https://prosemirror.net/")[ProseMirror] document and back, so that an edit changes only the source of what it touched. A stateless library in the Visual editor host, `src/hosts/visual-editor/typst-conversion/`; a module of its own: extensions, the widget and the editor import its entry `typst-conversion/typst-conversion.ts` directly. Shaped like prosemirror-markdown (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`), no view, tested without a DOM.
+The Visual editor's model (@architecture-visual-editor): Typst text to its #link("https://prosemirror.net/")[ProseMirror] document and back, so an edit changes only the source of what it touched. A stateless library in `src/hosts/visual-editor/typst-conversion/`, shaped like prosemirror-markdown, tested without a DOM; extensions, the widget and the editor import its entry `typst-conversion.ts` directly.
 
 #figure(
   mermaid(read("../diagrams/typst-prosemirror.mmd"), width: 60%),
   caption: [Typst text to the ProseMirror document and back.],
 )
 
-*Invariant:* `serializeToTypst(parseTypst(text, schema)) === text` for any input.
+== Specs <architecture-typst-conversion-specs>
 
-== Specs and grammar <architecture-typst-conversion-specs>
+#api("/src/hosts/visual-editor/typst-conversion/typst-conversion.ts", "DocumentNodeSpec")
+#api("/src/hosts/visual-editor/typst-conversion/typst-conversion.ts", "TypstNodeConversion", docs: "first-sentence")
+#api("/src/hosts/visual-editor/typst-conversion/typst-conversion.ts", "TypstParseRules", docs: "first-sentence")
+#api("/src/hosts/visual-editor/typst-conversion/typst-conversion.ts", "TypstMarkSpec")
+#api("/src/hosts/visual-editor/typst-conversion/typst-conversion.ts", "TypstMarkConversion", docs: "first-sentence")
 
-The framework knows only paragraphs, text, escapes, shorthands and raw Typst (a line break `\` without `markup`: a raw inline box). Every other construct is a spec:
+- *The framework knows only* paragraphs, text, escapes, shorthands and raw Typst (a line break `\` without `markup`: a raw inline box). Every other construct is a spec; writing one: @architecture-visual-editor-constructs, their order: @architecture-extensions-rules.
+- *Parsing:* syntax that `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break. A run with prose is a paragraph, a run that is exactly one call goes to the `calls` rules, and what no rule takes is `rawBlock` / `rawInline`, its source verbatim.
 
-#table(
-  columns: (auto, 1fr),
-  table.header[Field][Meaning],
-  [`name`], [The node or mark type.],
-  [`tiptap`], [The Tiptap extension defining the type (schema, attributes, priority).],
-  [`typst.parseTypst`], [Which syntax it reads: `syntaxNodes` by Lezer node name (`Heading`, `Strong`), `calls` by function name (`*`: any other call).],
-  [`typst.toTypst`], [How an edited node is written back.],
-  [`typst.labelled`, `anchors`, `container`], [Takes a trailing label; attributes kept like `src`; the container of consecutive items (list items → their list).],
-)
+== Nodes unchanged since parsed <architecture-typst-conversion-anchors>
 
-- *Attaching:* `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual editor) put the specs on the schema, where `parseTypst` and `serializeToTypst` find them.
-- A second spec of the same name extends the first; order between specs: @architecture-extensions-rules.
-- Writing a spec: @architecture-visual-editor-constructs.
-
-== Parsing <architecture-typst-conversion-parse>
-
-- *Segments:* syntax whose rule `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break.
-- *Runs:* a run with prose becomes a paragraph; a run that is exactly one call goes to the `calls` rules; what no rule takes becomes `rawBlock` / `rawInline` holding its source verbatim.
-- *Labels:* a label right after a heading, or ending a run, becomes the block's `label` attribute.
-- *Context:* rules get a `TypstParseContext` (see the d.ts).
-- *List items* are read without their common indentation and printed with it again.
-
-== Source anchors and nodes unchanged since parsed <architecture-typst-conversion-anchors>
-
-- *Anchors:* attributes that are never rendered and remember the source: `src` (the node's Typst), `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
-- *Unchanged since parsed:* a private `WeakMap` (`unchangedNodes`) holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
-- *Printing:* unchanged nodes and block atoms print `src`; edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped).
-- Editor-made nodes have `sep: null` and get the default separator.
+- *Anchors* are attributes never rendered that remember the source: `src`, `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
+- *Unchanged since parsed:* a private `WeakMap` holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`": such nodes print `src`, edited ones their spec's `toTypst`. Editor-made nodes have `sep: null` and get the default separator.
 
 == Position map <architecture-typst-conversion-position-map>
 
-```ts
-sourceToPos(doc, offset: SourceOffset, bias?) → number        // ProseMirror position
-posToSource(doc, pos: number, bias?) → SourceOffset
-```
-
-The only conversion between source offsets and document positions, character-exact, for any document.
-
-- *Built while printing:* each stretch of output records the document range showing it (text one to one, atoms as a whole, hidden syntax to the next visible position).
-- `bias: -1` maps a range end to just after the visible character before it.
+`sourceToPos` and `posToSource` are the only conversion between source offsets and ProseMirror positions, character-exact, for any document. The map is built while printing: each stretch of output records the document range showing it (text one to one, atoms as a whole, hidden syntax to the next visible position).
 
 == Sync <architecture-typst-conversion-sync>
 

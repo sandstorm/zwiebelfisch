@@ -1,6 +1,8 @@
-#import "../template.typ": mermaid, unreviewed
+#import "../template.typ": mermaid
 
 = Architecture overview <architecture-overview>
+
+A Typst editor in the browser. Hosts are the mechanism of a view; extensions are every feature. All of them read and edit one text per file.
 
 == Layers <architecture-overview-layers>
 
@@ -8,16 +10,16 @@
   columns: (auto, 1fr),
   table.header[Folder][Job],
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax (@architecture-core).],
-  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points, as small as possible (@architecture-visual-editor with its conversion @architecture-typst-conversion, @architecture-source-editor, @architecture-preview, @architecture-window); the extension host runs the extensions (@architecture-extensions-host).],
+  [`src/hosts/`], [A view's mechanism and its contribution points, as small as possible: @architecture-visual-editor (conversion: @architecture-typst-conversion), @architecture-source-editor, @architecture-preview, @architecture-window. The extension host runs the extensions (@architecture-extensions-host).],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …): every feature and every construct beyond paragraphs and raw Typst (@architecture-extensions-built-in).],
-  [`src/editor/`], [`createEditor`: the composition root. `editor/widget` makes and wires the hosts for a `Project` and runs the built-in extensions in the extension host.],
+  [`src/editor/`], [`createEditor`, the composition root: `editor/widget` makes and wires the hosts for a `Project` and runs the built-in extensions.],
   [`src/editor-element/`], [`<zwiebelfisch-editor>`: a shadow root around `createEditor`.],
   [`src/testing/`], [Test helpers composing the built-ins; only `*.test.ts` files import it.],
 )
 
-- *Model:* `core/` and each extension's `model/` folder. No DOM.
+- *Model:* `core/` and each extension's `model/`; no DOM.
 - *View:* the hosts and an extension's view folders (`visual-editor/`, `source-editor/`, `preview/`, `window/`).
-- *Controller:* an extension's `activate`. It subscribes views to model events and turns input into `TextChange`s and `FileChange`s.
+- *Controller:* an extension's `activate`: subscribes views to model events, turns input into `TextChange`s and `FileChange`s.
 
 Who may import whom, and why extensions never depend on each other: @architecture-conventions.
 
@@ -28,8 +30,9 @@ Who may import whom, and why extensions never depend on each other: @architectur
   caption: [A keystroke in the Visual editor; the numbers are the listeners' subscription order.],
 )
 
-The Visual editor writes back only what the transaction touched: one change per edited textblock, untouched nodes printing their source verbatim (@architecture-visual-editor-class). The way back is the same: a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (`applyTypstChanges`, @architecture-typst-conversion-sync).
+- *Only what was touched:* the Visual editor writes back one change per edited textblock; untouched nodes print their source verbatim (@architecture-visual-editor-class).
+- *The way back:* a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (@architecture-typst-conversion-sync).
 
 == One edit format, one source of truth <architecture-overview-truth>
 
-Every `.typ` file is one `TypstDocument`; editors never talk to each other. Every edit is a `TextChange[]` with an `origin` (echo suppression: @architecture-core-document).
+Every `.typ` file is one `TypstDocument`; editors never talk to each other. Every edit is a `TextChange[]` with an `origin`, which suppresses echoes (@architecture-core-document).
