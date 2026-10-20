@@ -7,7 +7,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { MenuItem } from '../../../hosts/commands/commands';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { SourceControl, SourceControlResourceState, SourceControlState, SourceControlStatusBarCommand } from '../../../hosts/scm/scm';
+import type { SourceControl, SourceControlResourceState, SourceControlStatusBarItem } from '../../../hosts/scm/scm';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
 import { sourceControl as sourceControlExtension } from '../source-control';
 import { commit, type SourceControlUi } from './workbench';
@@ -16,27 +16,27 @@ function control(id = 'gitlab', label = 'GitLab') {
   const committed: string[] = [];
   const changed = new EventEmitter<void>();
   const sourceControl: SourceControl & {
-    state: SourceControlState;
+    busy: boolean;
     resourceStates: SourceControlResourceState[];
-    statusBarCommands: SourceControlStatusBarCommand[];
+    statusBarItems: SourceControlStatusBarItem[];
   } = {
     id,
     label,
     defaultCommitMessage: 'Edit via Zwiebelfisch',
-    state: { busy: false },
+    busy: false,
     resourceStates: [],
-    statusBarCommands: [],
+    statusBarItems: [],
     onDidChange: changed.event,
     commit: (message) => {
       committed.push(message);
-      update({ busy: true });
+      update(true);
     },
   };
-  const update = (state: SourceControlState) => {
-    sourceControl.state = state;
+  const update = (busy: boolean) => {
+    sourceControl.busy = busy;
     changed.fire();
   };
-  const show = (shown: Pick<typeof sourceControl, 'resourceStates' | 'statusBarCommands'>) => {
+  const show = (shown: Pick<typeof sourceControl, 'resourceStates' | 'statusBarItems'>) => {
     Object.assign(sourceControl, shown);
     changed.fire();
   };
@@ -73,7 +73,7 @@ describe('commit', () => {
   it('commits nothing when cancelled, and only says so while a commit is under way', async () => {
     const { sourceControl, committed, update } = control();
     await commit(ui([sourceControl]).fake);
-    update({ busy: true });
+    update(true);
     const busy = ui([sourceControl], { input: 'x' });
     await commit(busy.fake);
     expect(committed).toEqual([]);
@@ -137,7 +137,7 @@ describe('sourceControl extension', () => {
     await commands.get('sourceControl.commit')!();
     expect(committed).toEqual(['Saved']);
     expect(menu.map((item) => item.title)).toEqual(['Saving to GitLab…']);
-    update({ busy: false });
+    update(false);
     expect(told).toEqual([]);
     expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
     controls.pop();
@@ -151,23 +151,23 @@ describe('sourceControl extension', () => {
     const { sourceControl, committed, show } = control();
     const { statusBar, dispose } = activate([sourceControl], { input: 'From the status bar' });
     expect(statusBar).toEqual([]);
-    show({ resourceStates: [], statusBarCommands: [{ title: 'Not in GitLab: 1 file · 3 min (Ann)', tooltip: 'M main.typ' }] });
+    show({ resourceStates: [], statusBarItems: [{ title: 'Not in GitLab: 1 file · 3 min (Ann)', tooltip: 'M main.typ' }] });
     expect(statusBar).toHaveLength(1);
     const button = () => statusBar[0].querySelector('button')!;
     expect([button().textContent, button().title]).toEqual(['Not in GitLab: 1 file · 3 min (Ann)', 'M main.typ']);
     const first = button();
-    show({ resourceStates: [], statusBarCommands: [{ title: 'Saved · 01234567' }] });
+    show({ resourceStates: [], statusBarItems: [{ title: 'Saved · 01234567' }] });
     expect(button()).toBe(first);
     expect(button().textContent).toBe('Saved · 01234567');
     expect(button().classList.contains('zwf-source-control__entry--warning')).toBe(false);
-    show({ resourceStates: [], statusBarCommands: [{ title: 'Conflict with GitLab: main.typ', backgroundColor: 'warning' }, { title: 'Saved · 01234567' }] });
+    show({ resourceStates: [], statusBarItems: [{ title: 'Conflict with GitLab: main.typ', backgroundColor: 'warning' }, { title: 'Saved · 01234567' }] });
     expect([...statusBar[0].children].map((entry) => [entry.textContent, entry.classList.contains('zwf-source-control__entry--warning')])).toEqual([
       ['Conflict with GitLab: main.typ', true],
       ['Saved · 01234567', false],
     ]);
     button().click();
     await vi.waitFor(() => expect(committed).toEqual(['From the status bar']));
-    show({ resourceStates: [], statusBarCommands: [] });
+    show({ resourceStates: [], statusBarItems: [] });
     expect(statusBar).toEqual([]);
     dispose();
   });
@@ -179,7 +179,7 @@ describe('sourceControl extension', () => {
     let told = 0;
     provider.onDidChangeFileDecorations(() => told++);
     const path = ProjectPath.of('/chapters/intro.typ');
-    show({ resourceStates: [{ path, decorations: { badge: 'M', tooltip: 'Changed', color: '#b58900' } }, { path: ProjectPath.of('/plain.typ') }], statusBarCommands: [] });
+    show({ resourceStates: [{ path, decorations: { badge: 'M', tooltip: 'Changed', color: '#b58900' } }, { path: ProjectPath.of('/plain.typ') }], statusBarItems: [] });
     expect(told).toBe(1);
     expect(provider.provideFileDecoration(path)).toEqual([{ badge: 'M', tooltip: 'Changed', color: '#b58900', propagate: true }]);
     expect(provider.provideFileDecoration(ProjectPath.of('/plain.typ'))).toEqual([]);

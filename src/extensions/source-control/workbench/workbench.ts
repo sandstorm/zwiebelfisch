@@ -14,7 +14,7 @@ export async function commit({ scm, window }: SourceControlUi, control?: SourceC
       ? (await window.showQuickPick(controls.map((each) => ({ label: `Save to ${each.label}…`, control: each })), { title: 'Save', placeHolder: 'Where to save' }))?.control
       : controls[0];
   if (!control) return;
-  if (control.state.busy) {
+  if (control.busy) {
     void window.showInformationMessage(`Saving to ${control.label} is under way.`);
     return;
   }
@@ -38,11 +38,11 @@ export interface SourceControlUi {
 export function commitTitle(controls: readonly SourceControl[]): string {
   if (controls.length !== 1) return 'Save…';
   const [control] = controls;
-  return control.state.busy ? `Saving to ${control.label}…` : `Save to ${control.label}…`;
+  return control.busy ? `Saving to ${control.label}…` : `Save to ${control.label}…`;
 }
 
 /**
- * The source controls' status bar entries (`statusBarCommands`), one button each, in registration order; a click
+ * The source controls' status bar entries (`statusBarItems`), one button each, in registration order; a click
  * commits to the source control of the entry (`onCommit`).
  */
 export class SourceControlStatus {
@@ -59,7 +59,7 @@ export class SourceControlStatus {
 
   /** Shows the entries of `controls`, reusing the buttons there are (so a focused one stays focused). */
   show(controls: readonly SourceControl[]): void {
-    const entries = controls.flatMap((control) => (control.statusBarCommands ?? []).map((command) => ({ control, command })));
+    const entries = controls.flatMap((control) => (control.statusBarItems ?? []).map((command) => ({ control, command })));
     const buttons = [...this.element.children] as HTMLButtonElement[];
     for (const button of buttons.slice(entries.length)) button.remove();
     entries.forEach(({ control, command }, index) => {

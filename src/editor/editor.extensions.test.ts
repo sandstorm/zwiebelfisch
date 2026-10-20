@@ -13,7 +13,7 @@ import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
-import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
+import type { SourceControl } from '../hosts/scm/scm';
 import * as Y from 'yjs';
 import { collaboration } from '../extensions/collaboration/collaboration';
 import { createEditor, type EditorOptions } from './editor';
@@ -441,15 +441,15 @@ describe('the built-in extensions', () => {
   it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, says while busy', async () => {
     const changed = new EventEmitter<void>();
     const committed: string[] = [];
-    const gitlab: SourceControl & { state: SourceControlState } = {
+    const gitlab: SourceControl & { busy: boolean } = {
       id: 'gitlab',
       label: 'GitLab',
       defaultCommitMessage: 'Edit via Zwiebelfisch',
-      state: { busy: false },
+      busy: false,
       onDidChange: changed.event,
       commit(message) {
         committed.push(message);
-        this.state = { busy: true };
+        this.busy = true;
         changed.fire();
       },
     };
@@ -477,7 +477,7 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(notifications()).toEqual(['Saving to GitLab is under way.']));
     expect(host.querySelector('form.zwf-quick-input')).toBeNull();
 
-    gitlab.state = { busy: false };
+    gitlab.busy = false;
     changed.fire();
     expect(action()!.textContent).toBe('Save to GitLab…');
 

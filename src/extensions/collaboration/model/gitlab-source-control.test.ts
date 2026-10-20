@@ -34,14 +34,14 @@ describe('GitLabSourceControl', () => {
     expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Zwiebelfisch' });
     sourceControl.commit('Fix typo');
     expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo', author: { name: 'Ann' } });
-    expect(sourceControl.state).toEqual({ busy: true });
+    expect(sourceControl.busy).toBe(true);
     receive('{"type":"gitlab:merged","sha":"s"}');
-    expect(sourceControl.state).toEqual({ busy: true });
+    expect(sourceControl.busy).toBe(true);
     receive('{"type":"other"}');
     receive('not json');
     receive('{"type":"gitlab:saved","sha":"0123456789abcdef","author":"Ann"}');
     receive('{"type":"gitlab:saved","sha":"fedcba9876543210","author":"Bob","automatic":true}');
-    expect(sourceControl.state).toEqual({ busy: false });
+    expect(sourceControl.busy).toBe(false);
     expect(told).toEqual([
       { message: 'Merged new changes from GitLab', severity: 'info' },
       { message: 'Saved version 01234567 (Ann)', severity: 'info' },
@@ -59,7 +59,7 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     const { meta, sourceControl, changes } = setup();
     meta.set('baseSha', '0123456789abcdef');
     expect(sourceControl.resourceStates).toEqual([]);
-    expect(sourceControl.statusBarCommands).toEqual([{ title: 'Saved · 01234567', tooltip: expect.stringContaining('Everything is in GitLab') }]);
+    expect(sourceControl.statusBarItems).toEqual([{ title: 'Saved · 01234567', tooltip: expect.stringContaining('Everything is in GitLab') }]);
 
     const files = [
       { path: '/chapters/intro.typ', kind: 'modified' },
@@ -74,7 +74,7 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
       ['/old.typ', 'D'],
     ]);
     meta.set('autoCommit', 10);
-    expect(sourceControl.statusBarCommands).toEqual([
+    expect(sourceControl.statusBarItems).toEqual([
       {
         title: 'Not in GitLab: 3 files · < 1 min (Ann, Bob)',
         tooltip:
@@ -82,13 +82,13 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
       },
     ]);
     meta.set('autoCommit', null);
-    expect(sourceControl.statusBarCommands[0].tooltip).toContain('Not saved by itself: save before you leave.');
+    expect(sourceControl.statusBarItems[0].tooltip).toContain('Not saved by itself: save before you leave.');
     const before = changes();
     vi.advanceTimersByTime(14 * 60_000);
     expect(changes()).toBe(before + 14);
-    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 3 files · 14 min (Ann, Bob)');
+    expect(sourceControl.statusBarItems[0].title).toBe('Not in GitLab: 3 files · 14 min (Ann, Bob)');
     vi.advanceTimersByTime(60 * 60_000);
-    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 3 files · 1 h 14 min (Ann, Bob)');
+    expect(sourceControl.statusBarItems[0].title).toBe('Not in GitLab: 3 files · 1 h 14 min (Ann, Bob)');
 
     meta.set('changes', null);
     expect(sourceControl.resourceStates).toEqual([]);
@@ -107,13 +107,13 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
       ['/main.typ', '!'],
       ['/a.typ', 'A'],
     ]);
-    const [warning, changes] = sourceControl.statusBarCommands;
+    const [warning, changes] = sourceControl.statusBarItems;
     expect(warning).toEqual({ title: 'Conflict with GitLab: main.typ', tooltip: expect.stringContaining('commit fedcba98'), backgroundColor: 'warning' });
     expect(changes.title).toBe('Not in GitLab: 2 files · < 1 min (Ann)');
     meta.set('conflict', { sha: 's', paths: ['/a.typ', '/b.typ', '/c.typ'] });
-    expect(sourceControl.statusBarCommands[0].title).toBe('Conflict with GitLab: a.typ, b.typ and 1 more');
+    expect(sourceControl.statusBarItems[0].title).toBe('Conflict with GitLab: a.typ, b.typ and 1 more');
     meta.set('conflict', null);
-    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual(['Not in GitLab: 2 files · < 1 min (Ann)']);
+    expect(sourceControl.statusBarItems.map((command) => command.title)).toEqual(['Not in GitLab: 2 files · < 1 min (Ann)']);
     expect(sourceControl.resourceStates.map((state) => state.decorations.badge)).toEqual(['M', 'A']);
   });
 
@@ -123,7 +123,7 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     meta.set('baseSha', '0123456789abcdef');
     meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }], since: T0, editors: ['Ann'] });
     meta.set('commitFailure', { message: 'GitLab could not be reached (fetch failed)', at: T0 });
-    expect(sourceControl.statusBarCommands).toEqual([
+    expect(sourceControl.statusBarItems).toEqual([
       {
         title: 'Saving to GitLab failed',
         tooltip: 'The last save to GitLab (3 min ago) failed:\nGitLab could not be reached (fetch failed)\nThe changes stay here. Click to try again.',
@@ -132,16 +132,16 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
       expect.objectContaining({ title: 'Not in GitLab: 1 file · 3 min (Ann)' }),
     ]);
     meta.set('conflict', { sha: 's', paths: ['/main.typ'] });
-    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual([
+    expect(sourceControl.statusBarItems.map((command) => command.title)).toEqual([
       'Conflict with GitLab: main.typ',
       'Saving to GitLab failed',
       'Not in GitLab: 1 file · 3 min (Ann)',
     ]);
     meta.set('conflict', null);
     meta.set('commitFailure', { message: 42 });
-    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual(['Not in GitLab: 1 file · 3 min (Ann)']);
+    expect(sourceControl.statusBarItems.map((command) => command.title)).toEqual(['Not in GitLab: 1 file · 3 min (Ann)']);
     meta.set('commitFailure', null);
-    expect(sourceControl.statusBarCommands).toHaveLength(1);
+    expect(sourceControl.statusBarItems).toHaveLength(1);
     sourceControl.dispose();
   });
 
@@ -169,10 +169,10 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     const { meta, sourceControl } = setup();
     meta.set('baseSha', 'abc');
     meta.set('changes', { files: 'x', since: 1, editors: [] });
-    expect(sourceControl.statusBarCommands[0].title).toBe('Saved · abc');
+    expect(sourceControl.statusBarItems[0].title).toBe('Saved · abc');
     meta.set('changes', { files: [{ path: 'no-slash', kind: 'added' }], since: Date.now(), editors: [] });
     expect(sourceControl.resourceStates).toEqual([]);
-    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 1 file · < 1 min');
+    expect(sourceControl.statusBarItems[0].title).toBe('Not in GitLab: 1 file · < 1 min');
   });
 });
 

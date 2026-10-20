@@ -224,5 +224,5 @@ Settings are declared by extensions and the workbench (`workbench.theme`, `workb
 
 `scm.registerSourceControl(sourceControl)` (ours) offers a place to commit the project to; `scm.sourceControls` and `onDidChangeSourceControls` are for whoever shows them. Collaboration registers a room's GitLab branch; source-control shows it. `SourceControl`: see the d.ts.
 
-- *`statusBarCommands`* sit at the start of the status bar; a click commits, `'warning'` makes an entry stand out.
+- *`statusBarItems`* sit at the start of the status bar; a click commits, `'warning'` makes an entry stand out.
 - *The outcome* the source control reports itself, through `window.show…Message`.

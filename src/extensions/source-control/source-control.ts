@@ -9,7 +9,7 @@ import { commit, commitTitle, resourceDecorations, SourceControlStatus } from '.
  * The UI over the registered source controls (`scm`), shown while there is at least one:
  * - "Save to <label>…" in the tab bar (menu `editor/title`, "Saving to <label>…" while busy): the command
  *   `sourceControl.commit` asks for a commit message and commits
- * - their `statusBarCommands` at the start of the status bar (a click commits, too)
+ * - their `statusBarItems` at the start of the status bar (a click commits, too)
  * - their `resourceStates` as file decorations
  */
 export function sourceControl(): Extension {
@@ -27,7 +27,7 @@ export function sourceControl(): Extension {
         entry?.dispose();
         entry = controls.length === 0 ? null : workbench.registerMenuItem('editor/title', { command: 'sourceControl.commit', title: commitTitle(controls), group: 'sourceControl' });
         status.show(controls);
-        const hasStatus = controls.some((control) => control.statusBarCommands?.length);
+        const hasStatus = controls.some((control) => control.statusBarItems?.length);
         if (hasStatus && !statusItem) statusItem = window.registerStatusBarItem(status.element, { alignment: 'left', priority: 200 });
         if (!hasStatus && statusItem) {
           statusItem.dispose();

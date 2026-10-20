@@ -29,19 +29,19 @@ export interface SourceControl {
   readonly label: string;
   /** The commit message offered (VS Code: the input box's placeholder). */
   readonly defaultCommitMessage?: string;
-  /** What it is doing. */
-  readonly state: SourceControlState;
+  /** A commit is under way (no second one meanwhile). */
+  readonly busy: boolean;
   /** The files whose changes it has not committed (VS Code: the resource states of its resource groups). */
   readonly resourceStates?: readonly SourceControlResourceState[];
   /**
-   * What it shows in the status bar (VS Code's `statusBarCommands`), e.g. how much is not committed. Clicking one
+   * What it shows in the status bar (VS Code: `statusBarCommands`), e.g. how much is not committed. Clicking one
    * commits: whoever shows source controls asks for the message, as for any commit.
    */
-  readonly statusBarCommands?: readonly SourceControlStatusBarCommand[];
-  /** `state`, `resourceStates` or `statusBarCommands` changed. */
+  readonly statusBarItems?: readonly SourceControlStatusBarItem[];
+  /** `busy`, `resourceStates` or `statusBarItems` changed. */
   readonly onDidChange: Event<void>;
   /**
-   * Commits the project's current state with `message` (VS Code: its accept-input command). `state.busy` meanwhile;
+   * Commits the project's current state with `message` (VS Code: its accept-input command). `busy` meanwhile;
    * the source control tells the outcome itself (`window.show…Message`), as it tells its news.
    */
   commit(message: string): void;
@@ -56,16 +56,11 @@ export interface SourceControlResourceState {
 }
 
 /** A status bar entry of a source control (VS Code: a `Command` of `statusBarCommands`); a click commits. */
-export interface SourceControlStatusBarCommand {
+export interface SourceControlStatusBarItem {
   readonly title: string;
   readonly tooltip?: string;
   /** `'warning'`: drawn to stand out, for what needs the user (VS Code: `statusBarItem.warningBackground`). */
   readonly backgroundColor?: 'warning';
-}
-
-export interface SourceControlState {
-  /** A commit is under way (no second one meanwhile). */
-  readonly busy: boolean;
 }
 
 /** The source controls in registration order, and word when one comes or goes. */

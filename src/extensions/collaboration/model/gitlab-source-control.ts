@@ -16,7 +16,7 @@ import {
 
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them, shaped as the scm host's `SourceControl`:
- * - `commit` asks the server to commit the room's changes as `author` (`state.busy` until it answers)
+ * - `commit` asks the server to commit the room's changes as `author` (`busy` until it answers)
  * - the server's answers (saved, nothing to save, a conflict, a failure) and news (upstream merged) go to `tell`
  * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
@@ -26,7 +26,7 @@ export class GitLabSourceControl {
   readonly id = 'gitlab';
   readonly label = 'GitLab';
   readonly defaultCommitMessage = DEFAULT_COMMIT_MESSAGE;
-  #state: CommitState = { busy: false };
+  #busy = false;
   #resourceStates: readonly ResourceState[] = [];
   readonly #changed = new EventEmitter<void>();
   readonly onDidChange = this.#changed.event;
@@ -55,8 +55,8 @@ export class GitLabSourceControl {
     return typeof ydoc.getMap(META_MAP).get('baseSha') === 'string';
   }
 
-  get state(): CommitState {
-    return this.#state;
+  get busy(): boolean {
+    return this.#busy;
   }
 
   /** The files with changes not in GitLab, badged M (modified), A (added) or D (deleted); conflicting files "!". */
@@ -78,10 +78,10 @@ export class GitLabSourceControl {
    * warnings, "Conflict with GitLab: main.typ" while upstream conflicts and "Saving to GitLab failed" after a failed
    * commit.
    */
-  get statusBarCommands(): readonly StatusBarCommand[] {
+  get statusBarItems(): readonly StatusBarItem[] {
     const conflict = this.#conflict();
     const failure = this.#commitFailure();
-    const warning: StatusBarCommand[] = [
+    const warning: StatusBarItem[] = [
       ...(conflict ? [{ title: conflictTitle(conflict), tooltip: conflictTooltip(conflict), backgroundColor: 'warning' as const }] : []),
       ...(failure ? [{ title: 'Saving to GitLab failed', tooltip: failureTooltip(failure, Date.now()), backgroundColor: 'warning' as const }] : []),
     ];
@@ -94,7 +94,7 @@ export class GitLabSourceControl {
 
   commit(message: string): void {
     const request: ClientMessage = { type: 'gitlab:save', message, ...(this.author ? { author: this.author } : {}) };
-    this.#set({ busy: true });
+    this.#setBusy(true);
     this.channel.send(JSON.stringify(request));
   }
 
@@ -154,11 +154,11 @@ export class GitLabSourceControl {
     const { text, severity } = said(message);
     this.tell(text, severity);
     // upstream changes are news, not the answer to a commit under way
-    if (message.type !== 'gitlab:merged') this.#set({ busy: false });
+    if (message.type !== 'gitlab:merged') this.#setBusy(false);
   }
 
-  #set(state: CommitState): void {
-    this.#state = state;
+  #setBusy(busy: boolean): void {
+    this.#busy = busy;
     this.#changed.fire();
   }
 }
@@ -179,16 +179,11 @@ export interface ResourceState {
   readonly decorations: { readonly badge: string; readonly tooltip: string; readonly color: string };
 }
 
-/** A status bar entry (the scm host's `SourceControlStatusBarCommand`). */
-export interface StatusBarCommand {
+/** A status bar entry (the scm host's `SourceControlStatusBarItem`). */
+export interface StatusBarItem {
   readonly title: string;
   readonly tooltip: string;
   readonly backgroundColor?: 'warning';
-}
-
-/** Whether a commit is under way (the scm host's `SourceControlState`). */
-export interface CommitState {
-  readonly busy: boolean;
 }
 
 function parse(payload: string): ServerMessage | null {

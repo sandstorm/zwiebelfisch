@@ -6,7 +6,7 @@ import { ScmHost, type SourceControl } from './scm';
 const sourceControl = (id: string): SourceControl => ({
   id,
   label: id,
-  state: { busy: false },
+  busy: false,
   onDidChange: () => new Disposable(() => {}),
   commit() {},
 });
