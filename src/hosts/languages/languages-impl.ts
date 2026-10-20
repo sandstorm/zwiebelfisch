@@ -1,8 +1,8 @@
 // See Languages in languages.ts.
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
-import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
+import type { SourceOffset } from '../../core/typst-document/typst-document';
+import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, KnownImport, LanguageContribution, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
 /** The `Languages` of one widget. Each link remembers its provider, which resolves it on demand (`resolveDocumentLink`). */
 export class LanguagesHost implements Languages {
@@ -56,39 +56,10 @@ export class LanguagesHost implements Languages {
     return add(this.#pasteEditProviders, { selector, provider, metadata, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
-    for (const { provider } of this.#pasteEditProvidersOf(document)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
-  }
-
-  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit[] {
-    const types = [...dataTransfer.types];
-    const has = (mime: string) => mime === '*/*' || types.some((type) => type === mime || (mime.endsWith('/*') && type.startsWith(mime.slice(0, -1))));
-    return this.#pasteEditProvidersOf(document).flatMap(({ provider, metadata: { providedPasteEditKinds: kinds, pasteMimeTypes = ['*/*'] } }) => {
-      if (kinds.length === 0 || !pasteMimeTypes.some(has)) return [];
-      const edits = provider.provideDocumentPasteEdits?.(document, ranges, dataTransfer) ?? [];
-      return edits.filter((edit) => kinds.some((kind) => containsKind(kind, edit.kind)));
-    });
-  }
-
-  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit {
-    const additionalEdit: TextChange[] = [];
-    const taken: SourceRange[] = [...ranges];
-    const accept = (changes: readonly TextChange[] = []) => {
-      for (const change of changes) {
-        if (additionalEdit.includes(change) || taken.some((range) => conflicts(range, change))) continue;
-        additionalEdit.push(change);
-        taken.push(change);
-      }
-    };
-    accept(edit.additionalEdit);
-    let resolved: DocumentPasteEdit = { ...edit, additionalEdit: [...additionalEdit] };
-    for (const { provider } of this.#pasteEditProvidersOf(document)) {
-      const next = provider.resolveDocumentPasteEdit?.(resolved, document, ranges, dataTransfer);
-      if (!next) continue;
-      accept(next.additionalEdit);
-      resolved = { ...next, additionalEdit: [...additionalEdit] };
-    }
-    return resolved;
+  getDocumentPasteEditProviders(languageId: string): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
+    // the sort is stable: equal priorities in registration order
+    const matching = this.#pasteEditProviders.filter(({ selector }) => matches(selector, languageId)).sort((a, b) => b.priority - a.priority);
+    return matching.map(({ provider, metadata }) => ({ provider, metadata }));
   }
 
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
@@ -140,11 +111,6 @@ export class LanguagesHost implements Languages {
     }
     return '/';
   }
-
-  /** The paste edit providers of `document`'s language, by priority (the sort is stable: equal ones in registration order). */
-  #pasteEditProvidersOf(document: TextDocument): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
-    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).sort((a, b) => b.priority - a.priority);
-  }
 }
 
 /** The default `priority` of a provider (as for the Visual editor's contributions). */
@@ -167,12 +133,3 @@ function overlap(a: DocumentLink, b: DocumentLink): boolean {
   return a.range.from < b.range.to && b.range.from < a.range.to;
 }
 
-/** Whether the paste edit kind `kind` is `other` or covers it (`typst` covers `typst.html`). */
-function containsKind(kind: string, other: string): boolean {
-  return other === kind || other.startsWith(`${kind}.`);
-}
-
-/** Whether changes of ranges `a` and `b` conflict: they share text, or an empty one lies inside the other (not at its ends). */
-function conflicts(a: SourceRange, b: SourceRange): boolean {
-  return (a.from < b.to && b.from < a.to) || (a.from === a.to && b.from < a.from && a.from < b.to) || (b.from === b.to && a.from < b.from && b.from < a.to);
-}

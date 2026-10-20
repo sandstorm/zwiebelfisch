@@ -7,7 +7,7 @@ import { children } from '../../../core/typst-syntax/typst-syntax';
 import { LanguagesHost, type DocumentPasteEditProvider } from '../../../hosts/languages/languages';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart, type TypstMarkSpec } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
-import type { PasteChoice, PasteChoices } from '../paste-as';
+import { PasteEdits, type PasteChoice, type PasteChoices } from '../paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from '../pasted-typst';
 import { typstClipboard } from './clipboard';
 
@@ -40,7 +40,7 @@ function setup(text: string, choices: PasteChoices = UNSEEN, provider?: Document
   const host = new VisualEditorHost();
   host.registerMark(STRONG);
   const textOf = () => ({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: doc.text });
-  host.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf, choices }));
+  host.registerTiptapExtension(({ document }) => typstClipboard(document, { pasteEdits: new PasteEdits(languages), document: textOf, choices }));
   const view = new VisualEditor(parent, doc, host);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   const select = (from: number, to = from) => view.reveal(SourceRange.of({ from, to }));

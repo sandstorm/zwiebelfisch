@@ -58,27 +58,13 @@ export interface Languages {
   provideKnownImports(languageId: string): readonly KnownImport[];
   /**
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, wherever an editor
-   * runs the providers (the clipboard extension: the Visual and the Source editors). A paste offers the edits of every
-   * provider of `metadata.providedPasteEditKinds` whose `pasteMimeTypes` the clipboard has, by the providers'
-   * `priority` (higher first, default 100; equal: registration order; the clipboard extension's own are 0: after the
-   * others'), as alternatives: it goes in as the first by `yieldTo` (the clipboard extension's `sortPasteEdits`), the others may replace it.
-   * Whichever goes in, every provider's `resolveDocumentPasteEdit` changes it first, in the same order; additional
-   * edits that overlap the pasted ranges or an earlier edit are dropped.
+   * runs the providers (the clipboard extension: the Visual and the Source editors, which offer the edits, ask every
+   * provider to resolve the one that goes in and drop additional edits that collide). `priority`: the order they are
+   * asked in (higher first, default 100; equal: registration order; the clipboard extension's own are 0: last).
    */
   registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata, options?: { priority?: number }): Disposable;
-  /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
-  prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void;
-  /**
-   * The edits the providers give for a paste of the clipboard `dataTransfer` into `document` in place of `ranges` (VS
-   * Code's paste edit providers asked by the editor), by priority: of each provider that reads a type the clipboard
-   * has, the edits of the kinds it declared. Unsorted by `yieldTo` (the clipboard extension sorts them).
-   */
-  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): readonly DocumentPasteEdit[];
-  /**
-   * `edit` as it goes into `document` in place of `ranges`: as the providers resolve it, by priority, each given the
-   * edit the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
-   */
-  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit;
+  /** The paste edit providers of `languageId`, with what they give, by priority. */
+  getDocumentPasteEditProviders(languageId: string): readonly { readonly provider: DocumentPasteEditProvider; readonly metadata: DocumentPasteProviderMetadata }[];
 }
 
 /** What a paste edit provider gives (VS Code's DocumentPasteProviderMetadata). */

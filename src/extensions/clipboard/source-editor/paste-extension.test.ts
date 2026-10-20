@@ -7,7 +7,7 @@ import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 import { LanguagesHost } from '../../../hosts/languages/languages';
-import type { PasteChoice, PasteChoices } from '../paste-as';
+import { PasteEdits, type PasteChoice, type PasteChoices } from '../paste-as';
 import { pasteExtension } from './paste-extension';
 
 /**
@@ -53,7 +53,7 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
   const view = new EditorView({
     parent,
     doc: text,
-    extensions: [undoable ? history() : [], pasteExtension(languages, 'typst', () => ProjectPath.of('/main.typ'), { preferences, choices })],
+    extensions: [undoable ? history() : [], pasteExtension(new PasteEdits(languages), 'typst', () => ProjectPath.of('/main.typ'), { preferences, choices })],
   });
   const paste = (pasted: string) => {
     const event = new Event('paste', { bubbles: true, cancelable: true });

@@ -1,5 +1,6 @@
 // See clipboard in clipboard.ts.
-import type { DocumentPasteEdit } from '../../hosts/languages/languages';
+import type { SourceRange, TextChange } from '../../core/typst-document/typst-document';
+import type { DocumentPasteEdit, Languages, TextDocument } from '../../hosts/languages/languages';
 import type { WindowApi } from '../../hosts/window/window';
 
 /**
@@ -65,10 +66,62 @@ export class PasteAs implements PasteChoices {
 }
 
 /**
+ * The paste edit providers of a text's language as both editors' copy and paste ask them (source-editor/,
+ * visual-editor/), by priority (`languages.getDocumentPasteEditProviders`).
+ */
+export class PasteEdits {
+  constructor(private readonly languages: Pick<Languages, 'getDocumentPasteEditProviders'>) {}
+
+  /** On a copy or cut of `copied` from `document`: every provider adds to the clipboard `dataTransfer`. */
+  prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
+    for (const { provider } of this.languages.getDocumentPasteEditProviders(document.languageId)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
+  }
+
+  /**
+   * The edits for a paste of the clipboard `dataTransfer` into `document` in place of `ranges`: of each provider that
+   * reads a type the clipboard has, the edits of the kinds it declared. Unsorted by `yieldTo` (`sortPasteEdits`).
+   */
+  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit[] {
+    const types = [...dataTransfer.types];
+    const has = (mime: string) => mime === '*/*' || types.some((type) => type === mime || (mime.endsWith('/*') && type.startsWith(mime.slice(0, -1))));
+    return this.languages.getDocumentPasteEditProviders(document.languageId).flatMap(({ provider, metadata: { providedPasteEditKinds: kinds, pasteMimeTypes = ['*/*'] } }) => {
+      if (kinds.length === 0 || !pasteMimeTypes.some(has)) return [];
+      const edits = provider.provideDocumentPasteEdits?.(document, ranges, dataTransfer) ?? [];
+      return edits.filter((edit) => kinds.some((kind) => containsKind(kind, edit.kind)));
+    });
+  }
+
+  /**
+   * `edit` as it goes into `document` in place of `ranges`: as every provider resolves it, each given the edit the ones
+   * before left; additional edits that overlap the ranges or an earlier edit are left out.
+   */
+  resolveDocumentPasteEdit(edit: DocumentPasteEdit, document: TextDocument, ranges: readonly SourceRange[], dataTransfer: DataTransfer): DocumentPasteEdit {
+    const additionalEdit: TextChange[] = [];
+    const taken: SourceRange[] = [...ranges];
+    const accept = (changes: readonly TextChange[] = []) => {
+      for (const change of changes) {
+        if (additionalEdit.includes(change) || taken.some((range) => conflicts(range, change))) continue;
+        additionalEdit.push(change);
+        taken.push(change);
+      }
+    };
+    accept(edit.additionalEdit);
+    let resolved: DocumentPasteEdit = { ...edit, additionalEdit: [...additionalEdit] };
+    for (const { provider } of this.languages.getDocumentPasteEditProviders(document.languageId)) {
+      const next = provider.resolveDocumentPasteEdit?.(resolved, document, ranges, dataTransfer);
+      if (!next) continue;
+      accept(next.additionalEdit);
+      resolved = { ...next, additionalEdit: [...additionalEdit] };
+    }
+    return resolved;
+  }
+}
+
+/**
  * `edits` in the order a paste offers them, the one it goes in as first: those of exactly a kind in `preferences`, in
  * their order; then each after those it yields to, else in the given order. An edit putting in the same text as one
  * before is left out; the plain text one (`text.plain`) takes the place of the first with its text, so a paste with
- * formatting always offers its plain text by that name. Used by both editors' pastes (source-editor/, visual-editor/).
+ * formatting always offers its plain text by that name.
  */
 export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences: readonly string[] = []): DocumentPasteEdit[] {
   const sorted = preferences.flatMap((kind) => edits.filter((edit) => edit.kind === kind));
@@ -89,4 +142,9 @@ export function sortPasteEdits(edits: readonly DocumentPasteEdit[], preferences:
 /** Whether the paste edit kind `kind` is `other` or covers it (`typst` covers `typst.html`). */
 function containsKind(kind: string, other: string): boolean {
   return other === kind || other.startsWith(`${kind}.`);
+}
+
+/** Whether changes of ranges `a` and `b` conflict: they share text, or an empty one lies inside the other (not at its ends). */
+function conflicts(a: SourceRange, b: SourceRange): boolean {
+  return (a.from < b.to && b.from < a.to) || (a.from === a.to && b.from < a.from && a.from < b.to) || (b.from === b.to && a.from < b.from && b.from < a.to);
 }

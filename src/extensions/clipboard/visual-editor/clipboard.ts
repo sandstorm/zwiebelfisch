@@ -3,15 +3,15 @@ import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, type EditorState } from '@tiptap/pm/state';
 import { SourceRange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentPasteEdit, Languages, TextDocument } from '../../../hosts/languages/languages';
+import type { DocumentPasteEdit, TextDocument } from '../../../hosts/languages/languages';
 import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
-import { sortPasteEdits, type PasteChoices } from '../paste-as';
+import { sortPasteEdits, type PasteChoices, type PasteEdits } from '../paste-as';
 import { TYPST } from '../pasted-typst';
 import { pasteChoicePlugin, pasteWith, type PasteAlternative } from './paste-as';
 
 /** Who a Visual editor's clipboard asks: the paste edit providers, of `document`'s text (null: none), and where a paste's choice shows. */
 export interface ClipboardServices {
-  readonly languages: Pick<Languages, 'prepareDocumentPaste' | 'provideDocumentPasteEdits' | 'resolveDocumentPasteEdit'>;
+  readonly pasteEdits: PasteEdits;
   readonly document: () => TextDocument | null;
   readonly choices: PasteChoices;
 }
@@ -45,7 +45,7 @@ export function typstClipboard(document: TypstDocument, services: ClipboardServi
               const copied = data?.getData('text/plain') ?? '';
               data?.setData(TYPST, copied);
               const text = services.document();
-              if (data && text && copied !== '') services.languages.prepareDocumentPaste(text, copied, data);
+              if (data && text && copied !== '') services.pasteEdits.prepareDocumentPaste(text, copied, data);
             };
             view.dom.addEventListener('copy', markTypst);
             view.dom.addEventListener('cut', markTypst);
@@ -77,7 +77,7 @@ export function typstClipboard(document: TypstDocument, services: ClipboardServi
               if (!data || view.state.selection.$from.parent.type.spec.code) return false;
               const text = services.document();
               if (!text) return false;
-              const edits = pasteEditsOf({ state: view.state, slice, data, document: text, languages: services.languages }, plain);
+              const edits = pasteEditsOf({ state: view.state, slice, data, document: text, pasteEdits: services.pasteEdits }, plain);
               if (edits.length === 0) return false;
               pasteWith(view, edits.map((edit) => alternative(edit, document)));
               return true;
@@ -95,7 +95,7 @@ interface PasteContext {
   readonly slice: Slice;
   readonly data: DataTransfer;
   readonly document: TextDocument;
-  readonly languages: ClipboardServices['languages'];
+  readonly pasteEdits: PasteEdits;
 }
 
 /**
@@ -104,7 +104,7 @@ interface PasteContext {
  * schema's HTML rules (`slice`; not with Typst a Visual editor copied, which the HTML lacks, nor `literal`); each as
  * the providers resolve it (asked now, while the clipboard can be read).
  */
-function pasteEditsOf({ state, slice, data, document, languages }: PasteContext, literal: boolean): DocumentPasteEdit[] {
+function pasteEditsOf({ state, slice, data, document, pasteEdits }: PasteContext, literal: boolean): DocumentPasteEdit[] {
   const ranges = [selectionSource(state)];
   const html = data.getData('text/html') && !data.getData(TYPST) && !literal;
   const printed = () => {
@@ -113,8 +113,8 @@ function pasteEditsOf({ state, slice, data, document, languages }: PasteContext,
     const blocks = content.firstChild?.isInline ? Fragment.from(state.schema.nodes.paragraph.create(null, content)) : content;
     return serializeToTypst(state.schema.topNodeType.create({ trail: '' }, blocks));
   };
-  const offered = [...languages.provideDocumentPasteEdits(document, ranges, data), ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : [])];
-  return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => languages.resolveDocumentPasteEdit(edit, document, ranges, data));
+  const offered = [...pasteEdits.provideDocumentPasteEdits(document, ranges, data), ...(html ? [{ kind: 'typst.html', title: 'HTML', insertText: printed() }] : [])];
+  return sortPasteEdits(offered, literal ? ['text.plain'] : []).map((edit) => pasteEdits.resolveDocumentPasteEdit(edit, document, ranges, data));
 }
 
 /** Pasting `edit` into `document`: its text read with the editor's specs, its additional edits made in the same step. */

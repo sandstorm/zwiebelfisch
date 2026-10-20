@@ -2,7 +2,7 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TextDocument } from '../../hosts/languages/languages';
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './clipboard.css?inline';
-import { PasteAs } from './paste-as';
+import { PasteAs, PasteEdits } from './paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from './pasted-typst';
 import { pasteExtension } from './source-editor/paste-extension';
 import { typstClipboard } from './visual-editor/clipboard';
@@ -22,6 +22,7 @@ export function clipboard(): Extension {
     id: 'clipboard',
     activate({ project, languages, window, commands, workbench, visualEditor, sourceEditor, subscriptions }) {
       const choices = new PasteAs(window);
+      const pasteEdits = new PasteEdits(languages);
       const textOf = (document: TypstDocument) => (): TextDocument | null => {
         const path = project.pathOf(document);
         return path ? { path, languageId: 'typst', text: document.text } : null;
@@ -30,11 +31,11 @@ export function clipboard(): Extension {
         workbench.registerStyleSheet(css),
         // priority 0: its edits after the other providers' (default 100)
         languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA, { priority: 0 }),
-        visualEditor.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf(document), choices })),
+        visualEditor.registerTiptapExtension(({ document }) => typstClipboard(document, { pasteEdits, document: textOf(document), choices })),
         // a paste goes in as CodeMirror pastes it (the text as Typst) first
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, (editor) => {
           if (editor.editor !== 'source') return [];
-          return pasteExtension(languages, 'typst', () => project.pathOf(editor.document) ?? null, { preferences: ['typst'], choices });
+          return pasteExtension(pasteEdits, 'typst', () => project.pathOf(editor.document) ?? null, { preferences: ['typst'], choices });
         }),
         commands.registerCommand('editor.action.pasteAs', (args?: { kind?: string }) => choices.pasteAs(args)),
       );
