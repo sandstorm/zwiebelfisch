@@ -27,7 +27,7 @@ describe('describeContribution', () => {
 
   it('commands and keybindings', () => {
     expect(describeAt('commands.registerCommand', 'files.newFile', () => {}).title).toBe('files.newFile');
-    expect(describeAt('commands.registerKeybinding', 'Ctrl+Alt+M', 'comments.addComment').title).toBe('Ctrl+Alt+M → comments.addComment');
+    expect(describeAt('contributes.keybindings', 'Ctrl+Alt+M', 'comments.addComment').title).toBe('Ctrl+Alt+M → comments.addComment');
   });
 
   it('submenus, floating bars, menu items, side panels, status bar items: where they go and in which order', () => {

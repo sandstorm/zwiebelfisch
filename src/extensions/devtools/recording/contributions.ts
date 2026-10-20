@@ -27,7 +27,7 @@ export class ContributionLog {
           this.#entries.push({ extension: extension.id, point: 'contributes.configuration', ...describeSetting(id, property), arguments: formatValue(property).text, location: undefined, late: false, disposed: false });
         }
         for (const binding of extension.contributes?.keybindings ?? []) {
-          const description = describeContribution('commands.registerKeybinding', [binding.key, binding.command]);
+          const description = describeContribution('contributes.keybindings', [binding.key, binding.command]);
           this.#entries.push({ extension: extension.id, point: 'contributes.keybindings', ...description, arguments: formatValue(binding).text, location: undefined, late: false, disposed: false });
         }
         const record: Recorder = (point, args, location) => {

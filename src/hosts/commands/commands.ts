@@ -25,15 +25,6 @@ export interface Commands {
    */
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
   /**
-   * Runs `command` (with `args` as its one argument, if given) on `key` anywhere in the widget, before the editors see
-   * the key (they never do; a failing command is logged). `key`: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM`
-   * (Mod: Cmd on the Mac, else Ctrl). The modifiers must be exactly those (as VS Code's): `Alt+Digit1` is not
-   * AltGr+1 (Ctrl+Alt on Windows), `Ctrl+Minus` not Ctrl+Shift+Minus. A modifier tapped twice is a key, too (as VS
-   * Code's `shift shift`): `Shift Shift`, `Alt Alt`, …, not while the user types in a text field. For a command people
-   * run: declare the key (`contributes.keybindings`) instead.
-   */
-  registerKeybinding(key: string, command: string, args?: unknown): Disposable;
-  /**
    * The commands declared for people (`contributes.commands`) that are registered now, in declaration order: what VS
    * Code's `getCommands` and its Command Palette show (search everywhere's "Commands"). Each runs without arguments.
    */
@@ -55,13 +46,18 @@ export interface CommandContribution {
 }
 
 /**
- * A key that runs a command (VS Code's `contributes.keybindings` entry), as `registerKeybinding` takes it. A
- * platform's own key replaces `key` there; '' is no key there.
+ * A key that runs a command anywhere in the widget (VS Code's `contributes.keybindings` entry), before the editors see
+ * the key (they never do; a failing command is logged). A platform's own key replaces `key` there; '' is no key there.
  */
 export interface KeybindingContribution {
   /** The command's id. */
   readonly command: string;
-  /** The key (`Mod+Shift+KeyF`). */
+  /**
+   * The key: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM` (Mod: Cmd on the Mac, else
+   * Ctrl). The modifiers must be exactly those (as VS Code's): `Alt+Digit1` is not AltGr+1 (Ctrl+Alt on Windows),
+   * `Ctrl+Minus` not Ctrl+Shift+Minus. A modifier tapped twice is a key, too (as VS Code's `shift shift`): `Shift
+   * Shift`, `Alt Alt`, …, not while the user types in a text field.
+   */
   readonly key: string;
   /** The key on the Mac instead. */
   readonly mac?: string;
@@ -117,7 +113,7 @@ export interface MenuItem<C extends object = MenuContext> {
   readonly toggled?: (context: C) => boolean;
   /**
    * A key of the editor showing the menu that does the same (its own keymap's, `Mod+B`), shown with the entry while the
-   * command has no key binding of its own (`registerKeybinding`).
+   * command has no key binding of its own (`contributes.keybindings`).
    */
   readonly keybinding?: string;
   /** What it belongs to, where a menu shows that (the Visual editor's text style menu: a section's title). */

@@ -10,7 +10,8 @@ import { listenForDoubleTap } from './double-tap';
  */
 export class CommandsHost implements Commands {
   readonly #handlers = new Map<string, CommandHandler>();
-  readonly #keybindings = new Set<{ key: string; matches(event: KeyboardEvent): boolean; command: string; args: unknown[] }>();
+  readonly #keybindings: { key: string; matches(event: KeyboardEvent): boolean; command: string; args: unknown[] }[] = [];
+  readonly #taps: Disposable[] = [];
   #declared: readonly CommandContribution[] = [];
   readonly #platform: Platform;
   readonly #mac: boolean;
@@ -40,17 +41,6 @@ export class CommandsHost implements Commands {
     }
   }
 
-  registerKeybinding(key: string, command: string, args?: unknown): Disposable {
-    const tapped = DOUBLE_TAP.exec(key)?.[1];
-    const binding = { key, matches: tapped ? () => false : parseKey(key, this.#mac), command, args: args === undefined ? [] : [args] };
-    this.#keybindings.add(binding);
-    const taps = tapped ? listenForDoubleTap(this.root, modifierKey(tapped, this.#mac), () => this.#run(binding)) : null;
-    return new Disposable(() => {
-      this.#keybindings.delete(binding);
-      taps?.dispose();
-    });
-  }
-
   /** Declares the commands for people (`contributes.commands`), for `getCommands`. */
   declareCommands(commands: readonly CommandContribution[] = []): void {
     this.#declared = [...this.#declared, ...commands];
@@ -64,7 +54,7 @@ export class CommandsHost implements Commands {
   declareKeybindings(keybindings: readonly KeybindingContribution[] = []): void {
     for (const keybinding of keybindings) {
       const key = keybinding[this.#platform] ?? keybinding.key;
-      if (key) this.registerKeybinding(key, keybinding.command, keybinding.args);
+      if (key) this.#bind(key, keybinding.command, keybinding.args);
     }
   }
 
@@ -76,7 +66,15 @@ export class CommandsHost implements Commands {
   dispose(): void {
     this.root.removeEventListener('keydown', this.#handleKey, true);
     this.#handlers.clear();
-    this.#keybindings.clear();
+    this.#keybindings.length = 0;
+    for (const taps of this.#taps.splice(0)) taps.dispose();
+  }
+
+  #bind(key: string, command: string, args: unknown): void {
+    const tapped = DOUBLE_TAP.exec(key)?.[1];
+    const binding = { key, matches: tapped ? () => false : parseKey(key, this.#mac), command, args: args === undefined ? [] : [args] };
+    this.#keybindings.push(binding);
+    if (tapped) this.#taps.push(listenForDoubleTap(this.root, modifierKey(tapped, this.#mac), () => this.#run(binding)));
   }
 
   readonly #handleKey = (event: KeyboardEvent): void => {

@@ -1,6 +1,6 @@
 import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
-import { type Commands, keyLabel } from '../../hosts/commands/commands';
+import type { Commands } from '../../hosts/commands/commands';
 import type { SearchProvider } from '../../hosts/window/window';
 import type { ExtensionContext, SidePanel, Extension } from '../../hosts/workbench/workbench';
 import { Replacement } from './model/replace';
@@ -32,8 +32,8 @@ export function search(): Extension {
         { command: REPLACE_IN_FILES, title: 'Replace in files' },
       ],
       keybindings: [
-        { command: FIND_IN_FILES, key: FIND_KEY },
-        { command: REPLACE_IN_FILES, key: REPLACE_KEY },
+        { command: FIND_IN_FILES, key: 'Mod+Shift+KeyF' },
+        { command: REPLACE_IN_FILES, key: 'Mod+Shift+KeyH' },
         // as the file panel's Alt+1 / ⌃1 (IntelliJ's 3 for its Find window)
         { command: 'workbench.view.search', key: 'Alt+Digit3', mac: 'Ctrl+Digit3', linux: '' },
       ],
@@ -55,8 +55,8 @@ export function search(): Extension {
         confirm: async (message, action) => (await context.window.showWarningMessage(message, action)) === action,
         state: globalState,
         keys: [
-          { label: 'Find in files', key: keyLabel(FIND_KEY) },
-          { label: 'Replace in files', key: keyLabel(REPLACE_KEY) },
+          { label: 'Find in files', key: commands.keybindingLabel(FIND_IN_FILES) ?? '' },
+          { label: 'Replace in files', key: commands.keybindingLabel(REPLACE_IN_FILES) ?? '' },
           { label: 'Search everywhere', key: 'Shift Shift' },
         ],
       });
@@ -83,8 +83,6 @@ export function search(): Extension {
 const FIND_IN_FILES = 'workbench.action.findInFiles';
 const REPLACE_IN_FILES = 'workbench.action.replaceInFiles';
 const FIND_IN_FOLDER = 'search.findInFolder';
-const FIND_KEY = 'Mod+Shift+KeyF';
-const REPLACE_KEY = 'Mod+Shift+KeyH';
 
 /**
  * Shows the panel in `mode` and searches for `options`, or (with no query given) for the selection of the shown Typst
@@ -111,7 +109,7 @@ function findInFilesRow(commands: Commands): SearchProvider {
     order: 91,
     provideItems: (query) =>
       query
-        ? [{ label: `Find in files: ${query}`, highlights: {}, keybinding: keyLabel(FIND_KEY), accept: () => commands.executeCommand(FIND_IN_FILES, { query }) }]
+        ? [{ label: `Find in files: ${query}`, highlights: {}, keybinding: commands.keybindingLabel(FIND_IN_FILES), accept: () => commands.executeCommand(FIND_IN_FILES, { query }) }]
         : [],
   };
 }

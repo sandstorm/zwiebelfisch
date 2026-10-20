@@ -7,7 +7,7 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import css from './file-navigation.css?inline';
 import { type NavigationLocation, NavigationHistory } from './model/navigation-history';
 import { FileNavigation } from './workbench/file-navigation';
-import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
+import { HistoryLinks } from './workbench/history-links';
 
 /**
  * Links around the shown file that lead to other files.
@@ -21,6 +21,7 @@ import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
 export function fileNavigation(): Extension {
   return {
     id: 'file-navigation',
+    contributes: { keybindings: KEYBINDINGS },
     activate({ project, window, workbench, commands, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const doc = workbench.ownerDocument;
@@ -45,7 +46,7 @@ export function fileNavigation(): Extension {
           going = false;
         }
       };
-      const links = new HistoryLinks(doc, go);
+      const links = new HistoryLinks(doc, go, { back: commands.keybindingLabel(BACK), forward: commands.keybindingLabel(FORWARD) });
       const top = Object.assign(doc.createElement('div'), { className: 'zwf-file-navigation__top' });
       top.append(links.element, readingOrder.top);
       // recomputed on every open, every change and every new main file: an #include may have been added, moved or removed
@@ -77,8 +78,6 @@ export function fileNavigation(): Extension {
         new Disposable(() => clearTimeout(typing)),
         commands.registerCommand(BACK, () => go('back')),
         commands.registerCommand(FORWARD, () => go('forward')),
-        commands.registerKeybinding(KEYBINDINGS.back, BACK),
-        commands.registerKeybinding(KEYBINDINGS.forward, FORWARD),
       );
       show();
     },
@@ -98,3 +97,9 @@ const READING_ORDER_DELAY_MS = 300;
 const BACK = 'fileNavigation.back';
 /** Goes forward again, after going back. */
 const FORWARD = 'fileNavigation.forward';
+
+/** VS Code's Go Back / Go Forward keys; not Ctrl+Minus outside the Mac: the browser's zoom. */
+const KEYBINDINGS = [
+  { command: BACK, key: 'Ctrl+Alt+Minus', mac: 'Ctrl+Minus' },
+  { command: FORWARD, key: 'Ctrl+Shift+Minus' },
+];

@@ -3,12 +3,16 @@ import { ProjectPath } from '../../../core/paths/paths';
 
 /**
  * One link bar above the shown file: back to the file the user came from (left), and forward again once they went back
- * (right); a click runs `go`. Hidden with nowhere to go.
+ * (right); a click runs `go`, the tooltips name `keys` (as people read them). Hidden with nowhere to go.
  */
 export class HistoryLinks {
   readonly element: HTMLElement;
 
-  constructor(doc: Document, private readonly go: (direction: 'back' | 'forward') => void) {
+  constructor(
+    doc: Document,
+    private readonly go: (direction: 'back' | 'forward') => void,
+    private readonly keys: { readonly back?: string; readonly forward?: string },
+  ) {
     this.element = doc.createElement('nav');
     this.element.className = 'zwf-file-navigation zwf-file-navigation--history';
     this.element.setAttribute('aria-label', 'Navigation history');
@@ -27,19 +31,9 @@ export class HistoryLinks {
     button.type = 'button';
     button.className = `zwf-file-navigation__history zwf-file-navigation__history--${direction}`;
     button.textContent = direction === 'back' ? `← Back to ${name}` : `Forward to ${name} →`;
-    button.title = direction === 'back' ? `Go back to ${name} (${KEYS.back})` : `Go forward to ${name} (${KEYS.forward})`;
+    const key = this.keys[direction];
+    button.title = `${direction === 'back' ? 'Go back' : 'Go forward'} to ${name}${key ? ` (${key})` : ''}`;
     button.addEventListener('click', () => this.go(direction));
     return button;
   }
 }
-
-const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-
-/** VS Code's Go Back / Go Forward keys, as `registerKeybinding` takes them. Not Ctrl+Minus outside the Mac: the browser's zoom. */
-export const KEYBINDINGS = {
-  back: MAC ? 'Ctrl+Minus' : 'Ctrl+Alt+Minus',
-  forward: 'Ctrl+Shift+Minus',
-} as const;
-
-/** The same keys as the user reads them. */
-const KEYS = MAC ? { back: '⌃-', forward: '⌃⇧-' } : { back: 'Ctrl+Alt+-', forward: 'Ctrl+Shift+-' };

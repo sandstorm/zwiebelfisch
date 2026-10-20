@@ -43,7 +43,7 @@ export function describeSetting(id: string, property: unknown): Description {
 const POINTS: Readonly<Record<string, Describer>> = {
   'contributes.configuration': ([id, property]) => describeSetting(String(id), property),
   'commands.registerCommand': ([id]) => ({ title: String(id), details: [] }),
-  'commands.registerKeybinding': ([key, command]) => ({ title: `${String(key)} → ${String(command)}`, details: [] }),
+  'contributes.keybindings': ([key, command]) => ({ title: `${String(key)} → ${String(command)}`, details: [] }),
   'visualEditor.registerNode': ([spec]) => typstSpec(spec),
   'visualEditor.registerMark': ([spec]) => typstSpec(spec),
   'visualEditor.registerTiptapExtension': ([provider]) => named(provider, 'Tiptap extensions'),

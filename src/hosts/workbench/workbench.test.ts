@@ -475,7 +475,7 @@ describe('WorkbenchHost: declared keys and rail menus', () => {
     host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.click();
     expect(host.querySelector('.zwf-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
     const panel = workbench.registerSidePanel('files', { label: 'Files', icon: workbench.ownerDocument.createElement('span') });
-    workbench.commands.registerKeybinding('Alt+Digit1', 'workbench.view.files');
+    workbench.commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'workbench.view.files' }]);
     const rail = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!;
     rail.dispatchEvent(new Event('pointerenter'));
     expect(rail.title).toBe('Files (Alt+1)');

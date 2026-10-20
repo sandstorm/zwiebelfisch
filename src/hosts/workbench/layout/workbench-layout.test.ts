@@ -322,7 +322,7 @@ describe('WorkbenchLayout', () => {
   it("names the key of workbench.view.<id> in the rail button's tooltip, also one bound after the panel was added", () => {
     const { commands, toggle } = setup();
     expect(toggle.title).toBe('Files');
-    commands.registerKeybinding('Alt+Digit1', 'workbench.view.files');
+    commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'workbench.view.files' }]);
     toggle.dispatchEvent(new Event('pointerenter'));
     expect(toggle.title).toBe('Files (Alt+1)');
     expect(toggle.getAttribute('aria-label')).toBe('Files');

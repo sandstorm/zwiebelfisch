@@ -54,7 +54,7 @@ describe('CommandsHost', () => {
     const { inner, commands } = setup();
     const run = vi.fn();
     commands.registerCommand('test.run', run);
-    commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
+    commands.declareKeybindings([{ key: 'Mod+Alt+KeyM', command: 'test.run' }]);
     const editor = vi.fn();
     inner.addEventListener('keydown', editor);
     const event = press(inner, { code: 'KeyM', altKey: true, ctrlKey: true });
@@ -67,8 +67,8 @@ describe('CommandsHost', () => {
     const run = vi.fn();
     const other = setup();
     other.commands.registerCommand('test.run', run);
-    other.commands.registerKeybinding('Alt+Digit1', 'test.run');
-    other.commands.registerKeybinding('Mod+KeyK', 'test.run');
+    other.commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'test.run' }]);
+    other.commands.declareKeybindings([{ key: 'Mod+KeyK', command: 'test.run' }]);
     expect(press(other.inner, { code: 'Digit1', altKey: true, ctrlKey: true }).defaultPrevented).toBe(false);
     expect(press(other.inner, { code: 'Digit1', altKey: true, shiftKey: true }).defaultPrevented).toBe(false);
     expect(press(other.inner, { code: 'KeyK', metaKey: true }).defaultPrevented).toBe(false);
@@ -79,7 +79,7 @@ describe('CommandsHost', () => {
 
     const mac = setup({ platform: 'mac' });
     mac.commands.registerCommand('test.run', run);
-    mac.commands.registerKeybinding('Mod+KeyK', 'test.run');
+    mac.commands.declareKeybindings([{ key: 'Mod+KeyK', command: 'test.run' }]);
     expect(press(mac.inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(false);
     press(mac.inner, { code: 'KeyK', metaKey: true });
     expect(run).toHaveBeenCalledTimes(3);
@@ -92,7 +92,7 @@ describe('CommandsHost', () => {
     ];
     const other = setup();
     other.commands.declareKeybindings(declared);
-    other.commands.registerKeybinding('F3', 'test.find');
+    other.commands.declareKeybindings([{ key: 'F3', command: 'test.find' }]);
     expect([other.commands.keybindingLabel('test.find'), other.commands.keybindingLabel('test.files'), other.commands.keybindingLabel('test.none')]).toEqual(['Ctrl+Shift+F', 'Alt+1', undefined]);
     const mac = setup({ platform: 'mac' });
     mac.commands.declareKeybindings(declared);
@@ -119,7 +119,7 @@ describe('CommandsHost', () => {
     const { inner, commands } = setup();
     commands.declareKeybindings(declared);
     commands.registerCommand('test.open', run);
-    commands.registerKeybinding('Mod+KeyP', 'test.open');
+    commands.declareKeybindings([{ key: 'Mod+KeyP', command: 'test.open' }]);
     press(inner, { code: 'KeyO', ctrlKey: true, shiftKey: true });
     press(inner, { code: 'KeyP', ctrlKey: true });
     expect(run.mock.calls).toEqual([['/'], []]);
@@ -134,42 +134,39 @@ describe('CommandsHost', () => {
     const { inner, commands } = setup();
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     commands.registerCommand('test.fails', () => Promise.reject(new Error('nope')));
-    commands.registerKeybinding('Mod+KeyK', 'test.fails');
+    commands.declareKeybindings([{ key: 'Mod+KeyK', command: 'test.fails' }]);
     expect(press(inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(error).toHaveBeenCalledWith('Command test.fails failed:', expect.objectContaining({ message: 'nope' })));
   });
 
-  it('leaves other keys to the editors, and bound keys once the binding or the command is gone', () => {
+  it('leaves other keys to the editors, and bound keys once the command is gone', () => {
     const { inner, commands } = setup();
     const run = vi.fn();
     const command = commands.registerCommand('test.run', run);
-    const binding = commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
+    commands.declareKeybindings([{ key: 'Mod+Alt+KeyM', command: 'test.run' }]);
     press(inner, { code: 'KeyM', ctrlKey: true });
     press(inner, { code: 'KeyN', altKey: true, ctrlKey: true });
-    binding.dispose();
-    press(inner, { code: 'KeyM', altKey: true, ctrlKey: true });
-    commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
     command.dispose();
     expect(press(inner, { code: 'KeyM', altKey: true, ctrlKey: true }).defaultPrevented).toBe(false);
     expect(run).not.toHaveBeenCalled();
   });
 
   it('refuses unknown modifiers', () => {
-    expect(() => setup().commands.registerKeybinding('Hyper+KeyM', 'test.run')).toThrow(/Unknown modifier Hyper/);
+    expect(() => setup().commands.declareKeybindings([{ key: 'Hyper+KeyM', command: 'test.run' }])).toThrow(/Unknown modifier Hyper/);
   });
 
-  it('binds a modifier tapped twice (Shift Shift), named so, until disposed', () => {
+  it('binds a modifier tapped twice (Shift Shift), named so, until the host is disposed', () => {
     const { inner, commands } = setup();
     const run = vi.fn();
     commands.registerCommand('test.search', run);
-    const binding = commands.registerKeybinding('Shift Shift', 'test.search', 'all');
+    commands.declareKeybindings([{ key: 'Shift Shift', command: 'test.search', args: 'all' }]);
     const tapShift = () => {
       for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) inner.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', shiftKey: type === 'keydown', bubbles: true }));
     };
     tapShift();
     expect(run.mock.calls).toEqual([['all']]);
     expect([commands.keybindingLabel('test.search'), keyLabel('Shift Shift', true)]).toEqual(['Shift Shift', '⇧ ⇧']);
-    binding.dispose();
+    commands.dispose();
     tapShift();
     expect(run).toHaveBeenCalledTimes(1);
   });

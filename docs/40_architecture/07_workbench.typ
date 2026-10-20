@@ -71,7 +71,7 @@ contributes: {
 },
 ```
 
-- *Keys* are a `KeyboardEvent.code` with exactly the modifiers named (`Mod` is ⌘ or Ctrl; Alt+1 is not AltGr+1), caught before any editor; or a modifier tapped twice, as VS Code's `shift shift` (`Shift Shift`; not in a text field). `''` in `mac` / `win` / `linux` means no key there. `commands.keybindingLabel(id)` names a command's key, for command rows, menus and tooltips.
+- *Keys* are a `KeyboardEvent.code` with exactly the modifiers named (`Mod` is ⌘ or Ctrl; Alt+1 is not AltGr+1), caught before any editor; or a modifier tapped twice, as VS Code's `shift shift` (`Shift Shift`; not in a text field). `''` in `mac` / `win` / `linux` means no key there. An extension only declares its keys (`contributes.keybindings`), as in VS Code. `commands.keybindingLabel(id)` names a command's key, for command rows, menus and tooltips.
 - *`commands.getCommands()`* lists the `contributes.commands` registered now, with titles (search everywhere's "Commands").
 - *`executeCommand`* rejects for an unknown id or a failing handler; `registerCommand` throws for an id registered twice. The host runs commands with `editor.executeCommand`.
 - *Search everywhere runs `contributes.commands` without arguments*: declare only commands that work without any.
