@@ -12,7 +12,7 @@ A Typst editor in the browser. Hosts are the mechanism of a view; extensions are
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax (@architecture-core).],
   [`src/hosts/`], [A view's mechanism and its contribution points, as small as possible: @architecture-visual-editor (conversion: @architecture-typst-conversion), @architecture-source-editor, @architecture-preview, @architecture-window. The extension host runs the extensions (@architecture-extensions-host).],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …): every feature and every construct beyond paragraphs and raw Typst (@architecture-extensions-built-in).],
-  [`src/editor/`], [`createEditor`, the composition root: `editor/widget` makes and wires the hosts for a `Project` and runs the built-in extensions.],
+  [`src/editor/`], [`createEditor`, the composition root: `editor/widget` makes and wires the hosts for a `Project` (the Typst files' editors into the window, its settings onto it) and runs the built-in extensions.],
   [`src/editor-element/`], [`<zwiebelfisch-editor>`: a shadow root around `createEditor`.],
   [`src/testing/`], [Test helpers composing the built-ins; only `*.test.ts` files import it.],
 )

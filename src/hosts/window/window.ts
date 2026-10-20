@@ -6,9 +6,6 @@ import type { FileContent, Project } from '../../core/project/project';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import type { User } from '../../core/user/user';
 import type { CommandsHost, MenuContext, MenuItem } from '../commands/commands';
-import type { SourceEditorHost } from '../source-editor/source-editor';
-import type { VisualEditorHost } from '../visual-editor/visual-editor';
-import type { WorkspaceHost } from '../workspace/workspace';
 
 /**
  * The window (VS Code's `window` namespace): everything the user sees and interacts with.
@@ -128,7 +125,7 @@ export interface WindowApi {
   readonly activeFile: ProjectPath;
   /** After a file was shown in the editing area (also when the same file is shown again). */
   readonly onDidChangeActiveFile: Event<ProjectPath>;
-  /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
+  /** The editor of the Typst file shown in the editing area (its panel's `textEditor`); null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
   /**
    * The selection in an editor moved, or its text changed (fired from the editors' own updates, so `selection` is
@@ -146,9 +143,10 @@ export interface WindowApi {
    */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
-   * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: in a
-   * Typst file's editor inside its content (in the Visual editor below its toolbar), scrolling with it; around any other
-   * editor's panel, not scrolling. Detached while no editor is shown. One frame at a time.
+   * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: inside
+   * the panel of an editor that names its `contentElement` (a Typst file's; in the Visual editor below its toolbar),
+   * scrolling with it; around any other editor's panel, not scrolling. Detached while no editor is shown. One frame at
+   * a time.
    */
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
   /**
@@ -523,6 +521,13 @@ export interface CustomEditorPanel {
    * deleted (retained), the provider is disposed, or the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
    */
   readonly onDidDispose: Event<void>;
+  /** The Typst file's editor shown in the panel, set by its provider: `activeTextEditor` while the panel is shown. */
+  textEditor?: TextEditor;
+  /**
+   * The first element of the file's content in `element`, set by a provider whose editor scrolls the whole panel: the
+   * editor frame goes into the panel, right before it and at the panel's end.
+   */
+  contentElement?: Element;
 }
 
 /**
@@ -572,12 +577,8 @@ export interface WindowOptions {
   readonly project: Project;
   /** Runs the menus' commands and names their keys; gets the side panels' commands `workbench.view.<id>`. */
   readonly commands: CommandsHost;
-  /** Its settings (`workbench.theme`, `workbench.rightSidePanel`), declared there. */
-  readonly workspace: WorkspaceHost;
-  /** The Visual editors of Typst files (the custom editor `visualEditor`) are made with it. */
-  readonly visualEditor: VisualEditorHost;
-  /** The Source editors of Typst files (the custom editor `sourceEditor`) are made with it. */
-  readonly sourceEditor: SourceEditorHost;
+  /** The selection changes of the Typst files' editors, as `onDidChangeTextEditorSelection`. */
+  readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   /** Where the layout keeps its sizes and the panels picked for the session (key `layout`). */
   readonly layoutState: { get<T>(key: string): T | undefined; update(key: string, value: unknown): Promise<void> };
   /** Who works here (`user`) until `setUser`. */

@@ -51,7 +51,7 @@ export type {
   Languages,
   TextDocument,
 } from './hosts/languages/languages';
-export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
+export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/extension-host/workspace/workspace';
 export type {
   HtmlBundle,
   PdfExportOption,

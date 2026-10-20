@@ -7,7 +7,6 @@ import type { User } from '../../core/user/user';
 import type { CommandContribution, MenuItem } from '../commands/commands';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { CustomEditors } from './custom-editors/custom-editors';
-import { DocumentEditors } from './document-editors/document-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
 import { EditorTabs } from './layout/editor-tabs';
@@ -26,8 +25,7 @@ import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem,
 
 /**
  * The `WindowApi` of one widget on `options.host`: its regions (the sides with their panels, the editing area with its
- * tabs and custom editors, the status bar), the Typst files' Visual and Source editors as two of the custom editors
- * (registered first, they win ties for `*.typ`), menus, messages and input, the style sheets and the color scheme.
+ * tabs and custom editors, the status bar), menus, messages and input, the style sheets and the color scheme.
  * It shows the main file once `open` is first called and keeps the editing area on an existing file as files change.
  */
 export class WindowHost implements WindowApi {
@@ -49,30 +47,27 @@ export class WindowHost implements WindowApi {
   readonly #statusBar: StatusBar;
   readonly #progress: ProgressIndicators;
   readonly #customEditors: CustomEditors;
-  readonly #documentEditors: DocumentEditors;
   readonly #fileDecorations = new FileDecorations();
   readonly #searchProviders = new Set<SearchProvider>();
   readonly #shown = new EventEmitter<ProjectPath>();
-  readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscriptions: Disposable;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
-  readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
+  readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   readonly onDidChangeActiveFile = this.#shown.event;
   readonly onDidChangeMenu = this.#menus.onDidChange;
   readonly onDidDropFiles: Event<File[]>;
 
   constructor(private readonly options: WindowOptions) {
-    const { host, project, commands, workspace } = options;
+    const { host, project, commands } = options;
     this.#active = project.main;
     this.#styleSheets = new StyleSheets(host);
     this.#ownStyles = Disposable.from(this.#styleSheets.add((options.styleSheet ?? '') + layoutCss, 'zwf-editor-styles'), this.#styleSheets.add(css));
     host.classList.add('zwf-editor');
-    workspace.declare(WINDOW_SETTINGS);
     this.#scheme = new ColorScheme(host);
-    this.#applyTheme();
     this.#layout = new WindowLayout(host, options.layoutState, commands);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
+    this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
     this.#tabs = new EditorTabs(this.#layout.editor, this.#menus, {
       onDidChoose: (viewType) => this.showDocument(this.#active, { viewType }),
       context: () => ({ activeCustomEditorId: this.#activeCustomEditorId, resource: this.#active }),
@@ -85,29 +80,29 @@ export class WindowHost implements WindowApi {
     this.#statusBar = new StatusBar(this.#layout.statusBar);
     this.#progress = new ProgressIndicators(this.#layout.editor);
     this.#customEditors = new CustomEditors(this.#layout.editor);
-    this.#documentEditors = new DocumentEditors(project, {
-      visualEditor: options.visualEditor,
-      sourceEditors: options.sourceEditor,
-      // Fired from the editors' own updates: the DOM's selectionchange fires before
-      // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
-      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
-    });
-    this.#documentEditors.register(this);
-    this.#applyRightSidePanel();
     this.#subscriptions = Disposable.from(
       // retained panels follow a rename before the renamed file is shown again
       project.onDidChangeFile((change) => this.#changed(change)),
       this.#menus.onDidChange((menuId) => this.#showRailActions(menuId)),
-      workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
-        if (event.affectsConfiguration('workbench.rightSidePanel')) this.#applyRightSidePanel();
-      }),
     );
   }
 
   /** Declares commands (`contributes.commands`), whose title and icon menu entries registered later show by default. */
   declareCommands(commands: readonly CommandContribution[] | undefined): void {
     this.#menus.declareCommands(commands);
+  }
+
+  /** Shows the widget `light`, `dark`, `auto` (as the OS) or, null, as the page around it (CSS `color-scheme`): `data-theme`, and `data-scheme` as the colors resolve now. */
+  setTheme(theme: 'light' | 'dark' | 'auto' | null): void {
+    const { host } = this.options;
+    if (theme) host.dataset.theme = theme;
+    else delete host.dataset.theme;
+    this.#scheme.update();
+  }
+
+  /** The panel the right side shows until the viewer picks one with its rail (null: it starts hidden), before the panels' own `setDefault`. */
+  setDefaultSidePanel(id: string | null): void {
+    this.#layout.setDefaultPanel('right', id);
   }
 
   get ownerDocument(): Document {
@@ -203,7 +198,7 @@ export class WindowHost implements WindowApi {
   }
 
   get activeTextEditor(): TextEditor | null {
-    return this.#documentEditors.activeTextEditor;
+    return this.#customEditors.shown?.textEditor ?? null;
   }
 
   isEditorFocused(): boolean {
@@ -219,11 +214,9 @@ export class WindowHost implements WindowApi {
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
     if (this.#frame) throw new Error('There is an editor frame already');
     this.#frame = frame;
-    this.#documentEditors.setFrame(frame);
     this.#placeFrame();
     return new Disposable(() => {
       this.#frame = null;
-      this.#documentEditors.setFrame(null);
       frame.top.remove();
       frame.bottom.remove();
     });
@@ -244,7 +237,7 @@ export class WindowHost implements WindowApi {
   dispose(): void {
     this.#searchProviders.clear();
     Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations, this.#tabs, this.#menus, this.#drops).dispose();
-    for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
+    this.#shown.dispose();
     const { host } = this.options;
     host.classList.remove('zwf-editor');
     delete host.dataset.theme;
@@ -253,19 +246,20 @@ export class WindowHost implements WindowApi {
     this.#ownStyles.dispose();
   }
 
-  /**
-   * The editor frame around the shown custom editor's panel, unless a Typst editor is shown (DocumentEditors puts it into
-   * the editor's scrolling content then).
-   */
+  /** The editor frame in the shown panel around its `contentElement`, else around the panel; detached while none is shown. */
   #placeFrame(): void {
-    if (!this.#frame || this.#documentEditors.activeTextEditor) return;
-    const panel = this.#customEditors.shownElement;
-    if (panel) {
-      panel.before(this.#frame.top);
-      panel.after(this.#frame.bottom);
+    if (!this.#frame) return;
+    const { top, bottom } = this.#frame;
+    const panel = this.#customEditors.shown;
+    if (!panel) {
+      top.remove();
+      bottom.remove();
+    } else if (panel.contentElement) {
+      panel.element.insertBefore(top, panel.contentElement);
+      panel.element.append(bottom);
     } else {
-      this.#frame.top.remove();
-      this.#frame.bottom.remove();
+      panel.element.before(top);
+      panel.element.after(bottom);
     }
   }
 
@@ -286,38 +280,7 @@ export class WindowHost implements WindowApi {
     const actions = this.#menus.items(menuId).map(({ command, title, icon, order }) => ({ command, title: title ?? command, icon: icon ?? '', order: order ?? 0 }));
     this.#layout.setRailActions(side, actions);
   }
-
-  /** The right side's default panel from the setting `workbench.rightSidePanel`. */
-  #applyRightSidePanel(): void {
-    this.#layout.setDefaultPanel('right', this.options.workspace.getConfiguration('workbench').get<string | null>('rightSidePanel'));
-  }
-
-  /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */
-  #applyTheme(): void {
-    const { host, workspace } = this.options;
-    const theme = workspace.getConfiguration('workbench').get<string | null>('theme');
-    if (theme) host.dataset.theme = theme;
-    else delete host.dataset.theme;
-    this.#scheme.update();
-  }
 }
-
-/** The window's own settings. */
-const WINDOW_SETTINGS = {
-  'workbench.theme': {
-    type: ['string', 'null'],
-    enum: ['light', 'dark', 'auto', null],
-    default: null,
-    description:
-      'Light or dark colors, or `auto`: as the OS. Default (null): as the page around the widget, through CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.',
-  },
-  'workbench.rightSidePanel': {
-    type: ['string', 'null'],
-    default: 'preview',
-    description:
-      "The side panel the right side shows until the viewer picks one with its rail: `preview`, or an extension's panel id (e.g. `devtools`); null: the right side starts hidden (the editing area takes its room). A panel id not registered: the right panel that asks for it (`setDefault`), if any.",
-  },
-} as const;
 
 /** The sides whose rail shows a menu's items (`workbench/rail/<side>`). */
 const RAIL_MENUS = ['left', 'right'] as const;

@@ -4,7 +4,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, FileContent } from '../../../core/project/project';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
-import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } from '../window';
+import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider, TextEditor } from '../window';
 import { FilenamePattern } from './filename-pattern';
 
 /**
@@ -78,9 +78,9 @@ export class CustomEditors {
     return panel;
   }
 
-  /** The element of the panel shown; null while none is. */
-  get shownElement(): HTMLElement | null {
-    return this.#shown?.element ?? null;
+  /** The panel shown; null while none is. */
+  get shown(): CustomEditorPanel | null {
+    return this.#shown;
   }
 
   /**
@@ -184,6 +184,8 @@ class Panel implements CustomEditorPanel {
   readonly onDidChangeViewState = this.#viewState.event;
   readonly onDidDispose = this.#disposed.event;
   readonly onDidRequestReveal = this.#reveal.event;
+  textEditor?: TextEditor;
+  contentElement?: Element;
 
   constructor(
     parent: HTMLElement,

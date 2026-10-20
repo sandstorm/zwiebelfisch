@@ -1,4 +1,5 @@
 import { Disposable } from '../../core/disposable/disposable';
+import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { FileChange, Project } from '../../core/project/project';
 import type { User } from '../../core/user/user';
 import { CommandsHost } from '../../hosts/commands/commands';
@@ -8,14 +9,16 @@ import { Preview } from '../../hosts/preview/preview';
 import { ScmHost } from '../../hosts/scm/scm';
 import { SourceEditorHost } from '../../hosts/source-editor/source-editor';
 import { VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import { WindowHost } from '../../hosts/window/window';
-import { type Settings, WorkspaceHost } from '../../hosts/workspace/workspace';
+import { type TextEditorSelectionChangeEvent, WindowHost } from '../../hosts/window/window';
+import { type Settings, WorkspaceHost } from '../../hosts/extension-host/workspace/workspace';
 import { registerDocumentDrops } from './document-drops';
+import { DocumentEditors } from './document-editors';
 
 /**
  * The widget on `host`: makes and wires the hosts, VS Code's namespaces (`commands`, `window`, `scm`, `languages`,
- * `workspace`) and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`), keeps the preview
- * compiling the main file, and runs the extensions (the extension host). Used by:
+ * `workspace`) and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`), puts the Typst files'
+ * editors into the window and its settings onto it, keeps the preview compiling the main file, and runs the extensions
+ * (the extension host). Used by:
  * - createEditor
  * - tests of extensions in the composed hosts
  *
@@ -33,17 +36,8 @@ export class Widget {
   readonly #extensions: ExtensionHost;
   readonly #hostStyles: Disposable;
   readonly #sourceEditors = new SourceEditorHost();
-  /** Its raw boxes' code takes the CodeMirror contributions (`editor: 'rawBox'`, as Typst in its file); its toolbar the window's menus. */
-  readonly #visualEditor = new VisualEditorHost({
-    rawBoxCodeMirrorExtensions: ({ document }) =>
-      this.#sourceEditors.codeMirrorExtensionsFor({ editor: 'rawBox', languageId: 'typst', path: () => this.project.pathOf(document) ?? null, document }),
-    menus: {
-      getMenuItems: (menuId, context) => this.window.getMenuItems(menuId, context),
-      onDidChangeMenu: (listener) => this.window.onDidChangeMenu(listener),
-      executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
-      keybindingLabel: (command) => this.commands.keybindingLabel(command),
-    },
-  });
+  readonly #visualEditor: VisualEditorHost;
+  readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #preview: Preview;
   readonly #subscription: Disposable;
 
@@ -59,17 +53,30 @@ export class Widget {
       host,
       project,
       commands: this.commands,
-      workspace: this.#workspace,
-      visualEditor: this.#visualEditor,
-      sourceEditor: this.#sourceEditors,
+      onDidChangeTextEditorSelection: this.#selectionChanged.event,
       layoutState: StorageMemento.of(doc, 'sessionStorage', `zwf:${project.main}:workbench:`),
       user: options.user,
       styleSheet: options.styleSheet,
     });
+    this.#visualEditor = this.#createVisualEditor();
+    // the custom editors of `*.typ`, registered before any extension's: they win ties
+    new DocumentEditors(project, {
+      visualEditor: this.#visualEditor,
+      sourceEditors: this.#sourceEditors,
+      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
+    }).register(this.window);
+    this.#workspace.declare(WORKBENCH_SETTINGS);
+    this.#applyWorkbenchSettings();
     this.#preview = this.#createPreview();
     // the hosts' CSS after the window's, before the extensions'
     this.#hostStyles = Disposable.from(...[this.#preview, this.#sourceEditors, this.#visualEditor].map((part) => this.window.registerStyleSheet(part.styleSheet)));
-    this.#subscription = Disposable.from(project.onDidChangeFile(() => this.#compile()), project.onDidChangeMain(() => this.#compile()));
+    this.#subscription = Disposable.from(
+      project.onDidChangeFile(() => this.#compile()),
+      project.onDidChangeMain(() => this.#compile()),
+      this.#workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration('workbench')) this.#applyWorkbenchSettings();
+      }),
+    );
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     registerDocumentDrops({
       project,
@@ -119,8 +126,23 @@ export class Widget {
     this.#preview.dispose();
     this.#hostStyles.dispose();
     this.window.dispose();
+    this.#selectionChanged.dispose();
     this.commands.dispose();
     this.#workspace.dispose();
+  }
+
+  /** The Visual editor: its raw boxes' code takes the CodeMirror contributions (`editor: 'rawBox'`, as Typst in its file); its toolbar the window's menus. */
+  #createVisualEditor(): VisualEditorHost {
+    return new VisualEditorHost({
+      rawBoxCodeMirrorExtensions: ({ document }) =>
+        this.#sourceEditors.codeMirrorExtensionsFor({ editor: 'rawBox', languageId: 'typst', path: () => this.project.pathOf(document) ?? null, document }),
+      menus: {
+        getMenuItems: (menuId, context) => this.window.getMenuItems(menuId, context),
+        onDidChangeMenu: (listener) => this.window.onDidChangeMenu(listener),
+        executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
+        keybindingLabel: (command) => this.commands.keybindingLabel(command),
+      },
+    });
   }
 
   /**
@@ -141,6 +163,13 @@ export class Widget {
     });
   }
 
+  /** The window's theme and right side panel from the settings `workbench.theme` and `workbench.rightSidePanel`. */
+  #applyWorkbenchSettings(): void {
+    const workbench = this.#workspace.getConfiguration('workbench');
+    this.window.setTheme(workbench.get<'light' | 'dark' | 'auto' | null>('theme') ?? null);
+    this.window.setDefaultSidePanel(workbench.get<string | null>('rightSidePanel') ?? null);
+  }
+
   #compile(): void {
     this.#preview.update(this.project.files(), this.project.main);
   }
@@ -156,7 +185,7 @@ export interface WidgetOptions {
   /** Who works here (`window.user`). */
   user?: User;
   /**
-   * The settings' values by full id (the window's own `workbench.theme`, and the extensions'), changeable later
+   * The settings' values by full id (the window's `workbench.theme` and `workbench.rightSidePanel`, and the extensions'), changeable later
    * (`updateSettings`).
    */
   settings?: Settings;
@@ -169,6 +198,23 @@ export interface WidgetOptions {
    */
   styleSheet?: string;
 }
+
+/** The window's settings. */
+const WORKBENCH_SETTINGS = {
+  'workbench.theme': {
+    type: ['string', 'null'],
+    enum: ['light', 'dark', 'auto', null],
+    default: null,
+    description:
+      'Light or dark colors, or `auto`: as the OS. Default (null): as the page around the widget, through CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.',
+  },
+  'workbench.rightSidePanel': {
+    type: ['string', 'null'],
+    default: 'preview',
+    description:
+      "The side panel the right side shows until the viewer picks one with its rail: `preview`, or an extension's panel id (e.g. `devtools`); null: the right side starts hidden (the editing area takes its room). A panel id not registered: the right panel that asks for it (`setDefault`), if any.",
+  },
+} as const;
 
 /** The preview's rail button's icon: a page. */
 const PREVIEW_ICON =

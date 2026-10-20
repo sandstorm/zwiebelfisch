@@ -3,7 +3,7 @@ import type { FileChange, FileContent, ProjectFiles } from '../core/project/proj
 import type { ProjectPath } from '../core/paths/paths';
 import type { Disposable } from '../core/disposable/disposable';
 import type { Event } from '../core/event-emitter/event-emitter';
-import { mergeSettings, type Settings } from '../hosts/workspace/workspace';
+import { mergeSettings, type Settings } from '../hosts/extension-host/workspace/workspace';
 
 /**
  * `<zwiebelfisch-editor>`: the editor widget as a custom element, for pages that should need no glue code.

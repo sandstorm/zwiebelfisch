@@ -60,8 +60,8 @@ const binaries = import.meta.glob<string>(['./examples/**/*.{ic,png}','../docs/*
   eager: true,
 });
 
-/** The core's and hosts' entries (`src/core/<module>/*.ts`, `src/hosts/<host>/*.ts`, the typst-conversion sub-module; no tests or implementations), for the docs' `#api(..)`. */
-const contracts = import.meta.glob<string>(['../src/core/*/*.ts', '../src/hosts/*/*.ts', '../src/hosts/visual-editor/typst-conversion/typst-conversion.ts', '!**/*.test.ts', '!**/*-impl.ts', '!**/*-helpers.ts'], {
+/** The core's and hosts' entries (`src/core/<module>/*.ts`, `src/hosts/<host>/*.ts`, the typst-conversion and workspace sub-modules; no tests or implementations), for the docs' `#api(..)`. */
+const contracts = import.meta.glob<string>(['../src/core/*/*.ts', '../src/hosts/*/*.ts', '../src/hosts/visual-editor/typst-conversion/typst-conversion.ts', '../src/hosts/extension-host/workspace/workspace.ts', '!**/*.test.ts', '!**/*-impl.ts', '!**/*-helpers.ts'], {
   query: '?raw',
   import: 'default',
   eager: true,

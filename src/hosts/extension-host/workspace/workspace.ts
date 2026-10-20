@@ -1,5 +1,5 @@
-import type { Event } from '../../core/event-emitter/event-emitter';
-import type { FileChange } from '../../core/project/project';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { FileChange } from '../../../core/project/project';
 
 /**
  * Changes to the project's files and the widget's settings (VS Code's `workspace` namespace).

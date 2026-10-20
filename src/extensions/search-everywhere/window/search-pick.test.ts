@@ -2,13 +2,11 @@
 // Tests for search-pick.ts (SearchPick) over a window: groups, matching, prefixes, async providers and picking.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CancellationToken } from '../../../core/cancellation/cancellation';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project } from '../../../core/project/project';
 import { CommandsHost } from '../../../hosts/commands/commands';
-import { SourceEditorHost } from '../../../hosts/source-editor/source-editor';
-import { VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { type SearchItem, type SearchProvider, WindowHost } from '../../../hosts/window/window';
-import { WorkspaceHost } from '../../../hosts/workspace/workspace';
 import { SearchPick } from './search-pick';
 
 afterEach(() => document.body.replaceChildren());
@@ -20,9 +18,7 @@ function setup(...providers: SearchProvider[]) {
     host,
     project,
     commands: new CommandsHost(host),
-    workspace: new WorkspaceHost(project),
-    visualEditor: new VisualEditorHost(),
-    sourceEditor: new SourceEditorHost(),
+    onDidChangeTextEditorSelection: new EventEmitter<never>().event,
     layoutState: { get: () => undefined, update: async () => {} },
   });
   const search = new SearchPick(window);

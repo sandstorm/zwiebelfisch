@@ -1,6 +1,6 @@
 // See Workspace in workspace.ts.
-import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { FileChange, Project } from '../../core/project/project';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import type { FileChange, Project } from '../../../core/project/project';
 import { type Workspace, type Settings, type ConfigurationType, type ConfigurationProperty, type WorkspaceConfiguration, type ConfigurationInspect, type ConfigurationChangeEvent, type WorkspaceOptions, mergeSettings } from './workspace';
 
 /**

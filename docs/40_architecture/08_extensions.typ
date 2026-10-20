@@ -16,7 +16,7 @@ Every feature is an extension in `src/extensions/<name>/`, the built-ins too; no
 
 == Extension host <architecture-extensions-host>
 
-`src/hosts/extension-host/` runs the extensions (VS Code's extension host). `Widget` (`src/editor/widget/`) makes and wires the hosts and hands them to it; `createEditor` makes the widget.
+`src/hosts/extension-host/` runs the extensions (VS Code's extension host) and holds the settings they declare and the file changes they ask for (`workspace/`, VS Code's `workspace`). `Widget` (`src/editor/widget/`) makes and wires the hosts and hands them to it; `createEditor` makes the widget.
 
 #figure(
   mermaid(read("../diagrams/widget-composition.mmd"), width: 85%),
@@ -82,7 +82,7 @@ await editor.executeCommand<number>('wordCount.count'); // 5
 
 == Settings <architecture-extensions-settings>
 
-#api("/src/hosts/workspace/workspace.ts", "ConfigurationProperty")
+#api("/src/hosts/extension-host/workspace/workspace.ts", "ConfigurationProperty")
 
 - *Follow `workspace.onDidChangeConfiguration`:* the host may change values any time (`editor.updateSettings`), and so may the user (search everywhere's Settings, `update`).
 - *A wrong value* (wrong type, outside `enum`) counts as unset, an undeclared setting is ignored, both with a warning: a host page's typo never breaks an extension. An id declared twice is an error.

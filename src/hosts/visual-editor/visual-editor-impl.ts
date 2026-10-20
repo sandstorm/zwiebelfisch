@@ -19,7 +19,7 @@ import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceH
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
- * window's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
+ * widget's `DocumentEditors` makes it, as one of the two editors for `*.typ`.
  *
  * A visual edit becomes one minimal text change on its `TypstDocument`. A change from elsewhere is applied as the
  * smallest replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code,

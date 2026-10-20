@@ -1,7 +1,7 @@
 // The settings in search everywhere: switch a boolean, pick one of an enum's values. See searchEverywhere in
 // ../search-everywhere.ts.
 import type { QuickPickItem, SearchItem, SearchProvider, WindowApi } from '../../../hosts/window/window';
-import type { ConfigurationProperty, Workspace } from '../../../hosts/workspace/workspace';
+import type { ConfigurationProperty, Workspace } from '../../../hosts/extension-host/workspace/workspace';
 
 /**
  * "Settings" (prefix `:`): every boolean setting (picking switches it) and every setting with an `enum` (picking

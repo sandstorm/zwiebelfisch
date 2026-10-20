@@ -44,7 +44,7 @@ import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import type { Extension } from '../hosts/extension-host/extension-host';
-import type { Settings } from '../hosts/workspace/workspace';
+import type { Settings } from '../hosts/extension-host/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';

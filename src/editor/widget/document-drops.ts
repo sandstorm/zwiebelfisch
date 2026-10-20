@@ -12,7 +12,7 @@ import type { SourceEditorHost } from '../../hosts/source-editor/source-editor';
 import { insertTypst, type VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
 import { posToSource } from '../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { PROJECT_PATH_TYPE, type WindowHost } from '../../hosts/window/window';
-import type { WorkspaceHost } from '../../hosts/workspace/workspace';
+import type { WorkspaceHost } from '../../hosts/extension-host/workspace/workspace';
 
 /** The hosts the drops go through. */
 export interface DropHosts {

@@ -186,7 +186,7 @@ describe('demo examples', () => {
     expect(Object.keys(files).filter((path) => /^\/src\/.*(\.test|-impl|-helpers)\.ts$/.test(path))).toEqual([]);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/(core|hosts)\/[\w-]+(\/typst-conversion)?\/[\w-]+\.ts$/);
+      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/(core|hosts)\/[\w-]+(\/typst-conversion|\/workspace)?\/[\w-]+\.ts$/);
     }
   });
 

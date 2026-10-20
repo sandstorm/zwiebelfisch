@@ -33,7 +33,7 @@ import { VisualEditor, VisualEditorHost, type VisualEditorContributions } from '
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Extension, ExtensionContext } from '../hosts/extension-host/extension-host';
-import type { Workspace } from '../hosts/workspace/workspace';
+import type { Workspace } from '../hosts/extension-host/workspace/workspace';
 
 /**
  * The schema of a Visual editor with the built-ins configured from `options`.

@@ -1,7 +1,7 @@
 // Tests for workspace.ts (WorkspaceHost): changes through the host's veto; declared settings, the host's values, changes.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ProjectPath } from '../../core/paths/paths';
-import { Project } from '../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
+import { Project } from '../../../core/project/project';
 import { type ConfigurationChangeEvent, WorkspaceHost } from './workspace';
 
 const PROPERTIES = {

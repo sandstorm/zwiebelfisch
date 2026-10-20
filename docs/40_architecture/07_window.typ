@@ -4,7 +4,7 @@
 
 #unreviewed
 
-Everything the user sees and interacts with (VS Code's `window`), in `src/hosts/window/`: the frame, the shown file, menus, messages, side panels. VS Code's other namespaces sit beside it in `src/hosts/{commands,languages,scm,workspace}/` and are covered here too. The window knows no feature by name; features are extensions (@architecture-extensions-host).
+Everything the user sees and interacts with (VS Code's `window`), in `src/hosts/window/`: the frame, the shown file, menus, messages, side panels. VS Code's other namespaces sit beside it in `src/hosts/{commands,languages,scm}/`, `workspace` in the extension host (`src/hosts/extension-host/workspace/`); all are covered here too. The window knows no feature by name; features are extensions (@architecture-extensions-host).
 
 #figure(
   mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),
@@ -17,7 +17,7 @@ Everything the user sees and interacts with (VS Code's `window`), in `src/hosts/
 - *Contributions are registered once*, at activation; the hosts apply them to every editor they create later. Competing ones are ordered as @architecture-extensions-rules says.
 - *Editors and side panels never draw menus or popups of their own:* they talk to the user through `window`, so one input, one menu and one message area serve all.
 - *One side panel per side.* Sizes and the panels picked are kept for the session; narrower than 720 px the left panel lies over the editing area. The preview is the right side's built-in panel (`preview`) and compiles whether shown or not.
-- *`DocumentEditors`* keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`: cursor, scroll, undo history). One `TextEditor` per document spans both; the one shown takes the other's selection.
+- *`DocumentEditors`* (the widget's, `src/editor/widget/`) keeps a document's Visual and Source editor alive while hidden (`retainContextWhenHidden`: cursor, scroll, undo history). One `TextEditor` per document spans both; the one shown takes the other's selection. The window knows neither editor: a panel's `textEditor` is `activeTextEditor` while shown, its `contentElement` puts the editor frame inside it.
 
 == Loading <architecture-window-loading>
 
@@ -88,15 +88,15 @@ One quick pick over every `SearchProvider`, a group each (IntelliJ's). The windo
 
 === Files and editors <architecture-window-files>
 
-#api("/src/hosts/workspace/workspace.ts", "Workspace", docs: "first-sentence")
+#api("/src/hosts/extension-host/workspace/workspace.ts", "Workspace", docs: "first-sentence")
 #api("/src/hosts/window/window.ts", "TextEditor", docs: "first-sentence")
 
 - *Read through `project`, change through `workspace.applyEdit`*, never `project.apply`: it asks the project, the host's `allowFileChange`, the project again, then applies. So no extension changes a file the host vetoed. `FileChange`: @architecture-core-project.
-- *The window's own settings* (`workbench.theme`, `workbench.rightSidePanel`) are declared like an extension's (@architecture-extensions-settings).
+- *The window's settings* (`workbench.theme`, `workbench.rightSidePanel`) are the widget's: it declares them like an extension's (@architecture-extensions-settings) and sets the window by them (`setTheme`, `setDefaultSidePanel`). The window reads no settings.
 
 === Custom editors <architecture-window-custom-editors>
 
-Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by `DocumentEditors` before any extension (as VS Code's text editor). A file several editors match gets a tab each; the one picked is remembered.
+Every file opens in a custom editor, Typst files too: the Visual and Source editor are the built-in ones for `*.typ`, registered by the widget's `DocumentEditors` before any extension (as VS Code's text editor). A file several editors match gets a tab each; the one picked is remembered.
 
 #api("/src/hosts/window/window.ts", "CustomEditorOptions", docs: "first-sentence")
 #api("/src/hosts/window/window.ts", "CustomEditorPanel", docs: "first-sentence")

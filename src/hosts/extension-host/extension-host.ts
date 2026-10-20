@@ -6,7 +6,7 @@ import type { Scm } from '../scm/scm';
 import type { SourceEditorContributions } from '../source-editor/source-editor';
 import type { VisualEditorContributions } from '../visual-editor/visual-editor';
 import type { WindowApi, WindowHost } from '../window/window';
-import type { ConfigurationProperty, Workspace, WorkspaceHost } from '../workspace/workspace';
+import type { ConfigurationProperty, Workspace, WorkspaceHost } from './workspace/workspace';
 
 /**
  * A feature of the widget (VS Code's extension), given to `createEditor({ extensions })`, built-in or a host page's own.
