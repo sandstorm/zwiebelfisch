@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import type { Command } from '../../hosts/commands/commands';
 import type { DocumentLinkProvider, DocumentSelector } from '../../hosts/languages/languages';
 import { documentLinks } from './document-links';

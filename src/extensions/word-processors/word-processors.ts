@@ -1,6 +1,6 @@
 import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { wordProcessorHtml } from './visual-editor/word-processor-html';
 
 /**

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { blockGaps } from './block-gaps';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.

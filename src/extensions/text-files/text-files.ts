@@ -2,7 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
 import type { LanguageContribution } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './text-files.css?inline';
 import { BIBTEX_HELP } from './workbench/bibtex-help';
 import { TextFileEditor } from './workbench/text-file-editor';

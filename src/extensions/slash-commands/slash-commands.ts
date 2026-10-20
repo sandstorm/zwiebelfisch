@@ -4,7 +4,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Commands, MenuItem } from '../../hosts/commands/commands';
 import type { CompletionItem, CompletionItemProvider, VisualEditorMenuContext } from '../../hosts/visual-editor/visual-editor';
 import type { WindowApi } from '../../hosts/window/window';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './slash-commands.css?inline';
 
 /**

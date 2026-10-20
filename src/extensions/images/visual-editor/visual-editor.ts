@@ -8,7 +8,7 @@ import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type RawBoxRenderer, type TypstNodeSpec, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { imageFilePastes, insertImages } from './image-insertion';
 import { imagePath } from './image-syntax';
 import { IMAGE_BAR, registerImageBarButtons } from './image-bar';
@@ -58,7 +58,7 @@ export interface ImageUrls {
   readonly onDidChange: Event<void>;
 }
 
-/** What the images in a document's Visual editor come from: the project and the workbench (see images.ts). */
+/** What the images in a document's Visual editor come from: the project and the window (see images.ts). */
 export interface ImagesOptions {
   /** What "Insert image" offers in a document: the project's images and uploads. */
   assets(document: TypstDocument): ImageAssets;

@@ -2,7 +2,7 @@
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { Disposable } from '../../../core/disposable/disposable';
 import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { DIAGRAM_EDITOR, diagramFigure } from '../model/model';
 import { createDiagram } from '../workbench/new-diagram';
 

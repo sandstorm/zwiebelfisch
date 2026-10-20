@@ -1,5 +1,5 @@
 import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/preview';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 
 /**
  * Three view options of the preview, off by default:

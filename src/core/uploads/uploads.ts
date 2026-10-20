@@ -6,7 +6,7 @@ import { ProjectPath } from '../paths/paths';
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
  *
  * Files picked or dropped from the computer enter the project here, used by:
- * - the workbench, for files dropped into the Typst editors
+ * - the widget (editor/widget), for files dropped into the Typst editors
  * - the file panel (extensions/files)
  * - image uploads (extensions/images)
  */

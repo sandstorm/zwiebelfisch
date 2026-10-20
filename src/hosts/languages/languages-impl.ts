@@ -16,7 +16,7 @@ export class LanguagesHost implements Languages {
   readonly #endings = new Map<string, string>();
 
   /**
-   * Declares `languages` (the extensions' `contributes.languages`, the workbench's own). An ending is one language's:
+   * Declares `languages` (the extensions' `contributes.languages`, the widget's own). An ending is one language's:
    * declaring it for another throws.
    */
   declare(languages: readonly LanguageContribution[]): void {

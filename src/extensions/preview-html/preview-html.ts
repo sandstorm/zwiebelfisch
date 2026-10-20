@@ -1,6 +1,6 @@
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { HtmlView } from './preview/html-view';
 import css from './preview-html.css?inline';
 

@@ -36,7 +36,7 @@ import css from './preview.css?inline';
 /**
  * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar.
  *
- * The workbench makes it the right side's panel and gives it the project's files on every change. It compiles whether
+ * The widget (editor/widget) makes it the right side's panel and gives it the project's files on every change. It compiles whether
  * shown or not, so diagnostics, snippets and clicks always belong to the newest files. Extensions add through
  * `PreviewContributions`:
  * - toolbar items (zoom, page number, "Follow cursor", "Download PDF")
@@ -106,7 +106,7 @@ export class Preview implements PreviewContributions {
   readonly onDidChangeRenderers = this.renderersChanged.event;
   readonly onDidLoad = this.loaded.event;
   readonly onDidCrash = this.crashes.event;
-  /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
+  /** The CSS of the pane, toolbar and pages, for the widget to put where the widget renders. */
   readonly styleSheet: string = css;
 
   constructor(container: HTMLElement) {

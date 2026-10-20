@@ -2,7 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { calculateMermaidFigure, isMermaid, MERMAN } from './model/mermaid-figure';
 import { registerInsertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';

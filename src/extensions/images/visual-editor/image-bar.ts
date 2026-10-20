@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, type Selection } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import { registerChainButton, svg, type Anchor, type FloatingBar, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import type { WindowApi } from '../../../hosts/window/window';
 import { imageArg, withImageWidth } from '../model/image-call';
 

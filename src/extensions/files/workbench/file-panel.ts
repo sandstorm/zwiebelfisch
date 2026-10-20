@@ -4,7 +4,7 @@ import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
 import type { FileDecoration, MenuAnchor, WindowApi } from '../../../hosts/window/window';
 import type { MenuContext } from '../../../hosts/commands/commands';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
 import { FileTree } from './tree/tree';

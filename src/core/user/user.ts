@@ -1,7 +1,7 @@
 /**
  * Who works in the widget, as the host page names them (`createEditor({ user })`) and as collaborators see them.
  * Used by:
- * - the workbench
+ * - the window
  * - the collaboration extension (presence, remote cursors)
  */
 export interface User {

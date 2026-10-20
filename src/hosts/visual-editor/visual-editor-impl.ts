@@ -206,7 +206,7 @@ export class VisualEditor {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`).
- * The workbench has one; tests make their own.
+ * The widget has one; tests make their own.
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
@@ -220,14 +220,14 @@ export class VisualEditorHost implements VisualEditorContributions {
     rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
-  /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
+  /** The CSS of the editors (ProseMirror's own first), for the widget to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
   /** The toolbar's menus and their commands (the window's); default: none, an empty toolbar. */
   readonly menus: ToolbarMenus;
 
   /**
-   * `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the workbench's: its CodeMirror
+   * `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the widget's: its CodeMirror
    * contributions); default: none. `menus`: see `menus`.
    */
   constructor(private readonly options: { rawBoxCodeMirrorExtensions?(editor: VisualEditorContext): Extension; menus?: ToolbarMenus } = {}) {

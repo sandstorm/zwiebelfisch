@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './comments.css?inline';
 import { registerIncludeComments, registerShowComments } from './preview/preview';
 import { registerCommentButtons, registerMarginNotes } from './visual-editor/margin-notes';

@@ -2,7 +2,7 @@
 // Tests for margin-notes.ts: parsing and printing margin notes, and "Comment" in the Visual editor's toolbar.
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import type { Extension } from '../../../hosts/workbench/workbench';
+import type { Extension } from '../../../hosts/extension-host/extension-host';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';

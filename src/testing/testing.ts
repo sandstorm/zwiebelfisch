@@ -32,7 +32,7 @@ import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualEditor, VisualEditorHost, type VisualEditorContributions } from '../hosts/visual-editor/visual-editor';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
-import type { Extension, ExtensionContext } from '../hosts/workbench/workbench';
+import type { Extension, ExtensionContext } from '../hosts/extension-host/extension-host';
 import type { Workspace } from '../hosts/workspace/workspace';
 
 /**

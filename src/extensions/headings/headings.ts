@@ -1,5 +1,5 @@
 import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
 import { HEADING, HEADING_STYLES } from './visual-editor/visual-editor';

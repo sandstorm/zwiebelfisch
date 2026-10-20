@@ -2,7 +2,7 @@ import { pageNumber } from './preview/page-number';
 import { rendererSwitch } from './preview/renderer-switch';
 import { zoomControls } from './preview/zoom-controls';
 import { registerViewOptionsMenu } from './workbench/view-options-menu';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './preview-controls.css?inline';
 
 /**

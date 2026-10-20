@@ -9,7 +9,7 @@ import { type FontInfo, type TypstEngine, createEngine } from '../../core/typst-
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { withPackages } from '../../core/typst-packages/typst-packages';
 import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/preview';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { previewGuides } from './preview-guides';
 
 const engineFiles = new URL('../../core/typst-engine/', import.meta.url);

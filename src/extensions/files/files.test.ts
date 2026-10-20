@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-// Tests for files.ts: the file panel's commands and menus in a workbench (preview mocked: no worker in jsdom).
+// Tests for files.ts: the file panel's commands and menus in the composed hosts (Widget) (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
+import { Widget } from '../../editor/widget/widget';
 import { files } from './files';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -28,20 +29,20 @@ afterEach(() => {
 function setup(more: Extension[] = [], { mainLocked = false } = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/chapters/a.typ': 'A\n', '/chapters/data.csv': 'a,b\n' }, { mainLocked });
-  const workbench = new WorkbenchHost(host, project, { settings: { 'files.panel': 'show' } });
-  workbench.activate([files(), ...more]);
+  const widget = new Widget(host, project, { settings: { 'files.panel': 'show' } });
+  widget.activate([files(), ...more]);
   const row = (title: string) => host.querySelector<HTMLElement>(`[role=treeitem][title="${title}"]`)!;
   const contextMenu = (title: string) => {
     row(title).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     return [...host.querySelectorAll<HTMLElement>('[role=menu] [role=menuitem]')];
   };
-  return { host, project, workbench, row, contextMenu };
+  return { host, project, widget, row, contextMenu };
 }
 
 describe('files', () => {
   it('fills the panel\'s menus with its commands: "New" and the context menu of a row', () => {
-    const { host, workbench, contextMenu } = setup();
-    expect(workbench.window.getMenuItems('file/newFile').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
+    const { host, widget, contextMenu } = setup();
+    expect(widget.window.getMenuItems('file/newFile').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
     host.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
     expect([...host.querySelectorAll('[role=menu] [role=menuitem]')].map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…']);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…', 'Rename…', 'Delete']);
@@ -76,14 +77,14 @@ describe('files', () => {
   });
 
   it('opens a file no other editor opens read-only: its name, size and type', () => {
-    const { host, project, workbench } = setup();
+    const { host, project, widget } = setup();
     project.apply({ kind: 'create', path: path('/fonts/Serif.otf'), content: new Uint8Array(2048) });
-    workbench.window.showDocument(path('/fonts/Serif.otf'));
+    widget.window.showDocument(path('/fonts/Serif.otf'));
     const info = host.querySelector<HTMLElement>('[data-view-type="files.file"] [data-testid=zwf-file-info]')!;
     expect(info.querySelector('h2')?.textContent).toBe('fonts/Serif.otf');
     expect([...info.querySelectorAll('dt, dd')].map((cell) => cell.textContent)).toEqual(['Size', '2.0 KB', 'Type', 'OTF file']);
     project.apply({ kind: 'create', path: path('/LICENSE'), content: 'MIT' });
-    workbench.window.showDocument(path('/LICENSE'));
+    widget.window.showDocument(path('/LICENSE'));
     expect([...host.querySelectorAll('[data-testid=zwf-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
   });
 
@@ -103,10 +104,10 @@ describe('files', () => {
   });
 
   it('offers no "Set as main file" while the host locked the main file; the command refuses with a message', async () => {
-    const { host, project, contextMenu, workbench } = setup([], { mainLocked: true });
+    const { host, project, contextMenu, widget } = setup([], { mainLocked: true });
     row(host, 'chapters').click();
     expect(contextMenu('chapters/a.typ').map((entry) => entry.textContent)).not.toContain('Set as main file');
-    await workbench.commands.executeCommand('files.setMainFile', path('/chapters/a.typ'));
+    await widget.commands.executeCommand('files.setMainFile', path('/chapters/a.typ'));
     expect(project.main).toBe('/main.typ');
     await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications] [role=alert]')?.textContent).toContain('The main file cannot be changed here.'));
   });

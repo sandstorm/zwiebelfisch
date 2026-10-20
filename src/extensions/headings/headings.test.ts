@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { headings, TOGGLE_NUMBERING } from './headings';
 
 /** `headings` activated with a window whose active editor shows `document` (null: none); runs a registered command. */

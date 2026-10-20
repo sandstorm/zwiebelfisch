@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './figures.css?inline';
 import { FIGURE, FIGURE_CAPTION } from './visual-editor/visual-editor';
 import { figureSearch } from './workbench/figure-search';

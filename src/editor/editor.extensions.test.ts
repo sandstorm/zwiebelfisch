@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for editor.ts: the built-in extensions in the composed widget, through the workbench's contribution
+// Tests for editor.ts: the built-in extensions in the composed widget, through the hosts' contribution
 // points (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
@@ -9,7 +9,7 @@ import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, Pr
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { WindowApi } from '../hosts/window/window';
-import type { Extension } from '../hosts/workbench/workbench';
+import type { Extension } from '../hosts/extension-host/extension-host';
 import type { LanguagesHost } from '../hosts/languages/languages';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';

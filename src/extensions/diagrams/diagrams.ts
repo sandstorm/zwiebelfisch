@@ -3,7 +3,7 @@ import { FileContent, type Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, diagramFigure, isDiagram } from './model/model';
 import { registerInsertDiagram } from './visual-editor/insert-diagram';

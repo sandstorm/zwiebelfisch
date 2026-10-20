@@ -7,7 +7,7 @@ import { WindowLayout } from './window-layout';
 
 let resize: (() => void) | null = null;
 
-/** The layout's state in the session storage under `prefix`, as JSON (as the workbench keeps it). */
+/** The layout's state in the session storage under `prefix`, as JSON (as the widget keeps it). */
 function sessionMemento(prefix: string) {
   return {
     get: <T>(key: string): T | undefined => {

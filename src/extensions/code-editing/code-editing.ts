@@ -1,7 +1,7 @@
 import { basicSetup } from 'codemirror';
 import { indentWithTab } from '@codemirror/commands';
 import { EditorView, keymap } from '@codemirror/view';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { codeColors } from './code-colors';
 
 /**

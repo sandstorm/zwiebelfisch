@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';
 import { renamePastedLabels } from './model/pasted-labels';

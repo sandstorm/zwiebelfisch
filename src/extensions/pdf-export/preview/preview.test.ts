@@ -2,7 +2,7 @@
 // Tests for preview.ts: "Download PDF" and its options popover.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PdfExportOption, PreviewContext } from '../../../hosts/preview/preview';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 import { downloadPdf, type PdfDownloads, type PdfMessages } from './preview';
 
 const preview = { ownerDocument: document } as Partial<PreviewContext> as PreviewContext;

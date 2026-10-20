@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './markup.css?inline';
 import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for search.ts in a workbench (preview mocked: no worker in jsdom): the panel on the rail; the key and the
+// Tests for search.ts in the composed hosts (Widget) (preview mocked: no worker in jsdom): the panel on the rail; the key and the
 // command, with the selection or the arguments as query; a match opening in the editor shown now (Visual or Source),
 // a match inside a raw box opening in its code, a text file's match opening in that file's editor, selected; the
 // matches highlighted in the shown editor; "Find in folder…" on a folder's row in the file panel; search everywhere's
@@ -15,7 +15,8 @@ import { SourceOffset, SourceRange } from '../../core/typst-document/typst-docum
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
 import type { CustomEditorPanel, SearchItem, WindowApi } from '../../hosts/window/window';
-import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
+import { Widget } from '../../editor/widget/widget';
 import { search } from './search';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -40,7 +41,7 @@ afterEach(() => {
 function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n', allowFileChange?: () => boolean) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': main, '/notes.txt': 'world notes', '/chapters/intro.typ': 'Round about.' });
-  const workbench = new WorkbenchHost(host, project, { viewType, allowFileChange });
+  const widget = new Widget(host, project, { viewType, allowFileChange });
   let window!: WindowApi;
   const revealed: SourceRange[] = [];
   // a text file: one with a declared language; its editor notes what it is to reveal
@@ -57,11 +58,11 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
       );
     },
   };
-  workbench.activate([search(), probe]);
+  widget.activate([search(), probe]);
   const panel = host.querySelector<HTMLElement>('[data-testid=zwf-search]')!;
   const input = panel.querySelector('input')!;
   const row = (text: string) => [...panel.querySelectorAll<HTMLElement>('[role=treeitem]')].find((item) => item.textContent?.includes(text))!;
-  return { host, project, workbench, window, panel, input, row, revealed };
+  return { host, project, widget, window, panel, input, row, revealed };
 }
 
 describe('search', () => {
@@ -84,14 +85,14 @@ describe('search', () => {
   });
 
   it('workbench.view.search (the panel key) focuses the query field, not the mode buttons before it', async () => {
-    const { workbench, input } = setup();
-    await workbench.commands.executeCommand('workbench.view.search');
+    const { widget, input } = setup();
+    await widget.commands.executeCommand('workbench.view.search');
     expect(document.activeElement).toBe(input);
   });
 
   it('workbench.action.findInFiles takes VS Code arguments', async () => {
-    const { workbench, panel, input } = setup();
-    await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'w.rld', isRegex: true, isCaseSensitive: true });
+    const { widget, panel, input } = setup();
+    await widget.commands.executeCommand('workbench.action.findInFiles', { query: 'w.rld', isRegex: true, isCaseSensitive: true });
     await vi.runAllTimersAsync();
     expect(input.value).toBe('w.rld');
     expect(panel.querySelector('[aria-label="Use Regular Expression"]')?.getAttribute('aria-pressed')).toBe('true');
@@ -100,10 +101,10 @@ describe('search', () => {
 
   it('a match opens in the editor shown now, selected: Visual or Source', async () => {
     for (const viewType of [VISUAL_EDITOR, SOURCE_EDITOR]) {
-      const { workbench, window, row } = setup(viewType);
-      await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'round' });
+      const { widget, window, row } = setup(viewType);
+      await widget.commands.executeCommand('workbench.action.findInFiles', { query: 'round' });
       await vi.runAllTimersAsync();
-      workbench.window.showDocument(path('/notes.txt'));
+      widget.window.showDocument(path('/notes.txt'));
       row('The world is round.').click();
       expect(window.activeFile).toBe('/main.typ');
       expect(window.activeTextEditor?.viewType).toBe(viewType);
@@ -114,9 +115,9 @@ describe('search', () => {
 
   it('the shown editor highlights every match in its file, the one the list is on emphasised, while the panel is shown', async () => {
     for (const viewType of [VISUAL_EDITOR, SOURCE_EDITOR]) {
-      const { host, workbench, project, row } = setup(viewType);
+      const { host, widget, project, row } = setup(viewType);
       const marked = (selector = '.zwf-search__highlight') => [...host.querySelectorAll('.zwf-editor__editor-area ' + selector)].map((element) => element.textContent);
-      await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
+      await widget.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
       await vi.runAllTimersAsync();
       expect(marked()).toEqual(['world', 'world']);
       row('Hello world').focus();
@@ -126,7 +127,7 @@ describe('search', () => {
       project.document(path('/main.typ'))!.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'A world. ' }], 'test');
       await vi.runAllTimersAsync();
       expect(marked()).toEqual(['world', 'world', 'world']);
-      workbench.commands.executeCommand('workbench.view.search');
+      widget.commands.executeCommand('workbench.view.search');
       await vi.runAllTimersAsync();
       expect(marked()).toEqual([]);
       document.body.replaceChildren();
@@ -134,8 +135,8 @@ describe('search', () => {
   });
 
   it('a match inside a raw box opens in the Visual editor in the box\'s code, selected there', async () => {
-    const { workbench, row, host } = setup(VISUAL_EDITOR, 'Hello\n\n#set text(lang: "world")\n');
-    await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
+    const { widget, row, host } = setup(VISUAL_EDITOR, 'Hello\n\n#set text(lang: "world")\n');
+    await widget.commands.executeCommand('workbench.action.findInFiles', { query: 'world' });
     await vi.runAllTimersAsync();
     row('#set text').click();
     const code = CodeView.findFromDOM(host.querySelector<HTMLElement>('.zwf-visual__raw-block .cm-content')!)!;
@@ -144,8 +145,8 @@ describe('search', () => {
   });
 
   it("a match in a text file opens in that file's editor, selected", async () => {
-    const { workbench, window, row, revealed } = setup();
-    await workbench.commands.executeCommand('workbench.action.findInFiles', { query: 'notes' });
+    const { widget, window, row, revealed } = setup();
+    await widget.commands.executeCommand('workbench.action.findInFiles', { query: 'notes' });
     await vi.runAllTimersAsync();
     row('world notes').click();
     expect(window.activeFile).toBe('/notes.txt');
@@ -165,11 +166,11 @@ describe('search', () => {
   });
 
   it('"Find in folder…" on a folder\'s row searches that folder and its subfolders', async () => {
-    const { workbench, panel, input } = setup();
-    expect(workbench.window.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
-    const [entry] = workbench.window.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
+    const { widget, panel, input } = setup();
+    expect(widget.window.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
+    const [entry] = widget.window.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
     input.value = 'round';
-    await workbench.commands.executeCommand(entry.command, path('/chapters'));
+    await widget.commands.executeCommand(entry.command, path('/chapters'));
     await vi.runAllTimersAsync();
     expect(document.activeElement).toBe(input);
     expect(panel.querySelector('select')?.value).toBe('folder');
@@ -191,8 +192,8 @@ describe('search', () => {
 
   it('Replace all asks in a notification, then replaces in the Typst and the text files; the host may refuse a text file', async () => {
     let allowed = true;
-    const { host, workbench, project, panel } = setup(VISUAL_EDITOR, undefined, () => allowed);
-    await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'world', replace: 'globe' });
+    const { host, widget, project, panel } = setup(VISUAL_EDITOR, undefined, () => allowed);
+    await widget.commands.executeCommand('workbench.action.replaceInFiles', { query: 'world', replace: 'globe' });
     await vi.runAllTimersAsync();
     panel.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.runAllTimersAsync();
@@ -203,7 +204,7 @@ describe('search', () => {
     expect([project.content(path('/main.typ')), project.content(path('/notes.txt'))]).toEqual(['Hello globe\n\nThe globe is round.\n', 'globe notes']);
     expect(panel.querySelector('.zwf-search__notice')?.textContent).toBe('Replaced 3 occurrences in 2 filesUndo');
     allowed = false;
-    await workbench.commands.executeCommand('workbench.action.replaceInFiles', { query: 'notes', replace: 'list' });
+    await widget.commands.executeCommand('workbench.action.replaceInFiles', { query: 'notes', replace: 'list' });
     await vi.runAllTimersAsync();
     panel.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.runAllTimersAsync();

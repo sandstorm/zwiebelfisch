@@ -11,7 +11,7 @@ import { type SourceEditorContributions, type CodeMirrorContext, type CodeMirror
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly registered: { readonly selector: CodeMirrorSelector; readonly extension: Extension | ((editor: CodeMirrorContext) => Extension) }[] = [];
   private readonly changed = new EventEmitter<void>();
-  /** The CSS of the editors (a revealed range), for the workbench to put where the widget renders. */
+  /** The CSS of the editors (a revealed range), for the widget to put where the widget renders. */
   readonly styleSheet: string = css;
 
   registerCodeMirrorExtension(selector: CodeMirrorSelector, extension: Extension | ((editor: CodeMirrorContext) => Extension)): Disposable {

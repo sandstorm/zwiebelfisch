@@ -1,6 +1,6 @@
 /* The Visual editor's text, raw boxes (code, or the picture a box renderer draws) and their titles, the text
    column, the toolbar with its menus and the floating bars, the suggestion lists. See VisualEditorHost in
-   visual-editor-impl.ts, whose styleSheet the workbench adds (after the vendored prosemirror.css). */
+   visual-editor-impl.ts, whose styleSheet the widget adds (after the vendored prosemirror.css). */
 .zwf-visual {
   flex: 1;
   padding: 24px 32px;

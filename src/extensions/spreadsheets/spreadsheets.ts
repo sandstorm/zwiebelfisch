@@ -2,7 +2,7 @@ import type { FileChange, Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './spreadsheets.css?inline';
 import { calculateSheetFigure, droppedSpreadsheet, firstSheet } from './model/sheet-figure';
 import { spreadsheetPath, typstPath } from './model/typst-file';

@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './lists.css?inline';
 import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import { BULLET_LIST, LIST_BUTTONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';

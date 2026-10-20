@@ -6,11 +6,11 @@ import { EditorView as CodeMirrorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ProjectPath } from '../../../core/paths/paths';
-import { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
-import { SourceEditorHost } from '../../source-editor/source-editor';
-import { VisualEditor, VisualEditorHost } from '../../visual-editor/visual-editor';
-import { PROJECT_PATH_TYPE } from '../../window/window';
+import { ProjectPath } from '../../core/paths/paths';
+import { SourceOffset, TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceEditorHost } from '../../hosts/source-editor/source-editor';
+import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
+import { PROJECT_PATH_TYPE } from '../../hosts/window/window';
 import { type DocumentDrops, sourceEditorDrops, visualEditorDrops } from './document-drops';
 
 /**

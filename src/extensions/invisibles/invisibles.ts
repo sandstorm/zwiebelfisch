@@ -1,7 +1,7 @@
 import { highlightWhitespace } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Memento, Extension } from '../../hosts/workbench/workbench';
+import type { Memento, Extension } from '../../hosts/extension-host/extension-host';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import css from './invisibles.css?inline';
 import { invisibleMarks } from './visual-editor/invisible-marks';

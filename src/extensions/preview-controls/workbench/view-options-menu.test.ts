@@ -4,7 +4,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { PreviewViewOption } from '../../../hosts/preview/preview';
 import type { MenuItem } from '../../../hosts/commands/commands';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 import { registerViewOptionsMenu } from './view-options-menu';
 
 function setup(saved: Record<string, unknown> = {}) {

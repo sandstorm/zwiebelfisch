@@ -1,6 +1,6 @@
 // The events of an extension context as they fire, with their values pretty-printed. See devtools in ../devtools.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { formatValue, type FormattedValue } from '../model/describe';
 
 /** Every event added since the last `clear`, oldest first; while `paused`, none are added. */

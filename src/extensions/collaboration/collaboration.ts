@@ -1,7 +1,7 @@
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 import { ProgressLocation } from '../../hosts/window/window';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './collaboration.css?inline';
 import { Account, SignInRequired } from './account';
 import { CollaborationLink } from './collaboration-link';

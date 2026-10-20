@@ -6,7 +6,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { TypstDiagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContext, PreviewToolbarItem } from '../../hosts/preview/preview';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { pdfExport } from './pdf-export';
 import { SourceOffset } from '../../core/typst-document/typst-document';
 

@@ -3,7 +3,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDiagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
 

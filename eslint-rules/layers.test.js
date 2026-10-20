@@ -23,9 +23,9 @@ describe('layers', () => {
   });
 
   it('keeps hosts free of extensions, editor/ and testing/', async () => {
-    expect(await broken('src/hosts/workbench/workbench.ts', "import { files } from '../../extensions/files/files';")).toEqual(['local/dependencies']);
-    expect(await broken('src/hosts/workbench/workbench.test.ts', "import { schema } from '../../testing/testing';")).toEqual(['local/dependencies']);
-    expect(await broken('src/hosts/workbench/workbench.ts', "import { Preview } from '../preview/preview';")).toEqual([]);
+    expect(await broken('src/hosts/extension-host/extension-host.ts', "import { files } from '../../extensions/files/files';")).toEqual(['local/dependencies']);
+    expect(await broken('src/hosts/extension-host/extension-host.test.ts', "import { schema } from '../../testing/testing';")).toEqual(['local/dependencies']);
+    expect(await broken('src/hosts/extension-host/extension-host.ts', "import { Preview } from '../preview/preview';")).toEqual([]);
   });
 
   it("enters a host's concept folder only through the host's entry (the window's menus: window.showContextMenu)", async () => {
@@ -56,7 +56,7 @@ describe('layers', () => {
     expect(await broken(file, 'export const body = document.body;')).toEqual(['no-restricted-globals']);
     expect(await broken(file, 'export let element: HTMLElement | undefined;')).toEqual(['@typescript-eslint/no-restricted-types']);
     expect(await broken(file, "import { references } from '../visual-editor/visual-editor';")).toEqual(['local/dependencies']);
-    expect(await broken(file, "import type { Workbench } from '../../../hosts/workbench/workbench';")).toEqual(['local/dependencies']);
+    expect(await broken(file, "import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';")).toEqual(['local/dependencies']);
     expect(await broken(file, "import { ProjectPath } from '../../../core/paths/paths';")).toEqual([]);
     expect(await broken(file, "import { scan } from './scan';")).toEqual([]);
     expect(await broken(file, "import * as Y from 'yjs';")).toEqual([]);

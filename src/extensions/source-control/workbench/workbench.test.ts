@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts (commit, status bar entries, file decorations) and the extension's wiring (../source-control.ts)
-// over a fake workbench.
+// Tests for widget.ts (commit, status bar entries, file decorations) and the extension's wiring (../source-control.ts)
+// over a fake widget.
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { MenuItem } from '../../../hosts/commands/commands';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceControl, SourceControlResourceState, SourceControlStatusBarItem } from '../../../hosts/scm/scm';
 import type { FileDecorationProvider } from '../../../hosts/window/window';

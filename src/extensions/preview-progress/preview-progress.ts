@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { LoadState } from './load-state';
 import { Loader } from './loader';
 import css from './preview-progress.css?inline';

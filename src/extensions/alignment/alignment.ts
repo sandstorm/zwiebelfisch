@@ -1,5 +1,5 @@
 import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual-editor/visual-editor';
 
 /**

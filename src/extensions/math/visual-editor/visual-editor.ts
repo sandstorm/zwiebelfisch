@@ -4,7 +4,7 @@ import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import { svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 
 /**
  * The closing `$` of `$…$` typed in the text: the opening `$` not after a backslash or another `$`, something between

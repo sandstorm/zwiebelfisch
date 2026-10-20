@@ -1,5 +1,5 @@
 import type { SidePanel } from '../../hosts/window/window';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
 import { EngineMemoryLog } from './model/engine-memory';

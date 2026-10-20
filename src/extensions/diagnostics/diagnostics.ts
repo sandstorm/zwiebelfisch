@@ -1,6 +1,6 @@
 import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './diagnostics.css?inline';
 import { DiagnosticCollection } from './model/model';
 import { summarizeDiagnostics } from './model/diagnostics-summary';

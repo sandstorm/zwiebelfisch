@@ -1,6 +1,6 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import type { SourceControl } from '../../hosts/scm/scm';
 import css from './source-control.css?inline';
 import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './workbench/workbench';

@@ -4,7 +4,7 @@ import type { FileChange, FileContent, Project } from '../../core/project/projec
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage, uploadFolder } from './model/image-files';
 import { imageSource } from './visual-editor/image-syntax';

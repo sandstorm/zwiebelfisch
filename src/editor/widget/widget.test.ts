@@ -1,19 +1,20 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts (WorkbenchHost): the contribution points as an extension uses them (preview mocked: no worker in jsdom).
+// Tests for widget.ts (Widget): the contribution points as an extension uses them (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { SOURCE_EDITOR } from '../source-editor/source-editor';
-import { VISUAL_EDITOR } from '../visual-editor/visual-editor';
-import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
+import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
+import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
+import { Widget, type WidgetOptions } from './widget';
 
 /** The main files the (mocked) preview compiled. */
 const made = vi.hoisted(() => ({ compiled: [] as string[] }));
 
-vi.mock('../preview/preview', async (importOriginal) => ({
+vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
     constructor(parent: HTMLElement) {
@@ -37,13 +38,13 @@ vi.mock('../preview/preview', async (importOriginal) => ({
 
 const path = ProjectPath.of;
 
-function setup(activate: (context: ExtensionContext) => void = () => {}, options: WorkbenchOptions = {}) {
+function setup(activate: (context: ExtensionContext) => void = () => {}, options: WidgetOptions = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/a.typ': 'A\n', '/logo.png': new Uint8Array([1]) });
-  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR, ...options });
+  const widget = new Widget(host, project, { viewType: SOURCE_EDITOR, ...options });
   let context: ExtensionContext | null = null;
-  workbench.activate([{ id: 'test', activate: (given) => activate((context = given)) }]);
-  return { host, project, workbench, context: context! };
+  widget.activate([{ id: 'test', activate: (given) => activate((context = given)) }]);
+  return { host, project, widget, context: context! };
 }
 
 afterEach(() => {
@@ -51,15 +52,15 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe('WorkbenchHost', () => {
+describe('Widget', () => {
   it('shows the main file once the extensions are active, and tells them about every file shown', () => {
     const shown: string[] = [];
-    const { workbench } = setup(({ window }) => void window.onDidChangeActiveFile((file) => shown.push(file)));
-    workbench.window.showDocument(path('/a.typ'));
-    workbench.window.showDocument(path('/a.typ'));
-    workbench.window.showDocument(path('/missing.typ'));
+    const { widget } = setup(({ window }) => void window.onDidChangeActiveFile((file) => shown.push(file)));
+    widget.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/missing.typ'));
     expect(shown).toEqual(['/main.typ', '/a.typ', '/a.typ']);
-    expect(workbench.window.activeFile).toBe('/a.typ');
+    expect(widget.window.activeFile).toBe('/a.typ');
   });
 
   it("gives extensions the host's veto on changes (workspace.applyEdit)", async () => {
@@ -70,12 +71,12 @@ describe('WorkbenchHost', () => {
   });
 
   it('keeps a renamed shown file shown, and falls back to the main file when it is deleted', () => {
-    const { workbench, project } = setup();
-    workbench.window.showDocument(path('/a.typ'));
+    const { widget, project } = setup();
+    widget.window.showDocument(path('/a.typ'));
     project.apply({ kind: 'rename', from: path('/a.typ'), path: path('/b.typ') });
-    expect(workbench.window.activeFile).toBe('/b.typ');
+    expect(widget.window.activeFile).toBe('/b.typ');
     project.apply({ kind: 'delete', path: path('/b.typ') });
-    expect(workbench.window.activeFile).toBe('/main.typ');
+    expect(widget.window.activeFile).toBe('/main.typ');
   });
 
   it('compiles the new main file once it is set', () => {
@@ -86,7 +87,7 @@ describe('WorkbenchHost', () => {
   });
 
   it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {
-    const { host, workbench } = setup(({ window, subscriptions }) => {
+    const { host, widget } = setup(({ window, subscriptions }) => {
       const doc = window.ownerDocument;
       const panel = window.registerSidePanel('outline', { label: 'Outline', icon: '<svg></svg>' });
       panel.body.textContent = 'outline';
@@ -97,7 +98,7 @@ describe('WorkbenchHost', () => {
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.zwf-editor__status-bar')!.textContent).toBe('status');
-    workbench.dispose();
+    widget.dispose();
     expect(host.children).toHaveLength(0);
   });
 
@@ -114,21 +115,21 @@ describe('WorkbenchHost', () => {
   });
 
   it('shows the right side panel the setting workbench.rightSidePanel names, none for null', () => {
-    const { host, workbench } = setup(({ window }) => {
+    const { host, widget } = setup(({ window }) => {
       window.registerSidePanel('devtools', { label: 'Devtools', icon: '<svg></svg>', side: 'right' });
     }, { settings: { 'workbench.rightSidePanel': 'devtools' } });
     const shown = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--right .zwf-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
     expect(shown()).toEqual(['devtools']);
-    workbench.updateSettings({ 'workbench.rightSidePanel': null });
+    widget.updateSettings({ 'workbench.rightSidePanel': null });
     expect(shown()).toEqual([]);
-    workbench.updateSettings({ 'workbench.rightSidePanel': undefined });
+    widget.updateSettings({ 'workbench.rightSidePanel': undefined });
     expect(shown()).toEqual(['preview']);
   });
 
   it("shows the editor/title menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
     const ran: string[] = [];
     const later = { registration: new Disposable(() => {}) };
-    const { host, workbench } = setup(({ commands, window, subscriptions }) => {
+    const { host, widget } = setup(({ commands, window, subscriptions }) => {
       const register = (id: string) => commands.registerCommand(id, () => ran.push(id));
       subscriptions.push(
         register('test.always'),
@@ -144,7 +145,7 @@ describe('WorkbenchHost', () => {
     expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Later']); // the Source tab, /main.typ
     expect(actions()[0].querySelector('svg')).not.toBeNull();
     [...host.querySelectorAll<HTMLElement>('[role=tab]')].find((tab) => tab.textContent === 'Visual')!.click();
-    workbench.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/a.typ'));
     expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Later', 'Visual only', 'In a.typ']);
     later.registration.dispose();
     expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Visual only', 'In a.typ']);
@@ -159,7 +160,7 @@ describe('WorkbenchHost', () => {
     const ran: string[] = [];
     let wrapped = false;
     const view = { registration: new Disposable(() => {}) };
-    const { host, workbench } = setup(({ commands, window, subscriptions }) => {
+    const { host, widget } = setup(({ commands, window, subscriptions }) => {
       subscriptions.push(
         commands.registerCommand('test.wrap', () => ran.push('wrap')),
         window.registerMenuItem('editor/title', { command: 'test.wrap', title: 'Wrap', when: (context) => context.resource === '/a.typ' }),
@@ -174,10 +175,10 @@ describe('WorkbenchHost', () => {
     const viewButton = () => actions().find((button) => button.textContent === 'View');
     expect(actions().map((button) => button.textContent)).toEqual(['View']);
     // a file with one editor: no tabs, the bar stays for "View"
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(bar.hidden).toBe(false);
     expect(bar.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
-    workbench.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/a.typ'));
     expect(actions().map((button) => button.textContent)).toEqual(['Wrap', 'View']);
     expect(viewButton()!.getAttribute('aria-haspopup')).toBe('menu');
 
@@ -195,12 +196,12 @@ describe('WorkbenchHost', () => {
 
     view.registration.dispose();
     expect(viewButton()).toBeUndefined();
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(bar.hidden).toBe(true);
   });
 
   it('names the shown editor in the editor/title context (`activeCustomEditorId`) for any file, not only Typst files', () => {
-    const { host, workbench } = setup(({ commands, window, subscriptions }) => {
+    const { host, widget } = setup(({ commands, window, subscriptions }) => {
       for (const [viewType, displayName] of [['test.image', 'Image'], ['test.pixels', 'Pixels']]) {
         subscriptions.push(window.registerCustomEditorProvider(viewType, { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName }));
       }
@@ -210,27 +211,27 @@ describe('WorkbenchHost', () => {
       );
     });
     const actions = () => [...host.querySelectorAll('[role=toolbar][aria-label="Editor actions"] button')].map((button) => button.textContent);
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(actions()).toEqual([]);
-    workbench.window.showDocument(path('/logo.png'), { viewType: 'test.pixels' });
+    widget.window.showDocument(path('/logo.png'), { viewType: 'test.pixels' });
     expect(actions()).toEqual(['Zoom']);
   });
 
   it('gives extensions the menus registered for any id, sorted (navigation first, then groups by name, then order)', () => {
-    const { workbench } = setup(({ window, subscriptions }) => {
+    const { widget } = setup(({ window, subscriptions }) => {
       for (const [title, group, order] of [['c', 'b', 0], ['b', 'a', 2], ['a', 'a', 1], ['n', 'navigation', 9]] as const) {
         subscriptions.push(window.registerMenuItem('test/menu', { command: `test.${title}`, title, group, order, when: (context) => context.show !== false }));
       }
     });
-    expect(workbench.window.getMenuItems('test/menu').map((item) => item.title)).toEqual(['n', 'a', 'b', 'c']);
-    expect(workbench.window.getMenuItems('test/menu', { show: false })).toEqual([]);
-    expect(workbench.window.getMenuItems('other/menu')).toEqual([]);
+    expect(widget.window.getMenuItems('test/menu').map((item) => item.title)).toEqual(['n', 'a', 'b', 'c']);
+    expect(widget.window.getMenuItems('test/menu', { show: false })).toEqual([]);
+    expect(widget.window.getMenuItems('other/menu')).toEqual([]);
   });
 
   it("gives menu items their command's declared title and icon unless they have their own", () => {
     const host = document.body.appendChild(document.createElement('div'));
-    const workbench = new WorkbenchHost(host, new Project(path('/main.typ'), { '/main.typ': '' }), { viewType: SOURCE_EDITOR });
-    workbench.activate([
+    const widget = new Widget(host, new Project(path('/main.typ'), { '/main.typ': '' }), { viewType: SOURCE_EDITOR });
+    widget.activate([
       {
         id: 'test',
         contributes: { commands: [{ command: 'test.declared', title: 'Declared…', icon: '<svg/>' }] },
@@ -242,7 +243,7 @@ describe('WorkbenchHost', () => {
         },
       },
     ]);
-    expect(workbench.window.getMenuItems('test/menu').map(({ title, icon }) => [title, icon])).toEqual([
+    expect(widget.window.getMenuItems('test/menu').map(({ title, icon }) => [title, icon])).toEqual([
       ['Declared…', '<svg/>'],
       ['Own', '<svg/>'],
       ['test.plain', undefined],
@@ -294,7 +295,7 @@ describe('WorkbenchHost', () => {
   it('puts the editor frame into a Typst editor’s content, around any other editor’s panel, and takes it away', () => {
     let frame!: { top: HTMLElement; bottom: HTMLElement };
     let registered!: Disposable;
-    const { host, workbench } = setup(({ window }) => {
+    const { host, widget } = setup(({ window }) => {
       frame = { top: window.ownerDocument.createElement('nav'), bottom: window.ownerDocument.createElement('nav') };
       registered = window.registerEditorFrame(frame);
       window.registerCustomEditorProvider('test.image', { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
@@ -302,39 +303,39 @@ describe('WorkbenchHost', () => {
     const source = host.querySelector('.zwf-editor__custom-editor[data-view-type="sourceEditor"]')!;
     expect(frame.top.parentElement).toBe(source);
     expect(source.lastElementChild).toBe(frame.bottom);
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     const image = host.querySelector('.zwf-editor__custom-editor[data-view-type="test.image"]')!;
     expect([frame.top.nextElementSibling, frame.bottom.previousElementSibling]).toEqual([image, image]);
-    workbench.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/a.typ'));
     expect(frame.top.closest('[data-view-type="sourceEditor"]:not([hidden])')).not.toBeNull();
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     registered.dispose();
     expect([frame.top.isConnected, frame.bottom.isConnected]).toEqual([false, false]);
   });
 
   it('opens a file at a range, in the Source editor when asked, which then stays the choice for Typst files', () => {
-    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_EDITOR });
-    workbench.window.showDocument(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceEditor' });
+    const { host, widget, context } = setup(undefined, { viewType: VISUAL_EDITOR });
+    widget.window.showDocument(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceEditor' });
     const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
     expect(editor.viewType).toBe(SOURCE_EDITOR);
     expect(editor.selection).toEqual({ from: 0, to: 1 });
     expect(host.querySelector('[role=tab][aria-selected=true]')!.textContent).toBe('Source');
-    workbench.window.showDocument(path('/main.typ'));
+    widget.window.showDocument(path('/main.typ'));
     expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
   });
 
   it('shows Typst files in the Visual and the Source editor, custom editors with tabs, kept while hidden', () => {
-    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_EDITOR });
+    const { host, widget, context } = setup(undefined, { viewType: VISUAL_EDITOR });
     const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
     expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
     const visual = host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')!;
     tabs()[1].click();
     expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
     expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(false);
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(true);
-    workbench.window.showDocument(path('/main.typ'), { viewType: 'visualEditor' });
+    widget.window.showDocument(path('/main.typ'), { viewType: 'visualEditor' });
     expect(host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')).toBe(visual);
     expect(host.querySelectorAll('.zwf-editor__custom-editor[data-view-type$="Editor"]')).toHaveLength(2);
   });
@@ -347,42 +348,42 @@ describe('WorkbenchHost', () => {
   });
 
   it('has no active editor while another kind of file is shown', () => {
-    const { workbench, context } = setup();
+    const { widget, context } = setup();
     expect(context.window.activeTextEditor?.document.text).toBe('= Main\n');
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(context.window.activeTextEditor).toBeNull();
   });
 
   it('applies the Visual editor contributions to the Visual editor of each document', () => {
     const provider = vi.fn((_editor: { document: TypstDocument }) => []);
-    const { workbench } = setup(({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerTiptapExtension(provider)), { viewType: VISUAL_EDITOR });
-    workbench.window.showDocument(path('/a.typ'));
+    const { widget } = setup(({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerTiptapExtension(provider)), { viewType: VISUAL_EDITOR });
+    widget.window.showDocument(path('/a.typ'));
     expect(provider.mock.calls.map(([editor]) => editor.document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
   it('applies the Source editor contributions to every Source editor, and gives the extensions the preview', () => {
     const item = () => ({ elements: [] });
     let preview: ExtensionContext['preview'] | null = null;
-    const { host, workbench } = setup((context) => {
+    const { host, widget } = setup((context) => {
       preview = context.preview;
       context.subscriptions.push(
         context.sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, EditorView.editorAttributes.of({ class: 'contributed' })),
         context.preview.registerToolbarItem(item, { group: 'test' }),
       );
     });
-    workbench.window.showDocument(path('/a.typ'));
+    widget.window.showDocument(path('/a.typ'));
     expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
-    workbench.dispose();
+    widget.dispose();
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
   });
 
   it("gives extensions the settings they declare, with the host's values, and tells them about changes", () => {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '' });
-    const workbench = new WorkbenchHost(host, project, { settings: { 'test.size': 3 } });
+    const widget = new Widget(host, project, { settings: { 'test.size': 3 } });
     const seen: unknown[] = [];
-    workbench.activate([
+    widget.activate([
       {
         id: 'test',
         contributes: { configuration: { properties: { 'test.size': { type: 'number', default: 1, description: 'A size.' } } } },
@@ -393,29 +394,29 @@ describe('WorkbenchHost', () => {
         },
       },
     ]);
-    workbench.updateSettings({ 'test.size': 5 });
-    workbench.updateSettings({ 'test.size': undefined });
+    widget.updateSettings({ 'test.size': 5 });
+    widget.updateSettings({ 'test.size': undefined });
     expect(seen).toEqual([3, 5, 1]);
-    expect(workbench.settings).toEqual({});
+    expect(widget.settings).toEqual({});
   });
 
   it('takes the theme from the setting workbench.theme, also when it changes', () => {
-    const { host, workbench } = setup(undefined, { settings: { 'workbench.theme': 'dark' } });
+    const { host, widget } = setup(undefined, { settings: { 'workbench.theme': 'dark' } });
     expect(host.dataset.theme).toBe('dark');
-    workbench.updateSettings({ 'workbench.theme': 'light' });
+    widget.updateSettings({ 'workbench.theme': 'light' });
     expect(host.dataset.theme).toBe('light');
-    workbench.updateSettings({ 'workbench.theme': undefined });
+    widget.updateSettings({ 'workbench.theme': undefined });
     expect(host.dataset.theme).toBeUndefined();
   });
 
   it('runs commands by id, resolving to their result', async () => {
     const created: unknown[] = [];
-    const { workbench } = setup(({ commands, subscriptions }) =>
+    const { widget } = setup(({ commands, subscriptions }) =>
       subscriptions.push(commands.registerCommand('test.create', async (name: string) => (created.push(name), `made ${name}`))),
     );
-    await expect(workbench.commands.executeCommand('test.create', 'a.typ')).resolves.toBe('made a.typ');
+    await expect(widget.commands.executeCommand('test.create', 'a.typ')).resolves.toBe('made a.typ');
     expect(created).toEqual(['a.typ']);
-    await expect(workbench.commands.executeCommand('test.unknown')).rejects.toThrow(/No command test.unknown/);
+    await expect(widget.commands.executeCommand('test.unknown')).rejects.toThrow(/No command test.unknown/);
   });
 
   it('gives extensions who works here', () => {
@@ -425,15 +426,15 @@ describe('WorkbenchHost', () => {
   });
 
   it('tells whether the user works in the editing area', () => {
-    const { host, workbench } = setup();
-    expect(workbench.window.isEditorFocused()).toBe(false);
+    const { host, widget } = setup();
+    expect(widget.window.isEditorFocused()).toBe(false);
     host.querySelector<HTMLElement>('.zwf-editor__editor-area .cm-content')!.focus();
-    expect(workbench.window.isEditorFocused()).toBe(true);
+    expect(widget.window.isEditorFocused()).toBe(true);
   });
 
   it("gives the CodeMirror extensions to the Source editors and raw boxes' code, as Typst in their file", () => {
     const seen: string[] = [];
-    const { host, workbench } = setup(({ sourceEditor, subscriptions }) =>
+    const { host, widget } = setup(({ sourceEditor, subscriptions }) =>
       subscriptions.push(
         sourceEditor.registerCodeMirrorExtension({}, ({ editor, languageId, path }) => (seen.push(`${editor} ${languageId} ${path()}`), EditorView.editorAttributes.of({ class: 'every' }))),
         sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, EditorView.editorAttributes.of({ class: 'box' })),
@@ -441,54 +442,54 @@ describe('WorkbenchHost', () => {
     );
     const source = host.querySelector('[data-testid=zwf-source]')!;
     expect([source.classList.contains('every'), source.classList.contains('box')]).toEqual([true, false]);
-    workbench.window.showDocument(path('/main.typ'), { viewType: 'visualEditor' });
+    widget.window.showDocument(path('/main.typ'), { viewType: 'visualEditor' });
     const box = host.querySelector('.zwf-visual__raw-block .cm-editor')!;
     expect([box.classList.contains('every'), box.classList.contains('box')]).toEqual([true, true]);
     expect(new Set(seen)).toEqual(new Set(['source typst /main.typ', 'rawBox typst /main.typ']));
   });
 });
 
-describe('WorkbenchHost: declared keys and rail menus', () => {
+describe('Widget: declared keys and rail menus', () => {
   function setupKeys() {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
-    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR });
+    const widget = new Widget(host, project, { viewType: SOURCE_EDITOR });
     const ran: string[] = [];
-    workbench.activate([
+    widget.activate([
       {
         id: 'test',
         contributes: { keybindings: [{ command: 'test.count', key: 'Mod+Shift+KeyC' }] },
         activate: ({ commands, subscriptions }) => subscriptions.push(commands.registerCommand('test.count', () => ran.push('count'))),
       },
     ]);
-    return { host, workbench, ran };
+    return { host, widget, ran };
   }
 
   it('binds the declared keys and names them in the View menu, the tab bar and on the rail (workbench.view.<id>)', async () => {
-    const { host, workbench, ran } = setupKeys();
+    const { host, widget, ran } = setupKeys();
     host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', ctrlKey: true, shiftKey: true, bubbles: true }));
     expect(ran).toEqual(['count']);
-    workbench.window.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
-    workbench.window.registerMenuItem('editor/title', { command: 'test.count', title: 'Count' });
+    widget.window.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
+    widget.window.registerMenuItem('editor/title', { command: 'test.count', title: 'Count' });
     const button = host.querySelector<HTMLElement>('.zwf-editor__tab-action[data-command="test.count"]')!;
     expect(button.title).toBe('Count (Ctrl+Shift+C)');
     host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.click();
     expect(host.querySelector('.zwf-context-menu__item')!.textContent).toBe('Count words Ctrl+Shift+C');
-    const panel = workbench.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' });
-    workbench.commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'workbench.view.files' }]);
+    const panel = widget.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' });
+    widget.commands.declareKeybindings([{ key: 'Alt+Digit1', command: 'workbench.view.files' }]);
     const rail = host.querySelector<HTMLElement>('[data-testid=zwf-panel-toggle-files]')!;
     rail.dispatchEvent(new Event('pointerenter'));
     expect(rail.title).toBe('Files (Alt+1)');
-    await workbench.commands.executeCommand('workbench.view.files');
+    await widget.commands.executeCommand('workbench.view.files');
     expect(panel.visible).toBe(true);
   });
 
 
   it("shows the items of workbench/rail/left among the left rail's panels by order, naming the key, running the command", () => {
-    const { host, workbench, ran } = setupKeys();
-    workbench.window.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
-    workbench.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
-    const item = workbench.window.registerMenuItem('workbench/rail/left', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
+    const { host, widget, ran } = setupKeys();
+    widget.window.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
+    widget.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
+    const item = widget.window.registerMenuItem('workbench/rail/left', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
     const buttons = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail-button')].map((button) => button.dataset.testid ?? button.title);
     expect(buttons()).toEqual(['zwf-panel-toggle-files', 'Count words (Ctrl+Shift+C)', 'zwf-panel-toggle-help']);
     host.querySelector<HTMLElement>('.zwf-editor__rail [data-command="test.count"]')!.click();

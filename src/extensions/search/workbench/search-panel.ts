@@ -3,7 +3,7 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
 import { keyLabel } from '../../../hosts/commands/commands';
 import type { WindowApi, SidePanel } from '../../../hosts/window/window';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 import type { MatchPreview } from '../model/match-preview';
 import type { FileMatches, SearchResults, SearchScope } from '../model/search-results';
 import type { MatchHighlights } from './match-highlights';

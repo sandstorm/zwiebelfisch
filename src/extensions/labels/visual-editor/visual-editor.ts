@@ -6,7 +6,7 @@ import { guardAfterReference, referenceSyntax } from '../model/reference-syntax'
 import type { ProjectLabels } from '../model/label-index';
 import { svg, type CompletionItem, type CompletionItemProvider, type TypstNodeSpec, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { MenuItem } from '../../../hosts/commands/commands';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { describeLabel } from '../model/label-description';
 import { insertReference } from './label-edits';
 import { captionLabels } from './caption-labels';

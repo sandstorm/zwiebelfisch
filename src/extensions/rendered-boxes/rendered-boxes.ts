@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './rendered-boxes.css?inline';
 import { snippetRenderer } from './visual-editor/visual-editor';
 

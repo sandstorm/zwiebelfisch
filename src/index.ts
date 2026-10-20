@@ -13,7 +13,7 @@ export type { User } from './core/user/user';
 export { type ElementLocation, HTML_ELEMENT_ATTRIBUTE, type HtmlFile, PageIndex, type PdfEntry, Pt } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
-export type { ExtensionContext, ExtensionContributions, Memento, Extension } from './hosts/workbench/workbench';
+export type { ExtensionContext, ExtensionContributions, Memento, Extension } from './hosts/extension-host/extension-host';
 export type { Command, Commands, MenuContext, MenuItem } from './hosts/commands/commands';
 export type {
   CustomDocument,

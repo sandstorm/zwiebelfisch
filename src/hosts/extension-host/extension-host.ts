@@ -1,19 +1,18 @@
-import type { FileChange, Project } from '../../core/project/project';
-import type { User } from '../../core/user/user';
-import type { CommandContribution, Commands, KeybindingContribution } from '../commands/commands';
-import type { LanguageContribution, Languages } from '../languages/languages';
+import type { Project } from '../../core/project/project';
+import type { CommandContribution, Commands, CommandsHost, KeybindingContribution } from '../commands/commands';
+import type { LanguageContribution, Languages, LanguagesHost } from '../languages/languages';
 import type { PreviewContributions } from '../preview/preview';
 import type { Scm } from '../scm/scm';
 import type { SourceEditorContributions } from '../source-editor/source-editor';
 import type { VisualEditorContributions } from '../visual-editor/visual-editor';
-import type { WindowApi } from '../window/window';
-import type { ConfigurationProperty, Settings, Workspace } from '../workspace/workspace';
+import type { WindowApi, WindowHost } from '../window/window';
+import type { ConfigurationProperty, Workspace, WorkspaceHost } from '../workspace/workspace';
 
 /**
  * A feature of the widget (VS Code's extension), given to `createEditor({ extensions })`, built-in or a host page's own.
  *
- * Each is activated once, in list order, after every extension's `contributes` is known and before any editor exists.
- * What it pushes into `context.subscriptions` is disposed with the widget.
+ * The extension host (`ExtensionHost`) runs it: activated once, in list order, after every extension's `contributes`
+ * is known and before any editor exists. What it pushes into `context.subscriptions` is disposed with the widget.
  */
 export interface Extension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */
@@ -102,27 +101,21 @@ export interface Memento {
   update(key: string, value: unknown): Promise<void>;
 }
 
-export interface WorkbenchOptions {
-  /**
-   * The custom editor the main file opens in (its view type), the user's choice until they pick another tab; default:
-   * the one its name picks (for Typst files the Visual editor).
-   */
-  viewType?: string;
-  /** Who works here (`window.user`). */
-  user?: User;
-  /**
-   * The settings' values by full id (the window's own `workbench.theme`, and the extensions'), changeable later
-   * (`settings`).
-   */
-  settings?: Settings;
-  /** The host's veto on a change someone asked for (`workspace.applyEdit`); default: all may happen. */
-  allowFileChange?(change: FileChange): boolean | Promise<boolean>;
-  /**
-   * The widget's color tokens and frame (CSS), put where it renders before the frame is built (the color scheme reads
-   * the resolved colors), as `<style id="zwf-editor-styles">` together with the window's layout CSS. The other
-   * hosts' stylesheets follow it, then the extensions'.
-   */
-  styleSheet?: string;
+/** The hosts an extension host gives its extensions, and which take their declarations (`contributes`). */
+export interface ExtensionHostOptions {
+  readonly project: Project;
+  /** Takes the commands and keys extensions declare. */
+  readonly commands: CommandsHost;
+  /** Takes the commands extensions declare (for menus); its document's storages keep the extensions' mementos. */
+  readonly window: WindowHost;
+  readonly scm: Scm;
+  /** Takes the languages extensions declare. */
+  readonly languages: LanguagesHost;
+  /** Takes the settings extensions declare, and checks the host's values against them. */
+  readonly workspace: WorkspaceHost;
+  readonly visualEditor: VisualEditorContributions;
+  readonly sourceEditor: SourceEditorContributions;
+  readonly preview: PreviewContributions;
 }
 
-export { WorkbenchHost } from './workbench-impl';
+export { ExtensionHost, StorageMemento } from './extension-host-impl';

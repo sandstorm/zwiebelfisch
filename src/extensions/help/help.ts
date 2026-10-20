@@ -1,4 +1,4 @@
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './help.css?inline';
 import { snippetDrops, TYPST_SNIPPET_TYPE } from './visual-editor/snippet-drops';
 import { HelpPanel } from './workbench/help-panel';

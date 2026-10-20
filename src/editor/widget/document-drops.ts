@@ -1,14 +1,71 @@
-// Files dropped into the Typst editors. See #extendEditors in ../workbench-impl.ts.
+// Files dropped into the Typst editors. See Widget in widget.ts.
 import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { EditorSelection, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { ProjectPath } from '../../../core/paths/paths';
-import { SourceOffset, type TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentDropEdit } from '../../languages/languages';
-import { insertTypst } from '../../visual-editor/visual-editor';
-import { posToSource } from '../../visual-editor/typst-conversion/typst-conversion';
-import { PROJECT_PATH_TYPE } from '../../window/window';
+import { ProjectPath } from '../../core/paths/paths';
+import type { Project } from '../../core/project/project';
+import { SourceOffset, type TypstDocument } from '../../core/typst-document/typst-document';
+import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
+import type { DocumentDropEdit, LanguagesHost } from '../../hosts/languages/languages';
+import type { SourceEditorHost } from '../../hosts/source-editor/source-editor';
+import { insertTypst, type VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
+import { posToSource } from '../../hosts/visual-editor/typst-conversion/typst-conversion';
+import { PROJECT_PATH_TYPE, type WindowHost } from '../../hosts/window/window';
+import type { WorkspaceHost } from '../../hosts/workspace/workspace';
+
+/** The hosts the drops go through. */
+export interface DropHosts {
+  readonly project: Project;
+  /** Makes text of a dropped project file (the drop edit providers) and names the upload folder. */
+  readonly languages: LanguagesHost;
+  /** Adds uploaded files to the project (`applyEdit`). */
+  readonly workspace: WorkspaceHost;
+  /** Shows a refused upload's error. */
+  readonly window: WindowHost;
+  readonly visualEditor: VisualEditorHost;
+  readonly sourceEditor: SourceEditorHost;
+}
+
+/**
+ * A project file (a row of the file panel) dropped into a Visual or Source editor of a Typst file becomes what the drop
+ * edit providers (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped; so does a
+ * file from the computer, once uploaded (`upload`): the providers know only project files.
+ */
+export function registerDocumentDrops(hosts: DropHosts): void {
+  const { project, languages } = hosts;
+  const drops: DocumentDrops = {
+    edit: (document, offset, file) => {
+      const path = project.pathOf(document);
+      return path ? languages.provideDocumentDropEdit({ path, languageId: 'typst', text: document.text }, offset, file) : null;
+    },
+    upload: (document, files) => upload(hosts, document, files),
+  };
+  hosts.visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
+  hosts.sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, (editor) => (editor.editor === 'source' ? sourceEditorDrops(editor.document, drops) : []));
+}
+
+/**
+ * Adds `files` from the computer, dropped into `document`, to the project (`workspace.applyEdit`), each in the folder
+ * the drop edit providers name (`languages.provideUploadFolder`; default: the top) under its name, or under the
+ * first free one of `name-2.ext`, … unless a file of that name has the same content (`uploadTarget`); a refusal is
+ * an error message. Resolves to the files' paths in the project, without the refused ones.
+ */
+async function upload({ project, languages, workspace, window }: DropHosts, document: TypstDocument, files: File[]): Promise<ProjectPath[]> {
+  const paths: ProjectPath[] = [];
+  const file = project.pathOf(document);
+  const text = { path: file!, languageId: 'typst', text: document.text };
+  for (const change of await uploadChanges(files)) {
+    if (change.kind !== 'create') continue;
+    const folder = file ? languages.provideUploadFolder(text, change.path) : '/';
+    const named = ProjectPath.of(folder + ProjectPath.name(change.path));
+    const path = uploadTarget(named, change.content, (candidate) => project.content(candidate));
+    const problem = project.has(path) ? null : await workspace.applyEdit({ ...change, path });
+    if (problem) void window.showErrorMessage(problem);
+    else paths.push(path);
+  }
+  return paths;
+}
 
 /** What the Typst editors do with dropped files: what a project file becomes, and how files from the computer get into the project. */
 export interface DocumentDrops {

@@ -3,7 +3,7 @@ import type { FileChange } from '../../../core/project/project';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { Disposable } from '../../../core/disposable/disposable';
 import { insertTypst, svg, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { calculateSheetFigure } from '../model/sheet-figure';
 import { typstPath } from '../model/typst-file';
 import type { NewWorkbook } from '../workbench/workbook';

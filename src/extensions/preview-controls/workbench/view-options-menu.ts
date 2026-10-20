@@ -3,7 +3,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import type { Commands } from '../../../hosts/commands/commands';
 import type { PreviewContributions, PreviewViewOption } from '../../../hosts/preview/preview';
 import type { WindowApi } from '../../../hosts/window/window';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 
 /**
  * An entry per registered view option (page guides, box outlines, comments) in the View menu (menu `view`, group

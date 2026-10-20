@@ -8,7 +8,7 @@ import type { TypstDocument } from '../../../core/typst-document/typst-document'
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Submenu, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { WindowApi } from '../../../hosts/window/window';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';

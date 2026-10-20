@@ -3,7 +3,7 @@ import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PageRect } from '../../core/typst-engine/typst-engine';
 import type { PageOverlay, PreviewContributions } from '../../hosts/preview/preview';
-import type { Memento, Extension } from '../../hosts/workbench/workbench';
+import type { Memento, Extension } from '../../hosts/extension-host/extension-host';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';

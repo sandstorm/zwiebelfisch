@@ -2,7 +2,7 @@ import type { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import type { Commands } from '../../hosts/commands/commands';
 import type { SearchProvider, SidePanel } from '../../hosts/window/window';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import { Replacement } from './model/replace';
 import { SearchResults } from './model/search-results';
 import css from './search.css?inline';

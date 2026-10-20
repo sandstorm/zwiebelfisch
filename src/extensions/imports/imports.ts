@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports } from './model/pasted-imports';
 
 /**

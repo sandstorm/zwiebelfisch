@@ -1,6 +1,6 @@
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TextDocument } from '../../hosts/languages/languages';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './clipboard.css?inline';
 import { PasteAs, PasteEdits } from './paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from './pasted-typst';

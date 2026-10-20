@@ -5,7 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { SourceEditorHost } from '../../hosts/source-editor/source-editor';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { codeEditing } from './code-editing';
 
 function setup(text: string) {

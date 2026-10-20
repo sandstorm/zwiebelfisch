@@ -43,13 +43,14 @@ import { math } from '../extensions/math/math';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
-import { type Extension, WorkbenchHost } from '../hosts/workbench/workbench';
+import type { Extension } from '../hosts/extension-host/extension-host';
 import type { Settings } from '../hosts/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import { type Event, EventEmitter } from '../core/event-emitter/event-emitter';
 import widgetStyles from './editor.css?inline';
+import { Widget } from './widget/widget';
 
 /**
  * Mounts the editor widget into `host`: the editors and the live preview of a project of Typst files.
@@ -66,17 +67,17 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
   const main = ProjectPath.of(options.mainFile?.path ?? '/main.typ');
   const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
   const project = new Project(main, files, { mainLocked: options.mainFile?.locked });
-  const workbench = new WorkbenchHost(host, project, {
+  const widget = new Widget(host, project, {
     viewType: options.viewType,
     user: options.user,
     settings: options.settings,
     allowFileChange: options.allowFileChange,
-    // the tokens and the frame; the window adds its own, the workbench the hosts', each extension its own (registerStyleSheet)
+    // the tokens and the frame; the window adds its own, the widget the hosts', each extension its own (registerStyleSheet)
     styleSheet: widgetStyles,
   });
   const builtins = builtinExtensions();
-  workbench.activate(devtools(options.extensions?.(builtins) ?? builtins));
-  const events = hostEvents(project, workbench);
+  widget.activate(devtools(options.extensions?.(builtins) ?? builtins));
+  const events = hostEvents(project, widget);
   return {
     get files() {
       return project.files();
@@ -84,7 +85,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     set files(next: ProjectFiles) {
       project.replace(next); // listeners hear about every file
       // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
-      workbench.window.showDocument(workbench.window.activeFile);
+      widget.window.showDocument(widget.window.activeFile);
     },
     get source() {
       return project.document(project.main)!.text;
@@ -93,42 +94,42 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
       project.apply({ kind: 'update', path: project.main, content: text });
     },
     get settings() {
-      return workbench.settings;
+      return widget.settings;
     },
-    updateSettings: (settings) => workbench.updateSettings(settings),
+    updateSettings: (settings) => widget.updateSettings(settings),
     get activeFile() {
-      return workbench.window.activeFile;
+      return widget.window.activeFile;
     },
     open: (path) => {
       const parsed = ProjectPath.parse(path);
-      if (parsed) workbench.window.showDocument(parsed);
+      if (parsed) widget.window.showDocument(parsed);
     },
     onDidChangeFiles: events.onDidChangeFiles,
     onDidChangeMainFile: events.onDidChangeMainFile,
     onDidChangeActiveFile: events.onDidChangeActiveFile,
-    executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
+    executeCommand: (id, ...args) => widget.commands.executeCommand(id, ...args),
     dispose: () => {
       events.dispose();
-      workbench.dispose();
+      widget.dispose();
       project.dispose();
     },
   };
 }
 
 /**
- * The handle's events, from the project's and the window's. Subscribed after the workbench's and the extensions'
+ * The handle's events, from the project's and the window's. Subscribed after the widget's and the extensions'
  * listeners, so the host hears about a change once the widget shows it. Nothing is reported for the files the host
  * gave, so a listener added once createEditor returned misses nothing. `dispose` drops every listener.
  */
-function hostEvents(project: Project, workbench: WorkbenchHost): Pick<Editor, 'onDidChangeFiles' | 'onDidChangeMainFile' | 'onDidChangeActiveFile' | 'dispose'> {
+function hostEvents(project: Project, widget: Widget): Pick<Editor, 'onDidChangeFiles' | 'onDidChangeMainFile' | 'onDidChangeActiveFile' | 'dispose'> {
   const filesChanged = new EventEmitter<FileChange>();
   const mainFileChanged = new EventEmitter<ProjectPath>();
   const activeFileChanged = new EventEmitter<ProjectPath>();
-  let shown = workbench.window.activeFile;
+  let shown = widget.window.activeFile;
   const subscriptions = [
     project.onDidChangeFile((change) => filesChanged.fire(change)),
     project.onDidChangeMain((path) => mainFileChanged.fire(path)),
-    workbench.window.onDidChangeActiveFile((path) => {
+    widget.window.onDidChangeActiveFile((path) => {
       if (path === shown) return; // shown again: not another file
       shown = path;
       activeFileChanged.fire(path);
@@ -176,7 +177,7 @@ export interface EditorOptions {
   user?: User;
   /**
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
-   * 'show', 'workbench.theme': 'dark' }` (see docs/30_configuration/01_options.typ for the built-in ones). Unset ones have their
+   * 'show', 'widget.theme': 'dark' }` (see docs/30_configuration/01_options.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
    * `Editor.updateSettings`.
    */

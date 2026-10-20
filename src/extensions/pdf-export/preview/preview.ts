@@ -2,7 +2,7 @@
 // See pdfExport in ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
 import type { WindowApi } from '../../../hosts/window/window';
-import type { Memento } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/extension-host/extension-host';
 
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left

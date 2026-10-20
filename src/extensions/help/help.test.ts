@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for help.ts in a workbench, with sheets of the test's own (preview mocked: no worker in jsdom): the sheet of the
+// Tests for help.ts in the composed hosts (Widget), with sheets of the test's own (preview mocked: no worker in jsdom): the sheet of the
 // shown file's language, switching with the file; inserting a row with Enter into the Source and the Visual editor; the
 // drag data of a row; its context menu.
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -10,7 +10,8 @@ import { SourceRange } from '../../core/typst-document/typst-document';
 import type { HelpSheet } from '../../hosts/languages/languages';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import type { WindowApi } from '../../hosts/window/window';
-import { type Extension, WorkbenchHost } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
+import { Widget } from '../../editor/widget/widget';
 import { help } from './help';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -56,13 +57,13 @@ const sheets: Extension = {
 function setup(viewType?: string) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': 'Hello world\n', '/flow.mmd': 'flowchart LR\n', '/logo.png': new Uint8Array() });
-  const workbench = new WorkbenchHost(host, project, { viewType });
+  const widget = new Widget(host, project, { viewType });
   let window!: WindowApi;
-  workbench.activate([help(), sheets, { id: 'probe', activate: (context) => void (window = context.window) }]);
+  widget.activate([help(), sheets, { id: 'probe', activate: (context) => void (window = context.window) }]);
   const panel = host.querySelector<HTMLElement>('[data-testid=zwf-help]')!;
   const row = (snippet: string) => [...panel.querySelectorAll<HTMLElement>('[role=option]')].find((option) => option.querySelector('code')?.textContent === snippet)!;
   const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }));
-  return { host, project, workbench, window, panel, row, press, text: () => project.document(path('/main.typ'))!.text };
+  return { host, project, widget, window, panel, row, press, text: () => project.document(path('/main.typ'))!.text };
 }
 
 describe('help', () => {
@@ -77,13 +78,13 @@ describe('help', () => {
   });
 
   it('switches the sheet with the shown file; a file without one says so', () => {
-    const { workbench, panel } = setup();
-    workbench.window.showDocument(path('/flow.mmd'));
+    const { widget, panel } = setup();
+    widget.window.showDocument(path('/flow.mmd'));
     expect(panel.querySelector('h2')?.textContent).toBe('Mermaid basics');
-    workbench.window.showDocument(path('/logo.png'));
+    widget.window.showDocument(path('/logo.png'));
     expect(panel.querySelector('h2')).toBeNull();
     expect(panel.textContent).toBe('No help for this file type.');
-    workbench.window.showDocument(path('/main.typ'));
+    widget.window.showDocument(path('/main.typ'));
     expect(panel.querySelector('h2')?.textContent).toBe('Typst basics');
   });
 
@@ -120,7 +121,7 @@ describe('help', () => {
   });
 
   it('a dragged row carries what it inserts: as text, and for a Typst sheet as Typst for the Visual editor', () => {
-    const { workbench, row } = setup();
+    const { widget, row } = setup();
     const drag = (option: HTMLElement) => {
       const data = new Map<string, string>();
       const event = Object.assign(new Event('dragstart', { bubbles: true }), { dataTransfer: { setData: (type: string, value: string) => data.set(type, value), effectAllowed: 'all' } });
@@ -129,16 +130,16 @@ describe('help', () => {
     };
     expect(row('= Heading').draggable).toBe(true);
     expect(drag(row('= Heading'))).toEqual({ 'text/plain': '= Heading\n', 'application/x-typst-snippet': '= Heading\n' });
-    workbench.window.showDocument(path('/flow.mmd'));
+    widget.window.showDocument(path('/flow.mmd'));
     expect(drag(row('A --> B'))).toEqual({ 'text/plain': 'A --> B' });
   });
 
   it('the context menu offers "Insert at cursor" (while a Typst editor is shown) and "Copy"', () => {
-    const { host, workbench, row, press } = setup();
+    const { host, widget, row, press } = setup();
     const menu = () => [...host.querySelectorAll('[role=menuitem]')].map((item) => item.textContent);
     row('*strong*').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 6 }));
     expect(menu()).toEqual(['Insert at cursor', 'Copy']);
-    workbench.window.showDocument(path('/flow.mmd'));
+    widget.window.showDocument(path('/flow.mmd'));
     press(row('A --> B'), 'F10', { shiftKey: true });
     expect(menu()).toEqual(['Copy']);
   });
@@ -146,8 +147,8 @@ describe('help', () => {
   it('Enter with no Typst editor shown copies the row instead, and says so', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    const { host, workbench, row, press } = setup();
-    workbench.window.showDocument(path('/flow.mmd'));
+    const { host, widget, row, press } = setup();
+    widget.window.showDocument(path('/flow.mmd'));
     press(row('A --> B'), 'Enter');
     expect(writeText).toHaveBeenCalledWith('A --> B');
     await vi.waitFor(() => expect(host.querySelector('[data-testid=zwf-notifications]')?.textContent).toContain('Copied'));

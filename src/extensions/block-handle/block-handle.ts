@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './block-handle.css?inline';
 import { BlockHandle } from './visual-editor/grip';
 

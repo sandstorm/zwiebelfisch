@@ -1,6 +1,6 @@
 // "New diagram…"; `createDiagram` is shared with "Insert diagram". See diagrams in ../diagrams.ts.
 import { ProjectPath } from '../../../core/paths/paths';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { emptyDiagram } from '../model/png';
 import { DIAGRAM_EDITOR, DIAGRAM_EXTENSION } from '../model/model';
 

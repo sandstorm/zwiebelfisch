@@ -5,7 +5,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { renderedBoxes } from './rendered-boxes';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 

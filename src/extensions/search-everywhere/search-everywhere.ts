@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { commandSearch } from './workbench/command-search';
 import { SearchPick } from './workbench/search-pick';
 import { settingSearch } from './workbench/setting-search';

@@ -1,4 +1,4 @@
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { markdownLikelihood } from './model/markdown-signals';
 import { markdownToTypst } from './model/markdown-to-typst';
 

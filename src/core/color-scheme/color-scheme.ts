@@ -3,7 +3,7 @@
  * null when it is not a resolved color.
  *
  * CSS does not tell scripts whether light or dark won, so they read an element's resolved text color with this:
- * - the workbench, for its `data-scheme`
+ * - the window, for its `data-scheme`
  * - the Source editor, for CodeMirror's dark theme
  */
 export function isLightText(color: string): boolean | null {

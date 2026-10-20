@@ -1,6 +1,6 @@
 // Tests for event-log.ts.
 import { describe, expect, it } from 'vitest';
-import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { EventLog, subscribeToEvents } from './event-log';
 
 /** An event and its firing, in the shape of the package's EventEmitter. */

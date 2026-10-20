@@ -2,7 +2,7 @@ import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { Extension, ExtensionContext } from '../../hosts/workbench/workbench';
+import type { Extension, ExtensionContext } from '../../hosts/extension-host/extension-host';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 import css from './document-links.css?inline';
 import type { LinkActions } from './followable-link';

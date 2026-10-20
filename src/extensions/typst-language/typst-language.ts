@@ -1,7 +1,7 @@
 import { ProjectPath } from '../../core/paths/paths';
 import { quote } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
-import type { Extension } from '../../hosts/workbench/workbench';
+import type { Extension } from '../../hosts/extension-host/extension-host';
 import { typstSyntax } from './source-editor/typst-syntax';
 import { TYPST_HELP } from './workbench/typst-help';
 

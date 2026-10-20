@@ -38,7 +38,7 @@ export interface Languages {
   registerDocumentDropEditProvider(selector: DocumentSelector, provider: DocumentDropEditProvider, options?: { priority?: number }): Disposable;
   /**
    * The language of the file `path` by its ending, as the extensions declare them (`contributes.languages`; the
-   * workbench's own: `typst` for `.typ`): the longest declared ending the name has, in any case. undefined: none.
+   * widget's own: `typst` for `.typ`): the longest declared ending the name has, in any case. undefined: none.
    */
   getLanguageId(path: ProjectPath): string | undefined;
   /**

@@ -1,5 +1,5 @@
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
-import type { ExtensionContext, Extension } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';

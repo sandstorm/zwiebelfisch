@@ -1,6 +1,6 @@
 // What each extension contributes, recorded as it activates (and later). See devtools in ../devtools.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
-import type { ExtensionContext, Extension } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext, Extension } from '../../../hosts/extension-host/extension-host';
 import { describeContribution, describeSetting, type Description } from './contribution-points';
 import { formatValue } from '../model/describe';
 

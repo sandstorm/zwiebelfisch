@@ -4,7 +4,7 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { ExtensionContext } from '../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { testHosts } from '../../testing/testing';
 import { undoRedo } from './undo-redo';
 

@@ -22,7 +22,7 @@ export function insertImages(editor: Editor, paths: PathReference[]): void {
 /**
  * Takes image files pasted into the editor: calls `onImages` with them.
  * Pastes without image files are left to others. Dropped files are the
- * workbench's (uploaded, then made into text by the drop edit providers,
+ * widget's (uploaded, then made into text by the drop edit providers,
  * see images in ../images.ts).
  */
 export function imageFilePastes(onImages: (files: File[]) => void): Plugin {

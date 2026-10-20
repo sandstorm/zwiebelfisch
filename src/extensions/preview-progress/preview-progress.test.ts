@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-// Tests for preview-progress.ts in a workbench (preview mocked: no worker in jsdom; `preview` tells its load events):
+// Tests for preview-progress.ts in the composed hosts (Widget) (preview mocked: no worker in jsdom; `preview` tells its load events):
 // the loading note over the empty pane, its progress bar, a failure as an error message once, gone with the first pages.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { EngineCrash, LoadEvent } from '../../hosts/preview/preview';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
-import { WorkbenchHost } from '../../hosts/workbench/workbench';
+import { Widget } from '../../editor/widget/widget';
 import { previewProgress } from './preview-progress';
 
 /** The (mocked) preview made last: fire its events, set whether it shows something. */
@@ -64,8 +64,8 @@ const path = ProjectPath.of;
 function setup() {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
-  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR });
-  workbench.activate([previewProgress()]);
+  const widget = new Widget(host, project, { viewType: SOURCE_EDITOR });
+  widget.activate([previewProgress()]);
   const note = host.querySelector<HTMLElement>('[data-testid=zwf-preview-progress]')!;
   const errors = () => [...host.querySelectorAll('[data-testid=zwf-notifications] [role=alert]')].map((error) => error.textContent);
   return { host, note, errors };
