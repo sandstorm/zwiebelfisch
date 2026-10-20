@@ -12,7 +12,7 @@ export function blockGaps(): Extension {
   return {
     id: 'block-gaps',
     activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(() => BlockGaps));
+      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockGaps));
     },
   };
 }

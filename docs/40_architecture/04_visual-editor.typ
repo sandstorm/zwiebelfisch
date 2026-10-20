@@ -60,17 +60,17 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
   columns: 2,
   [Contribution point], [What],
   [`registerNode(spec)`, `registerMark(spec)`], [A construct: `TypstNodeSpec`, `TypstMarkSpec` (below)],
-  [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands],
+  [`registerTiptapExtension(extension | editor => extension)`], [Per-editor plugins, decorations, commands],
   [`registerSubmenu(submenu)`], [A menu button (`{ id, label, icon(context), parent, group?, order? }`) in the row or a floating bar, opening the entries of menu `id` (@architecture-visual-editor-toolbar)],
   [`registerFloatingBar(bar)`], [A bar floating above `anchor(context)` in the text (`{ id, label, order, anchor }`), holding the entries of menu `id`],
   [`registerCompletionItemProvider(provider, trigger)`], [A list after a trigger character (@architecture-visual-editor-completion)],
-  [`registerHighlights(layer, provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
+  [`registerHighlightProvider(provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
   [`registerRawBoxRenderer(provider, options?)`], [What raw boxes show instead of their code],
   [`registerRawBoxExtension(box => extension | null)`], [Takes part in every raw box, deciding by `box.node()` (`dom`, `code`, `picture` or null, `tiptap`, `editor`, `src()`, `getPos()`, `editCode()`); returns `{ update?(node), dispose() }` or null. Called in registration order before the box listens to its picture, so stopping a `mousedown` there keeps the box closed],
 )
 
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
-- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). The toolbar's menus are shown with the `VisualEditorMenuContext`: that, plus Tiptap's `editor`.
+- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). The toolbar's menus are shown with the `VisualEditorMenuContext`: that, plus its Tiptap editor `tiptap` (so is a completion list's `CompletionContext`; `editor` is always the `VisualEditorContext`).
 - *`svg(body)`* makes a toolbar icon (24×24 outline strokes in the text colour).
 - *`chainCommand(chain)`* is a button's command from a Tiptap chain: `run` (the handler) and `enabled` (its dry run). *`registerChainButton({ commands, workbench }, menuId, button)`* registers both: the command and the menu entry.
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
@@ -109,13 +109,13 @@ The built-in constructs (headings, lists, tables, images, figures, …) use the 
 
 == Toolbar <architecture-visual-editor-toolbar>
 
-Buttons are VS Code's menus and commands: a command (`commands.registerCommand`) and an entry of a Visual editor menu (`workbench.registerMenuItem`). The host draws the menus and runs an entry's command with the `VisualEditorMenuContext` (the editor, its Tiptap `editor`) as its one argument.
+Buttons are VS Code's menus and commands: a command (`commands.registerCommand`) and an entry of a Visual editor menu (`workbench.registerMenuItem`). The host draws the menus and runs an entry's command with the `VisualEditorMenuContext` (the editor, its Tiptap editor `tiptap`) as its one argument.
 
 ```ts
-commands.registerCommand('callout.insert', ({ editor }: VisualEditorMenuContext) => editor.chain().focus().wrapIn('callout').run());
+commands.registerCommand('callout.insert', ({ tiptap }: VisualEditorMenuContext) => tiptap.chain().focus().wrapIn('callout').run());
 workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
   command: 'callout.insert', title: 'Callout', icon, order: 80,
-  enabled: ({ editor }) => editor.can().wrapIn('callout'),
+  enabled: ({ tiptap }) => tiptap.can().wrapIn('callout'),
 });
 ```
 
@@ -132,7 +132,7 @@ workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
 ```ts
 visualEditor.registerCompletionItemProvider(
   { provideCompletionItems: () => ['TODO', 'FIXME'].map((tag) => ({
-      label: tag, command: ({ editor, range }) => editor.chain().focus().insertContentAt(range, `${tag}: `).run() })) },
+      label: tag, command: ({ tiptap, range }) => tiptap.chain().focus().insertContentAt(range, `${tag}: `).run() })) },
   { char: '!' },
 );
 ```

@@ -33,8 +33,8 @@ export function registerCommentButtons(workbench: Pick<Workbench, 'registerMenuI
     command,
     title: 'Comment',
     icon: COMMENT_ICON,
-    enabled: ({ editor }) => {
-      const { selection } = editor.state;
+    enabled: ({ tiptap }) => {
+      const { selection } = tiptap.state;
       const { parent } = selection.$from;
       return selection instanceof TextSelection && parent.inlineContent && !parent.type.spec.code;
     },

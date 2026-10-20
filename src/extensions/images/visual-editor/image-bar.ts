@@ -12,7 +12,7 @@ import { imageArg, withImageWidth } from '../model/image-call';
 export type ImageBarPrompts = Pick<WindowApi, 'showInputBox'>;
 
 /** The bar floating above the selected image (as the table bar above a table), before the table's. */
-export const IMAGE_BAR: FloatingBar = { id: 'visualEditor/image', order: 15, label: 'Image', anchor: ({ editor }) => imageAnchor(editor) };
+export const IMAGE_BAR: FloatingBar = { id: 'visualEditor/image', order: 15, label: 'Image', anchor: ({ tiptap }) => imageAnchor(tiptap) };
 
 /**
  * The image bar's buttons: "Caption" (where the figures extension's commands are there; asks in the window's input
@@ -22,15 +22,15 @@ export const IMAGE_BAR: FloatingBar = { id: 'visualEditor/image', order: 15, lab
 export function registerImageBarButtons(context: Pick<ExtensionContext, 'commands' | 'workbench'>, prompts: ImageBarPrompts): Disposable {
   const { commands, workbench } = context;
   return Disposable.from(
-    commands.registerCommand(EDIT_CAPTION, ({ editor }: VisualEditorMenuContext) => askCaption(editor, prompts)),
+    commands.registerCommand(EDIT_CAPTION, ({ tiptap }: VisualEditorMenuContext) => askCaption(tiptap, prompts)),
     workbench.registerMenuItem<VisualEditorMenuContext>(IMAGE_BAR.id, {
       command: EDIT_CAPTION,
       title: 'Caption',
       icon: CAPTION_ICON,
       order: 10,
-      when: ({ editor }) => {
-        const image = selectedImage(editor.state.selection);
-        return image !== null && captionOf(editor, image) !== undefined;
+      when: ({ tiptap }) => {
+        const image = selectedImage(tiptap.state.selection);
+        return image !== null && captionOf(tiptap, image) !== undefined;
       },
     }),
     ...PRESETS.map((percent, i) =>
@@ -47,8 +47,8 @@ export function registerImageBarButtons(context: Pick<ExtensionContext, 'command
             if (src !== image.node.attrs.src) tr.setNodeAttribute(image.pos, 'src', src);
             return true;
           }),
-        toggled: ({ editor }) => {
-          const image = selectedImage(editor.state.selection);
+        toggled: ({ tiptap }) => {
+          const image = selectedImage(tiptap.state.selection);
           return image !== null && imageArg(image.node.attrs.src, 'width') === `${percent}%`;
         },
       }),

@@ -29,7 +29,7 @@ export function headings(): Extension {
       subscriptions.push(
         visualEditor.registerNode(HEADING),
         ...HEADING_STYLES.map((style) => registerChainButton({ commands, workbench }, 'visualEditor/textStyle', style)),
-        visualEditor.registerTiptapExtension(() => HeadingNumbers),
+        visualEditor.registerTiptapExtension(HeadingNumbers),
       );
     },
   };

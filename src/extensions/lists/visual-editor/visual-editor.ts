@@ -53,7 +53,7 @@ export const LIST_BUTTONS: ChainButton[] = [
     group: '3_lists',
     order: 10,
     chain: (c) => c.toggleBulletList(),
-    toggled: ({ editor }) => editor.isActive('bulletList'),
+    toggled: ({ tiptap }) => tiptap.isActive('bulletList'),
   },
   {
     command: 'lists.toggleOrderedList',
@@ -63,7 +63,7 @@ export const LIST_BUTTONS: ChainButton[] = [
     group: '3_lists',
     order: 20,
     chain: (c) => c.toggleOrderedList(),
-    toggled: ({ editor }) => editor.isActive('orderedList'),
+    toggled: ({ tiptap }) => tiptap.isActive('orderedList'),
   },
 ];
 

@@ -27,7 +27,7 @@ const alignButton = (title: string, alignment: TextAlignment, keybinding: string
   keybinding,
   icon,
   chain: (c) => c.setTextAlign(alignment),
-  toggled: ({ editor }) => textAlignAt(editor.state) === alignment,
+  toggled: ({ tiptap }) => textAlignAt(tiptap.state) === alignment,
 });
 
 const ICONS = {

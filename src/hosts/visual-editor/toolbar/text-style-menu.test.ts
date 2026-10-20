@@ -24,7 +24,7 @@ const STRONG: TypstMarkSpec = {
 };
 
 /** A toggle on the selection's text. */
-const BOLD: ChainButton = { command: 'test.bold', title: 'Bold', category: 'Text styles', group: 'inline', order: 20, chain: (c) => c.toggleBold(), toggled: ({ editor }) => editor.isActive('bold') };
+const BOLD: ChainButton = { command: 'test.bold', title: 'Bold', category: 'Text styles', group: 'inline', order: 20, chain: (c) => c.toggleBold(), toggled: ({ tiptap }) => tiptap.isActive('bold') };
 
 /** A block style (here: a paragraph all in bold), taken off when chosen where it is on (as Normal text does). */
 const LOUD: ChainButton = {
@@ -32,7 +32,7 @@ const LOUD: ChainButton = {
   title: 'Loud',
   order: 10,
   chain: (c) => c.command(({ editor, commands }) => (editor.isActive('bold') ? commands.selectParentNode() && commands.unsetBold() : commands.setBold())),
-  toggled: ({ editor }) => editor.isActive('bold'),
+  toggled: ({ tiptap }) => tiptap.isActive('bold'),
 };
 
 const TEXT_STYLE = 'visualEditor/textStyle';

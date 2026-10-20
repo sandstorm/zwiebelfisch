@@ -114,14 +114,14 @@ function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'c
     Disposable.from(
       ...source.styles().map((style) => {
         const entry = (context: VisualEditorMenuContext) => textStyle(style, context, source);
-        const toggled = (context: VisualEditorMenuContext) => entry(context).isActive(context.editor);
-        const enabled = (context: VisualEditorMenuContext) => entry(context).enabled(context.editor);
+        const toggled = (context: VisualEditorMenuContext) => entry(context).isActive(context.tiptap);
+        const enabled = (context: VisualEditorMenuContext) => entry(context).enabled(context.tiptap);
         if (style.kind === 'block') {
           const command = `styles.toggleBlockStyle.${style.name}`;
           return Disposable.from(
             // chosen where on (and by Normal text): taken off
             commands.registerCommand(command, (context: VisualEditorMenuContext) =>
-              toggled(context) ? context.editor.chain().focus().unsetBlockStyle().run() : applyTextStyle(entry(context), context.editor),
+              toggled(context) ? context.tiptap.chain().focus().unsetBlockStyle().run() : applyTextStyle(entry(context), context.tiptap),
             ),
             workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { command, title: style.label, category: 'Block styles', group: 'block', toggled, enabled: (context) => toggled(context) || enabled(context) }),
           );
@@ -129,7 +129,7 @@ function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'c
         const command = `styles.toggleInlineStyle.${style.name}`;
         const item = { command, title: style.label, enabled, toggled };
         return Disposable.from(
-          commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.editor)),
+          commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.tiptap)),
           workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { ...item, category: 'Inline styles', group: 'inline' }),
           workbench.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, { ...item, icon: STYLE_ICON }),
         );

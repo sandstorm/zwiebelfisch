@@ -66,7 +66,7 @@ function suggestionPlugins(editor: Editor, trigger: CompletionTrigger, items: (q
     minQueryLength: Infinity,
     dismissOnOutsideClick: false,
     decorationClass: 'zwf-visual__suggestion',
-    command: ({ editor, range, props: item }) => item.command({ editor, range }),
+    command: ({ editor, range, props: item }) => item.command({ tiptap: editor, range }),
     render: () => ({
       onStart: (next) => {
         show(next);

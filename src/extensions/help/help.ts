@@ -36,7 +36,7 @@ export function help(): Extension {
         commands.registerCommand(COPY, (text: string) => copy(context, text)),
         workbench.registerMenuItem(ROW_MENU, { command: INSERT, title: 'Insert at cursor', order: 10, when: () => window.activeTextEditor !== null }),
         workbench.registerMenuItem(ROW_MENU, { command: COPY, title: 'Copy', order: 20 }),
-        visualEditor.registerTiptapExtension(() => snippetDrops()),
+        visualEditor.registerTiptapExtension(snippetDrops()),
         window.onDidChangeActiveFile(render),
       );
     },

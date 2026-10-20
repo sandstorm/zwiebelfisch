@@ -33,13 +33,13 @@ const INSERT_MERMAID = 'mermaid.insertDiagram';
 const ICON = svg('<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8.3M18 8l-5 8.3"/>');
 
 async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext): Promise<void> {
-  const { editor, document } = menu;
+  const { tiptap, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
   if (!proposed) return;
   const target = await window.showSaveDialog({ title: 'Insert Mermaid diagram', defaultUri: ProjectPath.unique(proposed, (path) => project.has(path)), filters: { Mermaid: [MERMAID_EXTENSION.slice(1)] } });
   if (!target) {
-    editor.commands.focus();
+    tiptap.commands.focus();
     return;
   }
   const problem = await workspace.applyEdit({ kind: 'create', path: target, content: STARTER_FLOWCHART });
@@ -51,7 +51,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   const at = project.pathOf(document);
   if (!at) return;
   const { source, importChange } = calculateMermaidFigure(document.text, at, target, menu.selection().from);
-  insertTypst(editor, source, undefined, importChange ? [importChange] : []);
+  insertTypst(tiptap, source, undefined, importChange ? [importChange] : []);
   workbench.open(target);
 }
 

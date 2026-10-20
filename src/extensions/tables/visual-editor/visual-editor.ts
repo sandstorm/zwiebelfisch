@@ -56,7 +56,7 @@ export const INSERT_TABLE: ChainButton = {
 };
 
 /** The bar floating above the table that holds the cursor. */
-export const TABLE_BAR: FloatingBar = { id: 'visualEditor/table', order: 20, label: 'Table', anchor: ({ editor }) => tableAnchor(editor) };
+export const TABLE_BAR: FloatingBar = { id: 'visualEditor/table', order: 20, label: 'Table', anchor: ({ tiptap }) => tableAnchor(tiptap) };
 
 /** The table bar's buttons: rows, columns, header row. */
 export const TABLE_EDITS: ChainButton[] = [
@@ -65,7 +65,7 @@ export const TABLE_EDITS: ChainButton[] = [
   { command: 'tables.deleteRow', title: 'Delete row', icon: ICONS.deleteRow, order: 30, chain: (c) => c.deleteRow() },
   { command: 'tables.deleteColumn', title: 'Delete column', icon: ICONS.deleteColumn, order: 40, chain: (c) => c.deleteColumn() },
   // makes the first row a `table.header(..)`, or a normal row again
-  { command: 'tables.toggleHeaderRow', title: 'Header row', icon: ICONS.headerRow, order: 50, chain: (c) => c.toggleHeaderRow(), toggled: ({ editor }) => inHeaderTable(editor) },
+  { command: 'tables.toggleHeaderRow', title: 'Header row', icon: ICONS.headerRow, order: 50, chain: (c) => c.toggleHeaderRow(), toggled: ({ tiptap }) => inHeaderTable(tiptap) },
 ];
 
 /** A cell's attributes: Tiptap's, and `track`: its column's entry of `columns: (..)` (`2fr`), as written. */

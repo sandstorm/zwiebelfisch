@@ -14,7 +14,7 @@ export function blockHandle(): Extension {
   return {
     id: 'block-handle',
     activate({ workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(() => BlockHandle));
+      subscriptions.push(workbench.registerStyleSheet(css), visualEditor.registerTiptapExtension(BlockHandle));
     },
   };
 }

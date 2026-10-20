@@ -20,7 +20,7 @@ export function slashCommands(): Extension {
       subscriptions.push(
         workbench.registerStyleSheet(css),
         visualEditor.registerCompletionItemProvider(slashCommandItems(workbench, commands), { char: '/' }),
-        visualEditor.registerTiptapExtension(() => SlashCommandsHint),
+        visualEditor.registerTiptapExtension(SlashCommandsHint),
       );
     },
   };
@@ -58,8 +58,8 @@ function menuItem(item: MenuItem<VisualEditorMenuContext>, detail: string, conte
     detail: item.category ?? detail,
     icon: item.icon,
     keywords: item.keywords,
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).run();
+    command: ({ tiptap, range }) => {
+      tiptap.chain().focus().deleteRange(range).run();
       commands.executeCommand(item.command, context).catch((error: unknown) => console.error(`Command ${item.command} failed:`, error));
     },
   };

@@ -49,9 +49,9 @@ const STRONG: TypstMarkSpec = {
 function strong() {
   const hosts = testHosts();
   hosts.visualEditor.registerMark(STRONG);
-  registerChainButton(hosts, TOOLBAR, { command: 'test.bold', title: 'Bold', icon: svg(''), group: 'test', chain: (c) => c.toggleBold(), toggled: ({ editor }) => editor.isActive('bold') });
+  registerChainButton(hosts, TOOLBAR, { command: 'test.bold', title: 'Bold', icon: svg(''), group: 'test', chain: (c) => c.toggleBold(), toggled: ({ tiptap }) => tiptap.isActive('bold') });
   // shown only over a selection that is all bold (to test `when`)
-  registerChainButton(hosts, TOOLBAR, { command: 'test.unbold', title: 'Unbold', icon: svg(''), group: 'test', chain: (c) => c.unsetBold(), when: ({ editor }) => editor.isActive('bold') });
+  registerChainButton(hosts, TOOLBAR, { command: 'test.unbold', title: 'Unbold', icon: svg(''), group: 'test', chain: (c) => c.unsetBold(), when: ({ tiptap }) => tiptap.isActive('bold') });
   return hosts.visualEditor;
 }
 

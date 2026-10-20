@@ -128,12 +128,12 @@ describe('VisualEditor', () => {
   });
 });
 
-describe('VisualEditorHost.registerHighlights', () => {
+describe('VisualEditorHost.registerHighlightProvider', () => {
   it('sets a provider\'s highlights when a view is made and again when they change for its document only', () => {
     const changed = new EventEmitter<TypstDocument>();
     const ranges = new Map<TypstDocument, SourceHighlight[]>();
     const contributions = new VisualEditorHost();
-    contributions.registerHighlights('test', { provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
+    contributions.registerHighlightProvider({ provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
     const doc = new TypstDocument('Hello world\n');
     const other = new TypstDocument('Other\n');
     ranges.set(doc, [{ from: SourceOffset.of(0), to: SourceOffset.of(5), className: 'marked' }]);
@@ -187,7 +187,7 @@ function withHighlights(text: string, initial: SourceHighlight[], extensions: An
   const changed = new EventEmitter<TypstDocument>();
   const contributions = strong();
   contributions.registerTiptapExtension(() => extensions);
-  contributions.registerHighlights('test', { provideHighlights: () => current, onDidChangeHighlights: changed.event });
+  contributions.registerHighlightProvider({ provideHighlights: () => current, onDidChangeHighlights: changed.event });
   const doc = new TypstDocument(text);
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new VisualEditor(parent, doc, contributions);

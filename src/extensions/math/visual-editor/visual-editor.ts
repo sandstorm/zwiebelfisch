@@ -29,14 +29,14 @@ export function registerInsertMath({ commands, workbench }: Pick<ExtensionContex
   const inline = { type: 'rawInline', attrs: { src: '$$' } };
   const display = { type: 'rawBlock', attrs: { src: '$  $' } };
   return Disposable.from(
-    commands.registerCommand(INLINE_MATH, ({ editor }: VisualEditorMenuContext) => {
-      if (!editor.chain().focus().insertContent(inline).run()) return;
-      const { $from } = editor.state.selection;
-      if ($from.nodeBefore?.type.name === 'rawInline') editor.commands.editRawBox($from.pos - $from.nodeBefore.nodeSize, 1);
+    commands.registerCommand(INLINE_MATH, ({ tiptap }: VisualEditorMenuContext) => {
+      if (!tiptap.chain().focus().insertContent(inline).run()) return;
+      const { $from } = tiptap.state.selection;
+      if ($from.nodeBefore?.type.name === 'rawInline') tiptap.commands.editRawBox($from.pos - $from.nodeBefore.nodeSize, 1);
     }),
-    commands.registerCommand(DISPLAY_MATH, ({ editor }: VisualEditorMenuContext) => {
-      const at = besideTextblock(editor.state.selection.$to);
-      if (editor.chain().focus().insertContentAt(at, display).run()) editor.commands.editRawBox(at.from, 2);
+    commands.registerCommand(DISPLAY_MATH, ({ tiptap }: VisualEditorMenuContext) => {
+      const at = besideTextblock(tiptap.state.selection.$to);
+      if (tiptap.chain().focus().insertContentAt(at, display).run()) tiptap.commands.editRawBox(at.from, 2);
     }),
     workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: INLINE_MATH,
@@ -44,7 +44,7 @@ export function registerInsertMath({ commands, workbench }: Pick<ExtensionContex
       icon: ICONS.inline,
       keywords: ['math', 'equation', 'formula', 'inline'],
       order: 44,
-      enabled: ({ editor }) => editor.can().insertContent(inline),
+      enabled: ({ tiptap }) => tiptap.can().insertContent(inline),
     }),
     workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: DISPLAY_MATH,
@@ -52,7 +52,7 @@ export function registerInsertMath({ commands, workbench }: Pick<ExtensionContex
       icon: ICONS.display,
       keywords: ['math', 'equation', 'formula', 'block'],
       order: 46,
-      enabled: ({ editor }) => editor.can().insertContentAt(besideTextblock(editor.state.selection.$to), display),
+      enabled: ({ tiptap }) => tiptap.can().insertContentAt(besideTextblock(tiptap.state.selection.$to), display),
     }),
   );
 }

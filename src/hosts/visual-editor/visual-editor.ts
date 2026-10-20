@@ -31,10 +31,11 @@ export interface VisualEditorContributions {
    */
   registerMark(spec: TypstMarkSpec): Disposable;
   /**
-   * Tiptap extensions made for each editor (they may use its document): decorations, plugins (drops, appended
-   * transactions), commands not tied to a node. Their hooks see the editor's Tiptap editor (`this.editor`).
+   * Tiptap extensions in every editor, the same value for all, or made for each (they may use its document):
+   * decorations, plugins (drops, appended transactions), commands not tied to a node. Their hooks see the editor's
+   * Tiptap editor (`this.editor`).
    */
-  registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable;
+  registerTiptapExtension(extension: AnyExtension | readonly AnyExtension[] | ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])): Disposable;
   /**
    * A menu button (VS Code's submenu) in the menu `submenu.parent` (the toolbar row, a floating bar), placed by `group`
    * and `order` as an entry there: it opens the entries of the menu `submenu.id`, and is left out while that has none.
@@ -54,10 +55,10 @@ export interface VisualEditorContributions {
    */
   registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable;
   /**
-   * Highlights from `provider` in every editor, as layer `layer` (one per provider): set when the editor is created and
-   * again whenever the provider reports a change of its document; they follow edits in between.
+   * Highlights from `provider` in every editor, apart from other providers': set when the editor is created and again
+   * whenever the provider reports a change of its document; they follow edits in between.
    */
-  registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable;
+  registerHighlightProvider(provider: SourceHighlightProvider): Disposable;
   /**
    * What raw boxes of each editor show instead of their code while not edited. The renderers are asked by `priority`
    * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
@@ -95,7 +96,7 @@ export const VISUAL_EDITOR = 'visualEditor';
  *   heading level, a block style): "Normal text" runs the value's command, then makes the blocks paragraphs
  * - the menus of the submenus and floating bars that extensions add (`registerSubmenu`, `registerFloatingBar`)
  */
-export type VisualEditorMenuContext = VisualEditorContext & { readonly editor: Editor };
+export type VisualEditorMenuContext = VisualEditorContext & { readonly tiptap: Editor };
 
 // The contribution points: what extensions register, and what they are given.
 
@@ -258,7 +259,7 @@ export interface CompletionTrigger {
 
 /** What a completion item provider is asked with: the editor, its Tiptap editor and the query. */
 export interface CompletionContext extends VisualEditorContext {
-  readonly editor: Editor;
+  readonly tiptap: Editor;
   /** What is typed after the trigger character (the list filters the items by it). */
   readonly query: string;
 }
@@ -279,7 +280,7 @@ export interface CompletionItem {
   /** Typed while the item is the chosen one, these choose it first and are then typed (`@intro` + `.`). */
   readonly commitCharacters?: readonly string[];
   /** Chooses it: replaces `range`, the trigger character and the query, with what the item stands for. */
-  command(props: { editor: Editor; range: Range }): void;
+  command(props: { tiptap: Editor; range: Range }): void;
 }
 
 /** The items of one completion list; asked again on every keystroke while the list is open. */

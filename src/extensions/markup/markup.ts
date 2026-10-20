@@ -41,7 +41,7 @@ export function markup(): Extension {
         workbench.registerMenuItem('visualEditor/selection', LINK_BUTTON),
         visualEditor.registerFloatingBar(LINK_BAR),
         workbench.registerMenuItem(LINK_BAR.id, LINK_BUTTON),
-        visualEditor.registerTiptapExtension(() => linkShortcut(window)),
+        visualEditor.registerTiptapExtension(linkShortcut(window)),
         ...INSERT_BUTTONS.map((button) => registerChainButton(context, 'visualEditor/insert', button)),
       );
     },

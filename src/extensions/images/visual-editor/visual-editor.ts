@@ -32,14 +32,14 @@ export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 
     visualEditor.registerFloatingBar(IMAGE_BAR),
     registerImageBarButtons(context, options.prompts),
     visualEditor.registerTiptapExtension((editor) => imageUploads(options.assets(editor.document), options.prompts, pickers)),
-    commands.registerCommand(INSERT_IMAGE, ({ editor, document }: VisualEditorMenuContext) => chooseImage(editor, options.assets(document), options.prompts, pickers.get(editor))),
+    commands.registerCommand(INSERT_IMAGE, ({ tiptap, document }: VisualEditorMenuContext) => chooseImage(tiptap, options.assets(document), options.prompts, pickers.get(tiptap))),
     workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
       command: INSERT_IMAGE,
       title: 'Insert image',
       icon: ICON,
       keywords: ['picture', 'photo', 'figure'],
       order: 10,
-      enabled: ({ editor }) => editor.can().insertContent({ type: 'image' }),
+      enabled: ({ tiptap }) => tiptap.can().insertContent({ type: 'image' }),
     }),
     // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
     visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),

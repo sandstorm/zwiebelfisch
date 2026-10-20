@@ -345,7 +345,7 @@ const ICONS = {
 };
 
 /** A button toggling mark or node `name` (pressed where the selection has it). */
-const toggle = (name: string, button: Omit<ChainButton, 'toggled'>): ChainButton => ({ ...button, toggled: ({ editor }) => editor.isActive(name) });
+const toggle = (name: string, button: Omit<ChainButton, 'toggled'>): ChainButton => ({ ...button, toggled: ({ tiptap }) => tiptap.isActive(name) });
 
 /** Bold, italic, underline, strike, highlight, inline code: in the bar above the selection, their only place. */
 export const MARK_BUTTONS: ChainButton[] = [
@@ -371,7 +371,7 @@ export const LINK_COMMAND = 'markup.link';
 
 /** The command of "Link" (also Mod+K: `linkShortcut`). */
 export function linkCommand(prompt: LinkPrompt): (context: VisualEditorMenuContext) => Promise<void> {
-  return ({ editor }) => askLink(editor, prompt);
+  return ({ tiptap }) => askLink(tiptap, prompt);
 }
 
 /** "Link" in the selection's bar and the link bar: asks for the URL in an input box; enabled where a link may go (not in code). */
@@ -381,8 +381,8 @@ export const LINK_BUTTON: MenuItem<VisualEditorMenuContext> = {
   keybinding: 'Mod+K',
   icon: ICONS.link,
   order: 50,
-  enabled: ({ editor }) => editor.can().setMark('link'),
-  toggled: ({ editor }) => editor.isActive('link'),
+  enabled: ({ tiptap }) => tiptap.can().setMark('link'),
+  toggled: ({ tiptap }) => tiptap.isActive('link'),
 };
 
 /** The bar above a link holding the caret (no text selected: else the selection's bar shows), to edit the link. */
@@ -390,7 +390,7 @@ export const LINK_BAR: FloatingBar = {
   id: 'visualEditor/link',
   order: 11,
   label: 'Link',
-  anchor: ({ editor }) => (editor.state.selection.empty && editor.isActive('link') ? caretCoords(editor) : null),
+  anchor: ({ tiptap }) => (tiptap.state.selection.empty && tiptap.isActive('link') ? caretCoords(tiptap) : null),
 };
 
 /** Above the caret, or null without layout. */

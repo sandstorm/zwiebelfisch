@@ -15,7 +15,7 @@ export function wordProcessors(): Extension {
   return {
     id: 'wordProcessors',
     activate({ visualEditor, subscriptions }) {
-      subscriptions.push(visualEditor.registerTiptapExtension(() => WordProcessorPaste));
+      subscriptions.push(visualEditor.registerTiptapExtension(WordProcessorPaste));
     },
   };
 }

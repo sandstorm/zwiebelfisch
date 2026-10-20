@@ -91,8 +91,8 @@ export function chainCommand(chain: (chain: ChainedCommands) => ChainedCommands)
   enabled(context: VisualEditorMenuContext): boolean;
 } {
   return {
-    run: ({ editor }) => chain(editor.chain().focus()).run(),
-    enabled: ({ editor }) => chain(editor.can().chain()).run(),
+    run: ({ tiptap }) => chain(tiptap.chain().focus()).run(),
+    enabled: ({ tiptap }) => chain(tiptap.can().chain()).run(),
   };
 }
 

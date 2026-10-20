@@ -36,13 +36,13 @@ const INSERT_SPREADSHEET = 'spreadsheets.insertSpreadsheet';
 const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11M15 9v11"/>');
 
 async function insert({ project, window, workspace, workbench }: InsertContext, menu: VisualEditorMenuContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
-  const { editor, document } = menu;
+  const { tiptap, document } = menu;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
   if (!proposed) return;
   const target = await window.showSaveDialog({ title: 'Insert spreadsheet', defaultUri: ProjectPath.unique(proposed, (path) => project.has(path)), filters: { Spreadsheets: ['ic'] } });
   if (!target) {
-    editor.commands.focus();
+    tiptap.commands.focus();
     return;
   }
   const workbook = await newWorkbook(ProjectPath.name(target));
@@ -62,7 +62,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   const at = project.pathOf(document);
   if (!at) return;
   const { source, importChange } = calculateSheetFigure(document.text, { file: at, spreadsheet: target, sheet: workbook.sheet, use: menu.selection().from });
-  insertTypst(editor, source, undefined, importChange ? [importChange] : []);
+  insertTypst(tiptap, source, undefined, importChange ? [importChange] : []);
   workbench.open(target);
 }
 

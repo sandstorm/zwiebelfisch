@@ -14,7 +14,7 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 function item(label: string, extra: Partial<CompletionItem> = {}): CompletionItem {
   return {
     label,
-    command: vi.fn(({ editor, range }) => editor.chain().insertContentAt(range, label.toUpperCase()).run()),
+    command: vi.fn(({ tiptap, range }) => tiptap.chain().insertContentAt(range, label.toUpperCase()).run()),
     ...extra,
   };
 }
@@ -93,7 +93,7 @@ describe('completion lists', () => {
     type(editor, ' /ch');
     const context = asked.at(-1)!;
     expect(context.query).toBe('ch');
-    expect(context.editor).toBe(editor);
+    expect(context.tiptap).toBe(editor);
   });
 
   it('arrow keys choose (wrapping around), Enter replaces the trigger and query with the chosen item', () => {
@@ -106,7 +106,7 @@ describe('completion lists', () => {
     press(editor, 'ArrowDown');
     expect(chosen()).toBe('banana');
     expect(press(editor, 'Enter')).toBe(true);
-    expect(ITEMS[1].command).toHaveBeenCalledWith({ editor, range: { from: 6, to: 7 } });
+    expect(ITEMS[1].command).toHaveBeenCalledWith({ tiptap: editor, range: { from: 6, to: 7 } });
     expect(doc.text).toBe('Text BANANA\n');
     expect(list.hidden).toBe(true);
   });

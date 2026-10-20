@@ -21,7 +21,7 @@ import { boxCaretsSpec, type BoxCaret } from './box-carets';
  */
 export function registerVisualPresence(visualEditor: VisualEditorContributions, presences: PresenceSource, documents: () => readonly TypstDocument[]): Disposable {
   return Disposable.from(
-    visualEditor.registerHighlights('collaboration.selections', selections(presences, documents)),
+    visualEditor.registerHighlightProvider(selections(presences, documents)),
     visualEditor.registerTiptapExtension((editor) => remoteCarets(editor, presences)),
   );
 }

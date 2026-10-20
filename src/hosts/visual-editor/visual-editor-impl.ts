@@ -1,5 +1,5 @@
 // See VisualEditorContributions in visual-editor.ts.
-import { Editor, type AnyExtension } from '@tiptap/core';
+import { Editor } from '@tiptap/core';
 import type { Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
@@ -59,12 +59,8 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.rawBoxCodeMirrorExtensions(editor))),
         highlights,
-        suggestions(contributed.completionItemProviders, (tiptap, query) => ({
-          ...editor,
-          editor: tiptap,
-          query,
-        })),
-        ...contributed.tiptapExtensions.flatMap((provider) => provider(editor)),
+        suggestions(contributed.completionItemProviders, (tiptap, query) => ({ ...editor, tiptap, query })),
+        ...contributed.tiptapExtensions.flatMap((extension) => (typeof extension === 'function' ? extension(editor) : extension)),
       ],
       injectCSS: false,
       editorProps: { attributes: { class: 'zwf-visual', 'data-testid': 'zwf-visual' } },
@@ -85,7 +81,7 @@ export class VisualEditor {
       }),
     );
     this.toolbar = new Toolbar(parent, this.tiptap, {
-      context: { ...editor, editor: this.tiptap },
+      context: { ...editor, tiptap: this.tiptap },
       menus: contributions.menus,
       submenus: contributed.submenus,
       floatingBars: contributed.floatingBars,
@@ -96,7 +92,9 @@ export class VisualEditor {
       }),
       // e.g. a style declared or removed changes what its calls project to
       onDidChangeGrammar(schema, () => this.syncFromDocument()),
-      ...contributed.highlights.map(({ layer, provider }) => {
+      // a layer per provider
+      ...contributed.highlights.map((provider, index) => {
+        const layer = String(index);
         this.setHighlights(layer, provider.provideHighlights(document));
         return provider.onDidChangeHighlights((changed) => {
           if (changed === document) this.setHighlights(layer, provider.provideHighlights(document));
@@ -215,10 +213,10 @@ export class VisualEditorHost implements VisualEditorContributions {
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
-    tiptapExtensions: [] as ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[],
+    tiptapExtensions: [] as TiptapExtensions[],
     submenus: [] as Submenu[],
     floatingBars: [] as FloatingBar[],
-    highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
+    highlights: [] as SourceHighlightProvider[],
     rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
@@ -244,8 +242,8 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.marks, spec);
   }
 
-  registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable {
-    return this.add(this.lists.tiptapExtensions, provider);
+  registerTiptapExtension(extension: TiptapExtensions): Disposable {
+    return this.add(this.lists.tiptapExtensions, extension);
   }
 
   registerSubmenu(submenu: Submenu): Disposable {
@@ -260,8 +258,8 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.completionItemProviders, { provider, trigger });
   }
 
-  registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable {
-    return this.add(this.lists.highlights, { layer, provider });
+  registerHighlightProvider(provider: SourceHighlightProvider): Disposable {
+    return this.add(this.lists.highlights, provider);
   }
 
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options: { readonly priority?: number } = {}): Disposable {
@@ -306,14 +304,17 @@ export class VisualEditorHost implements VisualEditorContributions {
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
-  readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
+  readonly tiptapExtensions: readonly TiptapExtensions[];
   readonly submenus: readonly Submenu[];
   readonly floatingBars: readonly FloatingBar[];
-  readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
+  readonly highlights: readonly SourceHighlightProvider[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxExtensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
+
+/** What `registerTiptapExtension` takes. */
+type TiptapExtensions = Parameters<VisualEditorContributions['registerTiptapExtension']>[0];
 
 /** What the raw boxes of `editor` get from the contributions. */
 function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], codeExtensions: Extension): RawBoxes {

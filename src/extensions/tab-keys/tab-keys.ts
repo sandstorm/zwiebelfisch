@@ -12,7 +12,7 @@ export function tabKeys(): Extension {
   return {
     id: 'tab-keys',
     activate({ visualEditor, subscriptions }) {
-      subscriptions.push(visualEditor.registerTiptapExtension(() => TabKeys));
+      subscriptions.push(visualEditor.registerTiptapExtension(TabKeys));
     },
   };
 }

@@ -43,7 +43,7 @@ export function diagnostics(): Extension {
       };
       subscriptions.push(
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, lint(collection)),
-        visualEditor.registerHighlights('diagnostics', {
+        visualEditor.registerHighlightProvider({
           provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
           onDidChangeHighlights: collection.onDidChange,
         }),

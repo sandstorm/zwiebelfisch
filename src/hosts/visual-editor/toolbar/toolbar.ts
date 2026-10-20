@@ -222,7 +222,7 @@ const ICONS = {
 const HOST_SUBMENUS: Submenu[] = [{ id: 'visualEditor/insert', label: 'Insert', icon: () => ICONS.insert, parent: TOOLBAR, group: '5_insert' }];
 
 /** The host's own bar: above a text selection. */
-const HOST_BARS: FloatingBar[] = [{ id: 'visualEditor/selection', order: 10, label: 'Selection', anchor: ({ editor }) => (hasTextSelection(editor) ? selectionCoords(editor) : null) }];
+const HOST_BARS: FloatingBar[] = [{ id: 'visualEditor/selection', order: 10, label: 'Selection', anchor: ({ tiptap }) => (hasTextSelection(tiptap) ? selectionCoords(tiptap) : null) }];
 
 /** `entries` as the workbench sorts a menu's: group `navigation` first, the others by name, then by order, then as given. */
 function sortPlaced(entries: readonly Placed[]): Placed[] {

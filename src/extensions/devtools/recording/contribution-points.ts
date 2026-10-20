@@ -65,7 +65,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const prefixes = Array.isArray(allowedPrefixes) ? [`after ${allowedPrefixes.map((prefix) => JSON.stringify(prefix)).join(', ')}`] : [];
     return { title: `trigger "${String(char)}"`, details: [...optional(nameOf(provider), String), ...prefixes], rank: [String(char)] };
   },
-  'visualEditor.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
+  'visualEditor.registerHighlightProvider': ([provider]) => named(provider, 'highlight provider'),
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
   'visualEditor.registerRawBoxExtension': ([provider]) => named(provider, 'raw box extension'),
   'sourceEditor.registerCodeMirrorExtension': ([selector, extension]) => {

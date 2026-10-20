@@ -65,7 +65,7 @@ export function search(): Extension {
         side,
         panel,
         highlights,
-        visualEditor.registerHighlights('search', highlights.visualHighlights),
+        visualEditor.registerHighlightProvider(highlights.visualHighlights),
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, highlights.sourceExtension),
         commands.registerCommand(FIND_IN_FILES, (options?: FindOptions) => findInFiles(context, side, panel, { ...options, mode: 'find' })),
         commands.registerCommand(REPLACE_IN_FILES, (options?: FindOptions) => findInFiles(context, side, panel, { ...options, mode: 'replace' })),

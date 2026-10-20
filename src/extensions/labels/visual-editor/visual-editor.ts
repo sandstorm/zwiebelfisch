@@ -30,8 +30,8 @@ export function registerReferences(visualEditor: VisualEditorContributions, opti
  */
 export function registerLabelButtons({ commands, workbench }: Pick<ExtensionContext, 'commands' | 'workbench'>, options: ReferencesOptions): Disposable {
   return Disposable.from(
-    commands.registerCommand(ADD_LABEL, ({ editor }: VisualEditorMenuContext) => startNewLabel(editor.view)),
-    commands.registerCommand(EDIT_LABEL, ({ editor, document }: VisualEditorMenuContext) => editLabel(editor.view, { ...options, document })),
+    commands.registerCommand(ADD_LABEL, ({ tiptap }: VisualEditorMenuContext) => startNewLabel(tiptap.view)),
+    commands.registerCommand(EDIT_LABEL, ({ tiptap, document }: VisualEditorMenuContext) => editLabel(tiptap.view, { ...options, document })),
     workbench.registerMenuItem('visualEditor/insert', { ...ADD_LABEL_BUTTON, order: 80 }),
     // after the marks and the link, before the comment (50); only where it applies, so the bar stays small
     workbench.registerMenuItem('visualEditor/selection', { ...ADD_LABEL_BUTTON, order: 45, when: ADD_LABEL_BUTTON.enabled }),
@@ -41,7 +41,7 @@ export function registerLabelButtons({ commands, workbench }: Pick<ExtensionCont
       title: 'Label',
       icon: ICON,
       order: 15,
-      toggled: ({ editor }) => hasLabel(editor.state),
+      toggled: ({ tiptap }) => hasLabel(tiptap.state),
     }),
   );
 }
@@ -103,9 +103,9 @@ function labelCompletions(labels: ProjectLabels): CompletionItemProvider {
         keywords: label.title ? [label.title] : undefined,
         // `.` and `:` may go on with a longer name (`@fig` + `:` → `@fig:x`)
         commitCharacters: label.name === query ? ENDS_REFERENCE.filter((c) => ![...seen].some((name) => name.startsWith(label.name + c))) : undefined,
-        command: ({ editor, range }) => {
-          editor.view.dispatch(insertReference(editor.state, range, label.name));
-          editor.view.focus();
+        command: ({ tiptap, range }) => {
+          tiptap.view.dispatch(insertReference(tiptap.state, range, label.name));
+          tiptap.view.focus();
         },
       }));
     },
@@ -132,5 +132,5 @@ const ADD_LABEL_BUTTON: MenuItem<VisualEditorMenuContext> = {
   title: 'Add label',
   icon: ICON,
   keywords: ['anchor', 'reference'],
-  enabled: ({ editor }) => canStartNewLabel(editor.state) !== null,
+  enabled: ({ tiptap }) => canStartNewLabel(tiptap.state) !== null,
 };

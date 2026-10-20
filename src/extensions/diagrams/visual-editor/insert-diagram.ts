@@ -32,7 +32,7 @@ const INSERT_DIAGRAM = 'diagrams.insertDiagram';
 
 const ICON = svg('<rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v9H14"/>');
 
-async function insert(context: InsertContext, { editor, document }: VisualEditorMenuContext): Promise<void> {
+async function insert(context: InsertContext, { tiptap, document }: VisualEditorMenuContext): Promise<void> {
   const { project, workbench } = context;
   const file = project.pathOf(document);
   const proposed = file && ProjectPath.resolve(file, PROPOSED);
@@ -41,10 +41,10 @@ async function insert(context: InsertContext, { editor, document }: VisualEditor
   // the document may have moved meanwhile
   const at = project.pathOf(document);
   if (!target || !at) {
-    editor.commands.focus();
+    tiptap.commands.focus();
     return;
   }
-  insertTypst(editor, diagramFigure(ProjectPath.referenceTo(at, target)));
+  insertTypst(tiptap, diagramFigure(ProjectPath.referenceTo(at, target)));
   workbench.open(target, { viewType: DIAGRAM_EDITOR });
 }
 

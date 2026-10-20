@@ -14,7 +14,7 @@ export function math(): Extension {
   return {
     id: 'math',
     activate(context) {
-      context.subscriptions.push(context.visualEditor.registerTiptapExtension(() => MathInput), registerInsertMath(context));
+      context.subscriptions.push(context.visualEditor.registerTiptapExtension(MathInput), registerInsertMath(context));
     },
   };
 }

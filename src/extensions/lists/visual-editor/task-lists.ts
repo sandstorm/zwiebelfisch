@@ -50,7 +50,7 @@ export const TASK_LIST_BUTTON: ChainButton = {
   group: '3_lists',
   order: 30,
   chain: (c) => c.toggleTaskList(),
-  toggled: ({ editor }) => editor.isActive('taskList'),
+  toggled: ({ tiptap }) => tiptap.isActive('taskList'),
 };
 
 /**

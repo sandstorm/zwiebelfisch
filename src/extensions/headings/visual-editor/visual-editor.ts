@@ -67,5 +67,5 @@ export const HEADING_STYLES: ChainButton[] = ([1, 2, 3] as const).map((level) =>
   keywords: [`h${level}`, level === 1 ? 'title' : 'section'],
   order: 10 * level,
   chain: (chain) => chain.toggleHeading({ level }),
-  toggled: ({ editor }) => editor.isActive('heading', { level }),
+  toggled: ({ tiptap }) => tiptap.isActive('heading', { level }),
 }));
