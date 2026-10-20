@@ -2,7 +2,7 @@ import { Extension as TiptapExtension } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Commands, MenuItem } from '../../hosts/commands/commands';
-import type { CompletionItem, CompletionItemProvider, TextStyle, VisualEditorMenuContext } from '../../hosts/visual-editor/visual-editor';
+import type { CompletionItem, CompletionItemProvider, VisualEditorMenuContext } from '../../hosts/visual-editor/visual-editor';
 import type { Extension, Workbench } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
@@ -40,42 +40,27 @@ function slashCommandItems(workbench: Pick<Workbench, 'getMenuItems'>, commands:
           .filter((item) => (group === undefined || item.group === group) && (item.enabled?.(context) ?? true))
           .map((item) => menuItem(item, detail, context, commands)),
       ),
-      ...context
-        .textStyles()
-        .filter((style) => (style.enabled ? style.enabled(context.editor) : style.apply(context.editor.can().chain(), context.editor).run()))
-        .map(textStyleItem),
     ],
   };
 }
 
-/** The menus the slash list offers (of the row: one group), and how a row names its menu. */
+/** The menus the slash list offers (of the row: one group), and how a row names its menu (unless the entry names its `category`). */
 const SLASH_MENUS: readonly { readonly menuId: string; readonly group?: string; readonly detail: string }[] = [
   { menuId: 'visualEditor/insert', detail: 'Insert' },
   { menuId: 'visualEditor/toolbar', group: '3_lists', detail: 'List' },
   { menuId: 'visualEditor/align', detail: 'Align' },
+  { menuId: 'visualEditor/textStyle', detail: 'Text style' },
 ];
 
 function menuItem(item: MenuItem<VisualEditorMenuContext>, detail: string, context: VisualEditorMenuContext, commands: Pick<Commands, 'executeCommand'>): CompletionItem {
   return {
     label: item.title ?? item.command,
-    detail,
+    detail: item.category ?? detail,
     icon: item.icon,
     keywords: item.keywords,
     command: ({ editor, range }) => {
       editor.chain().focus().deleteRange(range).run();
       commands.executeCommand(item.command, context).catch((error: unknown) => console.error(`Command ${item.command} failed:`, error));
-    },
-  };
-}
-
-function textStyleItem(style: TextStyle): CompletionItem {
-  return {
-    label: style.label,
-    detail: style.section ?? 'Text style',
-    keywords: style.keywords,
-    command: ({ editor, range }) => {
-      style.apply(editor.chain().focus().deleteRange(range), editor).run();
-      style.applied?.();
     },
   };
 }

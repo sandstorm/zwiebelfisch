@@ -15,7 +15,7 @@ import { suggestions } from './suggestions/suggestions';
 import { Toolbar, type ToolbarMenus } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, TextStyleProvider, CompletionTrigger, CompletionItemProvider, Submenu, FloatingBar } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, CompletionTrigger, CompletionItemProvider, Submenu, FloatingBar } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -63,7 +63,6 @@ export class VisualEditor {
           ...editor,
           editor: tiptap,
           query,
-          textStyles: () => this.toolbar.textStyles(),
         })),
         ...contributed.tiptapExtensions.flatMap((provider) => provider(editor)),
       ],
@@ -90,7 +89,6 @@ export class VisualEditor {
       menus: contributions.menus,
       submenus: contributed.submenus,
       floatingBars: contributed.floatingBars,
-      textStyles: contributed.textStyles,
     });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
@@ -222,7 +220,6 @@ export class VisualEditorHost implements VisualEditorContributions {
     floatingBars: [] as FloatingBar[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
-    textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
@@ -275,10 +272,6 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.rawBoxExtensions, provider);
   }
 
-  registerTextStyleProvider(provider: TextStyleProvider): Disposable {
-    return this.add(this.lists.textStyles, provider);
-  }
-
   /** The CodeMirror extensions of the raw boxes' code in `editor` (see the constructor). */
   rawBoxCodeMirrorExtensions(editor: VisualEditorContext): Extension {
     return this.options.rawBoxCodeMirrorExtensions?.(editor) ?? [];
@@ -296,7 +289,6 @@ export class VisualEditorHost implements VisualEditorContributions {
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxExtensions: [...lists.rawBoxExtensions],
-      textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
     };
   }
@@ -320,7 +312,6 @@ export interface Contributed {
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxExtensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
-  readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
 

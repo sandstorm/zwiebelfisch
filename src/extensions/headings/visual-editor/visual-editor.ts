@@ -1,7 +1,7 @@
 // The heading node and its levels in the text style menu. See headings in ../headings.ts.
 import { textblockTypeInputRule, type AnyExtension, type Node as NodeExtension } from '@tiptap/core';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { type TextStyleProvider, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
+import { type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
@@ -57,15 +57,15 @@ export const HEADING: TypstNodeSpec = {
 /** Typed at a line start: `= ` .. `====== ` (Typst), or Markdown's `# ` .. `###### `, makes the line a heading of that level. */
 const HEADING_INPUT = /^(={1,6}|#{1,6})\s$/;
 
-/** "Heading 1" to "Heading 3" in the text style menu, right after Normal text. */
-export const HEADING_STYLES: TextStyleProvider = {
-  provideTextStyles: () =>
-    ([1, 2, 3] as const).map((level) => ({
-      id: `heading-${level}`,
-      label: `Heading ${level}`,
-      keywords: [`h${level}`, level === 1 ? 'title' : 'section'],
-      order: 10 * level,
-      apply: (chain) => chain.setHeading({ level }),
-      isActive: (editor) => editor.isActive('heading', { level }),
-    })),
-};
+/**
+ * "Heading 1" to "Heading 3" in the text style menu (`visualEditor/textStyle`), right after Normal text: a level
+ * chosen where it is takes itself off, as Normal text needs.
+ */
+export const HEADING_STYLES: ChainButton[] = ([1, 2, 3] as const).map((level) => ({
+  command: `headings.toggleHeading${level}`,
+  title: `Heading ${level}`,
+  keywords: [`h${level}`, level === 1 ? 'title' : 'section'],
+  order: 10 * level,
+  chain: (chain) => chain.toggleHeading({ level }),
+  toggled: ({ editor }) => editor.isActive('heading', { level }),
+}));

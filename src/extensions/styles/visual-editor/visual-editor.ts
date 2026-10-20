@@ -1,12 +1,12 @@
 // Custom styles in the Visual editor. See styles in ../styles.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { Extension, type Editor } from '@tiptap/core';
+import { Extension, type ChainedCommands, type Editor } from '@tiptap/core';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Submenu, type TextStyle, type TextStyleProvider, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type Submenu, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext, Workbench } from '../../../hosts/workbench/workbench';
 import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { ProjectStyles } from '../model/typst-style-index';
@@ -49,9 +49,8 @@ export function registerCustomStyles(context: Pick<ExtensionContext, 'visualEdit
         onDidChange,
       },
     }),
-    visualEditor.registerTextStyleProvider(textStyles(options)),
     visualEditor.registerSubmenu(INLINE_STYLES_MENU),
-    registerInlineStyleButtons(context, options.styles),
+    registerStyleButtons(context, options),
   );
 }
 
@@ -105,46 +104,71 @@ export function registerStyleApplier(visualEditor: VisualEditorContributions, so
 }
 
 /**
- * The inline styles as entries of the Styles menu in the selection bar, each with its command, anew whenever the
- * styles change: pressed where the selection has the style; a click toggles it as the text style menu's entry does.
+ * The styles as entries of the text style menu (`visualEditor/textStyle`), each with its command, anew whenever the
+ * styles change: the block styles (wrap the selected blocks, `#note[..]`; chosen where on, or Normal text, takes them
+ * off), the inline styles (toggles on a selection, `#key[..]`; also the Styles menu of the selection bar), and "New
+ * style…". Applying a style imports it into the editor's document where needed.
  */
-function registerInlineStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, source: ProjectStyles): Disposable {
+function registerStyleButtons({ commands, workbench }: Pick<ExtensionContext, 'commands'> & { workbench: Pick<Workbench, 'registerMenuItem'> }, { styles: source, create }: StylesOptions): Disposable {
   const register = () =>
     Disposable.from(
-      ...source
-        .styles()
-        .filter((style) => style.kind === 'inline')
-        .map((style) => {
-          const command = `styles.toggleInlineStyle.${style.name}`;
-          const entry = (context: VisualEditorMenuContext) => textStyle(style, context, source);
+      ...source.styles().map((style) => {
+        const entry = (context: VisualEditorMenuContext) => textStyle(style, context, source);
+        const toggled = (context: VisualEditorMenuContext) => entry(context).isActive(context.editor);
+        const enabled = (context: VisualEditorMenuContext) => entry(context).enabled(context.editor);
+        if (style.kind === 'block') {
+          const command = `styles.toggleBlockStyle.${style.name}`;
           return Disposable.from(
-            commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.editor)),
-            workbench.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, {
-              command,
-              title: style.label,
-              icon: STYLE_ICON,
-              enabled: (context) => entry(context).enabled?.(context.editor) ?? true,
-              toggled: (context) => entry(context).isActive?.(context.editor) ?? false,
-            }),
+            // chosen where on (and by Normal text): taken off
+            commands.registerCommand(command, (context: VisualEditorMenuContext) =>
+              toggled(context) ? context.editor.chain().focus().unsetBlockStyle().run() : applyTextStyle(entry(context), context.editor),
+            ),
+            workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { command, title: style.label, category: 'Block styles', group: 'block', toggled, enabled: (context) => toggled(context) || enabled(context) }),
           );
-        }),
+        }
+        const command = `styles.toggleInlineStyle.${style.name}`;
+        const item = { command, title: style.label, enabled, toggled };
+        return Disposable.from(
+          commands.registerCommand(command, (context: VisualEditorMenuContext) => applyTextStyle(entry(context), context.editor)),
+          workbench.registerMenuItem<VisualEditorMenuContext>(TEXT_STYLE, { ...item, category: 'Inline styles', group: 'inline' }),
+          workbench.registerMenuItem<VisualEditorMenuContext>(INLINE_STYLES_MENU.id, { ...item, icon: STYLE_ICON }),
+        );
+      }),
     );
   let registered = register();
   const subscription = source.onDidChange(() => {
     registered.dispose();
     registered = register();
   });
-  return new Disposable(() => {
-    subscription.dispose();
-    registered.dispose();
-  });
+  return Disposable.from(
+    new Disposable(() => {
+      subscription.dispose();
+      registered.dispose();
+    }),
+    commands.registerCommand(NEW_STYLE, () => create()),
+    workbench.registerMenuItem(TEXT_STYLE, { command: NEW_STYLE, title: 'New style…', group: 'new' }),
+  );
 }
 
-/** Applies a text style menu `entry` to the selection of `tiptap` (with what follows, the import); false where it does not apply. */
-function applyTextStyle(entry: TextStyle, tiptap: Editor): boolean {
-  if (entry.enabled && !entry.enabled(tiptap)) return false;
-  const applied = entry.apply(tiptap.chain().focus(), tiptap).run();
-  if (applied) entry.applied?.();
+/** The text style menu. */
+const TEXT_STYLE = 'visualEditor/textStyle';
+/** "New style…" (the host's: `StylesOptions.create`). */
+const NEW_STYLE = 'styles.newStyle';
+
+/** What applying a style is, in one editor: its chain, where it applies, whether the selection has it, what follows. */
+interface StyleEntry {
+  apply(chain: ChainedCommands): ChainedCommands;
+  enabled(editor: Editor): boolean;
+  isActive(editor: Editor): boolean;
+  /** After it was applied: the import where it is now used. */
+  applied(): void;
+}
+
+/** Applies style `entry` to the selection of `tiptap` (with what follows, the import); false where it does not apply. */
+function applyTextStyle(entry: StyleEntry, tiptap: Editor): boolean {
+  if (!entry.enabled(tiptap)) return false;
+  const applied = entry.apply(tiptap.chain().focus()).run();
+  if (applied) entry.applied();
   return applied;
 }
 
@@ -215,48 +239,26 @@ function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly 
   return p.inline(inside, p.schema.marks.style.create({ name, title: style.label, head }).addToSet(marks));
 }
 
-/**
- * The text style menu's entries: the block styles (wrap the selected blocks, `#note[..]`; Normal text takes them
- * off), the inline styles (toggle on a selection, `#key[..]`), and "New style…". Applying a style imports it into the
- * editor's document where needed.
- */
-function textStyles({ styles: source, create }: StylesOptions): TextStyleProvider {
-  return {
-    provideTextStyles: (editor) => [...source.styles().map((style) => textStyle(style, editor, source)), { id: 'new-style', label: 'New style…', order: 1000, apply: (chain) => chain, applied: create }],
-    onDidChangeTextStyles: source.onDidChange,
-  };
-}
-
-/** The menu entry of `style`, in `editor`. */
-function textStyle(style: TypstStyle, editor: VisualEditorContext, source: ProjectStyles): TextStyle {
+/** Applying `style` in `editor`. */
+function textStyle(style: TypstStyle, editor: VisualEditorContext, source: ProjectStyles): StyleEntry {
   const applied = { name: style.name, label: style.label };
-  const entry = {
-    label: style.label,
-    applied: () => {
-      const change = source.calculateImportChange(editor.document, style, editor.selection().from);
-      if (change) editor.document.change([change], STYLE_IMPORT);
-    },
+  const imported = () => {
+    const change = source.calculateImportChange(editor.document, style, editor.selection().from);
+    if (change) editor.document.change([change], STYLE_IMPORT);
   };
   if (style.kind === 'block') {
     return {
-      ...entry,
-      id: `block:${style.name}`,
-      section: 'Block styles',
-      order: 100,
       apply: (chain) => chain.setBlockStyle(applied),
-      isActive: (editor) => editor.isActive('styledBlock', { name: style.name }),
-      remove: (chain) => chain.unsetBlockStyle(),
+      enabled: (tiptap) => tiptap.can().setBlockStyle(applied),
+      isActive: (tiptap) => tiptap.isActive('styledBlock', { name: style.name }),
+      applied: imported,
     };
   }
   return {
-    ...entry,
-    id: `inline:${style.name}`,
-    section: 'Inline styles',
-    order: 200,
-    toggle: true,
     apply: (chain) => chain.toggleInlineStyle(applied),
-    enabled: (editor) => !editor.state.selection.empty && editor.can().toggleInlineStyle(applied),
-    isActive: (editor) => editor.isActive('style', { name: style.name }),
+    enabled: (tiptap) => !tiptap.state.selection.empty && tiptap.can().toggleInlineStyle(applied),
+    isActive: (tiptap) => tiptap.isActive('style', { name: style.name }),
+    applied: imported,
   };
 }
 

@@ -83,8 +83,6 @@ export type {
   SourceHighlight,
   SourceHighlightProvider,
   Submenu,
-  TextStyle,
-  TextStyleProvider,
   TypstNodeSpec,
   VisualEditorContext,
   VisualEditorContributions,

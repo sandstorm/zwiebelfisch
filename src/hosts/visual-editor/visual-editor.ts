@@ -48,11 +48,6 @@ export interface VisualEditorContributions {
    */
   registerFloatingBar(bar: FloatingBar): Disposable;
   /**
-   * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
-   * "Normal text". The menu shows once any provider is registered.
-   */
-  registerTextStyleProvider(provider: TextStyleProvider): Disposable;
-  /**
    * A list that pops up while `trigger.char` and a query are typed in the text (the labels after `@`, the slash
    * commands after `/`): the provider's items, filtered by the query (see `CompletionItem`). Not in code (code
    * blocks, inline code) nor raw boxes. Of two providers with the same character, each opens its own list.
@@ -94,6 +89,10 @@ export const VISUAL_EDITOR = 'visualEditor';
  *   text style menu, `3_lists`, `4_align`, `5_insert` the Insert menu, `6_comments`)
  * - `visualEditor/insert`: the Insert menu
  * - `visualEditor/selection`: the bar above a text selection
+ * - `visualEditor/textStyle`: the text style menu (a `<select>`), after the host's "Normal text": its value the first
+ *   entry whose `toggled` holds; the entries of group `inline` are toggles instead (✓ where on, never the value);
+ *   consecutive entries of one `category` under its title. An entry chosen where it is on takes itself off (a
+ *   heading level, a block style): "Normal text" runs the value's command, then makes the blocks paragraphs
  * - the menus of the submenus and floating bars that extensions add (`registerSubmenu`, `registerFloatingBar`)
  */
 export type VisualEditorMenuContext = VisualEditorContext & { readonly editor: Editor };
@@ -246,42 +245,6 @@ export interface FloatingBar {
   anchor(context: VisualEditorMenuContext): Anchor;
 }
 
-/**
- * An entry of the toolbar's text style menu: a block style (a heading level, a custom block style) the menu shows as
- * its value where the selection has it, or a `toggle` on the selection's text (an inline style). The menu lists its
- * entries by `order`, those of one `section` together under its title. The host's own first entry, "Normal text",
- * takes off the selection's style (the first active entry's `remove`) and makes its blocks paragraphs.
- */
-export interface TextStyle {
-  /** The entry's id, unique in the menu (`heading-1`, `block:note`). */
-  readonly id: string;
-  readonly label: string;
-  /** The title of the menu section it is listed in (`Block styles`); none: in the menu itself. */
-  readonly section?: string;
-  /** Where it is listed (default 0; then as provided). */
-  readonly order?: number;
-  /** The command; also decides, dry-run, whether the entry is enabled. An entry that only asks (New style…) applies nothing. */
-  apply(chain: ChainedCommands, editor: Editor): ChainedCommands;
-  /** Whether the entry is enabled, instead of the dry run of `apply`. */
-  enabled?(editor: Editor): boolean;
-  /** Whether the selection has it: the menu's value (the first active entry), or for a toggle a ✓. */
-  isActive?(editor: Editor): boolean;
-  /** Applied on top of the block's style (an inline style): marked ✓ where on, never the menu's value. */
-  readonly toggle?: boolean;
-  /** Takes it off the selection, where it is active (a block style: its blocks lifted out); for Normal text. */
-  remove?(chain: ChainedCommands): ChainedCommands;
-  /** After it was applied (importing a style where it is now used; New style…: asking for one). */
-  applied?(): void;
-  /** Other words it is found by where entries are searched (the slash commands): `['h1']` for Heading 1. */
-  readonly keywords?: readonly string[];
-}
-
-/** The text style menu's entries of one editor; the menu asks again whenever `onDidChangeTextStyles` fires. */
-export interface TextStyleProvider {
-  provideTextStyles(editor: VisualEditorContext): readonly TextStyle[];
-  readonly onDidChangeTextStyles?: Event<void>;
-}
-
 // Suggestions: lists that pop up while a trigger character and a query are typed.
 
 /**
@@ -298,8 +261,6 @@ export interface CompletionContext extends VisualEditorContext {
   readonly editor: Editor;
   /** What is typed after the trigger character (the list filters the items by it). */
   readonly query: string;
-  /** The text style menu's entries of this editor, sorted as shown (without the host's "Normal text"). */
-  textStyles(): readonly TextStyle[];
 }
 
 /**

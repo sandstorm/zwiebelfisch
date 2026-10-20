@@ -60,7 +60,6 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { id, label, order } = record(bar);
     return { title: String(id), details: [`"${String(label)}"`, `order ${num(order, 0)}`], rank: [num(order, 0)] };
   },
-  'visualEditor.registerTextStyleProvider': ([provider]) => named(provider, 'text styles'),
   'visualEditor.registerCompletionItemProvider': ([provider, trigger]) => {
     const { char, allowedPrefixes } = record(trigger);
     const prefixes = Array.isArray(allowedPrefixes) ? [`after ${allowedPrefixes.map((prefix) => JSON.stringify(prefix)).join(', ')}`] : [];

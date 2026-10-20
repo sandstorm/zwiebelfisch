@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-// Tests for TextStyleMenu (text-style-menu.ts), through the Visual editor, with providers and a mark defined here.
+// Tests for TextStyleMenu (text-style-menu.ts), through the Visual editor, with entries and a mark defined here.
 import { describe, expect, it, vi } from 'vitest';
+import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
+import { CommandsHost, type MenuItem } from '../../commands/commands';
 import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
-import { VisualEditor, VisualEditorHost, type TextStyle, type TextStyleProvider } from '../visual-editor';
+import { registerChainButton, VisualEditor, VisualEditorHost, type ChainButton, type VisualEditorMenuContext } from '../visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -22,91 +24,119 @@ const STRONG: TypstMarkSpec = {
 };
 
 /** A toggle on the selection's text. */
-const BOLD: TextStyle = { id: 'bold', label: 'Bold', section: 'Text styles', order: 20, toggle: true, apply: (c) => c.toggleBold(), isActive: (e) => e.isActive('bold') };
+const BOLD: ChainButton = { command: 'test.bold', title: 'Bold', category: 'Text styles', group: 'inline', order: 20, chain: (c) => c.toggleBold(), toggled: ({ editor }) => editor.isActive('bold') };
 
-/** A block style (here: a paragraph all in bold) that Normal text takes off. */
-const LOUD: TextStyle = { id: 'loud', label: 'Loud', order: 10, apply: (c) => c.setBold(), isActive: (e) => e.isActive('bold'), remove: (c) => c.selectParentNode().unsetBold() };
+/** A block style (here: a paragraph all in bold), taken off when chosen where it is on (as Normal text does). */
+const LOUD: ChainButton = {
+  command: 'test.loud',
+  title: 'Loud',
+  order: 10,
+  chain: (c) => c.command(({ editor, commands }) => (editor.isActive('bold') ? commands.selectParentNode() && commands.unsetBold() : commands.setBold())),
+  toggled: ({ editor }) => editor.isActive('bold'),
+};
 
-function setup(text: string, providers: readonly TextStyleProvider[]) {
+const TEXT_STYLE = 'visualEditor/textStyle';
+
+/** The workbench's menus and commands, as small as these tests need: entries by group (`inline` after ''), then `order`. */
+function testHosts() {
+  const items: { menuId: string; item: MenuItem<VisualEditorMenuContext> }[] = [];
+  const changed = new EventEmitter<string>();
+  const commands = new CommandsHost(document.createElement('div'));
+  const rank = (item: MenuItem<VisualEditorMenuContext>) => item.group ?? '';
+  const getMenuItems = (menuId: string) =>
+    items
+      .filter((entry) => entry.menuId === menuId)
+      .map((entry) => entry.item)
+      .sort((a, b) => (rank(a) < rank(b) ? -1 : rank(a) > rank(b) ? 1 : 0) || (a.order ?? 0) - (b.order ?? 0));
+  const workbench = {
+    registerMenuItem(menuId: string, item: MenuItem<VisualEditorMenuContext>) {
+      const entry = { menuId, item };
+      items.push(entry);
+      changed.fire(menuId);
+      return new Disposable(() => (items.splice(items.indexOf(entry), 1), changed.fire(menuId)));
+    },
+  };
+  const visualEditor = new VisualEditorHost({
+    menus: { getMenuItems, onDidChangeMenu: changed.event, executeCommand: (command, ...args) => commands.executeCommand(command, ...args), keybindingLabel: () => undefined },
+  });
+  return { visualEditor, commands, workbench };
+}
+
+function setup(text: string, entries: readonly ChainButton[]) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const visualEditor = new VisualEditorHost();
-  visualEditor.registerMark(STRONG);
-  for (const provider of providers) visualEditor.registerTextStyleProvider(provider);
-  const view = new VisualEditor(parent, doc, visualEditor);
-  const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]');
+  const hosts = testHosts();
+  hosts.visualEditor.registerMark(STRONG);
+  for (const entry of entries) registerChainButton(hosts, TEXT_STYLE, entry);
+  const view = new VisualEditor(parent, doc, hosts.visualEditor);
+  const menu = () => parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]');
   const choose = (value: string) => {
-    menu!.value = value;
-    menu!.dispatchEvent(new Event('change', { bubbles: true }));
+    menu()!.value = value;
+    menu()!.dispatchEvent(new Event('change', { bubbles: true }));
   };
   /** The option `value` as the opened list shows it (the options are looked at when the menu is pressed). */
   const option = (value: string) => {
-    menu!.dispatchEvent(new MouseEvent('mousedown'));
-    return [...menu!.options].find((o) => o.value === value)!;
+    menu()!.dispatchEvent(new MouseEvent('mousedown'));
+    return [...menu()!.options].find((o) => o.value === value)!;
   };
-  return { doc, view, menu, choose, option };
+  return { doc, view, menu, choose, option, hosts };
 }
 
 describe('the text style menu', () => {
   it('looks at its options when pressed, not after every transaction', () => {
     const enabled = vi.fn(() => true);
-    const { view, menu } = setup('Hello world\n', [{ provideTextStyles: () => [{ ...LOUD, enabled }] }]);
-    enabled.mockClear();
+    const { view, menu, hosts } = setup('Hello world\n', []);
+    hosts.workbench.registerMenuItem(TEXT_STYLE, { command: 'test.counted', title: 'Counted', enabled });
     view.reveal(SourceRange.of({ from: 0, to: 5 }));
     expect(enabled).not.toHaveBeenCalled();
-    menu!.dispatchEvent(new MouseEvent('mousedown'));
+    menu()!.dispatchEvent(new MouseEvent('mousedown'));
     expect(enabled).toHaveBeenCalledTimes(1);
   });
 
-  it('shows only when a provider contributes to it', () => {
-    expect(setup('Text\n', []).menu).toBeNull();
-    expect(setup('Text\n', [{ provideTextStyles: () => [] }]).menu).not.toBeNull();
+  it('shows only while its menu has entries', () => {
+    expect(setup('Text\n', []).menu()).toBeNull();
+    expect(setup('Text\n', [LOUD]).menu()).not.toBeNull();
   });
 
-  it('lists Normal text first, then the entries by order, a section under its title', () => {
-    const { menu } = setup('Text\n', [{ provideTextStyles: () => [BOLD] }, { provideTextStyles: () => [LOUD] }]);
-    expect([...menu!.children].map((c) => (c instanceof HTMLOptGroupElement ? [c.label, ...[...c.children].map((o) => o.textContent)] : c.textContent))).toEqual([
+  it('lists Normal text first, then the entries as sorted, a category under its title', () => {
+    const { menu } = setup('Text\n', [BOLD, LOUD]);
+    expect([...menu()!.children].map((c) => (c instanceof HTMLOptGroupElement ? [c.label, ...[...c.children].map((o) => o.textContent)] : c.textContent))).toEqual([
       'Normal text',
       'Loud',
       ['Text styles', 'Bold'],
     ]);
   });
 
-  it('asks a provider again when it reports a change', () => {
-    const changed = new EventEmitter<void>();
-    let entries: TextStyle[] = [];
-    const { menu } = setup('Text\n', [{ provideTextStyles: () => entries, onDidChangeTextStyles: changed.event }]);
-    expect(menu!.options.length).toBe(1);
-    entries = [LOUD];
-    changed.fire();
-    expect([...menu!.options].map((o) => o.value)).toEqual(['paragraph', 'loud']);
+  it('follows its menu as entries are registered', () => {
+    const { menu, hosts, view } = setup('Text\n', [BOLD]);
+    expect(menu()!.options.length).toBe(2);
+    registerChainButton(hosts, TEXT_STYLE, LOUD);
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
+    expect([...menu()!.options].map((o) => o.value)).toEqual(['paragraph', 'test.loud', 'test.bold']);
   });
 
-  it('applies a toggle on the selection, marks it ✓ where on, and tells the entry', () => {
-    const applied = vi.fn();
-    const { doc, view, menu, choose, option } = setup('Hello world\n', [{ provideTextStyles: () => [{ ...BOLD, applied }] }]);
+  it('runs a toggle on the selection, marks it ✓ where on, and never shows it as its value', () => {
+    const { doc, view, menu, choose, option } = setup('Hello world\n', [BOLD]);
     view.reveal(SourceRange.of({ from: 0, to: 'Hello'.length }));
-    choose('bold');
+    choose('test.bold');
     expect(doc.text).toBe('*Hello* world\n');
-    expect(applied).toHaveBeenCalled();
-    expect(option('bold').text).toBe('✓ Bold');
-    // a toggle is never the menu's value
-    expect(menu!.value).toBe('paragraph');
+    expect(option('test.bold').text).toBe('✓ Bold');
+    expect(menu()!.value).toBe('paragraph');
   });
 
   it("shows the selection's block style, and Normal text takes it off", () => {
-    const { doc, view, menu, choose, option } = setup('*Hello*\n', [{ provideTextStyles: () => [LOUD] }]);
+    const { doc, view, menu, choose, option } = setup('*Hello*\n', [LOUD]);
     view.reveal(SourceRange.of({ from: 1, to: 3 }));
-    expect(menu!.value).toBe('loud');
+    expect(menu()!.value).toBe('test.loud');
     // the blocks are paragraphs already: taking the style off is all Normal text does
     expect(option('paragraph').disabled).toBe(false);
     choose('paragraph');
     expect(doc.text).toBe('Hello\n');
-    expect(menu!.value).toBe('paragraph');
+    expect(menu()!.value).toBe('paragraph');
   });
 
   it('disables an entry that cannot apply', () => {
-    const { option } = setup('Text\n', [{ provideTextStyles: () => [{ ...LOUD, enabled: () => false }] }]);
-    expect(option('loud').disabled).toBe(true);
+    const { option } = setup('Text\n', [{ ...LOUD, chain: (c) => c.command(() => false) }]);
+    expect(option('test.loud').disabled).toBe(true);
   });
 });

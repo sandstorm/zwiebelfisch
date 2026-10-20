@@ -15,9 +15,9 @@ describe('headings in the text style menu', () => {
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
     expect([...menu.options].map((o) => [o.value, o.text])).toEqual([
       ['paragraph', 'Normal text'],
-      ['heading-1', 'Heading 1'],
-      ['heading-2', 'Heading 2'],
-      ['heading-3', 'Heading 3'],
+      ['headings.toggleHeading1', 'Heading 1'],
+      ['headings.toggleHeading2', 'Heading 2'],
+      ['headings.toggleHeading3', 'Heading 3'],
     ]);
   });
 
@@ -32,12 +32,12 @@ describe('headings in the text style menu', () => {
     };
     view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     expect(menu.value).toBe('paragraph');
-    choose('heading-2');
+    choose('headings.toggleHeading2');
     expect(doc.text).toBe('== Hello world\n');
-    expect(menu.value).toBe('heading-2');
-    choose('heading-1');
+    expect(menu.value).toBe('headings.toggleHeading2');
+    choose('headings.toggleHeading1');
     expect(doc.text).toBe('= Hello world\n');
-    choose('heading-3');
+    choose('headings.toggleHeading3');
     expect(doc.text).toBe('=== Hello world\n');
     choose('paragraph');
     expect(doc.text).toBe('Hello world\n');

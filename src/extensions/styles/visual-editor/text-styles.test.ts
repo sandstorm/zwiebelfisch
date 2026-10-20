@@ -52,17 +52,17 @@ describe('custom styles in the text style menu', () => {
   it('lists the block and the inline styles after the headings, and New style…', () => {
     const { menu, labels } = setup('Text\n', [NOTE, KEY]);
     expect(labels()).toEqual([['Block styles', 'Note'], ['Inline styles', 'Keyword']]);
-    expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'heading-1', 'heading-2', 'heading-3', 'block:note', 'inline:key', 'new-style']);
+    expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'headings.toggleHeading1', 'headings.toggleHeading2', 'headings.toggleHeading3', 'styles.toggleBlockStyle.note', 'styles.toggleInlineStyle.key', 'styles.newStyle']);
   });
 
   it('a block style wraps the paragraph and is imported once; Normal text unwraps it', () => {
     const { doc, view, menu, choose } = setup('One\n\nTwo\n');
     view.reveal(SourceRange.of({ from: 1, to: 1 }));
-    choose('block:note');
+    choose('styles.toggleBlockStyle.note');
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n\nTwo\n');
-    expect(menu.value).toBe('block:note');
+    expect(menu.value).toBe('styles.toggleBlockStyle.note');
     view.reveal(SourceRange.of({ from: doc.text.indexOf('Two'), to: doc.text.indexOf('Two') }));
-    choose('block:note');
+    choose('styles.toggleBlockStyle.note');
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n\n#note[Two]\n');
     view.reveal(SourceRange.of({ from: doc.text.indexOf('One'), to: doc.text.indexOf('One') }));
     expect([...menu.options].find((o) => o.value === 'paragraph')!.disabled).toBe(false);
@@ -75,12 +75,12 @@ describe('custom styles in the text style menu', () => {
     const { doc, view, menu, choose } = setup('#import "styles.typ": note\n\nA term here\n');
     const from = doc.text.indexOf('term');
     view.reveal(SourceRange.of({ from: from, to: from + 4 }));
-    choose('inline:key');
+    choose('styles.toggleInlineStyle.key');
     expect(doc.text).toBe('#import "styles.typ": note, key\n\nA #key[term] here\n');
     menu.dispatchEvent(new MouseEvent('mousedown'));
-    const option = [...menu.options].find((o) => o.value === 'inline:key')!;
+    const option = [...menu.options].find((o) => o.value === 'styles.toggleInlineStyle.key')!;
     expect(option.text).toBe('✓ Keyword');
-    choose('inline:key');
+    choose('styles.toggleInlineStyle.key');
     expect(doc.text).toBe('#import "styles.typ": note, key\n\nA term here\n');
   });
 
@@ -88,7 +88,7 @@ describe('custom styles in the text style menu', () => {
     const { view, menu } = setup('A term\n');
     view.reveal(SourceRange.of({ from: 2, to: 2 }));
     menu.dispatchEvent(new MouseEvent('mousedown'));
-    expect([...menu.options].find((o) => o.value === 'inline:key')!.disabled).toBe(true);
+    expect([...menu.options].find((o) => o.value === 'styles.toggleInlineStyle.key')!.disabled).toBe(true);
   });
 
   it('follows the declared styles: a call shows styled once its style is declared', () => {
@@ -104,7 +104,7 @@ describe('custom styles in the text style menu', () => {
   it('New style… asks the host to create one', () => {
     const create = vi.fn();
     const { choose } = setup('Text\n', [NOTE], create);
-    choose('new-style');
+    choose('styles.newStyle');
     expect(create).toHaveBeenCalled();
   });
 });
@@ -162,7 +162,7 @@ describe('the text style menu without headings', () => {
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('Text\n'), contributions);
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
-    expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'block:note', 'new-style']);
+    expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'styles.toggleBlockStyle.note', 'styles.newStyle']);
   });
 });
 

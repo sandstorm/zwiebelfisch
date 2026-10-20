@@ -94,7 +94,6 @@ describe('completion lists', () => {
     const context = asked.at(-1)!;
     expect(context.query).toBe('ch');
     expect(context.editor).toBe(editor);
-    expect(context.textStyles()).toEqual([]);
   });
 
   it('arrow keys choose (wrapping around), Enter replaces the trigger and query with the chosen item', () => {

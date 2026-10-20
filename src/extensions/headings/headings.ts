@@ -1,3 +1,4 @@
+import { registerChainButton } from '../../hosts/visual-editor/visual-editor';
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
@@ -27,7 +28,7 @@ export function headings(): Extension {
       );
       subscriptions.push(
         visualEditor.registerNode(HEADING),
-        visualEditor.registerTextStyleProvider(HEADING_STYLES),
+        ...HEADING_STYLES.map((style) => registerChainButton({ commands, workbench }, 'visualEditor/textStyle', style)),
         visualEditor.registerTiptapExtension(() => HeadingNumbers),
       );
     },

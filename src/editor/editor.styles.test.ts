@@ -87,7 +87,7 @@ describe("the docs' example block style", () => {
   it('is offered in the text style menu of a docs chapter, declared in template.typ', () => {
     const { pane } = setup();
     const menu = pane().querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
-    expect([...menu.options].map((o) => [o.value, o.text])).toContainEqual(['block:example', 'Example']);
+    expect([...menu.options].map((o) => [o.value, o.text])).toContainEqual(['styles.toggleBlockStyle.example', 'Example']);
   });
 
   it('shows a chapter\'s #example[```typ …```] as the styled block "Example" with the code block in it, unchanged when printed back', () => {

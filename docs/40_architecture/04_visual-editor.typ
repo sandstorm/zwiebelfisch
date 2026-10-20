@@ -63,7 +63,6 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands],
   [`registerSubmenu(submenu)`], [A menu button (`{ id, label, icon(context), parent, group?, order? }`) in the row or a floating bar, opening the entries of menu `id` (@architecture-visual-editor-toolbar)],
   [`registerFloatingBar(bar)`], [A bar floating above `anchor(context)` in the text (`{ id, label, order, anchor }`), holding the entries of menu `id`],
-  [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles)],
   [`registerCompletionItemProvider(provider, trigger)`], [A list after a trigger character (@architecture-visual-editor-completion)],
   [`registerHighlights(layer, provider)`], [Styled source ranges over the text (diagnostics, others' selections)],
   [`registerRawBoxRenderer(provider, options?)`], [What raw boxes show instead of their code],
@@ -124,6 +123,7 @@ workbench.registerMenuItem<VisualEditorMenuContext>('visualEditor/insert', {
 - *State per editor:* the entry's `when`, `enabled` and `toggled` are functions of the menu context, where VS Code has context keys: the state lives in the Tiptap editor the menu is shown for, so the entry asks it each time the menu shows (the row: after every transaction; a submenu or a bar: only while open or shown). `when` leaves a button out, `enabled` disables it, `toggled` shows it pressed.
 - *How a button looks:* the entry's `icon`, else its `shortTitle` (`25%`), else its title; the title and the key as tooltip: the command's key binding, else the entry's `keybinding` (the editor's own key, `Mod+B`). Buttons never take the focus from the text. `keywords` feed the slash commands.
 - *A submenu's icon* is a function of the context (the Align menu shows the selection's alignment); a submenu without entries is left out.
+- *The text style menu* (`visualEditor/textStyle`, a `<select>` in the row's `2_textStyle`, shown while it has entries): the host's "Normal text", then the entries (heading levels: `headings`; block styles, inline styles, "New style…": `styles`), consecutive ones of one `category` under its title. Its value is the first entry whose `toggled` holds; entries of group `inline` are toggles instead (✓ where on, never the value). An entry chosen where it is on takes itself off; "Normal text" runs the value's command so, then makes the blocks paragraphs (the paragraph is the host's own node, so the host keeps it).
 
 == Completion lists <architecture-visual-editor-completion>
 
@@ -139,7 +139,7 @@ visualEditor.registerCompletionItemProvider(
 
 - *Where:* `char` at the start of a text block or after one of `allowedPrefixes` (default: a space); never in code or raw boxes.
 - *Asked synchronously on every keystroke*, filtered by the host. A list without matches is closed, so its keys go to the editor.
-- *Providers get* `editor`, `query` and `textStyles()`. The slash commands read the menus with `workbench.getMenuItems(menuId, context)` and run an entry's command: they offer what other extensions registered without knowing them.
+- *Providers get* `editor` and `query`. The slash commands read the menus with `workbench.getMenuItems(menuId, context)` and run an entry's command: they offer what other extensions registered without knowing them.
 - One Tiptap `Suggestion` plugin per provider and editor, with a `SuggestWidget` (`listbox`); keys as in VS Code.
 
 == Example: a callout <architecture-visual-editor-callout>

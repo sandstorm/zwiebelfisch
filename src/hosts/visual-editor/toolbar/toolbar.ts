@@ -2,18 +2,19 @@
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBarView } from './floating-bar';
-import { TextStyleMenu, textStyleEntries } from './text-style-menu';
+import { TextStyleMenu } from './text-style-menu';
 import { ToolbarMenu, type MenuItems } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import { keyLabel } from '../../commands/commands';
 import type { MenuItem } from '../../commands/commands';
-import type { Anchor, FloatingBar, Submenu, TextStyle, TextStyleProvider, VisualEditorMenuContext } from '../visual-editor';
+import type { Anchor, FloatingBar, Submenu, VisualEditorMenuContext } from '../visual-editor';
 import { svg } from '../visual-editor-helpers';
 
 /**
  * The Visual editor's formatting toolbar: the row (the menu `visualEditor/toolbar`, a group of buttons per entry
- * group, with the submenus placed there, the host's "Insert" among them, and the text style menu), and the bars
+ * group, with the submenus placed there, the host's "Insert" among them, and the text style menu of the menu
+ * `visualEditor/textStyle`), and the bars
  * floating above their anchor in the text (the menu `visualEditor/selection` above a text selection, those of
  * `registerFloatingBar`), of which only the first with an anchor shows.
  *
@@ -43,7 +44,6 @@ export class Toolbar {
       menus: ToolbarMenus;
       submenus: readonly Submenu[];
       floatingBars: readonly FloatingBar[];
-      textStyles: readonly TextStyleProvider[];
     },
   ) {
     this.context = options.context;
@@ -56,8 +56,11 @@ export class Toolbar {
     this.root.addEventListener('mousedown', (event) => {
       if ((event.target as HTMLElement).closest('button')) event.preventDefault();
     });
-    const textStyles = options.textStyles.length > 0 ? [this.control(new TextStyleMenu(doc, tiptap, options.context, options.textStyles), TEXT_STYLE_GROUP)] : [];
-    this.refreshers.push(() => this.showRow(this.entries(TOOLBAR, textStyles)));
+    const textStyles = new TextStyleMenu(doc, tiptap, options.context, options.menus);
+    this.disposers.push(() => textStyles.dispose());
+    const textStyleEntry: Placed = { group: TEXT_STYLE_GROUP, order: 0, element: textStyles.element, shows: () => true, refresh: () => textStyles.refresh() };
+    // the text style menu while it has entries
+    this.refreshers.push(() => this.showRow(this.entries(TOOLBAR, textStyles.items().length > 0 ? [textStyleEntry] : [])));
     parent.prepend(this.root);
     this.floatingBars([...HOST_BARS, ...options.floatingBars].sort((a, b) => a.order - b.order));
     this.subscription = options.menus.onDidChangeMenu(this.refresh);
@@ -65,11 +68,6 @@ export class Toolbar {
     tiptap.on('focus', this.refresh);
     tiptap.on('blur', this.refresh);
     this.refresh();
-  }
-
-  /** The text style menu's entries, sorted as shown (without "Normal text"). */
-  textStyles(): readonly TextStyle[] {
-    return textStyleEntries(this.options.textStyles, this.context);
   }
 
   dispose(): void {
@@ -142,11 +140,6 @@ export class Toolbar {
     const placed: Placed = { group: submenu.group ?? '', order: submenu.order ?? 0, element: menu.element, shows: () => menu.hasItems, refresh: () => menu.refresh() };
     this.submenus.set(submenu, placed);
     return placed;
-  }
-
-  private control(control: TextStyleMenu, group: string): Placed {
-    this.disposers.push(() => control.dispose());
-    return { group, order: 0, element: control.element, shows: () => true, refresh: () => control.refresh() };
   }
 
   /**

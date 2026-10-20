@@ -9,7 +9,7 @@ import { headings, TOGGLE_NUMBERING } from './headings';
 /** `headings` activated with a window whose active editor shows `document` (null: none); runs a registered command. */
 function activate(document: TypstDocument | null): (id: string) => void {
   const registered = new Map<string, () => void>();
-  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+  const workbench = { registerStyleSheet: () => new Disposable(() => {}), registerMenuItem: () => new Disposable(() => {}) };
   const commands = {
     registerCommand: (id: string, handler: () => void) => (registered.set(id, handler), new Disposable(() => registered.delete(id))),
   };
