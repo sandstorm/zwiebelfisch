@@ -180,7 +180,7 @@ Every file opens in a custom editor, Typst files too: the Visual and Source edit
 
 === Help <architecture-workbench-help>
 
-`languages.registerHelpProvider(selector, { provideHelp })` (ours) gives the help panel a cheat sheet for the shown file's language: a plain-data `HelpSheet` (sections of rows `{ snippet, description, insert? }`, links), no markup. A row drags into an editor or inserts at the cursor with Enter; rows of a `typst` sheet drop into the Visual editor as Typst. `help/row` is the row's menu. Built-in sheets: `typst`, `mermaid`, `ironcalc`, `bibtex`.
+`languages.registerHelpSheet(selector, sheet)` (ours) gives the help panel a cheat sheet for the shown file's language: a plain-data `HelpSheet` (sections of rows `{ snippet, description, insert? }`, links), no markup. A row drags into an editor or inserts at the cursor with Enter; rows of a `typst` sheet drop into the Visual editor as Typst. `help/row` is the row's menu. Built-in sheets: `typst`, `mermaid`, `ironcalc`, `bibtex`.
 
 === Known imports <architecture-workbench-known-imports>
 
@@ -204,7 +204,7 @@ VS Code's `DocumentDropEditProvider`, for a file dropped into a Typst file. Retu
 VS Code's `DocumentPasteEditProvider`: `prepareDocumentPaste` on copy, `provideDocumentPasteEdits` for alternatives (each of a `kind`, shown in a "Paste as" chip), `resolveDocumentPasteEdit` for whatever goes in. `languages` keeps the providers and answers the same three queries; the `clipboard` extension asks them in the Visual and Source editors. Without it, no provider takes part: the editors paste as ProseMirror and CodeMirror do.
 
 - *Kinds* are dot-separated (`typst` covers `typst.html`). The `clipboard` extension's: `typst`, `typst.code`, `text.plain` (a provider of priority 0), and the Visual editor's `typst.html`.
-- *Order* (`sortPasteEdits`, in the clipboard extension's `paste-as.ts`): the providers' edits by their metadata's `priority` (default 100, higher first; equal: registration order), so the clipboard's own come last; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
+- *Order* (`sortPasteEdits`, in the clipboard extension's `paste-as.ts`): the providers' edits by their `priority` (`options`, as for links and drops; default 100, higher first; equal: registration order), so the clipboard's own come last; an edit goes after the kinds in its `yieldTo`; duplicates of earlier text drop out, and `text.plain` ("Plain text") takes the place of the first with its text, so a paste with formatting always offers it. ⌘⇧V prefers `text.plain`; the Source editors prefer `typst`.
 - *`resolveDocumentPasteEdit`* of every provider runs on the edit that goes in, in the same order, whatever its kind. Built-in: `imports`, `labels` (new names for clashing labels). Overlapping additional edits are dropped.
 - *Only providers whose `pasteMimeTypes` the clipboard has are asked*, all at paste time: the clipboard can't be read later.
 

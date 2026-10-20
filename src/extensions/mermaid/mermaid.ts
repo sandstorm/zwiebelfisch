@@ -25,7 +25,7 @@ export function mermaid(): Extension {
         registerInsertMermaid(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, mermaidLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, mermaidDrops),
-        languages.registerHelpProvider({ language: 'mermaid' }, { provideHelp: () => MERMAID_HELP }),
+        languages.registerHelpSheet({ language: 'mermaid' }, MERMAID_HELP),
         languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: MERMAN }),
       );
     },

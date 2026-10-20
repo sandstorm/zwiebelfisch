@@ -23,8 +23,8 @@ export class TypstPasteEditProvider implements DocumentPasteEditProvider {
   }
 }
 
-/** What `TypstPasteEditProvider` gives and reads; priority 0: its edits after the other providers' (default 100). */
-export const TYPST_PASTE_METADATA: DocumentPasteProviderMetadata = { providedPasteEditKinds: ['typst', 'text.plain'], pasteMimeTypes: ['text/plain', 'text/x-typst'], priority: 0 };
+/** What `TypstPasteEditProvider` gives and reads. */
+export const TYPST_PASTE_METADATA: DocumentPasteProviderMetadata = { providedPasteEditKinds: ['typst', 'text.plain'], pasteMimeTypes: ['text/plain', 'text/x-typst'] };
 
 /**
  * The Typst source to paste from the clipboard `data`; null: nothing to read as Typst (HTML of a web page or a word

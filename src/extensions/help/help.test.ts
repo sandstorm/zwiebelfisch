@@ -48,8 +48,8 @@ const sheets: Extension = {
   contributes: { languages: [{ id: 'mermaid', extensions: ['.mmd'] }] },
   activate: ({ languages, subscriptions }) =>
     subscriptions.push(
-      languages.registerHelpProvider({ language: 'typst' }, { provideHelp: () => TYPST }),
-      languages.registerHelpProvider({ language: 'mermaid' }, { provideHelp: () => MERMAID }),
+      languages.registerHelpSheet({ language: 'typst' }, TYPST),
+      languages.registerHelpSheet({ language: 'mermaid' }, MERMAID),
     ),
 };
 

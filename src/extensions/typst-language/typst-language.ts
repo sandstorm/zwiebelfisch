@@ -20,7 +20,7 @@ export function typstLanguage(): Extension {
     activate({ sourceEditor, languages, subscriptions }) {
       subscriptions.push(
         sourceEditor.registerCodeMirrorExtension({ language: 'typst' }, typstSyntax()),
-        languages.registerHelpProvider({ language: 'typst' }, { provideHelp: () => TYPST_HELP }),
+        languages.registerHelpSheet({ language: 'typst' }, TYPST_HELP),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, includeDrops),
       );
     },

@@ -111,10 +111,10 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const languages = [selector].flat().map((filter) => String(record(filter).language ?? '*'));
     return prioritized({ ...named(provider, 'document links'), details: [`language ${languages.join(', ')}`] }, record(options).priority);
   },
-  'languages.registerDocumentPasteEditProvider': ([selector, provider, metadata]) => {
+  'languages.registerDocumentPasteEditProvider': ([selector, provider, metadata, options]) => {
     const languages = [selector].flat().map((filter) => String(record(filter).language ?? '*'));
     const { providedPasteEditKinds: kinds } = record(metadata);
-    return prioritized({ ...named(provider, 'paste edits'), details: [`language ${languages.join(', ')}`, `kinds ${Array.isArray(kinds) && kinds.length > 0 ? kinds.join(', ') : '(resolves)'}`] }, record(metadata).priority);
+    return prioritized({ ...named(provider, 'paste edits'), details: [`language ${languages.join(', ')}`, `kinds ${Array.isArray(kinds) && kinds.length > 0 ? kinds.join(', ') : '(resolves)'}`] }, record(options).priority);
   },
   'preview.registerToolbarItem': ([item, placement]) => {
     const { group, order, renderer } = record(placement);
@@ -143,7 +143,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
 type Describer = (args: Arguments) => Description;
 
 // The arguments, read by shape: each describer picks what it knows.
-type Arguments = readonly [unknown?, unknown?, unknown?];
+type Arguments = readonly [unknown?, unknown?, unknown?, unknown?];
 
 /** A node or mark spec: its name, its Tiptap extension's priority, the Typst syntax and calls it parses. */
 function typstSpec(spec: unknown): Description {

@@ -28,7 +28,8 @@ export function clipboard(): Extension {
       };
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA),
+        // priority 0: its edits after the other providers' (default 100)
+        languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA, { priority: 0 }),
         visualEditor.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf(document), choices })),
         // a paste goes in as CodeMirror pastes it (the text as Typst) first
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, (editor) => {

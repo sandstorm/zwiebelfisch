@@ -33,7 +33,8 @@ function setup(text: string, { yieldTo = ['text.plain'], preferences = ['typst']
         { kind: 'text.plain', title: 'Plain text', insertText: pastedOf(data).toUpperCase(), yieldTo: ['typst'] },
       ],
     },
-    { providedPasteEditKinds: ['typst', 'text.plain'], priority: 0 },
+    { providedPasteEditKinds: ['typst', 'text.plain'] },
+    { priority: 0 },
   );
   languages.registerDocumentPasteEditProvider(
     {},

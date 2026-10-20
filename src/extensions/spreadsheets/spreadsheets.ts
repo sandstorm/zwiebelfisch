@@ -48,7 +48,7 @@ export function spreadsheets(): Extension {
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
-        languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
+        languages.registerHelpSheet({ language: 'ironcalc' }, SPREADSHEET_HELP),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),
         registerInsertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName)),

@@ -70,13 +70,13 @@ describe('LanguagesHost', () => {
     expect(() => languages.declare([{ id: 'other', extensions: ['.typ'] }])).toThrow(/\.typ are typst/);
   });
 
-  it('gives the help sheets of the providers for a language (no language: every file), until disposed', () => {
+  it('gives the help sheets registered for a language (no language: every file), until disposed', () => {
     const languages = new LanguagesHost();
-    const sheet = (title: string) => ({ provideHelp: () => ({ title, sections: [] }) });
-    languages.registerHelpProvider({ language: 'typst' }, sheet('Typst'));
-    const mermaid = languages.registerHelpProvider([{ language: 'mermaid' }], sheet('Mermaid'));
-    languages.registerHelpProvider({}, sheet('Everywhere'));
-    const titles = (languageId: string | undefined) => languages.provideHelp(languageId).map(({ title }) => title);
+    const sheet = (title: string) => ({ title, sections: [] });
+    languages.registerHelpSheet({ language: 'typst' }, sheet('Typst'));
+    const mermaid = languages.registerHelpSheet([{ language: 'mermaid' }], sheet('Mermaid'));
+    languages.registerHelpSheet({}, sheet('Everywhere'));
+    const titles = (languageId: string | undefined) => languages.getHelpSheets(languageId).map(({ title }) => title);
     expect(titles('typst')).toEqual(['Typst', 'Everywhere']);
     expect(titles('mermaid')).toEqual(['Mermaid', 'Everywhere']);
     expect(titles(undefined)).toEqual(['Everywhere']);
@@ -131,9 +131,9 @@ describe('LanguagesHost', () => {
       provideDocumentPasteEdits: () => [{ kind, title: kind, insertText: kind }],
       resolveDocumentPasteEdit: () => void resolved.push(kind),
     });
-    languages.registerDocumentPasteEditProvider({}, provider('typst'), { providedPasteEditKinds: ['typst'], priority: 0 });
+    languages.registerDocumentPasteEditProvider({}, provider('typst'), { providedPasteEditKinds: ['typst'] }, { priority: 0 });
     languages.registerDocumentPasteEditProvider({}, provider('typst.a'), { providedPasteEditKinds: ['typst.a'] });
-    languages.registerDocumentPasteEditProvider({}, provider('typst.b'), { providedPasteEditKinds: ['typst.b'], priority: 200 });
+    languages.registerDocumentPasteEditProvider({}, provider('typst.b'), { providedPasteEditKinds: ['typst.b'] }, { priority: 200 });
     languages.registerDocumentPasteEditProvider({}, provider('typst.c'), { providedPasteEditKinds: ['typst.c'] });
     const data = { types: ['text/plain'] } as unknown as DataTransfer;
     const ranges = [SourceRange.of({ from: 0, to: 0 })];

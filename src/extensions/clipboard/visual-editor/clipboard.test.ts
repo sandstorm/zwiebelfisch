@@ -35,7 +35,7 @@ function setup(text: string, choices: PasteChoices = UNSEEN, provider?: Document
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
   const languages = new LanguagesHost();
-  languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA);
+  languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA, { priority: 0 });
   if (provider) languages.registerDocumentPasteEditProvider({ language: 'typst' }, provider, { providedPasteEditKinds: ['typst.loud'] });
   const host = new VisualEditorHost();
   host.registerMark(STRONG);

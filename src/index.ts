@@ -41,7 +41,6 @@ export type {
   DocumentLinkProvider,
   DocumentSelector,
   HelpLink,
-  HelpProvider,
   HelpRow,
   HelpSection,
   HelpSheet,

@@ -42,12 +42,12 @@ export interface Languages {
    */
   getLanguageId(path: ProjectPath): string | undefined;
   /**
-   * Adds a help sheet for the languages `selector` matches until disposed: the help panel shows it while a file in
-   * such a language is shown (no `language`: for every file).
+   * Adds `sheet` for the languages `selector` matches until disposed: the help panel shows it while a file in such a
+   * language is shown (no `language`: for every file).
    */
-  registerHelpProvider(selector: DocumentSelector, provider: HelpProvider): Disposable;
+  registerHelpSheet(selector: DocumentSelector, sheet: HelpSheet): Disposable;
   /** The help sheets for `languageId` (undefined: a file in no declared language), in registration order. */
-  provideHelp(languageId: string | undefined): readonly HelpSheet[];
+  getHelpSheets(languageId: string | undefined): readonly HelpSheet[];
   /**
    * Says where a name that texts of the languages `selector` matches use comes from, until disposed: `mermaid` from
    * `@preview/merman:0.4.0`. An extension declares the names of its own constructs, so that whoever adds imports
@@ -60,11 +60,12 @@ export interface Languages {
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, wherever an editor
    * runs the providers (the clipboard extension: the Visual and the Source editors). A paste offers the edits of every
    * provider of `metadata.providedPasteEditKinds` whose `pasteMimeTypes` the clipboard has, by the providers'
-   * `priority`, as alternatives: it goes in as the first by `yieldTo` (the clipboard extension's `sortPasteEdits`), the others may replace it.
+   * `priority` (higher first, default 100; equal: registration order; the clipboard extension's own are 0: after the
+   * others'), as alternatives: it goes in as the first by `yieldTo` (the clipboard extension's `sortPasteEdits`), the others may replace it.
    * Whichever goes in, every provider's `resolveDocumentPasteEdit` changes it first, in the same order; additional
    * edits that overlap the pasted ranges or an earlier edit are dropped.
    */
-  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata): Disposable;
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata, options?: { priority?: number }): Disposable;
   /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
   prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void;
   /**
@@ -86,11 +87,6 @@ export interface DocumentPasteProviderMetadata {
   readonly providedPasteEditKinds: readonly string[];
   /** The clipboard types it reads (`text/html`, `text/*`); default: any. */
   readonly pasteMimeTypes?: readonly string[];
-  /**
-   * Where its edits are offered and it resolves, among the providers (not VS Code's): higher first (default 100; equal:
-   * registration order). The clipboard extension's own (Typst, code, plain text) are 0: after the others'.
-   */
-  readonly priority?: number;
 }
 
 /**
@@ -146,12 +142,7 @@ export interface LanguageContribution {
   readonly extensions: readonly string[];
 }
 
-/** Gives the help sheet of a language: what to write in it, ready to insert. */
-export interface HelpProvider {
-  provideHelp(): HelpSheet;
-}
-
-/** A cheat sheet: plain data, which the help panel renders (no markup). */
+/** A cheat sheet of a language, what to write in it ready to insert: plain data, which the help panel renders (no markup). */
 export interface HelpSheet {
   /** "Typst basics". */
   readonly title: string;

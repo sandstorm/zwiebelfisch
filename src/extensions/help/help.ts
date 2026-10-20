@@ -5,7 +5,7 @@ import { HelpPanel } from './workbench/help-panel';
 
 /**
  * The "Help" side panel: the cheat sheets for the language of the shown file.
- * The sheets come from the language extensions (`languages.registerHelpProvider`).
+ * The sheets come from the language extensions (`languages.registerHelpSheet`).
  *
  * A row is something to write:
  * - dragged into an editor, it lands where it is dropped (the Visual editor reads a Typst row as Typst)
@@ -26,7 +26,7 @@ export function help(): Extension {
       const render = () => {
         const languageId = languages.getLanguageId(window.activeFile);
         // only a Typst row is read as Typst where it is dropped (the Visual editor)
-        panel.render(languages.provideHelp(languageId), languageId === 'typst' ? ['text/plain', TYPST_SNIPPET_TYPE] : ['text/plain']);
+        panel.render(languages.getHelpSheets(languageId), languageId === 'typst' ? ['text/plain', TYPST_SNIPPET_TYPE] : ['text/plain']);
       };
       render();
       subscriptions.push(

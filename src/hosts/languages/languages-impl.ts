@@ -2,16 +2,16 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
-import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpProvider, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
+import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, DocumentPasteEdit, KnownImport, LanguageContribution, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
 /** The `Languages` of one widget. Each link remembers its provider, which resolves it on demand (`resolveDocumentLink`). */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
-  readonly #helpProviders: { selector: DocumentSelector; provider: HelpProvider }[] = [];
+  readonly #helpSheets: { selector: DocumentSelector; sheet: HelpSheet }[] = [];
   readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
   readonly #dropEditProviders: { selector: DocumentSelector; provider: DocumentDropEditProvider; priority: number }[] = [];
-  readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] = [];
+  readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata; priority: number }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -36,12 +36,12 @@ export class LanguagesHost implements Languages {
     return this.#endings.get(longest);
   }
 
-  registerHelpProvider(selector: DocumentSelector, provider: HelpProvider): Disposable {
-    return add(this.#helpProviders, { selector, provider });
+  registerHelpSheet(selector: DocumentSelector, sheet: HelpSheet): Disposable {
+    return add(this.#helpSheets, { selector, sheet });
   }
 
-  provideHelp(languageId: string | undefined): readonly HelpSheet[] {
-    return this.#helpProviders.filter(({ selector }) => matches(selector, languageId)).map(({ provider }) => provider.provideHelp());
+  getHelpSheets(languageId: string | undefined): readonly HelpSheet[] {
+    return this.#helpSheets.filter(({ selector }) => matches(selector, languageId)).map(({ sheet }) => sheet);
   }
 
   registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable {
@@ -52,8 +52,8 @@ export class LanguagesHost implements Languages {
     return this.#knownImports.filter(({ selector }) => matches(selector, languageId)).map(({ known }) => known);
   }
 
-  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata): Disposable {
-    return add(this.#pasteEditProviders, { selector, provider, metadata });
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata, options: { priority?: number } = {}): Disposable {
+    return add(this.#pasteEditProviders, { selector, provider, metadata, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
   prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
@@ -143,8 +143,7 @@ export class LanguagesHost implements Languages {
 
   /** The paste edit providers of `document`'s language, by priority (the sort is stable: equal ones in registration order). */
   #pasteEditProvidersOf(document: TextDocument): { provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata }[] {
-    const priority = ({ metadata }: { metadata: DocumentPasteProviderMetadata }) => metadata.priority ?? DEFAULT_PRIORITY;
-    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).sort((a, b) => priority(b) - priority(a));
+    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).sort((a, b) => b.priority - a.priority);
   }
 }
 

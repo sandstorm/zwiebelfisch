@@ -26,7 +26,7 @@ export function textFiles(): Extension {
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
-        languages.registerHelpProvider({ language: 'bibtex' }, { provideHelp: () => BIBTEX_HELP }),
+        languages.registerHelpSheet({ language: 'bibtex' }, BIBTEX_HELP),
         window.registerSearchProvider(textSearch({ project, workbench, isTextFile: (path) => isTextFile(path) })),
       );
     },
