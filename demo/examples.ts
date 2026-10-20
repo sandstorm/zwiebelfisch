@@ -5,7 +5,7 @@ import type { ProjectFiles } from '../src';
  * The demo's example projects, each a folder whose files become the project's files (`examples/<name>/main.typ` →
  * `/main.typ`): Typst files as text, everything else (images, Mermaid diagrams, spreadsheets) as bytes.
  * "Documentation" is this project's own docs/: on the dev server and in vite preview its edits are saved there, in a
- * static build nowhere. It also has the core's and hosts' contracts its `#api(..)` reads, at their paths from the repository root
+ * static build nowhere. It also has the hosts' contracts its `#api(..)` reads, at their paths from the repository root
  * (`/src/hosts/commands/commands.ts`), as `typst compile --root .` reads them.
  */
 export const EXAMPLES = [
@@ -65,8 +65,8 @@ const binaries = import.meta.glob<string>(['./examples/**/*.{ic,png}','../docs/*
   eager: true,
 });
 
-/** The core's and hosts' entries (`src/core/<module>/*.ts`, `src/hosts/<host>/*.ts`, the typst-conversion and workspace sub-modules; no tests or implementations), for the docs' `#api(..)`. */
-const contracts = import.meta.glob<string>(['../src/core/*/*.ts', '../src/hosts/*/*.ts', '../src/hosts/visual-editor/typst-conversion/typst-conversion.ts', '../src/hosts/extension-host/workspace/workspace.ts', '!**/*.test.ts', '!**/*-impl.ts', '!**/*-helpers.ts'], {
+/** The hosts' entries (`src/hosts/<host>/*.ts`, the typst-conversion and workspace sub-modules; no tests or implementations), for the docs' `#api(..)`. */
+const contracts = import.meta.glob<string>(['../src/hosts/*/*.ts', '../src/hosts/visual-editor/typst-conversion/typst-conversion.ts', '../src/hosts/extension-host/workspace/workspace.ts', '!**/*.test.ts', '!**/*-impl.ts', '!**/*-helpers.ts'], {
   query: '?raw',
   import: 'default',
   eager: true,

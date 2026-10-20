@@ -187,13 +187,13 @@ describe('demo examples', () => {
     expect(Object.keys(files).filter((path) => /^\/src\/.*(\.test|-impl|-helpers)\.ts$/.test(path))).toEqual([]);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/(core|hosts)\/[\w-]+(\/typst-conversion|\/workspace)?\/[\w-]+\.ts$/);
+      else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/hosts\/[\w-]+(\/typst-conversion|\/workspace)?\/[\w-]+\.ts$/);
     }
   });
 
   it('the contracts are the files under /src/, none of docs/', () => {
     const contracts = Object.keys(exampleFiles('docs')).filter(isContract);
-    expect(contracts).toContain('/src/core/typst-document/typst-document.ts');
+    expect(contracts).toContain('/src/hosts/commands/commands.ts');
     expect(contracts.every((path) => path.startsWith('/src/'))).toBe(true);
     expect(isContract('/template.typ')).toBe(false);
   });
