@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): the preview's "Pages | HTML" switch and the HTML preview
+// End-to-end tests (Playwright, against the demo build): the preview's "Pages" and "HTML" buttons and the HTML preview
 // (previewHtml): Typst's HTML export in a sandboxed frame, page by page, following the cursor, links between pages,
 // the scroll position kept across compiles.
 import { expect, type FrameLocator, type Page } from '@playwright/test';
@@ -30,7 +30,7 @@ const html = (page: Page): FrameLocator => page.frameLocator('[data-testid="zwf-
  * compiled, the frame shows the demo's document, whose HTML has two `h2`s.
  */
 const heading = (page: Page, name: string) => html(page).getByRole('heading', { level: 2, name, exact: true });
-const switchTo = (page: Page, name: 'Pages' | 'HTML') => page.getByTestId('zwf-preview-renderers').getByRole('button', { name }).click();
+const switchTo = (page: Page, name: 'Pages' | 'HTML') => page.getByTestId('zwf-preview-toolbar').getByRole('button', { name, exact: true }).click();
 /** How far the frame's page is scrolled. */
 const scrollY = (page: Page) => html(page).locator('html').evaluate((element) => element.ownerDocument.defaultView!.scrollY);
 
@@ -40,11 +40,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('switches to HTML and back: zoom and page number only with the pages, the choice remembered', async ({ page }) => {
-  const switcher = page.getByTestId('zwf-preview-renderers');
-  await expect(switcher.getByRole('button', { name: 'Pages' })).toHaveAttribute('aria-pressed', 'true');
+  const switcher = page.getByTestId('zwf-preview-toolbar');
+  await expect(switcher.getByRole('button', { name: 'Pages', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await setSource(page, PLAIN);
   await switchTo(page, 'HTML');
-  await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(switcher.getByRole('button', { name: 'HTML', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(heading(page, 'Hello')).toBeVisible();
   await expect(page.getByTestId('zwf-preview')).toBeHidden();
   await expect(page.getByTestId('zwf-preview-zoom')).toBeHidden();
@@ -53,7 +53,7 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
 
   // the demo's document again (Local mode keeps no edits), shown as HTML
   await page.reload();
-  await expect(switcher.getByRole('button', { name: 'HTML' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(switcher.getByRole('button', { name: 'HTML', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await setSource(page, PLAIN);
   await expect(heading(page, 'Hello')).toBeVisible();
   await switchTo(page, 'Pages');

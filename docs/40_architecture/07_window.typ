@@ -74,6 +74,7 @@ A button is a menu entry: `window.registerMenuItem(menuId, item)`; `window.showC
   [Menu], [Where], [Context], [Command gets],
   [`editor/title`], [Buttons at the right end of the editing area's tab bar], [`activeCustomEditorId`, `resource`], [nothing],
   [`view`], [The View menu; groups `editor` ("Invisible characters") and `preview` (@architecture-preview-view)], [as `editor/title`], [nothing],
+  [`preview/title`], [The preview's toolbar (@architecture-preview-contributions)], [`previewRenderer`], [the context],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind`, `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
   [`help/row`], [A help row's context menu], [none], [the text the row inserts],

@@ -1,4 +1,4 @@
-/* The preview's pane, toolbar, pages (inverted in the dark) or a renderer's container, and the dimming of a failed
+/* The preview's pane, toolbar (the menu preview/title), pages (inverted in the dark) or a renderer's container, and the dimming of a failed
    compile. See Preview in preview.ts, whose styleSheet the widget adds. */
 .zwf-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--zwf-preview-bg); }
 .zwf-preview__toolbar {
@@ -10,15 +10,25 @@
   background: var(--zwf-subtle);
   font-size: 12px;
 }
-.zwf-preview__toolbar > button {
+.zwf-preview__toolbar:empty { display: none; }
+/* a group per menu group; the last one at the row's end */
+.zwf-preview__toolbar-group { display: flex; align-items: center; gap: 4px; }
+.zwf-preview__toolbar-group + .zwf-preview__toolbar-group { margin-left: 8px; }
+.zwf-preview__toolbar-group:last-child:not(:first-child) { margin-left: auto; }
+.zwf-preview__toolbar button {
   min-width: 28px;
   border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 2px 6px;
   background: var(--zwf-surface);
+  color: var(--zwf-text-2);
   font: inherit;
   cursor: pointer;
 }
+.zwf-preview__toolbar button:hover:not(:disabled), .zwf-preview__toolbar button:focus-visible { background: var(--zwf-hover); }
+.zwf-preview__toolbar button:disabled { cursor: progress; opacity: 0.6; }
+.zwf-preview__toolbar button[aria-pressed='true'] { background: var(--zwf-subtle); color: var(--zwf-text); font-weight: 600; border-color: var(--zwf-accent); }
+.zwf-preview__toolbar button > svg { display: block; width: 14px; height: 14px; }
 .zwf-preview__scroller { position: relative; flex: 1; min-height: 0; overflow: auto; }
 .zwf-preview {
   display: flex;

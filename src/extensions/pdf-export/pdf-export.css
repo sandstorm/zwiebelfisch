@@ -1,7 +1,6 @@
-/* The pdf-export extension's styles: "Download PDF" in the preview toolbar and its popover of export options.
+/* The pdf-export extension's styles: the popover of export options "Download PDF" opens, over the preview's top right.
    See pdf-export.ts, which registers it; colors from the widget's --zwf-* tokens. */
-.zwf-pdf-export { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
-.zwf-pdf-export button {
+.zwf-pdf-export__options button {
   border: 1px solid var(--zwf-border);
   border-radius: 4px;
   padding: 2px 8px;
@@ -9,11 +8,10 @@
   font: inherit;
   cursor: pointer;
 }
-.zwf-pdf-export button:disabled { cursor: progress; opacity: 0.6; }
+.zwf-pdf-export__options button:disabled { cursor: progress; opacity: 0.6; }
 .zwf-pdf-export__options {
   position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  right: 8px;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -24,8 +22,9 @@
   border-radius: 6px;
   background: var(--zwf-surface);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
 }
 .zwf-pdf-export__options[hidden] { display: none; }
 .zwf-pdf-export__options label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
 .zwf-pdf-export__options .zwf-pdf-export__download { align-self: flex-end; }
-.zwf-pdf-export button:hover:not(:disabled), .zwf-pdf-export button:focus-visible { background: var(--zwf-hover); }
+.zwf-pdf-export__options button:hover:not(:disabled), .zwf-pdf-export__options button:focus-visible { background: var(--zwf-hover); }

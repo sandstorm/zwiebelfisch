@@ -1,18 +1,4 @@
-/* The preview-controls extension's styles: the preview toolbar's renderer switch, zoom and page number.
+/* The preview-controls extension's styles: the preview's zoom and page number in the status bar.
    See preview-controls.ts, which registers it; colors from the widget's --zwf-* tokens. */
-.zwf-preview-controls__zoom { margin-left: 4px; color: var(--zwf-muted); font-variant-numeric: tabular-nums; }
-.zwf-preview-controls__page-number { margin-left: auto; color: var(--zwf-muted); font-variant-numeric: tabular-nums; }
-.zwf-preview-controls__renderers { display: inline-flex; margin-right: 8px; }
-.zwf-preview-controls__renderers[hidden] { display: none; }
-.zwf-preview-controls__renderers > button {
-  border: 1px solid var(--zwf-border);
-  padding: 2px 8px;
-  background: var(--zwf-surface);
-  color: var(--zwf-text-2);
-  font: inherit;
-  cursor: pointer;
-}
-.zwf-preview-controls__renderers > button:first-child { border-radius: 4px 0 0 4px; }
-.zwf-preview-controls__renderers > button:last-child { border-radius: 0 4px 4px 0; }
-.zwf-preview-controls__renderers > button + button { border-left: 0; }
-.zwf-preview-controls__renderers > button[aria-pressed='true'] { background: var(--zwf-subtle); color: var(--zwf-text); font-weight: 600; }
+.zwf-preview-controls__zoom, .zwf-preview-controls__page-number { color: var(--zwf-muted); font-variant-numeric: tabular-nums; }
+.zwf-preview-controls__zoom[hidden], .zwf-preview-controls__page-number[hidden] { display: none; }

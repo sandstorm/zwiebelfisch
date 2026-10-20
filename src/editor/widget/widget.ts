@@ -125,12 +125,20 @@ export class Widget {
 
   /**
    * The preview, in the right side's built-in panel `preview` (registered before any extension, so first among equal
-   * orders). It compiles whether shown or not: diagnostics, raw box snippets and the selection highlight never wait
+   * orders), its toolbar the window's menu `preview/title`. It compiles whether shown or not: diagnostics, raw box snippets and the selection highlight never wait
    * for it to be shown.
    */
   #createPreview(): Preview {
     const panel = this.window.registerSidePanel('preview', { label: 'Preview', icon: PREVIEW_ICON, side: 'right' });
-    return new Preview(panel.body);
+    return new Preview(panel.body, {
+      menus: {
+        getMenuItems: (menuId, context) => this.window.getMenuItems(menuId, context),
+        onDidChangeMenu: (listener) => this.window.onDidChangeMenu(listener),
+        onDidChangeConfiguration: (listener) => this.#workspace.onDidChangeConfiguration(listener),
+        executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
+        keybindingLabel: (command) => this.commands.keybindingLabel(command),
+      },
+    });
   }
 
   #compile(): void {

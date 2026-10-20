@@ -22,7 +22,11 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     createPageOverlay = () => ({ set() {}, dispose() {} });
     boxesFor = async () => [];
     onDidChangeDiagnostics = () => ({ dispose() {} });
-    registerToolbarItem = () => ({ dispose() {} });
+    zoom = 'fit';
+    setZoom() {}
+    scale = 1;
+    visiblePage = { index: 0, count: 0 };
+    onDidChangeView = () => ({ dispose() {} });
     registerPdfExportOption = () => ({ dispose() {} });
     registerViewOption = () => ({ dispose() {} });
     viewOptions = () => [];

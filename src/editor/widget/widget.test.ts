@@ -17,10 +17,12 @@ const made = vi.hoisted(() => ({ compiled: [] as string[] }));
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
-    constructor(parent: HTMLElement) {
+    constructor(
+      parent: HTMLElement,
+      readonly options: { menus: { getMenuItems(menuId: string, context: object): readonly { command: string }[] } },
+    ) {
       parent.append(Object.assign(document.createElement('div'), { className: 'mock-preview' }));
     }
-    readonly toolbarItems: unknown[] = [];
     update(_files: unknown, main: string) {
       made.compiled.push(main);
     }
@@ -28,10 +30,6 @@ vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
     snippet = async () => null;
     onDidRender = () => new Disposable(() => {});
     onDidChangeDiagnostics = () => new Disposable(() => {});
-    registerToolbarItem(item: unknown) {
-      this.toolbarItems.push(item);
-      return new Disposable(() => this.toolbarItems.splice(this.toolbarItems.indexOf(item), 1));
-    }
     dispose() {}
   },
 }));
@@ -361,21 +359,22 @@ describe('Widget', () => {
     expect(provider.mock.calls.map(([editor]) => editor.document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
-  it('applies the Source editor contributions to every Source editor, and gives the extensions the preview', () => {
-    const item = () => ({ elements: [] });
+  it('applies the Source editor contributions to every Source editor, and gives the preview its toolbar menu', () => {
     let preview: ExtensionContext['preview'] | null = null;
     const { host, widget } = setup((context) => {
       preview = context.preview;
       context.subscriptions.push(
         context.sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, EditorView.editorAttributes.of({ class: 'contributed' })),
-        context.preview.registerToolbarItem(item, { group: 'test' }),
+        context.window.registerMenuItem('preview/title', { command: 'test.run', when: (c: { previewRenderer: string }) => c.previewRenderer === 'pages' }),
       );
     });
     widget.window.showDocument(path('/a.typ'));
     expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
-    expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
+    const { menus } = (preview as unknown as { options: { menus: { getMenuItems(menuId: string, context: object): readonly { command: string }[] } } }).options;
+    expect(menus.getMenuItems('preview/title', { previewRenderer: 'pages' }).map((item) => item.command)).toEqual(['test.run']);
+    expect(menus.getMenuItems('preview/title', { previewRenderer: 'html' })).toEqual([]);
     widget.dispose();
-    expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
+    expect(menus.getMenuItems('preview/title', { previewRenderer: 'pages' })).toEqual([]);
   });
 
   it("gives extensions the settings they declare, with the host's values, and tells them about changes", () => {

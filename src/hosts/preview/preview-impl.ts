@@ -3,7 +3,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { TypstDiagnostic, Page, PageIndex, PageRect, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, Page, PageRect, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -11,35 +11,33 @@ import { snippet } from './pages/snippet';
 import type { FileContent } from '../../core/project/project';
 import { EngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only/latest-only';
+import { NO_MENUS, PreviewToolbar, type PreviewMenus } from './toolbar/toolbar';
 import type {
   EngineCrash,
   LoadEvent,
   PdfExportOption,
-  PreviewContext,
   PreviewContributions,
   PreviewEntry,
   PreviewOutput,
   PreviewRenderer,
   PreviewRendererInfo,
   PreviewRendererView,
-  PreviewToolbarItem,
   PreviewViewOption,
   PageClick,
   PageOverlay,
   RenderedSnippet,
-  ToolbarItemElements,
-  ToolbarPlacement,
+  VisiblePage,
   Zoom,
 } from './preview';
 import css from './preview.css?inline';
 
 /**
- * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar.
+ * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar (the menu
+ * `preview/title`, from `options.menus`).
  *
  * The widget (editor/widget) makes it the right side's panel and gives it the project's files on every change. It compiles whether
  * shown or not, so diagnostics, snippets and clicks always belong to the newest files. Extensions add through
  * `PreviewContributions`:
- * - toolbar items (zoom, page number, "Follow cursor", "Download PDF")
  * - PDF export options and view options
  * - other renderers than the pages (the HTML preview)
  * - page overlays: boxes drawn over the pages (the click outline, the selection shading)
@@ -53,17 +51,13 @@ export class Preview implements PreviewContributions {
   /** Whether the engine was restarted after a crash since the last `update()`. */
   private restarted = false;
   private readonly pane: HTMLElement;
-  private readonly toolbar: HTMLElement;
+  private readonly toolbar: PreviewToolbar;
   private readonly scroller: HTMLElement;
   private readonly pages: HTMLElement;
   private readonly list: PageList;
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
-  /** What toolbar items see of the preview. */
-  private readonly context: PreviewContext;
-  /** The toolbar's items in toolbar order. */
-  private readonly items: { made: ToolbarItemElements; group: string; order: number; renderer: string | null }[] = [];
   /** The PDF export options, in registration order. */
   private readonly exportOptions: PdfExportOption[] = [];
   /** The view options, in registration order. */
@@ -84,7 +78,7 @@ export class Preview implements PreviewContributions {
   private latest: Compile | null = null;
   /** The overlays of `createPageOverlay` not disposed yet, drawn again after every render. */
   private readonly overlays = new Set<OverlayLayer>();
-  private zoom: Zoom = 'fit';
+  private zoomed: Zoom = 'fit';
   private frame = 0;
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
@@ -94,6 +88,7 @@ export class Preview implements PreviewContributions {
   private readonly viewOptionsChanged = new EventEmitter<void>();
   private readonly engineMemoryChanged = new EventEmitter<void>();
   private readonly renderersChanged = new EventEmitter<void>();
+  private readonly viewMoved = new EventEmitter<void>();
   private readonly loaded = new EventEmitter<LoadEvent>();
   private readonly crashes = new EventEmitter<EngineCrash>();
   /** The engine's memory as its last compile answered. */
@@ -104,28 +99,29 @@ export class Preview implements PreviewContributions {
   readonly onDidClickPage = this.clicked.event;
   readonly onDidChangeEngineMemory = this.engineMemoryChanged.event;
   readonly onDidChangeRenderers = this.renderersChanged.event;
+  readonly onDidChangeView = this.viewMoved.event;
   readonly onDidLoad = this.loaded.event;
   readonly onDidCrash = this.crashes.event;
   /** The CSS of the pane, toolbar and pages, for the widget to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, options: { menus?: PreviewMenus } = {}) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'zwf-preview-pane');
-    this.toolbar = div(doc, 'zwf-preview__toolbar');
-    this.toolbar.dataset.testid = 'zwf-preview-toolbar';
+    const toolbar = div(doc, 'zwf-preview__toolbar');
+    toolbar.dataset.testid = 'zwf-preview-toolbar';
     this.scroller = div(doc, 'zwf-preview__scroller');
     this.pages = div(doc, 'zwf-preview');
     this.pages.dataset.testid = 'zwf-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
-    this.context = this.itemContext(doc);
     this.scroller.append(this.pages);
-    this.pane.append(this.toolbar, this.scroller);
+    this.pane.append(toolbar, this.scroller);
     container.append(this.pane);
+    this.toolbar = new PreviewToolbar(toolbar, options.menus ?? NO_MENUS, () => ({ previewRenderer: this.activeRenderer }));
 
     this.pages.addEventListener('click', (event) => void this.handleClick(event));
-    this.scroller.addEventListener('scroll', () => this.scheduleStatus(), { passive: true });
-    this.resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.scheduleStatus());
+    this.scroller.addEventListener('scroll', () => this.scheduleViewChange(), { passive: true });
+    this.resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.scheduleViewChange());
     this.resizeObserver?.observe(this.scroller);
     this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded), { interval: COMPILE_INTERVAL_MS });
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
@@ -216,18 +212,6 @@ export class Preview implements PreviewContributions {
     return new Disposable(() => element.remove());
   }
 
-  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
-    const made = item(this.context);
-    const entry = { made, group: placement.group, order: placement.order ?? 0, renderer: placement.renderer ?? null };
-    // the sort is stable: equal places stay in registration order
-    this.items.push(entry);
-    this.items.sort(byPlacement);
-    this.toolbar.append(...this.items.flatMap((each) => each.made.elements));
-    this.showItems();
-    this.scheduleStatus();
-    return new Disposable(() => this.removeItem(made));
-  }
-
   registerRenderer(renderer: PreviewRenderer): Disposable {
     if (this.renderers().some(({ id }) => id === renderer.id)) throw new Error(`Preview renderer '${renderer.id}' is already registered`);
     this.registeredRenderers.push(renderer);
@@ -255,6 +239,27 @@ export class Preview implements PreviewContributions {
     if (this.showRenderer()) this.renderersChanged.fire();
   }
 
+  get zoom(): Zoom {
+    return this.zoomed;
+  }
+
+  setZoom(zoom: Zoom): void {
+    const before = this.scroller.scrollTop / (this.scroller.scrollHeight || 1);
+    this.zoomed = zoom;
+    this.list.setZoom(zoom);
+    this.scroller.scrollTop = before * this.scroller.scrollHeight;
+    this.scheduleViewChange();
+  }
+
+  get scale(): number {
+    return this.list.scale();
+  }
+
+  get visiblePage(): VisiblePage {
+    const rects = this.list.elements().map(measure);
+    return { index: mostVisible(rects, measure(this.scroller)), count: rects.length };
+  }
+
   registerPdfExportOption(option: PdfExportOption): Disposable {
     if (this.exportOptions.some((other) => other.id === option.id)) throw new Error(`PDF export option '${option.id}' is already registered`);
     this.exportOptions.push(option);
@@ -271,13 +276,13 @@ export class Preview implements PreviewContributions {
   registerViewOption(option: PreviewViewOption): Disposable {
     if (this.registeredViewOptions.some((other) => other.id === option.id)) throw new Error(`View option '${option.id}' is already registered`);
     this.registeredViewOptions.push(option);
-    this.viewChanged();
+    this.recompile();
     this.viewOptionsChanged.fire();
     return new Disposable(() => {
       const index = this.registeredViewOptions.indexOf(option);
       if (index < 0) return;
       this.registeredViewOptions.splice(index, 1);
-      this.viewChanged();
+      this.recompile();
       this.viewOptionsChanged.fire();
     });
   }
@@ -288,12 +293,13 @@ export class Preview implements PreviewContributions {
 
   setViewOptionValues(values: Readonly<Record<string, boolean>>): void {
     this.viewOptionValues = { ...values };
-    this.viewChanged();
+    this.recompile();
   }
 
   dispose(): void {
     this.active?.view.dispose();
     this.renderersChanged.dispose();
+    this.viewMoved.dispose();
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
@@ -301,30 +307,12 @@ export class Preview implements PreviewContributions {
     this.engineMemoryChanged.dispose();
     this.loaded.dispose();
     this.crashes.dispose();
-    for (const { made } of [...this.items]) this.removeItem(made);
+    this.toolbar.dispose();
     this.engine.dispose();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
     this.list.dispose();
     this.pane.remove();
-  }
-
-  private itemContext(doc: Document): PreviewContext {
-    return {
-      ownerDocument: doc,
-      zoom: () => this.zoom,
-      setZoom: (zoom) => this.setZoom(zoom),
-      scale: () => this.list.scale(),
-      visiblePage: () => this.visiblePage(),
-    };
-  }
-
-  private removeItem(item: ToolbarItemElements): void {
-    const index = this.items.findIndex((entry) => entry.made === item);
-    if (index < 0) return;
-    this.items.splice(index, 1);
-    for (const element of item.elements) element.remove();
-    item.dispose?.();
   }
 
   /**
@@ -346,22 +334,14 @@ export class Preview implements PreviewContributions {
       this.active = { renderer, container, view: renderer.create(container), shown: false };
     }
     this.pages.hidden = renderer !== null;
-    this.showItems();
-    this.viewChanged();
+    this.toolbar.refresh();
+    this.recompile();
     return true;
   }
 
-  /** Hides the toolbar items of another renderer than the active one (the others' `hidden` is their own). */
-  private showItems(): void {
-    for (const { made, renderer } of this.items) {
-      if (renderer !== null) for (const element of made.elements) element.hidden = renderer !== this.activeRenderer;
-    }
-  }
-
-  /** Compiles the last files again with the view options as they are now; toolbar items show the new options. */
-  private viewChanged(): void {
+  /** Compiles the last files again with the renderer and view options as they are now. */
+  private recompile(): void {
     if (this.latest) this.compiles.push(this.latest);
-    this.scheduleStatus();
   }
 
   private async compile(compile: Compile, superseded: () => boolean): Promise<void> {
@@ -384,7 +364,7 @@ export class Preview implements PreviewContributions {
     if (!failed) {
       this.list.render(pages);
       for (const layer of this.overlays) layer.redraw();
-      this.scheduleStatus();
+      this.scheduleViewChange();
       this.compiled = { files, pages };
       if (!quiet) this.rendered.fire();
     }
@@ -466,27 +446,10 @@ export class Preview implements PreviewContributions {
     this.follow(response.positions[0]);
   }
 
-  private setZoom(zoom: Zoom): void {
-    const before = this.scroller.scrollTop / (this.scroller.scrollHeight || 1);
-    this.zoom = zoom;
-    this.list.setZoom(zoom);
-    this.scroller.scrollTop = before * this.scroller.scrollHeight;
-    this.updateStatus();
-  }
-
-  private visiblePage(): { index: PageIndex; count: number } {
-    const rects = this.list.elements().map(measure);
-    return { index: mostVisible(rects, measure(this.scroller)), count: rects.length };
-  }
-
-  /** Lets the toolbar items show the new view (zoom, page number) at most once per frame. */
-  private scheduleStatus(): void {
+  /** Tells `onDidChangeView` at most once per frame. */
+  private scheduleViewChange(): void {
     cancelAnimationFrame(this.frame);
-    this.frame = requestAnimationFrame(() => this.updateStatus());
-  }
-
-  private updateStatus(): void {
-    for (const { made } of this.items) made.update?.();
+    this.frame = requestAnimationFrame(() => this.viewMoved.fire());
   }
 
   private async handleClick(event: MouseEvent): Promise<void> {
@@ -564,12 +527,3 @@ const REVEAL_INTERVAL_MS = 80;
  * one compile per keystroke a fast engine (a short document) would do that per keystroke.
  */
 const COMPILE_INTERVAL_MS = 150;
-
-/** Toolbar order (see `ToolbarPlacement`): the group `navigation` first, the other groups by name, then `order`. */
-function byPlacement(a: { group: string; order: number }, b: { group: string; order: number }): number {
-  if (a.group !== b.group) {
-    if (a.group === 'navigation' || b.group === 'navigation') return a.group === 'navigation' ? -1 : 1;
-    return a.group < b.group ? -1 : 1;
-  }
-  return a.order - b.order;
-}

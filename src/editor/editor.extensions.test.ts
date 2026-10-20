@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
 import { type PageRect, type TypstDiagnostic, PageIndex, Pt } from '../core/typst-engine/typst-engine';
-import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
+import type { PageClick, PdfExportOption, PreviewMenuContext, PreviewViewOption } from '../hosts/preview/preview';
+import type { MenuItem } from '../hosts/commands/commands';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { WindowApi } from '../hosts/window/window';
@@ -22,7 +23,8 @@ import { SourceOffset, type SourceRange } from '../core/typst-document/typst-doc
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
 interface FakePreview {
-  toolbarItems: PreviewToolbarItem[];
+  /** What the widget made it with: its toolbar's menus. */
+  options: { menus: { getMenuItems(menuId: string, context: PreviewMenuContext): readonly MenuItem<PreviewMenuContext>[] } };
   pdfOptions: PdfExportOption[];
   revealed: [string, SourceRange][];
   /** Every `boxesFor(path, ranges)` (the text left out). */
@@ -52,7 +54,6 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       onDidCrash = () => ({ dispose() {} });
       isEmpty = true;
       registerPaneOverlay = () => ({ dispose() {} });
-      readonly toolbarItems: unknown[] = [];
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
       readonly lookedUp: unknown[] = [];
@@ -62,7 +63,10 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
       readonly onDidClickPage = this.#clicks.event;
-      constructor() {
+      constructor(
+        _container: unknown,
+        readonly options: unknown,
+      ) {
         previews.push(this as never);
       }
       compiled(diagnostics: TypstDiagnostic[]) {
@@ -92,14 +96,11 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       snippet = async () => null;
       onDidRender = this.#renders.event;
       exportPdf = exportPdf;
-      readonly #placements = new Map<unknown, string>();
-      // in toolbar order: by group, then order (the built-ins use neither `navigation` nor equal places)
-      registerToolbarItem = (item: unknown, placement: { group: string; order?: number }) => {
-        this.#placements.set(item, `${placement.group}@${String(placement.order ?? 0).padStart(4, '0')}`);
-        const registration = registry(this.toolbarItems)(item);
-        this.toolbarItems.sort((a, b) => this.#placements.get(a)!.localeCompare(this.#placements.get(b)!));
-        return registration;
-      };
+      zoom = 'fit';
+      setZoom() {}
+      scale = 1;
+      visiblePage = { index: 0, count: 0 };
+      onDidChangeView = () => new Disposable(() => {});
       registerPdfExportOption = registry(this.pdfOptions);
       pdfExportOptions = () => this.pdfOptions;
       readonly #viewOptions: PreviewViewOption[] = [];
@@ -141,20 +142,9 @@ function setup(options: EditorOptions) {
   return { host, editor, source, preview: previews.at(-1)! };
 }
 
-/** What each toolbar item shows, named by its element's test id or class (made once for a stand-in preview). */
-function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
-  const context = {
-    ownerDocument: document,
-    zoom: () => 'fit',
-    setZoom() {},
-    scale: () => 1,
-    visiblePage: () => ({ index: PageIndex.of(0), count: 0 }),
-  } satisfies PreviewContext;
-  return items.map((item) => {
-    const made = item(context);
-    made.dispose?.();
-    return made.elements.map((element) => element.dataset.testid || element.className).filter(Boolean).join(' ');
-  });
+/** The commands of the preview toolbar's entries (menu `preview/title`) while the pages are shown. */
+function toolbarCommands(preview: FakePreview): string[] {
+  return preview.options.menus.getMenuItems('preview/title', { previewRenderer: 'pages' }).map((item) => item.command);
 }
 
 function drop(target: HTMLElement, files: File[]) {
@@ -419,21 +409,30 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.zwf-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: "Follow cursor", the renderer switch, zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
-    const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['zwf-preview-sync__follow', 'zwf-preview-renderers', 'zwf-preview-zoom', 'zwf-preview-page-number', 'zwf-pdf'];
-    expect(toolbarControls(preview.toolbarItems)).toEqual(all);
-    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 4));
+  it('fills the preview toolbar: "Follow cursor", zoom, then "Download PDF" while pdfExport.download is on; zoom and page number in the status bar', () => {
+    const { editor, preview, host } = setup({ source: '= Hi' });
+    const zoom = ['previewControls.zoomOut', 'previewControls.zoomIn', 'previewControls.zoomFit', 'previewControls.zoomActualSize'];
+    const all = ['previewSync.toggleFollowCursor', ...zoom, 'pdfExport.download'];
+    expect(toolbarCommands(preview)).toEqual(all);
+    expect(toolbarCommands(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview)).toEqual(all.slice(0, -1));
     editor.updateSettings({ 'pdfExport.download': false });
-    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 4));
-    // back in its place, by its group and order
+    expect(toolbarCommands(preview)).toEqual(all.slice(0, -1));
     editor.updateSettings({ 'pdfExport.download': undefined });
-    expect(toolbarControls(preview.toolbarItems)).toEqual(all);
+    expect(toolbarCommands(preview)).toEqual(all);
+    expect(host.querySelector('[data-testid="zwf-preview-zoom"]')?.textContent).toBe('Fit · 100%');
+    expect(host.querySelector('[data-testid="zwf-preview-page-number"]')?.textContent).toBe('');
   });
 
-  it('switches "Follow cursor" when the host changes previewSync.followCursor', () => {
+  it('switches "Follow cursor" when the host changes previewSync.followCursor, and with its button', async () => {
     const { editor, preview, source } = setup({ source: '= Hi\n', settings: { 'previewSync.followCursor': false } });
+    const follow = () => preview.options.menus.getMenuItems('preview/title', { previewRenderer: 'pages' })[0].toggled!({ previewRenderer: 'pages' });
+    expect(follow()).toBe(false);
+    await editor.executeCommand('previewSync.toggleFollowCursor');
+    expect(follow()).toBe(true);
+    await editor.executeCommand('previewSync.toggleFollowCursor');
+    expect(follow()).toBe(false);
     editor.updateSettings({ 'previewSync.followCursor': true });
+    expect(follow()).toBe(true);
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
@@ -639,7 +638,7 @@ describe('the built-in extensions', () => {
     });
     expect(seen).toEqual(['Wörter']);
     await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['zwf-preview-renderers', 'zwf-preview-zoom', 'zwf-preview-page-number']);
+    expect(toolbarCommands(preview)).toEqual(['previewControls.zoomOut', 'previewControls.zoomIn', 'previewControls.zoomFit', 'previewControls.zoomActualSize']);
     // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
     setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'preview-sync') });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));

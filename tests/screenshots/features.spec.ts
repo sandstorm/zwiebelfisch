@@ -90,7 +90,7 @@ test('bidirectional-navigation', async ({ page }) => {
 test('html-preview', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
-  await page.getByTestId('zwf-preview-renderers').getByRole('button', { name: 'HTML' }).click();
+  await page.getByTestId('zwf-preview-toolbar').getByRole('button', { name: 'HTML', exact: true }).click();
   await expect(page.frameLocator('[data-testid="zwf-preview-html"]').locator('h1, h2').first()).toBeVisible();
   await shoot(page, 'html-preview', [page.locator('.zwf-preview-pane')]);
 });

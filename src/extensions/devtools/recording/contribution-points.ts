@@ -116,12 +116,6 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { providedPasteEditKinds: kinds } = record(metadata);
     return prioritized({ ...named(provider, 'paste edits'), details: [`language ${languages.join(', ')}`, `kinds ${Array.isArray(kinds) && kinds.length > 0 ? kinds.join(', ') : '(resolves)'}`] }, record(options).priority);
   },
-  'preview.registerToolbarItem': ([item, placement]) => {
-    const { group, order, renderer } = record(placement);
-    const place = String(group);
-    const details = [`group ${place}`, `order ${num(order, 0)}`, ...(renderer === undefined ? [] : [`renderer ${String(renderer)}`])];
-    return { title: nameOf(item) ?? '(toolbar item)', details, rank: [place === 'navigation' ? 0 : 1, place, num(order, 0)] };
-  },
   'preview.registerRenderer': ([renderer]) => {
     const { id, label, output } = record(renderer);
     return { title: String(id), details: [`"${String(label)}"`, `output ${String(output)}`] };

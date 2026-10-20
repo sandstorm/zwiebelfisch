@@ -1,38 +1,25 @@
-// What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
+// What the pdf-export extension adds to the preview: "Download PDF" and its options popover (PdfDownload).
 // See pdfExport in ../pdf-export.ts.
-import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
+import type { PdfExportOption } from '../../../hosts/preview/preview';
 import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento } from '../../../hosts/extension-host/extension-host';
 
 /**
- * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left
- * them last time, kept in `state` under `options`, else their defaults) and "Download"; without any it downloads at
- * once. While a PDF is being made the buttons are disabled ("Making PDF…"); a failure is an error message, and nothing
- * is downloaded.
+ * "Download PDF" (`run`, the command `pdfExport.download`). With export options registered it opens a popover over
+ * the top right of the preview (`element`, a pane overlay) with a checkbox per option (as this viewer left them last
+ * time, kept in `state` under `options`, else their defaults) and "Download"; without any it downloads at once.
+ * While a PDF is being made `busy` holds and the popover's buttons are disabled; a failure is an error message, and
+ * nothing is downloaded.
+ *
+ * Escape, a press elsewhere and scrolling the preview close the popover; a press on its toolbar button
+ * (`data-command="pdfExport.download"`) leaves it to `run`, which closes it again.
  */
-export function downloadPdf(pdfs: PdfDownloads, state: Memento, messages: PdfMessages): PreviewToolbarItem {
-  return (preview) => {
-    const button = new DownloadPdfButton(preview.ownerDocument, pdfs, state, messages);
-    return { elements: [button.element], update: () => button.describe(), dispose: () => button.dispose() };
-  };
-}
-
-/** What the button downloads: the PDF made with the given option values, and the name to save it under. */
-export interface PdfDownloads {
-  /** The options an export offers now (registered by other extensions). */
-  options(): readonly PdfExportOption[];
-  /** Rejects with an error whose message is shown to the user. */
-  file(values: Record<string, boolean>): Promise<{ blob: Blob; name: string }>;
-}
-
-/** Where the button tells why there is no PDF. */
-export type PdfMessages = Pick<WindowApi, 'showErrorMessage'>;
-
-class DownloadPdfButton {
+export class PdfDownload {
+  /** The popover, for `preview.registerPaneOverlay`; hidden while closed. */
   readonly element: HTMLElement;
-  private readonly download: HTMLButtonElement;
-  private readonly popover: HTMLElement;
-  private busy = false;
+  private making = false;
+  /** What had the focus when the popover opened (the toolbar button), focused again on Escape. */
+  private opener: HTMLElement | null = null;
 
   constructor(
     private readonly doc: Document,
@@ -40,69 +27,69 @@ class DownloadPdfButton {
     private readonly state: Memento,
     private readonly messages: PdfMessages,
   ) {
-    this.element = doc.createElement('span');
-    this.element.className = 'zwf-pdf-export';
-    this.element.dataset.testid = 'zwf-pdf';
-    this.download = this.button(LABEL);
-    this.download.addEventListener('click', () => this.click());
-    this.popover = doc.createElement('div');
-    this.popover.className = 'zwf-pdf-export__options';
-    this.popover.setAttribute('role', 'dialog');
-    this.popover.setAttribute('aria-label', 'PDF options');
-    this.popover.hidden = true;
-    this.popover.addEventListener('keydown', (event) => {
+    this.element = doc.createElement('div');
+    this.element.className = 'zwf-pdf-export__options';
+    this.element.dataset.testid = 'zwf-pdf-options';
+    this.element.setAttribute('role', 'dialog');
+    this.element.setAttribute('aria-label', 'PDF options');
+    this.element.hidden = true;
+    this.element.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
-      this.open(false);
-      this.download.focus();
+      this.close();
+      this.opener?.focus();
     });
-    this.element.append(this.download, this.popover);
-    this.describe();
     doc.addEventListener('mousedown', this.closeOutside, true);
   }
 
-  /** Tells whether the button opens options or downloads (options may be registered after the button). */
-  describe(): void {
-    const options = this.pdfs.options().length > 0;
-    this.download.title = options ? 'Choose what the PDF includes, then download it' : 'Download the PDF';
-    if (options) {
-      this.download.setAttribute('aria-haspopup', 'dialog');
-      this.download.setAttribute('aria-expanded', String(!this.popover.hidden));
-    } else {
-      this.download.removeAttribute('aria-haspopup');
-      this.download.removeAttribute('aria-expanded');
-    }
+  /** Whether a PDF is being made. */
+  get busy(): boolean {
+    return this.making;
+  }
+
+  /** Downloads at once while there are no options, else opens the popover or closes it; resolves once that is done. */
+  async run(): Promise<void> {
+    if (this.pdfs.options().length === 0) return this.makeAndSave({});
+    if (this.element.hidden) this.open();
+    else this.close();
   }
 
   dispose(): void {
     this.doc.removeEventListener('mousedown', this.closeOutside, true);
-    this.element.remove();
+    this.close();
   }
 
-  private click(): void {
-    if (this.pdfs.options().length === 0) void this.makeAndSave({});
-    else this.open(this.popover.hidden);
+  /** Shows the popover with the options registered now, at the top of the preview as it is scrolled. */
+  private open(): void {
+    const root = this.element.getRootNode() as Document | ShadowRoot;
+    this.opener = root.activeElement instanceof HTMLElement ? root.activeElement : null;
+    this.fill();
+    const scroller = this.element.parentElement;
+    this.element.style.top = `${(scroller?.scrollTop ?? 0) + MARGIN}px`;
+    scroller?.addEventListener('scroll', this.close, { passive: true });
+    this.element.hidden = false;
+    this.element.querySelector('input')?.focus();
   }
 
-  /** Opens the popover with the options registered now, or closes it. */
-  private open(open: boolean): void {
-    if (open) this.fill();
-    this.popover.hidden = !open;
-    this.describe();
-    if (open) this.popover.querySelector('input')?.focus();
-  }
+  private readonly close = (): void => {
+    this.element.parentElement?.removeEventListener('scroll', this.close);
+    this.element.hidden = true;
+  };
 
   /** A checkbox per option, as this viewer left it last time (else its default), and "Download" with them. */
   private fill(): void {
     const remembered = this.remembered();
     const boxes = this.pdfs.options().map((option) => this.checkbox(option, remembered[option.id] ?? option.default));
-    const download = this.button('Download');
+    const download = this.doc.createElement('button');
+    download.type = 'button';
+    download.textContent = 'Download';
     download.className = 'zwf-pdf-export__download';
+    download.disabled = this.making;
     download.addEventListener('click', () => {
       const values = Object.fromEntries(boxes.map(({ id, input }) => [id, input.checked]));
-      this.open(false);
+      this.close();
       void this.makeAndSave(values);
     });
-    this.popover.replaceChildren(...boxes.map(({ label }) => label), download);
+    this.element.replaceChildren(...boxes.map(({ label }) => label), download);
   }
 
   private checkbox(option: PdfExportOption, checked: boolean): { id: string; label: HTMLLabelElement; input: HTMLInputElement } {
@@ -123,42 +110,49 @@ class DownloadPdfButton {
     return Object.fromEntries(Object.entries(saved).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'));
   }
 
-  private button(label: string): HTMLButtonElement {
-    const button = this.doc.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.disabled = this.busy;
-    return button;
-  }
-
   private readonly closeOutside = (event: MouseEvent): void => {
-    if (!this.popover.hidden && !event.composedPath().includes(this.element)) this.open(false);
+    if (this.element.hidden) return;
+    const path = event.composedPath();
+    const toolbarButton = path.some((target) => target instanceof HTMLElement && target.dataset.command === COMMAND);
+    if (!path.includes(this.element) && !toolbarButton) this.close();
   };
 
   private async makeAndSave(values: Record<string, boolean>): Promise<void> {
-    if (this.busy) return;
-    this.setBusy(true);
+    if (this.making) return;
+    this.setMaking(true);
     try {
       const { blob, name } = await this.pdfs.file(values);
       save(this.doc, blob, name);
     } catch (error) {
       void this.messages.showErrorMessage(`No PDF: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      this.setBusy(false);
+      this.setMaking(false);
     }
   }
 
-  private setBusy(busy: boolean): void {
-    this.busy = busy;
-    for (const button of this.element.querySelectorAll('button')) button.disabled = busy;
-    this.download.textContent = busy ? 'Making PDF…' : LABEL;
-    this.download.setAttribute('aria-busy', String(busy));
+  private setMaking(making: boolean): void {
+    this.making = making;
+    for (const button of this.element.querySelectorAll('button')) button.disabled = making;
   }
 }
 
-const LABEL = 'Download PDF';
+/** What "Download PDF" downloads: the PDF made with the given option values, and the name to save it under. */
+export interface PdfDownloads {
+  /** The options an export offers now (registered by other extensions). */
+  options(): readonly PdfExportOption[];
+  /** Rejects with an error whose message is shown to the user. */
+  file(values: Record<string, boolean>): Promise<{ blob: Blob; name: string }>;
+}
+
+/** Where "Download PDF" tells why there is no PDF. */
+export type PdfMessages = Pick<WindowApi, 'showErrorMessage'>;
+
+/** The command of "Download PDF". */
+export const COMMAND = 'pdfExport.download';
 /** Where the viewer's choices are kept. */
 const OPTIONS_KEY = 'options';
+/** Between the preview's top and the popover (px). */
+const MARGIN = 4;
 
 /** Hands `blob` to the browser as a download named `name`. */
 function save(doc: Document, blob: Blob, name: string): void {

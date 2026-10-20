@@ -55,7 +55,6 @@ describe('describeContribution', () => {
       details: ['right', 'priority 5'],
       rank: [1, -5],
     });
-    expect(describeAt('preview.registerToolbarItem', function zoom() {}, { group: '2_view', order: 1 })).toEqual({ title: 'zoom', details: ['group 2_view', 'order 1'], rank: [1, '2_view', 1] });
   });
 
   it('custom editors: view type, name, files, priority', () => {

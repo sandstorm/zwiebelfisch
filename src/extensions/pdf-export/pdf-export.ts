@@ -1,20 +1,20 @@
-import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDiagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './pdf-export.css?inline';
-import { downloadPdf } from './preview/preview';
+import { COMMAND, PdfDownload } from './preview/preview';
 
 /**
  * The project's PDF, used by:
  * - hosts, through the command `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>`
- * - users, through "Download PDF" in the preview's toolbar (while the setting `pdfExport.download` is on, the default)
+ * - users, through "Download PDF" in the preview's toolbar (menu `preview/title`, group `4_export`, the command
+ *   `pdfExport.download`), while the setting `pdfExport.download` is on (the default); disabled while it makes a PDF
  *
  * The PDF is the project as it is now, with the export options set by id and the others at their default. A document
- * with errors gives no PDF: the command rejects with the errors, also for an unknown option. The toolbar's popover has
- * a checkbox per export option, remembered for this viewer.
+ * with errors gives no PDF: the command rejects with the errors, also for an unknown option. "Download PDF" opens a
+ * popover with a checkbox per export option, remembered for this viewer.
  */
 export function pdfExport(): Extension {
   return {
@@ -34,20 +34,18 @@ export function pdfExport(): Extension {
       subscriptions.push(window.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
       subscriptions.push(commands.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
-      const download = downloadPdf(pdfs, workspaceState, window);
-      let button: Disposable | null = null;
-      const show = () => {
-        const wanted = workspace.getConfiguration('pdfExport').get('download', true);
-        if (wanted === (button !== null)) return;
-        button?.dispose();
-        button = wanted ? preview.registerToolbarItem(download, { group: '3_export', order: 10 }) : null;
-      };
-      show();
+      const download = new PdfDownload(window.ownerDocument, pdfs, workspaceState, window);
       subscriptions.push(
-        workspace.onDidChangeConfiguration((event) => {
-          if (event.affectsConfiguration('pdfExport.download')) show();
+        download,
+        preview.registerPaneOverlay(download.element),
+        commands.registerCommand(COMMAND, () => download.run()),
+        window.registerMenuItem('preview/title', {
+          command: COMMAND,
+          title: 'Download PDF',
+          group: '4_export',
+          when: () => workspace.getConfiguration('pdfExport').get('download', true),
+          enabled: () => !download.busy,
         }),
-        new Disposable(() => button?.dispose()),
       );
     },
   };

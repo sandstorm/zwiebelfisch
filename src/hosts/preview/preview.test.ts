@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for preview.ts: the PDF export options registry, the view options, the renderers, clicks, page overlays
-// and boxesFor, load events and pane overlays, and restarting a crashed engine (the engine worker is replaced by a stub that answers what
+// and boxesFor, load events and pane overlays, the toolbar's entries by renderer, zooming, and restarting a crashed engine (the engine worker is replaced by a stub that answers what
 // `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -17,6 +17,9 @@ import { type ElementLocation, PageIndex, Pt } from '../../core/typst-engine/typ
 import type { EngineRequest, WorkerLoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
+import { EventEmitter } from '../../core/event-emitter/event-emitter';
+import type { MenuItem } from '../commands/commands';
+import type { PreviewMenuContext } from './preview';
 
 const engine = {
   answer: (_request: { type: string }): object | null => null,
@@ -585,18 +588,42 @@ describe('Preview renderers', () => {
     await vi.waitFor(() => expect(requests.at(-1)).toBe('compile'));
   });
 
-  it('hides the toolbar items of the other renderers', () => {
-    const { renderer, container } = setup();
-    const item = (text: string) => () => ({ elements: [Object.assign(document.createElement('span'), { textContent: text })] });
-    preview.registerToolbarItem(item('zoom'), { group: '2_view', renderer: 'pages' });
-    preview.registerToolbarItem(item('follow'), { group: '1_sync' });
-    const shown = () => [...container.querySelectorAll<HTMLElement>('[data-testid="zwf-preview-toolbar"] > *')].filter((e) => !e.hidden).map((e) => e.textContent);
-    expect(shown()).toEqual(['follow', 'zoom']);
+  it('shows the toolbar entries whose when holds for the renderer shown', () => {
+    const { renderer } = setup();
+    preview.dispose();
+    const items: MenuItem<PreviewMenuContext>[] = [
+      { command: 'test.follow', title: 'Follow', group: '1_sync' },
+      { command: 'test.zoom', title: 'Zoom', group: '2_view', when: (context) => context.previewRenderer === 'pages' },
+    ];
+    const container = document.createElement('div');
+    preview = new Preview(container, {
+      menus: {
+        getMenuItems: (_menuId, context) => items.filter((item) => item.when?.(context) ?? true),
+        onDidChangeMenu: new EventEmitter<string>().event,
+        onDidChangeConfiguration: new EventEmitter<unknown>().event,
+        executeCommand: async () => undefined,
+        keybindingLabel: () => undefined,
+      },
+    });
+    const shown = () => [...container.querySelectorAll('[data-testid="zwf-preview-toolbar"] button')].map((button) => button.textContent);
+    expect(shown()).toEqual(['Follow', 'Zoom']);
     preview.registerRenderer(renderer);
     preview.setActiveRenderer('html');
-    expect(shown()).toEqual(['follow']);
+    expect(shown()).toEqual(['Follow']);
     preview.setActiveRenderer('pages');
-    expect(shown()).toEqual(['follow', 'zoom']);
+    expect(shown()).toEqual(['Follow', 'Zoom']);
+  });
+
+  it('zooms, telling the view changed once per frame', async () => {
+    setup();
+    let changes = 0;
+    preview.onDidChangeView(() => changes++);
+    expect(preview.zoom).toBe('fit');
+    preview.setZoom(1.25);
+    preview.setZoom(2);
+    expect(preview.zoom).toBe(2);
+    expect(preview.visiblePage.count).toBe(0);
+    await vi.waitFor(() => expect(changes).toBe(1));
   });
 
   it('compiles HTML with the prelude of the view options for HTML only, telling them the output; its errors there have no file', async () => {

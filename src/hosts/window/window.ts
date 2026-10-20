@@ -173,7 +173,7 @@ export interface WindowApi {
    * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
    * arguments). Other ids are menus that extensions show (`showContextMenu`), documented there (the file panel:
    * `file/newFile`, `explorer/context`; the Visual editor's: `visualEditor/toolbar` and the others its host
-   * documents). `C` is the context the menu is shown in, as that menu documents it.
+   * documents; the preview's toolbar: `preview/title`). `C` is the context the menu is shown in, as that menu documents it.
    */
   registerMenuItem<C extends object = MenuContext>(menuId: string, item: MenuItem<C>): Disposable;
   /**

@@ -16,28 +16,22 @@
 #table(
   columns: (auto, 1fr, auto),
   table.header[Member][What][Built-in users],
-  [`registerToolbarItem(item, { group, order, renderer })`], [A toolbar control. Groups `1_sync`, `2_view`, `3_export`. `renderer`: shown only while that renderer is active.], [`previewSync`, `previewControls`, `pdfExport`],
-  [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (switch: `previewControls`)],
+  [Menu `preview/title` (`window.registerMenuItem`)], [The toolbar: a button per entry (its icon, else `shortTitle`, else title), pressed while `toggled`, disabled while not `enabled`, `data-command` naming its command. Groups `1_sync`, `2_renderers`, `3_zoom`, `4_export` (at the row's end). Context and command argument: `PreviewMenuContext` (`previewRenderer`, the renderer shown); asked again after its commands settle, settings change and the renderer changes.], [`previewSync`, `previewControls`, `pdfExport`],
+  [`registerRenderer(renderer)`], [Another way to show the document; `setActiveRenderer(id)` picks one, `renderers()` lists `pages` first.], [`previewHtml` (buttons: `previewControls`)],
   [`registerPdfExportOption(option)`], [A checkbox offered with PDF exports.], [`comments`],
   [`registerViewOption(option)`], [Typst run before the main file, in the preview only (pages, or also HTML).], [`previewGuides`, `comments`],
   [`createPageOverlay(className)`], [Boxes drawn over the pages as elements of the caller's class, `set(boxes)`, drawn again after every render; the boxes come from `boxesFor(path, ranges, text)` or a `PageClick`.], [`previewSync` (click outline, selection shading)],
   [`registerPaneOverlay(element)`], [An element over the whole pane below the toolbar, placed by the caller's CSS; with `onDidLoad` (engine download, ready or failed, a new engine `starting`, packages and fonts), `onDidCrash` and `isEmpty`.], [`previewProgress` (the loading note)],
 )
 
-The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), `reveal(path, range)`, `onDidClickPage` (source range and boxes; nothing marked), `boxesFor(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
+The rest is API the host offers, see the d.ts: `update(files, main)` (cheap per keystroke), the view (`zoom`, `setZoom`, `scale`, `visiblePage`, `onDidChangeView` at most once per frame), `reveal(path, range)`, `onDidClickPage` (source range and boxes; nothing marked), `boxesFor(path, ranges, text)`, `snippet(path, range, text)`, `exportPdf(entry)`, `onDidChangeDiagnostics`, `onDidRender`, `engineMemory`. Order of options: @architecture-extensions-rules.
 
 ```ts
-const pageNumber: PreviewToolbarItem = (preview) => {   // ownerDocument, zoom(), setZoom, scale(), visiblePage()
-  const element = preview.ownerDocument.createElement('span');
-  return {
-    elements: [element],
-    update() {   // at most once per frame
-      const { index, count } = preview.visiblePage();
-      element.textContent = count === 0 ? '' : `${index + 1} / ${count}`;
-    },
-  };
-};
-preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20 });
+commands.registerCommand('previewControls.zoomIn', () => preview.setZoom(stepZoom(preview.scale, 1)));
+window.registerMenuItem<PreviewMenuContext>('preview/title', {
+  command: 'previewControls.zoomIn', title: 'Zoom in', shortTitle: '+', group: '3_zoom',
+  when: (context) => context.previewRenderer === 'pages',
+});
 
 preview.registerPdfExportOption({
   id: 'comments.include', label: 'Include comments', default: false,

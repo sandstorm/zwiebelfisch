@@ -1,14 +1,14 @@
-import { pageNumber } from './preview/page-number';
-import { rendererSwitch } from './preview/renderer-switch';
-import { zoomControls } from './preview/zoom-controls';
+import { registerRendererButtons } from './preview/renderer-buttons';
+import { registerZoomButtons } from './preview/zoom-buttons';
 import { registerViewOptionsMenu } from './window/view-options-menu';
+import { registerViewStatus } from './window/view-status';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import css from './preview-controls.css?inline';
 
 /**
  * The preview's controls:
- * - a switch between its renderers ("Pages | HTML") in the toolbar
- * - zoom buttons and "page n / total" in the toolbar, shown with the pages only
+ * - a button per renderer ("Pages", "HTML") in its toolbar, pressed while shown
+ * - zoom buttons in its toolbar, and the zoom and "page n / total" in the status bar, with the pages only
  * - an entry per view option in the View menu (menu `view`, group `preview`)
  *
  * The renderer chosen last and which view options are on are remembered per viewer, also for renderers and options
@@ -21,11 +21,11 @@ export function previewControls(): Extension {
       subscriptions.push(window.registerStyleSheet(css));
       const chosen = globalState.get<unknown>(RENDERER_KEY);
       if (typeof chosen === 'string') preview.setActiveRenderer(chosen);
-      const remember = (id: string) => void globalState.update(RENDERER_KEY, id);
+      const onChoose = (id: string) => void globalState.update(RENDERER_KEY, id);
       subscriptions.push(
-        preview.registerToolbarItem(rendererSwitch(preview, remember), { group: '2_view', order: 0 }),
-        preview.registerToolbarItem(zoomControls, { group: '2_view', order: 10, renderer: 'pages' }),
-        preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20, renderer: 'pages' }),
+        registerRendererButtons({ preview, window, commands, onChoose }),
+        registerZoomButtons({ preview, window, commands }),
+        registerViewStatus({ preview, window }),
         registerViewOptionsMenu({ preview, window, commands, state: globalState }),
       );
     },

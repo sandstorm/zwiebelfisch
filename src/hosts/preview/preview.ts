@@ -5,16 +5,14 @@ import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ElementLocation, HtmlFile, TypstDiagnostic, PageIndex, PageRect, PdfEntry, PdfResult, Pt } from '../../core/typst-engine/typst-engine';
 
 /**
- * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
- * answers about the project it compiles.
+ * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, its view, and what its
+ * engine answers about the project it compiles.
+ *
+ * Its toolbar shows the menu `preview/title` (as VS Code's `editor/title`; `window.registerMenuItem`): a button per
+ * entry, in groups (the built-ins: `1_sync` "Follow cursor", `2_view` the renderers and zoom, `3_export` "Download
+ * PDF", at the row's end). Its context and its commands' argument is a `PreviewMenuContext`.
  */
 export interface PreviewContributions {
-  /**
-   * Adds a control to the toolbar until disposed, at `placement`: VS Code's menu `group` + `order` (groups by name,
-   * `navigation` first; the built-ins: `1_sync` "Follow cursor", `2_view` zoom and page number, `3_export` "Download
-   * PDF"), never by registration order alone.
-   */
-  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable;
   /**
    * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, in registration
    * order, each to what the ones before it made. Throws when an option with the same `id` is registered.
@@ -36,6 +34,16 @@ export interface PreviewContributions {
   setActiveRenderer(id: string): void;
   /** A renderer was registered or disposed, or the active one changed. */
   readonly onDidChangeRenderers: Event<void>;
+  /** How the pages are zoomed. */
+  readonly zoom: Zoom;
+  /** Zooms the pages, keeping the part of the document shown (relatively) where it was. */
+  setZoom(zoom: Zoom): void;
+  /** The scale of the first page (1 = 100 %), also when fitting the width. */
+  readonly scale: number;
+  /** The page covering most of the viewport, and the number of pages. */
+  readonly visiblePage: VisiblePage;
+  /** The pages were scrolled, resized, zoomed or shown anew (`zoom`, `scale`, `visiblePage`); at most once per frame. */
+  readonly onDidChangeView: Event<void>;
   /** The registered PDF export options, in the order an export applies them. */
   pdfExportOptions(): readonly PdfExportOption[];
   /**
@@ -119,21 +127,16 @@ export interface PreviewContributions {
   setViewOptionValues(values: Readonly<Record<string, boolean>>): void;
 }
 
-/** A control in the preview's toolbar: made once, for the preview it is registered with. */
-export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemElements;
+/** What the menu `preview/title` is shown with, and what its commands get. */
+export interface PreviewMenuContext {
+  /** The id of the renderer shown (`activeRenderer`): `pages`, `html`, … */
+  readonly previewRenderer: string;
+}
 
-/**
- * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
- * first), so groups are named like `1_sync`, `2_view`; within a group by `order` (default 0), then registration order.
- */
-export interface ToolbarPlacement {
-  readonly group: string;
-  readonly order?: number;
-  /**
-   * Shown only while this renderer is active (zoom and page number: `pages`), by the elements' `hidden`; none: always
-   * (an item may then hide its elements itself).
-   */
-  readonly renderer?: string;
+/** The page covering most of the preview's viewport, and the number of pages (0: none). */
+export interface VisiblePage {
+  readonly index: PageIndex;
+  readonly count: number;
 }
 
 /**
@@ -151,7 +154,7 @@ export interface PreviewRenderer extends PreviewRendererInfo {
 export interface PreviewRendererInfo {
   /** The key in `setActiveRenderer`, e.g. `html`; `pages` is the built-in pages'. */
   readonly id: string;
-  /** Its name in a switch ("HTML"). */
+  /** Its name, on its button in the toolbar ("HTML"). */
   readonly label: string;
 }
 
@@ -174,29 +177,6 @@ export interface PreviewRendererView {
  */
 export interface HtmlBundle {
   readonly files: readonly HtmlFile[];
-}
-
-/** A toolbar item as made for one preview. */
-export interface ToolbarItemElements {
-  /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
-  readonly elements: readonly HTMLElement[];
-  /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
-  update?(): void;
-  /** Called when the item is unregistered or the preview disposed; the toolbar removes `elements`. */
-  dispose?(): void;
-}
-
-/** What a toolbar item may read and change of the preview it is in. */
-export interface PreviewContext {
-  /** The DOM document the preview lives in (to make elements). */
-  readonly ownerDocument: Document;
-  zoom(): Zoom;
-  /** Zooms, keeping the part of the document shown (relatively) where it was. */
-  setZoom(zoom: Zoom): void;
-  /** The scale of the first page (1 = 100 %), also when fitting the width. */
-  scale(): number;
-  /** The page covering most of the viewport and the number of pages. */
-  visiblePage(): { index: PageIndex; count: number };
 }
 
 /** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */

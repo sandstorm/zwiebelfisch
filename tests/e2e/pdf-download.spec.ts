@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
 });
 
-const pdfControls = (page: Page) => page.getByTestId('zwf-pdf');
+const downloadButton = (page: Page) => page.getByTestId('zwf-preview-toolbar').getByRole('button', { name: 'Download PDF' });
 /** The error messages shown ("No PDF: …"). */
 const errors = (page: Page) => page.getByTestId('zwf-notifications').getByRole('alert');
 type Editor = { source: string; executeCommand<T>(id: string, ...args: unknown[]): Promise<T> };
@@ -29,8 +29,8 @@ async function download(page: Page, click: () => Promise<void>): Promise<{ name:
 
 /** Opens the options popover of "Download PDF" and returns it. */
 async function openOptions(page: Page) {
-  await pdfControls(page).getByRole('button', { name: 'Download PDF' }).click();
-  const options = pdfControls(page).getByRole('dialog', { name: 'PDF options' });
+  await downloadButton(page).click();
+  const options = page.getByRole('dialog', { name: 'PDF options' });
   await expect(options).toBeVisible();
   return options;
 }

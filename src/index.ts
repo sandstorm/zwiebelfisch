@@ -57,13 +57,13 @@ export type {
   PdfExportOption,
   PreviewContributions,
   PreviewEntry,
+  PreviewMenuContext,
   PreviewOutput,
   PreviewRenderer,
   PreviewRendererInfo,
   PreviewRendererView,
-  PreviewToolbarItem,
   PreviewViewOption,
-  ToolbarPlacement,
+  Zoom,
 } from './hosts/preview/preview';
 export { SOURCE_EDITOR, type CodeMirrorContext, type CodeMirrorSelector, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {

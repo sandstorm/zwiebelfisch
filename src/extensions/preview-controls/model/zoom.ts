@@ -7,7 +7,7 @@ export function stepZoom(scale: number, direction: 1 | -1): number {
   return [...PRESETS].reverse().find((preset) => preset < scale - epsilon) ?? PRESETS[0];
 }
 
-/** The zoom as the toolbar shows it: "Fit · 83%" while fitting the width (at `scale`), else "125%". */
+/** The zoom as the status bar shows it: "Fit · 83%" while fitting the width (at `scale`), else "125%". */
 export function zoomText(zoom: 'fit' | number, scale: number): string {
   return zoom === 'fit' ? `Fit · ${zoomLabel(scale)}` : zoomLabel(zoom);
 }

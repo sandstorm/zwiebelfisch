@@ -125,7 +125,7 @@ Each has an explicit tie-breaker; registration order counts only within one exte
 #table(
   columns: 2,
   table.header[Contribution][Ordered by],
-  [Menu items (the Visual editor's toolbar too, with its submenus), preview toolbar items], [`group` (by name, `navigation` first), then `order`],
+  [Menu items (the Visual editor's and the preview's toolbars too, with the Visual editor's submenus)], [`group` (by name, `navigation` first), then `order`],
   [Visual editor floating bars], [`order`: the first with an anchor shows],
   [Status bar items], [`alignment`, then `priority` (higher further left)],
   [Box renderers, document links, drop and paste edits, PDF export options], [`priority`, default 100, higher first],
@@ -189,11 +189,11 @@ Every name says whose it is: ours (VS Code-shaped, unprefixed: `registerCommand`
   [`invisibles`], ["Invisible characters" in the View menu, for every editor], [Tiptap decorations, source editor, menu, command],
   [`slashCommands`], [`/` lists the Insert menu, the lists and the Align menu and the text style menu (`window.getMenuItems`); the hint "Type / for commands"], [completion, Tiptap decoration],
   [`previewProgress`], [the preview's loading note over its empty pane ("Loading the Typst compiler… 3.1 / 6.6 MB", "Compiling…", downloads); a compiler that cannot load or crashed as an error message], [`registerPaneOverlay`, `onDidLoad`, `onDidCrash`, `isEmpty`],
-  [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source and is outlined], [preview toolbar, `reveal`, `createPageOverlay`, `boxesFor`, `onDidClickPage`],
-  [`previewControls`], [zoom, page number (pages only); the switch "Pages | HTML" between the renderers, remembered per viewer; a View menu entry per view option], [preview toolbar, menu `view`, commands],
+  [`previewSync`], [the preview follows the cursor and shades the selection; a click selects the source and is outlined], [menu `preview/title` ("Follow cursor"), `reveal`, `createPageOverlay`, `boxesFor`, `onDidClickPage`],
+  [`previewControls`], [zoom buttons, zoom and page number in the status bar (pages only); a button per renderer ("Pages", "HTML"), the choice remembered per viewer; a View menu entry per view option], [menus `preview/title` and `view`, commands, status bar],
   [`previewHtml`], [the renderer `html`: Typst's HTML export page by page, following the cursor (@architecture-preview-renderers)], [renderer],
   [`previewGuides`], [view options "Page guides", "Box outlines", "Block spacing" (@architecture-extensions-guides)], [view options],
-  [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover], [command, preview toolbar],
+  [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" (`pdfExport.download`) with the options popover], [commands, menu `preview/title`, pane overlay],
 )
 
 === Optional extension <architecture-extensions-optional>

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-// Tests for pdf-export.ts: the command `pdfExport.export` and the file "Download PDF" saves, over a fake context.
+// Tests for pdf-export.ts: the command `pdfExport.export`, the toolbar entry and the file "Download PDF" saves, over a fake context.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { TypstDiagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/typst-engine';
-import type { PdfExportOption, PreviewContext, PreviewToolbarItem } from '../../hosts/preview/preview';
+import type { PdfExportOption } from '../../hosts/preview/preview';
+import type { MenuItem } from '../../hosts/commands/commands';
 import type { ExtensionContext } from '../../hosts/extension-host/extension-host';
 import { pdfExport } from './pdf-export';
 import { SourceOffset } from '../../core/typst-document/typst-document';
@@ -22,7 +23,7 @@ function setup(result: Partial<PdfResult> = {}, main = path('/main.typ'), option
   const project = new Project(main, { [main]: TEXT, '/logo.png': new Uint8Array([1]) });
   const exportPdf = vi.fn(async (_entry: PdfEntry) => ({ pdf, diagnostics: [], missingPackages: [], ...result }));
   const commands = new Map<string, (...args: unknown[]) => unknown>();
-  const toolbar: PreviewToolbarItem[] = [];
+  const menu: [string, MenuItem][] = [];
   const context = {
     project,
     subscriptions: [],
@@ -30,12 +31,17 @@ function setup(result: Partial<PdfResult> = {}, main = path('/main.typ'), option
     commands: {
       registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
     },
-    window: { showErrorMessage: async () => undefined, registerStyleSheet: () => new Disposable(() => {}) },
+    window: {
+      ownerDocument: document,
+      showErrorMessage: async () => undefined,
+      registerStyleSheet: () => new Disposable(() => {}),
+      registerMenuItem: (menuId: string, item: MenuItem) => (menu.push([menuId, item]), new Disposable(() => {})),
+    },
     workspaceState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {}, keys: () => [] },
     preview: {
       exportPdf,
       pdfExportOptions: () => options,
-      registerToolbarItem: (item: PreviewToolbarItem) => (toolbar.push(item), new Disposable(() => {})),
+      registerPaneOverlay: (element: HTMLElement) => (document.body.append(element), new Disposable(() => element.remove())),
     },
   };
   pdfExport().activate(context as unknown as ExtensionContext);
@@ -48,11 +54,10 @@ function setup(result: Partial<PdfResult> = {}, main = path('/main.typ'), option
       });
     });
     vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:pdf', revokeObjectURL: () => {} }));
-    const [button] = toolbar[0]({ ownerDocument: document } as PreviewContext).elements;
-    button.querySelector('button')!.click();
+    void commands.get('pdfExport.download')!();
     return saved;
   };
-  return { exportPdf, exportCommand, downloadName };
+  return { exportPdf, exportCommand, downloadName, menu };
 }
 
 /** A blob's bytes (jsdom's Blob has no `arrayBuffer`). */
@@ -94,6 +99,11 @@ describe('pdfExport', () => {
     const { exportPdf, exportCommand } = setup({}, path('/main.typ'), [marker('comments.include')]);
     await expect(exportCommand({ 'comments.includ': true })).rejects.toThrow('Unknown PDF export option: comments.includ');
     expect(exportPdf).not.toHaveBeenCalled();
+  });
+
+  it('puts "Download PDF" into the preview toolbar while pdfExport.download is on', () => {
+    const [[menuId, item]] = setup().menu;
+    expect([menuId, item.command, item.title, item.group, item.when?.({}), item.enabled?.({})]).toEqual(['preview/title', 'pdfExport.download', 'Download PDF', '4_export', true, true]);
   });
 
   it('downloads the file under the name of the main file', async () => {

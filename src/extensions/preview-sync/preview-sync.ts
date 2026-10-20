@@ -1,17 +1,16 @@
-import { Disposable } from '../../core/disposable/disposable';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PageRect } from '../../core/typst-engine/typst-engine';
 import type { PageOverlay, PreviewContributions } from '../../hosts/preview/preview';
 import type { Memento, Extension } from '../../hosts/extension-host/extension-host';
 import type { Workspace } from '../../hosts/workspace/workspace';
-import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
 
 /**
  * Keeps the editor and the preview in step, both ways:
- * - Follow cursor: the preview scrolls to the selection of the focused editor. A switch in the preview's toolbar turns
- *   it on and off; it starts as the setting `previewSync.followCursor` says, else as this viewer chose last, else on.
+ * - Follow cursor: the preview scrolls to the selection of the focused editor. "Follow cursor" in the preview's toolbar
+ *   (menu `preview/title`, the command `previewSync.toggleFollowCursor`, pressed while on) turns it on and off; it
+ *   starts as the setting `previewSync.followCursor` says, else as this viewer chose last, else on.
  * - Shading: while `previewSync.highlightSelection` is on (the default), the text selected in the shown file is shaded
  *   in the preview, a moment after the selection settles.
  * - Click: a click on text in the preview opens its file with that range selected (files outside the project are
@@ -22,7 +21,7 @@ export function previewSync(): Extension {
   return {
     id: 'preview-sync',
     contributes,
-    activate({ project, globalState, window, workspace, preview, subscriptions }) {
+    activate({ project, globalState, window, workspace, commands, preview, subscriptions }) {
       subscriptions.push(window.registerStyleSheet(css));
       let following = configuredFollow(workspace, globalState);
       const outline = new ClickOutline(preview.createPageOverlay('zwf-preview-sync__click'));
@@ -39,23 +38,18 @@ export function previewSync(): Extension {
         const path = editor && project.pathOf(editor.document);
         if (path) preview.reveal(path, editor.selection);
       };
-      const onChange = (on: boolean) => {
-        following = on;
-        void globalState.update(FOLLOW_KEY, on);
-        if (on) revealSelection();
-      };
-      // made anew to show a new state; its place stays (group + order)
-      let toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
       subscriptions.push(
-        new Disposable(() => toggle.dispose()),
+        commands.registerCommand(TOGGLE_FOLLOW, () => {
+          following = !following;
+          void globalState.update(FOLLOW_KEY, following);
+          if (following) revealSelection();
+        }),
+        window.registerMenuItem('preview/title', { command: TOGGLE_FOLLOW, title: 'Follow cursor', group: '1_sync', order: 10, toggled: () => following }),
         outline,
         highlight,
         workspace.onDidChangeConfiguration((event) => {
           if (event.affectsConfiguration('previewSync.highlightSelection')) highlight.update();
-          if (!event.affectsConfiguration('previewSync.followCursor')) return;
-          following = configuredFollow(workspace, globalState);
-          toggle.dispose();
-          toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
+          if (event.affectsConfiguration('previewSync.followCursor')) following = configuredFollow(workspace, globalState);
         }),
         // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden editor)
         window.onDidChangeTextEditorSelection(({ textEditor }) => {
@@ -108,6 +102,9 @@ function configuredFollow(workspace: Workspace, globalState: Memento): boolean {
   const chosen = globalState.get<unknown>(FOLLOW_KEY);
   return setting?.globalValue ?? (typeof chosen === 'boolean' ? chosen : undefined) ?? setting?.defaultValue ?? true;
 }
+
+/** The command of "Follow cursor": turns following on or off. */
+const TOGGLE_FOLLOW = 'previewSync.toggleFollowCursor';
 
 /** Where the viewer's last "Follow cursor" choice is kept (`globalState`). */
 const FOLLOW_KEY = 'followCursor';

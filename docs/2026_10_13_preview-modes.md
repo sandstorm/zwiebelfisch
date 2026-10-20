@@ -7,8 +7,8 @@ Temporary working note: concept for an HTML preview next to today's SVG pages. D
 the extension `previewHtml`, the switch in `previewControls`; distilled into `06_preview.typ` ("Renderers") and
 `20_features/14_html-preview.typ`. Differences to the design below: the pages stay built into the host (not behind
 `create()`: their clicks, shading, snippets and zoom are host API); `reveal` gets the cursor's elements
-(`ElementLocation[]`), not a source range; the switch is `previewControls`' (it lists every renderer); page-only
-toolbar items say so with `ToolbarPlacement.renderer`. Not built: the server-side SVG preview, "Export HTML".
+(`ElementLocation[]`), not a source range; the renderer buttons are `previewControls`' (it lists every renderer);
+page-only toolbar entries say so with `when` (`previewRenderer`). Not built: the server-side SVG preview, "Export HTML".
 
 ## Decisions (user, 2026-10-13)
 

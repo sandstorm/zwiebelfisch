@@ -66,15 +66,15 @@ test('maps the settings attribute onto the settings, also when it changes', asyn
   const widget = editor.locator('.zwf-editor');
   const toolbar = editor.getByTestId('zwf-preview-toolbar');
   await expect(widget).toHaveAttribute('data-theme', 'light');
-  await expect(toolbar.getByTestId('zwf-pdf')).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Download PDF' })).toBeVisible();
   await page.getByTestId('dark').check();
   await expect(widget).toHaveAttribute('data-theme', 'dark');
   await expect(widget).toHaveAttribute('data-scheme', 'dark');
   await page.getByTestId('pdf').uncheck();
-  await expect(toolbar.getByTestId('zwf-pdf')).toHaveCount(0);
+  await expect(toolbar.getByRole('button', { name: 'Download PDF' })).toHaveCount(0);
   await page.getByTestId('pdf').check();
-  // back in its place: after the page number
-  await expect(toolbar.locator('> *').last()).toHaveAttribute('data-testid', 'zwf-pdf');
+  // back in its place: at the end
+  await expect(toolbar.locator('button').last()).toHaveAttribute('data-command', 'pdfExport.download');
   expect(await editor.evaluate((el: HTMLElement & { settings: object }) => el.settings)).toEqual({
     'workbench.theme': 'dark',
     'pdfExport.download': true,
