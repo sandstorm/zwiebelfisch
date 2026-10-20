@@ -11,7 +11,7 @@ import type { ExtensionContext, PreviewViewOption, ProjectFiles } from '../src';
 import { previewGuides } from '../src/extensions/preview-guides/preview-guides';
 import { comments } from '../src/extensions/comments/comments';
 import { Project } from '../src/core/project/project';
-import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
+import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery, isContract } from './examples';
 
 const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm.gen/typst_engine_bg.wasm', engineDir));
@@ -188,6 +188,13 @@ describe('demo examples', () => {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
       else expect(path).toMatch(/\.(svg|png|mmd|ttf|ic|css)$|^\/src\/(core|hosts)\/[\w-]+(\/typst-conversion|\/workspace)?\/[\w-]+\.ts$/);
     }
+  });
+
+  it('the contracts are the files under /src/, none of docs/', () => {
+    const contracts = Object.keys(exampleFiles('docs')).filter(isContract);
+    expect(contracts).toContain('/src/core/typst-document/typst-document.ts');
+    expect(contracts.every((path) => path.startsWith('/src/'))).toBe(true);
+    expect(isContract('/template.typ')).toBe(false);
   });
 
   it("the documentation's HTML entry, site.typ, is the docs site in the HTML preview: a page per chapter, its style sheet and logo", async () => {

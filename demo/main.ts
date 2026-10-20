@@ -15,6 +15,7 @@
 
 import { collaboration, createEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
+import { isContract } from './examples';
 import { openFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
@@ -57,9 +58,9 @@ async function start(): Promise<void> {
       ...(STATIC_SITE ? [readOnlySave()] : []),
     ],
     user: { name: state.user },
-    allowFileChange: (change) => docs?.allowFileChange(change) ?? true,
+    allowFileChange: (change) => (isContract(change.path) ? true : (docs?.allowFileChange(change) ?? true)),
   });
-  if (docs) editor.onDidChangeFiles((change) => docs.filesChanged(change));
+  if (docs) editor.onDidChangeFiles((change) => isContract(change.path) || docs.filesChanged(change));
   docs?.attach(editor);
   Object.assign(window, { editor });
   if (server) watchServer(server.kind !== 'offline');
@@ -73,9 +74,13 @@ async function probe(): Promise<ServerProbe | null> {
   return server;
 }
 
-/** The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved (static build). */
+/**
+ * The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved
+ * (static build). The contracts are not in docs/: the sync never sees them, so a snapshot of docs/ keeps them.
+ */
 function docsSync(files: ProjectFiles): DocsSync | null {
-  const sync = connectDocsSync(files, (text, level) => bar.setSaveStatus(text, level));
+  const inDocs = Object.fromEntries(Object.entries(files).filter(([path]) => !isContract(path)));
+  const sync = connectDocsSync(inDocs, (text, level) => bar.setSaveStatus(text, level));
   bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo saves them to docs/)', 'muted');
   return sync;
 }

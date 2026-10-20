@@ -35,6 +35,11 @@ export function exampleFiles(name: ExampleName): ProjectFiles {
   return files;
 }
 
+/** Whether `path` is one of the contracts the Documentation example has from the repository (`/src/…`), not a file of docs/. */
+export function isContract(path: string): boolean {
+  return path.startsWith('/src/');
+}
+
 /** The example a URL asks for: `?example=<name>`; anything else the default. */
 export function exampleFromQuery(params: URLSearchParams): ExampleName {
   return EXAMPLES.find(({ name }) => name === params.get('example'))?.name ?? DEFAULT_EXAMPLE;
