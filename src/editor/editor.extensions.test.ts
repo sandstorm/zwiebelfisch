@@ -16,7 +16,6 @@ import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import * as Y from 'yjs';
 import { collaboration } from '../extensions/collaboration/collaboration';
-import { FILES_MAP } from '../core/room-protocol/room-protocol';
 import { createEditor, type EditorOptions } from './editor';
 import { SourceOffset, type SourceRange } from '../core/typst-document/typst-document';
 
@@ -670,7 +669,7 @@ describe('collaboration', () => {
   it('shows "Connecting to the room…" over the editing area, which takes no input, until the room\'s text is there', async () => {
     const room = new Y.Doc();
     const shared = new Y.Text();
-    room.getMap<Y.Text>(FILES_MAP).set('/main.typ', shared);
+    room.getMap<Y.Text>('files').set('/main.typ', shared);
     shared.insert(0, 'Room text');
     const { host, source } = setup({ source: 'Local text', extensions: (builtins) => [...builtins, collaboration({ doc: room })] });
     const area = host.querySelector('.zwf-editor__editor-area')!;
@@ -707,7 +706,7 @@ describe('collaboration', () => {
     relay(ann, bob);
     relay(bob, ann);
     const shared = new Y.Text();
-    ann.getMap<Y.Text>(FILES_MAP).set('/main.typ', shared);
+    ann.getMap<Y.Text>('files').set('/main.typ', shared);
     shared.insert(0, 'A cat.\n\nAnother cat.\n');
     const widgets = [ann, bob].map((doc) => setup({ source: '', extensions: (builtins) => [...builtins, collaboration({ doc })] }));
     await vi.waitFor(() => expect(widgets.map((widget) => widget.editor.source)).toEqual(['A cat.\n\nAnother cat.\n', 'A cat.\n\nAnother cat.\n']));

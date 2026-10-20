@@ -1,10 +1,12 @@
+// What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the messages of GitLab-backed
+// rooms, and the paths of the collaboration WebSocket and a room's file. The server's side is
+// server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there. Outside the
+// lazily loaded model/ (which uses most of it), so the eager account.ts can build the WebSocket's URL. See
+// collaboration in collaboration.ts.
+
 /**
  * The Y.Doc map of the shared Typst files: path → Y.Text (written by the collaboration extension's SharedProject; the
  * server reads and merges them in GitLab rooms).
- *
- * This file is the widget's side of what it and the collaboration server agree on: the maps of a room's Y.Doc, the
- * messages of GitLab-backed rooms, and the paths of the collaboration WebSocket and a room's file. The server's side is
- * server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there.
  */
 export const FILES_MAP = 'files';
 

@@ -3,7 +3,7 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import { type FileChange, FileContent, type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { ASSETS_MAP } from '../../../core/room-protocol/room-protocol';
+import { ASSETS_MAP } from '../room-protocol';
 
 /**
  * Shares the project's other files (images, data) in a GitLab-backed room

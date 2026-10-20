@@ -38,7 +38,7 @@ The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collabora
 mise run typecheck
 mise run quality       # ESLint, quality:top-comments, quality:module-cycles
 mise run test:unit
-mise run server:test   # when server/ or core/room-protocol changed
+mise run server:test   # when server/ or extensions/collaboration/room-protocol.ts changed
 ```
 
 - *Lint limits*: cognitive complexity 12, cyclomatic 10, nesting depth 3, 60 lines per function (tests exempt), 4 parameters. `mise run quality:report` ranks every function.

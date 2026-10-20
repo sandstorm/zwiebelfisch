@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { META_MAP } from '../../../core/room-protocol/room-protocol';
+import { META_MAP } from '../room-protocol';
 import { GitLabSourceControl } from './gitlab-source-control';
 
 afterEach(() => void vi.useRealTimers());

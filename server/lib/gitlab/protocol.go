@@ -8,7 +8,7 @@ import (
 )
 
 // What the widget and the server agree on about a GitLab room: the maps of its document and the stateless
-// messages (the Go side of src/core/room-protocol/room-protocol.ts; field names are the wire's).
+// messages (the Go side of src/extensions/collaboration/room-protocol.ts; field names are the wire's).
 const (
 	filesMap  = "files"  // path → Y.Text: the .typ files
 	assetsMap = "assets" // path → blob sha (as in the repository) or []byte (uploaded, not committed yet)

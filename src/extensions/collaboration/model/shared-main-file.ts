@@ -3,7 +3,7 @@ import { Disposable } from '../../../core/disposable/disposable';
 import type * as Y from 'yjs';
 import type { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { PROJECT_MAP } from '../../../core/room-protocol/room-protocol';
+import { PROJECT_MAP } from '../room-protocol';
 
 /**
  * Shares which file is the project's main one through the Y.Doc map `project` (key `main`: its path), so everyone in

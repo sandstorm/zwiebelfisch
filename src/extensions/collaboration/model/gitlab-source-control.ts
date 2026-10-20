@@ -12,7 +12,7 @@ import {
   type RoomChanges,
   type RoomConflict,
   type ServerMessage,
-} from '../../../core/room-protocol/room-protocol';
+} from '../room-protocol';
 
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them, shaped as the scm host's `SourceControl`:

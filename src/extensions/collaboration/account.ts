@@ -1,6 +1,6 @@
 // Who is signed in to the collaboration server. See collaboration in collaboration.ts.
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import { COLLABORATION_PATH } from '../../core/room-protocol/room-protocol';
+import { COLLABORATION_PATH } from './room-protocol';
 
 /** Who signed in to the collaboration server (`GET /api/me`): (provider, id) identifies them. */
 export interface Identity {
