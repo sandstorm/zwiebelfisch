@@ -7,6 +7,7 @@ import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { TextDocument } from '../../../hosts/languages/languages';
 import type { RawBoxPictureHost, VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
+import { posToSource } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { Disposable } from '../../../core/disposable/disposable';
 import { linkFinder, primaryLink, type FollowableLink, type LinkActions } from '../followable-link';
 
@@ -25,7 +26,7 @@ export function textLinks(editor: VisualEditorContext, actions: LinkActions, pat
   /** The link under the pointer, and the element that shows it. */
   const linkUnder = (view: EditorView, event: MouseEvent) => {
     const under = elementUnder(view, event);
-    const link = under && linkAt(editor.posToSource(view.state.doc, under.pos));
+    const link = under && linkAt(posToSource(view.state.doc, under.pos));
     return link && under ? { link, element: under.element } : null;
   };
   const isBox = (node: Node) => editor.isBox(node);
@@ -164,6 +165,6 @@ function outermostIn(parent: globalThis.Node, target: EventTarget | null): Eleme
 /** The source offset of the cursor, or of the selected inline atom (a reference chip); null for other selections and boxes. */
 function offsetAtCursor(view: EditorView, editor: VisualEditorContext): SourceOffset | null {
   const { selection, doc } = view.state;
-  if (selection instanceof NodeSelection) return selection.node.isInline && !editor.isBox(selection.node) ? editor.posToSource(doc, selection.from) : null;
-  return selection.empty ? editor.posToSource(doc, selection.head) : null;
+  if (selection instanceof NodeSelection) return selection.node.isInline && !editor.isBox(selection.node) ? posToSource(doc, selection.from) : null;
+  return selection.empty ? posToSource(doc, selection.head) : null;
 }

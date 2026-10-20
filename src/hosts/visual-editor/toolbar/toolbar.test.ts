@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
-import { svg, VisualEditor, VisualEditorHost, type VisualEditorContribution } from '../visual-editor';
+import { svg, VisualEditor, VisualEditorHost } from '../visual-editor';
 
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
 const STRONG: TypstMarkSpec = {
@@ -16,27 +16,24 @@ const STRONG: TypstMarkSpec = {
     toTypst: () => ({ open: '*', close: '*' }),
   },
 };
-const strong: VisualEditorContribution = {
-  id: 'strong',
-  activate: ({ visualEditor, subscriptions }) => {
-    subscriptions.push(
-      visualEditor.registerMark(STRONG),
-      visualEditor.registerToolbarGroup({ kind: 'group', id: 'test', order: 20 }),
-      visualEditor.registerToolbarItem({
-        group: 'test',
-        action: { label: 'Bold', icon: svg(''), run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
-      }),
-      // shown only over a selection that is all bold (to test `visible`)
-      visualEditor.registerToolbarItem({ group: 'test', action: { label: 'Unbold', icon: svg(''), run: (c) => c.unsetBold(), visible: (e) => e.isActive('bold') } }),
-    );
-  },
-};
+function strong(): VisualEditorHost {
+  const visualEditor = new VisualEditorHost();
+  visualEditor.registerMark(STRONG);
+  visualEditor.registerToolbarGroup({ kind: 'group', id: 'test', order: 20 });
+  visualEditor.registerToolbarItem({
+    group: 'test',
+    action: { label: 'Bold', icon: svg(''), run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
+  });
+  // shown only over a selection that is all bold (to test `visible`)
+  visualEditor.registerToolbarItem({ group: 'test', action: { label: 'Unbold', icon: svg(''), run: (c) => c.unsetBold(), visible: (e) => e.isActive('bold') } });
+  return visualEditor;
+}
 
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(parent, doc, VisualEditorHost.from([strong]));
+  const view = new VisualEditor(parent, doc, strong());
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { doc, view, toolbar, button, parent };
@@ -45,16 +42,12 @@ function setup(text: string) {
 describe('Visual editor toolbar', () => {
   it("asks a menu's and a floating bar's items for their state only while they show, not after every transaction", () => {
     const asked = { menu: 0, bar: 0 };
-    const counted: VisualEditorContribution = {
-      id: 'counted',
-      activate: ({ visualEditor }) => {
-        visualEditor.registerToolbarItem({ group: 'insert', action: { label: 'Counted', icon: svg(''), enabled: () => (asked.menu++, true) } });
-        visualEditor.registerToolbarItem({ group: 'selection', action: { label: 'Counted in bar', icon: svg(''), enabled: () => (asked.bar++, true) } });
-      },
-    };
+    const counted = new VisualEditorHost();
+    counted.registerToolbarItem({ group: 'insert', action: { label: 'Counted', icon: svg(''), enabled: () => (asked.menu++, true) } });
+    counted.registerToolbarItem({ group: 'selection', action: { label: 'Counted in bar', icon: svg(''), enabled: () => (asked.bar++, true) } });
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
-    const view = new VisualEditor(parent, doc, VisualEditorHost.from([counted]));
+    const view = new VisualEditor(parent, doc, counted);
     view.reveal(SourceRange.of({ from: 3, to: 3 }));
     doc.setText('Hello there\n', 'elsewhere');
     expect(asked).toEqual({ menu: 0, bar: 0 });
@@ -100,18 +93,14 @@ describe('Visual editor toolbar', () => {
 describe('a menu in a floating bar', () => {
   it("sits among the bar's items by its order, holds the actions provided when it opens, and is left out without any", () => {
     let words: string[] = [];
-    const menus: VisualEditorContribution = {
-      id: 'menus',
-      activate: ({ visualEditor }) => {
-        visualEditor.registerToolbarGroup({ kind: 'menu', id: 'words', bar: 'selection', order: 20, label: 'Words', icon: () => svg('') });
-        visualEditor.registerToolbarItem({ group: 'words', provideActions: () => words.map((word) => ({ label: word, icon: svg(''), run: (c) => c.insertContent(word) })) });
-        visualEditor.registerToolbarItem({ group: 'selection', order: 10, action: { label: 'First', icon: svg(''), run: (c) => c } });
-        visualEditor.registerToolbarItem({ group: 'selection', order: 30, action: { label: 'Last', icon: svg(''), run: (c) => c } });
-      },
-    };
+    const menus = new VisualEditorHost();
+    menus.registerToolbarGroup({ kind: 'menu', id: 'words', bar: 'selection', order: 20, label: 'Words', icon: () => svg('') });
+    menus.registerToolbarItem({ group: 'words', provideActions: () => words.map((word) => ({ label: word, icon: svg(''), run: (c) => c.insertContent(word) })) });
+    menus.registerToolbarItem({ group: 'selection', order: 10, action: { label: 'First', icon: svg(''), run: (c) => c } });
+    menus.registerToolbarItem({ group: 'selection', order: 30, action: { label: 'Last', icon: svg(''), run: (c) => c } });
     const parent = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
-    const view = new VisualEditor(parent, doc, VisualEditorHost.from([menus]));
+    const view = new VisualEditor(parent, doc, menus);
     const bar = parent.querySelector<HTMLElement>('[role="toolbar"][aria-label="Selection"]')!;
     const trigger = bar.querySelector<HTMLButtonElement>('button[aria-label="Words"]')!;
     const labels = [...bar.children].map((child) => (child.matches('button') ? child : child.querySelector('button'))!.getAttribute('aria-label'));

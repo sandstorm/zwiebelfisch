@@ -6,7 +6,7 @@ import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
 import { imageFilePastes, insertImages } from './image-insertion';
 import { imagePath } from './image-syntax';
 import { IMAGE_BAR, imageBarItems } from './image-bar';
@@ -21,20 +21,15 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * - "Insert image": a path, or the project's images and uploads
  * - image files pasted into the text, uploaded and inserted
  */
-export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
-  return {
-    id: 'images',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerNode(imageSpec()),
-        visualEditor.registerToolbarGroup(IMAGE_BAR),
-        ...imageBarItems(options.prompts).map((item) => visualEditor.registerToolbarItem(item)),
-        visualEditor.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
-        // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
-        visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
-      );
-    },
-  };
+export function registerImages(visualEditor: VisualEditorContributions, options: ImagesOptions): Disposable {
+  return Disposable.from(
+    visualEditor.registerNode(imageSpec()),
+    visualEditor.registerToolbarGroup(IMAGE_BAR),
+    ...imageBarItems(options.prompts).map((item) => visualEditor.registerToolbarItem(item)),
+    visualEditor.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
+    // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
+    visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
+  );
 }
 
 /** Where images ask (an image, a path, a caption, a width) and tell why an upload was refused: the window's. */

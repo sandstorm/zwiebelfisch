@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { createVisualEditor, TestPrompts } from '../../../testing/testing';
+import { createVisualEditor, TestPrompts, visualEditorExtension } from '../../../testing/testing';
 import { LabelIndex } from '../model/label-index';
-import { references } from './visual-editor';
+import { registerReferences } from './visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -21,7 +21,7 @@ async function setup(text: string, prompts: TestPrompts) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': text, '/other.typ': '#figure(image("x.png")) <fig:cat-mat>\n' });
-  createVisualEditor(parent, doc, { files: { '/cat.png': new Uint8Array([1]) }, prompts, contributions: [references({ labels: new LabelIndex(project), prompts })] });
+  createVisualEditor(parent, doc, { files: { '/cat.png': new Uint8Array([1]) }, prompts, contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: new LabelIndex(project), prompts }))] });
   await settle();
   const click = async (name: string) => {
     parent.querySelector('img.zwf-visual__rendering')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));

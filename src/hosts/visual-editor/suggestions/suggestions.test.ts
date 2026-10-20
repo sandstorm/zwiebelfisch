@@ -27,28 +27,18 @@ function setup(text = 'Text\n', items: readonly CompletionItem[] = ITEMS, trigge
   const asked: CompletionContext[] = [];
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  new VisualEditor(
-    parent,
-    doc,
-    VisualEditorHost.from([
-      {
-        id: 'test',
-        activate: ({ visualEditor, subscriptions }) =>
-          subscriptions.push(
-            visualEditor.registerToolbarItem({ group: 'insert', action: INSERT_RULE }),
-            visualEditor.registerCompletionItemProvider(
-              {
-                provideCompletionItems: (context) => {
-                  asked.push(context);
-                  return items;
-                },
-              },
-              trigger,
-            ),
-          ),
+  const visualEditor = new VisualEditorHost();
+  visualEditor.registerToolbarItem({ group: 'insert', action: INSERT_RULE });
+  visualEditor.registerCompletionItemProvider(
+    {
+      provideCompletionItems: (context) => {
+        asked.push(context);
+        return items;
       },
-    ]),
+    },
+    trigger,
   );
+  new VisualEditor(parent, doc, visualEditor);
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const list = parent.querySelector<HTMLElement>('[data-testid="zwf-suggest"]')!;
   const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.zwf-visual__suggest-label')!.textContent);

@@ -8,7 +8,7 @@ import type { Extension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage, uploadFolder } from './model/image-files';
 import { imageSource } from './visual-editor/image-syntax';
-import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
+import { registerImages, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
 import { imageEditor } from './workbench/image-editor';
 
 /**
@@ -26,19 +26,19 @@ export function images(): Extension {
   return {
     id: 'images',
     activate(context) {
-      const { project, workspace, window, languages, workbench, preview, subscriptions } = context;
+      const { project, workspace, window, languages, workbench, preview, visualEditor, subscriptions } = context;
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyEdit: (change) => workspace.applyEdit(change) });
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
         window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops(project)),
+        registerImages(visualEditor, {
+          assets: (document) => projectImages.forDocument(document).assets,
+          imageUrls: (document) => projectImages.forDocument(document).urls,
+          prompts: window,
+        }),
       );
-      imagesVisualEditor({
-        assets: (document) => projectImages.forDocument(document).assets,
-        imageUrls: (document) => projectImages.forDocument(document).urls,
-        prompts: window,
-      }).activate(context);
     },
   };
 }

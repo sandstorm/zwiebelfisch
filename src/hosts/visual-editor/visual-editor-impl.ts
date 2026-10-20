@@ -15,7 +15,7 @@ import { suggestions } from './suggestions/suggestions';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContribution, PriorityOptions, Contributed, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxPictureHost, ToolbarGroup, TextStyleProvider, CompletionTrigger, CompletionItemProvider, ToolbarItem } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -49,7 +49,7 @@ export class VisualEditor {
     const views = nodeViewSpecs(contributed.nodes);
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
-    const editor: VisualEditorContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
+    const editor: VisualEditorContext = { document, selection: () => this.selection(), isBox };
     // the text column: the text and what floats in it (bars, popovers), `position: relative`
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'zwf-visual__body';
@@ -205,7 +205,7 @@ export class VisualEditor {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`).
- * The workbench has one; tests make their own (`from`).
+ * The workbench has one; tests make their own.
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
@@ -225,14 +225,6 @@ export class VisualEditorHost implements VisualEditorContributions {
 
   /** `rawBoxCodeMirrorExtensions`: those of the raw boxes' code in `editor` (the workbench's: its CodeMirror contributions); default: none. */
   constructor(private readonly options: { rawBoxCodeMirrorExtensions?(editor: VisualEditorContext): Extension } = {}) {}
-
-  /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
-  static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
-    const visualEditor = new VisualEditorHost();
-    const subscriptions: { dispose(): unknown }[] = [];
-    for (const contribution of contributions) contribution.activate({ visualEditor, subscriptions });
-    return visualEditor;
-  }
 
   registerNode(spec: TypstNodeSpec): Disposable {
     return this.add(this.lists.nodes, spec);
@@ -262,7 +254,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  registerRawBoxRenderer(provider: RawBoxRendererProvider, options: PriorityOptions = {}): Disposable {
+  registerRawBoxRenderer(provider: RawBoxRendererProvider, options: { readonly priority?: number } = {}): Disposable {
     return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
@@ -303,6 +295,20 @@ export class VisualEditorHost implements VisualEditorContributions {
       if (index >= 0) list.splice(index, 1);
     });
   }
+}
+
+/** Everything registered: box renderers by priority, the rest in registration order. What the host applies to each editor it creates. */
+export interface Contributed {
+  readonly nodes: readonly TypstNodeSpec[];
+  readonly marks: readonly TypstMarkSpec[];
+  readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
+  readonly toolbarGroups: readonly ToolbarGroup[];
+  readonly toolbarItems: readonly ToolbarItem[];
+  readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
+  readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
+  readonly rawBoxPictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
+  readonly textStyles: readonly TextStyleProvider[];
+  readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
 
 /** What the raw boxes of `editor` get from the contributions. */

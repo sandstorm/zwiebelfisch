@@ -59,7 +59,7 @@ export interface VisualEditorContributions {
    * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
-  registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
+  registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: { readonly priority?: number }): Disposable;
   /**
    * Takes part in the picture of every raw box a box renderer draws, in each editor (document links: hovered, the
    * picture shows the box's link; Mod+click follows it): `provider` is called once per picture, before the box adds
@@ -115,65 +115,12 @@ export interface SourceHighlightProvider {
   readonly onDidChangeHighlights: Event<TypstDocument>;
 }
 
-/** What a contribution's `activate` gets: a part of the extension context (which offers more). */
-export interface ContributionContext {
-  readonly visualEditor: VisualEditorContributions;
-  /** Disposed when the contribution is deactivated, in reverse order. */
-  readonly subscriptions: { dispose(): unknown }[];
-}
-
-/**
- * A construct or feature contributing to the Visual editor: `activate` registers
- * its parts and pushes each registration's Disposable to `subscriptions`.
- * Shaped like an extension (`Extension`): a construct without
- * configuration is one, in the widget's list of built-in extensions; a
- * feature's extension activates the contributions it configures.
- */
-export interface VisualEditorContribution {
-  readonly id: string;
-  activate(context: ContributionContext): void;
-}
-
-/**
- * Who wins where box renderers compete: higher `priority` first (default 100, as Tiptap's extension priority), and
- * equal priorities in registration order. Registration order alone never carries meaning between extensions. (Nodes
- * and marks compete by their Tiptap extensions' own priority.)
- */
-export interface PriorityOptions {
-  readonly priority?: number;
-}
-
-/**
- * Everything registered: box renderers by priority (see `PriorityOptions`), the rest in registration order. What the
- * host applies to each editor it creates.
- */
-export interface Contributed {
-  readonly nodes: readonly TypstNodeSpec[];
-  readonly marks: readonly TypstMarkSpec[];
-  readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
-  readonly toolbarGroups: readonly ToolbarGroup[];
-  readonly toolbarItems: readonly ToolbarItem[];
-  readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
-  readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
-  readonly rawBoxPictureExtensions: readonly ((box: RawBoxPictureHost) => Disposable)[];
-  readonly textStyles: readonly TextStyleProvider[];
-  readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
-}
-
 /** One Visual editor, as contributions made for it see it (see the `…Provider` types). */
 export interface VisualEditorContext {
   /** The document the editor shows. */
   readonly document: TypstDocument;
   /** The source range the editor's selection shows (see `VisualEditor.selection`). */
   selection(): SourceRange;
-  /**
-   * The position in `doc` (the editor's document node, e.g. a transaction's) that shows source offset `offset`: with
-   * `bias` -1, a position at the end of the text before it (a caret at a line end stays there). The only way from
-   * source offsets to ProseMirror positions.
-   */
-  sourceToPos(doc: Node, offset: SourceOffset, bias?: 1 | -1): number;
-  /** The source offset a position in `doc` shows (with `bias` -1: where the text before it ends); the only way back. */
-  posToSource(doc: Node, pos: number, bias?: 1 | -1): SourceOffset;
   /** Whether `node` shows as a box of its own (raw Typst, an image, a page break, a margin note), not as text. */
   isBox(node: Node): boolean;
 }
@@ -274,11 +221,6 @@ export interface ToolbarAction {
   visible?(editor: Editor): boolean;
   /** In a floating bar: shows the bar at its anchor also without a selection (a link at the cursor). */
   showsBar?(editor: Editor): boolean;
-}
-
-/** A toolbar icon: 24×24 outline strokes in the text colour. */
-export function svg(body: string): string {
-  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 }
 
 /** A control of its own in the toolbar (the text style `<select>`). */
@@ -430,4 +372,4 @@ export type ToolbarItem =
     };
 
 export { VisualEditor, VisualEditorHost } from './visual-editor-impl';
-export { insertTypst } from './visual-editor-helpers';
+export { insertTypst, svg } from './visual-editor-helpers';

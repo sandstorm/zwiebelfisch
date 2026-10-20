@@ -6,8 +6,8 @@ import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstStyle } from '../model/discover';
 import type { ProjectStyles } from '../model/typst-style-index';
 import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
-import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
-import { customStyles } from './visual-editor';
+import { after, edit, expectPreciseMap, find, schemaWith, visualEditorExtension } from '../../../testing/testing';
+import { registerCustomStyles } from './visual-editor';
 
 const style = (name: string, kind: TypstStyle['kind'], label: string): TypstStyle => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });
 /** A project's styles that are `list`, never changing. */
@@ -18,10 +18,10 @@ function declaring(list: TypstStyle[]): ProjectStyles {
 const STYLES = [style('note', 'block', 'Note'), style('callout', 'block', 'Callout'), style('key', 'inline', 'Keyword')];
 
 /** The schema of a Visual editor whose project declares `STYLES`. */
-const schema = schemaWith({ contributions: [customStyles({ styles: declaring(STYLES), create: () => {} })] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles: declaring(STYLES), create: () => {} }))] });
 
 /** The schema of a Visual editor whose project declares no styles. */
-const withoutStyles = schemaWith({ contributions: [customStyles({ styles: declaring([]), create: () => {} })] });
+const withoutStyles = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles: declaring([]), create: () => {} }))] });
 
 const parseTypst = (source: string): Node => parseTypstWith(source, schema);
 

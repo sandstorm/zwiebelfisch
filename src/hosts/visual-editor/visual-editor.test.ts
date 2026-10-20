@@ -8,7 +8,7 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-docum
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import { children } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from './typst-conversion/typst-conversion';
-import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
+import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type VisualEditorContext } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -19,13 +19,17 @@ const STRONG: TypstMarkSpec = {
     toTypst: () => ({ open: '*', close: '*' }),
   },
 };
-const strong = { id: 'strong', activate: ({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerMark(STRONG)) } satisfies VisualEditorContribution;
+function strong(): VisualEditorHost {
+  const visualEditor = new VisualEditorHost();
+  visualEditor.registerMark(STRONG);
+  return visualEditor;
+}
 
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(parent, doc, VisualEditorHost.from([strong]));
+  const view = new VisualEditor(parent, doc, strong());
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   return { doc, view, editable, parent };
 }
@@ -181,7 +185,7 @@ describe('VisualEditorHost.registerHighlights', () => {
 function withHighlights(text: string, initial: SourceHighlight[], extensions: AnyExtension[] = []) {
   let current = initial;
   const changed = new EventEmitter<TypstDocument>();
-  const contributions = VisualEditorHost.from([strong]);
+  const contributions = strong();
   contributions.registerTiptapExtension(() => extensions);
   contributions.registerHighlights('test', { provideHighlights: () => current, onDidChangeHighlights: changed.event });
   const doc = new TypstDocument(text);
@@ -195,9 +199,8 @@ function withHighlights(text: string, initial: SourceHighlight[], extensions: An
 }
 
 describe('VisualEditor contexts', () => {
-  it('give contributions the source ↔ position mapping and which nodes are boxes', () => {
+  it('give contributions their document and which nodes are boxes', () => {
     const contributions = new VisualEditorHost();
-    const seen: { pos: number; offset: number; boxes: string[] }[] = [];
     const seenBy: VisualEditorContext[] = [];
     contributions.registerTiptapExtension((editor) => {
       seenBy.push(editor);
@@ -211,8 +214,8 @@ describe('VisualEditor contexts', () => {
     const doc = editor.state.doc;
     const boxes: string[] = [];
     doc.descendants((node) => void (context.isBox(node) && boxes.push(node.type.name)));
-    seen.push({ pos: context.sourceToPos(doc, SourceOffset.of(source.indexOf('llo'))), offset: context.posToSource(doc, 3), boxes });
-    expect(seen).toEqual([{ pos: 3, offset: 2, boxes: ['rawBlock'] }]);
+    expect(context.document.text).toBe(source);
+    expect(boxes).toEqual(['rawBlock']);
     view.dispose();
   });
 

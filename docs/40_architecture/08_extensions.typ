@@ -29,6 +29,8 @@ extensions/<name>/
   workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
+- *A host folder's part* is a plain function the entry's `activate` calls: `registerReferences(visualEditor, options)` returns its `Disposable` (with more where the entry needs it: `registerNoteCards(..).editNote`). It is no extension of its own.
+
 == Example: word count <architecture-extensions-example>
 
 The words of the shown file in the status bar, with a setting for its label and a command the host can run.

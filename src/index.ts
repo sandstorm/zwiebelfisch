@@ -82,7 +82,6 @@ export type {
   RawBoxToolsHost,
   SourceHighlight,
   SourceHighlightProvider,
-  PriorityOptions,
   TextStyle,
   TextStyleProvider,
   ToolbarContext,

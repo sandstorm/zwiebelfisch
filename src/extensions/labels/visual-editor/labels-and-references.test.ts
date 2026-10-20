@@ -3,15 +3,15 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
-import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts } from '../../../testing/testing';
+import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts, visualEditorExtension } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
 import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
-import { references as referencesContribution } from './visual-editor';
+import { registerReferences } from './visual-editor';
 
 const noLabels = new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
-const schema = schemaWith({ contributions: [referencesContribution({ labels: noLabels, prompts: new TestPrompts() })] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: noLabels, prompts: new TestPrompts() }))] });
 const parseTypst = (source: string): Node => parseTypstWith(source, schema);
 
 const chapter = (name: string) => readFileSync(new URL(`../../../../demo/examples/advanced/chapters/${name}.typ`, import.meta.url), 'utf8');

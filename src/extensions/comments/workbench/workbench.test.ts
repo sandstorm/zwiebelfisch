@@ -9,8 +9,8 @@ import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import type { TextEditor } from '../../../hosts/window/window';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { localDate } from '../model/note-thread';
-import { marginNotes } from '../visual-editor/margin-notes';
-import { noteCards } from '../visual-editor/note-cards/note-cards';
+import { registerMarginNotes } from '../visual-editor/margin-notes';
+import { registerNoteCards } from '../visual-editor/note-cards/note-cards';
 import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
@@ -63,8 +63,9 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
-    const notes = noteCards({ user: { name: 'Anna' } });
-    const contributions = VisualEditorHost.from([marginNotes({ comment: () => comment() }), notes]);
+    const contributions = new VisualEditorHost();
+    registerMarginNotes(contributions, { comment: () => comment() });
+    const notes = registerNoteCards(contributions, { user: { name: 'Anna' } });
     const view = new VisualEditor(root.appendChild(document.createElement('div')), doc, contributions);
     view.reveal(SourceRange.of({ from: 6, to: 11 }));
     const editor: TextEditor = {
@@ -101,7 +102,7 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const text = `${IMPORT}#set page(width: 16cm)\n#set text(size: 12pt)\n#show link: underline\n\n= Title\n\nHello *stars* world.\n`;
     const doc = new TypstDocument(text);
-    const view = new VisualEditor(root, doc, VisualEditorHost.from([marginNotes({ comment: () => {} })]));
+    const view = new VisualEditor(root, doc, withMarginNotes());
     const tiptap = (root.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     expect(tiptap.state.doc.firstChild?.type.name).toBe('rawBlock');
     tiptap.view.dispatch(tiptap.state.tr.setSelection(NodeSelection.create(tiptap.state.doc, 0)));
@@ -115,7 +116,7 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const text = `= Title\n\n${IMPORT}\nHello world.\n`;
     const doc = new TypstDocument(text);
-    const view = new VisualEditor(root, doc, VisualEditorHost.from([marginNotes({ comment: () => {} })]));
+    const view = new VisualEditor(root, doc, withMarginNotes());
     const tiptap = (root.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     view.reveal(SourceRange.of({ from: 2, to: 7 }));
     const editor: TextEditor = { document: doc, viewType: VISUAL_EDITOR, selection: view.selection(), revealRange: vi.fn(), insertSnippet: vi.fn(), edit: edits((changes) => view.edit(changes)) };
@@ -125,3 +126,10 @@ describe('comments.addComment', () => {
     expect(doc.text).toBe(text);
   });
 });
+
+/** A Visual editor host with margin notes (their "Comment" does nothing). */
+function withMarginNotes(): VisualEditorHost {
+  const visualEditor = new VisualEditorHost();
+  registerMarginNotes(visualEditor, { comment: () => {} });
+  return visualEditor;
+}

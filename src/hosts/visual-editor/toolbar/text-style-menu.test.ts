@@ -30,16 +30,10 @@ const LOUD: TextStyle = { id: 'loud', label: 'Loud', order: 10, apply: (c) => c.
 function setup(text: string, providers: readonly TextStyleProvider[]) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(
-    parent,
-    doc,
-    VisualEditorHost.from([
-      {
-        id: 'test',
-        activate: ({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerMark(STRONG), ...providers.map((p) => visualEditor.registerTextStyleProvider(p))),
-      },
-    ]),
-  );
+  const visualEditor = new VisualEditorHost();
+  visualEditor.registerMark(STRONG);
+  for (const provider of providers) visualEditor.registerTextStyleProvider(provider);
+  const view = new VisualEditor(parent, doc, visualEditor);
   const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]');
   const choose = (value: string) => {
     menu!.value = value;

@@ -3,10 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import { SourceOffset, SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
-import { createVisualEditor } from '../../../testing/testing';
+import { createVisualEditor, visualEditorExtension } from '../../../testing/testing';
 import { Presences, type Presence } from '../presence/presence';
 import { boxPresence } from './box-carets';
-import { visualPresence } from './visual-editor';
+import { registerVisualPresence } from './visual-editor';
 
 const MAIN = ProjectPath.of('/main.typ');
 
@@ -20,7 +20,7 @@ function setup(text: string) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const presences = new Presences((document) => (document === doc ? MAIN : undefined));
-  const visual = createVisualEditor(parent, doc, { contributions: [visualPresence(presences, () => [doc])], rawBoxCodeMirrorExtensions: boxPresence });
+  const visual = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerVisualPresence(visualEditor, presences, () => [doc]))], rawBoxCodeMirrorExtensions: boxPresence });
   const view = {
     reveal: (from: number, to: number) => visual.reveal(SourceRange.of({ from, to })),
     setPresence: (here: readonly Presence[]) =>

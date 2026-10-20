@@ -13,7 +13,7 @@ import { Collaboration } from './model/model';
 import { connect, connectAwareness } from './model/in-process';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
-import { visualPresence } from './visual-editor/visual-editor';
+import { registerVisualPresence } from './visual-editor/visual-editor';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
@@ -45,7 +45,9 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualEditor(visualParent, document, VisualEditorHost.from([visualPresence(presences, () => [document])]));
+  const visualEditor = new VisualEditorHost();
+  registerVisualPresence(visualEditor, presences, () => [document]);
+  const visual = new VisualEditor(visualParent, document, visualEditor);
   const sourceEditors = new SourceEditorHost();
   sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences));
   sourceEditors.registerCodeMirrorExtension({ editor: 'source' }, history());

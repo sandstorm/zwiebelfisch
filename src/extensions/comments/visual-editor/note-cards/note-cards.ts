@@ -5,36 +5,32 @@ import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { SourceOffset, TypstDocument } from '../../../../core/typst-document/typst-document';
 import { addReply, deleteMessage, editMessage, firstWords, localDate, readThread } from '../../model/note-thread';
 import { safeNote } from '../../model/margin-note-syntax';
-import type { VisualEditorContribution } from '../../../../hosts/visual-editor/visual-editor';
+import type { VisualEditorContributions } from '../../../../hosts/visual-editor/visual-editor';
 import { NOTE_ICON } from '../margin-notes';
 import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
 
-/** The floating note card (see `NoteCardPopover`) in every Visual editor. */
-export function noteCards(options: NoteCardsOptions = {}): NoteCardsContribution {
+/** The floating note card (see `NoteCardPopover`) in every Visual editor; disposing it takes it out of editors created later. */
+export function registerNoteCards(visualEditor: VisualEditorContributions, options: NoteCardsOptions = {}): NoteCardsRegistration {
   const popovers = new Map<TypstDocument, NoteCardPopover>();
   const me = () => options.user?.name.trim() || 'Anonymous';
+  const registration = visualEditor.registerTiptapExtension(({ document }) =>
+    Extension.create({
+      name: 'noteCards',
+      addProseMirrorPlugins: () => [
+        cardsPlugin((view) => {
+          const popover = new NoteCardPopover(view, me);
+          popovers.set(document, popover);
+          popover.onDispose = () => {
+            if (popovers.get(document) === popover) popovers.delete(document);
+          };
+          return popover;
+        }),
+      ],
+    }));
   return {
-    id: 'note-cards',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerTiptapExtension(({ document }) =>
-          Extension.create({
-            name: 'noteCards',
-            addProseMirrorPlugins: () => [
-              cardsPlugin((view) => {
-                const popover = new NoteCardPopover(view, me);
-                popovers.set(document, popover);
-                popover.onDispose = () => {
-                  if (popovers.get(document) === popover) popovers.delete(document);
-                };
-                return popover;
-              }),
-            ],
-          })),
-      );
-    },
     editNote: (document, offset) => popovers.get(document)?.openAt(offset) ?? false,
+    dispose: () => registration.dispose(),
   };
 }
 
@@ -46,14 +42,15 @@ export interface NoteCardsOptions {
   readonly user?: { name: string };
 }
 
-/** The note cards as a contribution, and a way to open one (the Comment action opens the new note's card). */
-export interface NoteCardsContribution extends VisualEditorContribution {
+/** The note cards' registration, and a way to open one (the Comment action opens the new note's card). */
+export interface NoteCardsRegistration {
   /**
    * Opens and focuses the card of the margin note whose source contains
    * `offset` (a point note, or the note part of a range note) in the Visual
    * editor of `document`. False if there is none.
    */
   editNote(document: TypstDocument, offset: SourceOffset): boolean;
+  dispose(): void;
 }
 
 /**

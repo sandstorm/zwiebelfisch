@@ -5,12 +5,12 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../model/label-index';
-import { createVisualEditor, TestPrompts, type } from '../../../testing/testing';
+import { createVisualEditor, TestPrompts, type, visualEditorExtension } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { InputBoxOptions } from '../../../hosts/window/window';
-import { references } from './visual-editor';
+import { registerReferences } from './visual-editor';
 
 const path = ProjectPath.of;
 
@@ -27,7 +27,7 @@ function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<
   const parent = document.createElement('div');
   document.body.append(parent);
   const document_ = project.document(file)!;
-  createVisualEditor(parent, document_, { contributions: [references({ labels, prompts })] });
+  createVisualEditor(parent, document_, { contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels, prompts }))] });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const text = (p: string) => project.document(path(p))!.text;
   return { project, labels, parent, editor, document: document_, text };
@@ -183,7 +183,8 @@ describe('references in the Visual editor', () => {
 describe('references without the other constructs', () => {
   it('offers the labels after @ also where no extension contributes inline code', () => {
     const project = new Project(path('/main.typ'), { '/main.typ': '= Intro <intro>\n\nText\n' });
-    const contributions = VisualEditorHost.from([references({ labels: new LabelIndex(project), prompts: new TestPrompts() })]);
+    const contributions = new VisualEditorHost();
+    registerReferences(contributions, { labels: new LabelIndex(project), prompts: new TestPrompts() });
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('Text\n'), contributions);
     const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;

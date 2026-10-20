@@ -1,6 +1,7 @@
 // The Visual editors the devtools read the document from. See devtools in ../devtools.ts.
 import { Extension, type Editor } from '@tiptap/core';
 import type { VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
+import { posToSource } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { documentRows, type DocumentRow } from '../model/document-tree';
 
 /**
@@ -37,7 +38,7 @@ export class LoadedVisualEditors {
     if (!entry) return null;
     const { doc, selection } = entry.tiptap.state;
     const { editor } = entry;
-    const rows = documentRows(doc, { posToSource: (pos, bias) => editor.posToSource(doc, pos, bias), isBox: (node) => editor.isBox(node) });
+    const rows = documentRows(doc, { posToSource: (pos, bias) => posToSource(doc, pos, bias), isBox: (node) => editor.isBox(node) });
     return { rows, selection: { from: selection.from, to: selection.to } };
   }
 }

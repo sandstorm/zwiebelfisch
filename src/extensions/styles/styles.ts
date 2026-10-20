@@ -3,7 +3,7 @@ import type { ExtensionContext, Extension } from '../../hosts/workbench/workbenc
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';
-import { customStyles, styleApplier } from './visual-editor/visual-editor';
+import { registerCustomStyles, registerStyleApplier } from './visual-editor/visual-editor';
 import { styleSearch } from './workbench/style-search';
 
 /**
@@ -22,11 +22,13 @@ export function styles(): Extension {
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const index = new TypstStyleIndex(context.project);
-      context.subscriptions.push(index);
-      customStyles({ styles: index, create: () => void addNewStyle(index, context) }).activate(context);
-      const applier = styleApplier(index);
-      applier.activate(context);
-      context.subscriptions.push(context.window.registerSearchProvider(styleSearch(index, applier, context.window)));
+      const applier = registerStyleApplier(context.visualEditor, index);
+      context.subscriptions.push(
+        index,
+        registerCustomStyles(context.visualEditor, { styles: index, create: () => void addNewStyle(index, context) }),
+        applier,
+        context.window.registerSearchProvider(styleSearch(index, applier, context.window)),
+      );
     },
   };
 }

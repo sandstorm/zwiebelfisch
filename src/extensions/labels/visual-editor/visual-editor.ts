@@ -1,9 +1,10 @@
 // References and labels in the Visual editor. See labels in ../labels.ts.
 import { Extension } from '@tiptap/core';
+import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
-import { svg, type CompletionItem, type CompletionItemProvider, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type CompletionItem, type CompletionItemProvider, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
 import { describeLabel } from '../model/label-description';
 import { insertReference } from './label-edits';
 import { captionLabels } from './caption-labels';
@@ -16,23 +17,18 @@ import { Reference } from './reference-node';
  * (add, rename, remove), and "Add label" (in the Insert menu and, where
  * the selection's block can take a label, in the selection's bar).
  */
-export function references(options: ReferencesOptions): VisualEditorContribution {
+export function registerReferences(visualEditor: VisualEditorContributions, options: ReferencesOptions): Disposable {
   const { labels, prompts } = options;
-  return {
-    id: 'references',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerNode(REFERENCE),
-        visualEditor.registerTiptapExtension((editor) => referencesExtension(labels, editor.document, prompts)),
-        visualEditor.registerCompletionItemProvider(labelCompletions(labels), { char: '@', allowedPrefixes: [' ', '\u00a0', '(', '[', '{'] }),
-        visualEditor.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
-        // after the marks and the link, before the comment (50)
-        visualEditor.registerToolbarItem({ group: 'selection', order: 45, create: (toolbar) => onlyWhereEnabled(addLabel(toolbar)) }),
-        // the images extension's bar above a selected image (an extension that is left out takes the bar along)
-        visualEditor.registerToolbarItem({ group: 'image', order: 15, create: (toolbar) => figureLabel(toolbar, options) }),
-      );
-    },
-  };
+  return Disposable.from(
+    visualEditor.registerNode(REFERENCE),
+    visualEditor.registerTiptapExtension((editor) => referencesExtension(labels, editor.document, prompts)),
+    visualEditor.registerCompletionItemProvider(labelCompletions(labels), { char: '@', allowedPrefixes: [' ', '\u00a0', '(', '[', '{'] }),
+    visualEditor.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
+    // after the marks and the link, before the comment (50)
+    visualEditor.registerToolbarItem({ group: 'selection', order: 45, create: (toolbar) => onlyWhereEnabled(addLabel(toolbar)) }),
+    // the images extension's bar above a selected image (an extension that is left out takes the bar along)
+    visualEditor.registerToolbarItem({ group: 'image', order: 15, create: (toolbar) => figureLabel(toolbar, options) }),
+  );
 }
 
 export interface ReferencesOptions {

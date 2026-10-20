@@ -4,9 +4,17 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
+import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { undoRedo } from './undo-redo';
 
-function setup(text: string, host = VisualEditorHost.from([undoRedo()])) {
+/** A Visual editor host with undo and redo. */
+function withUndoRedo(): VisualEditorHost {
+  const visualEditor = new VisualEditorHost();
+  undoRedo().activate({ visualEditor, subscriptions: [] } as unknown as ExtensionContext);
+  return visualEditor;
+}
+
+function setup(text: string, host = withUndoRedo()) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
   const view = new VisualEditor(parent, doc, host);

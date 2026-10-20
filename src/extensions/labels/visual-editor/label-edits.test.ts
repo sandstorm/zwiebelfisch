@@ -2,21 +2,21 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@tiptap/pm/state';
-import { find, schemaWith, TestPrompts } from '../../../testing/testing';
+import { find, schemaWith, TestPrompts, visualEditorExtension } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
 import { serializeToTypst, parseTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
-import { references } from './visual-editor';
+import { registerReferences } from './visual-editor';
 
 const introduction = readFileSync(new URL('../../../../demo/examples/advanced/chapters/introduction.typ', import.meta.url), 'utf8');
 const results = readFileSync(new URL('../../../../demo/examples/advanced/chapters/results.typ', import.meta.url), 'utf8');
 
 /** The labels of a project with one empty file. */
 const noLabels = () => new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
-const schema = schemaWith({ contributions: [references({ labels: noLabels(), prompts: new TestPrompts() })] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: noLabels(), prompts: new TestPrompts() }))] });
 const stateOf = (source: string) => EditorState.create({ doc: parseTypst(source, schema) });
 
 describe('label edits', () => {

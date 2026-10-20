@@ -5,10 +5,10 @@ import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { serializeToTypst } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
-import { after, createVisualEditor, edit, expectPreciseMap, parseTypst as parseTypstWith, schemaWith } from '../../../testing/testing';
-import { marginNotes, type MarginNotesOptions } from './margin-notes';
+import { after, createVisualEditor, edit, expectPreciseMap, parseTypst as parseTypstWith, schemaWith, visualEditorExtension } from '../../../testing/testing';
+import { registerMarginNotes, type MarginNotesOptions } from './margin-notes';
 
-const schema = schemaWith({ contributions: [marginNotes({ comment: () => {} })] });
+const schema = schemaWith({ contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} }))] });
 const parseTypst = (source: string) => parseTypstWith(source, schema);
 
 const MARGIN_NOTES =
@@ -116,7 +116,7 @@ describe('margin notes', () => {
   it('syncs a note changed in the source', () => {
     const parent = document.createElement('div');
     const doc = new TypstDocument('Text#margin-note[old] and #margin-note[x][y].\n');
-    createVisualEditor(parent, doc, { contributions: [marginNotes({ comment: () => {} })] });
+    createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} }))] });
     const target = 'Text#margin-note[new] and #margin-note[x][z].\n';
     doc.setText(target, 'test');
     const shown = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.state.doc;
@@ -128,7 +128,7 @@ describe('margin notes', () => {
 function setup(text: string, options: MarginNotesOptions = { comment: () => {} }) {
   const parent = document.createElement('div');
   document.body.append(parent);
-  const view = createVisualEditor(parent, new TypstDocument(text), { contributions: [marginNotes(options)] });
+  const view = createVisualEditor(parent, new TypstDocument(text), { contributions: [visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, options))] });
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { view, button };
 }

@@ -5,17 +5,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SourceOffset, SourceRange, TypstDocument } from '../../../../core/typst-document/typst-document';
 import { calculateMarginNoteChanges } from '../../model/add-margin-note';
 import { localDate } from '../../model/note-thread';
-import { createVisualEditor } from '../../../../testing/testing';
-import { marginNotes } from '../margin-notes';
-import { noteCards, type NoteCardsOptions } from './note-cards';
+import { createVisualEditor, visualEditorExtension } from '../../../../testing/testing';
+import { registerMarginNotes } from '../margin-notes';
+import { registerNoteCards, type NoteCardsOptions, type NoteCardsRegistration } from './note-cards';
 
 /** A Visual editor with margin notes and their cards, written as `options.user`; `editNote` opens a note's card. */
 function setup(source: string, options: NoteCardsOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(source);
-  const notes = noteCards(options);
-  const view = Object.assign(createVisualEditor(parent, doc, { contributions: [marginNotes({ comment: () => {} }), notes] }), {
+  let notes!: NoteCardsRegistration;
+  const contributions = [
+    visualEditorExtension((visualEditor) => registerMarginNotes(visualEditor, { comment: () => {} })),
+    visualEditorExtension((visualEditor) => (notes = registerNoteCards(visualEditor, options))),
+  ];
+  const view = Object.assign(createVisualEditor(parent, doc, { contributions }), {
     editNote: (offset: number) => notes.editNote(doc, SourceOffset.of(offset)),
   });
   const text = parent.querySelector<HTMLElement>('[data-testid="zwf-visual"]')!;

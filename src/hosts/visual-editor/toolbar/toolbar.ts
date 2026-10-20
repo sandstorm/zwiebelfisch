@@ -6,7 +6,8 @@ import { TextStyleMenu, textStyleEntries } from './text-style-menu';
 import { ToolbarMenu, type MenuItems } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { keyLabel } from '../../commands/commands';
-import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyle, type TextStyleProvider, type VisualEditorContext } from '../visual-editor';
+import type { ToolbarAction, Anchor, ToolbarContext, ToolbarControl, ToolbarGroup, ToolbarItem, TextStyle, TextStyleProvider, VisualEditorContext } from '../visual-editor';
+import { svg } from '../visual-editor-helpers';
 
 /**
  * The Visual editor's formatting toolbar: a row of groups and menus sorted by `order` (the host's own: `history`, the

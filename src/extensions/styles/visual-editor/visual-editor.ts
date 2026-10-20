@@ -3,9 +3,10 @@ import type { SyntaxNode } from '@lezer/common';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
+import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type TextStyle, type TextStyleProvider, type ToolbarAction, type ToolbarContext, type ToolbarGroup, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import { svg, type TextStyle, type TextStyleProvider, type ToolbarAction, type ToolbarContext, type ToolbarGroup, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
 import { type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
@@ -22,39 +23,34 @@ import { StyledBlock, TypstStyleMark } from './style-nodes';
  * used. The inline styles are also the "Styles" menu of the bar above a text
  * selection, toggled there as in the text style menu.
  */
-export function customStyles(options: StylesOptions): VisualEditorContribution {
+export function registerCustomStyles(visualEditor: VisualEditorContributions, options: StylesOptions): Disposable {
   const declared = declaredStyles(options.styles);
   // a style declared or removed: every Visual editor parses its document again
   const onDidChange = options.styles.onDidChange;
-  return {
-    id: 'styles',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerNode({
-          ...STYLED_BLOCK,
-          typst: { ...STYLED_BLOCK.typst, parseTypst: { calls: { '*': { block: (p, call, sep) => parseStyledBlock(p, call, sep, declared()) } } }, onDidChange },
-        }),
-        visualEditor.registerMark({
-          ...STYLE,
-          typst: {
-            ...STYLE.typst,
-            parseTypst: {
-              calls: {
-                '*': {
-                  inline: (p, call, marks) => parseStyleCall(p, call, marks, declared()),
-                  inRunningText: (p, call) => declared().get(calleeName(call, p.source))?.kind === 'inline',
-                },
-              },
+  return Disposable.from(
+    visualEditor.registerNode({
+      ...STYLED_BLOCK,
+      typst: { ...STYLED_BLOCK.typst, parseTypst: { calls: { '*': { block: (p, call, sep) => parseStyledBlock(p, call, sep, declared()) } } }, onDidChange },
+    }),
+    visualEditor.registerMark({
+      ...STYLE,
+      typst: {
+        ...STYLE.typst,
+        parseTypst: {
+          calls: {
+            '*': {
+              inline: (p, call, marks) => parseStyleCall(p, call, marks, declared()),
+              inRunningText: (p, call) => declared().get(calleeName(call, p.source))?.kind === 'inline',
             },
-            onDidChange,
           },
-        }),
-        visualEditor.registerTextStyleProvider(textStyles(options)),
-        visualEditor.registerToolbarGroup(INLINE_STYLES_MENU),
-        visualEditor.registerToolbarItem({ group: INLINE_STYLES_MENU.id, provideActions: (toolbar) => inlineStyleActions(options.styles, toolbar) }),
-      );
-    },
-  };
+        },
+        onDidChange,
+      },
+    }),
+    visualEditor.registerTextStyleProvider(textStyles(options)),
+    visualEditor.registerToolbarGroup(INLINE_STYLES_MENU),
+    visualEditor.registerToolbarItem({ group: INLINE_STYLES_MENU.id, provideActions: (toolbar) => inlineStyleActions(options.styles, toolbar) }),
+  );
 }
 
 /** A letter over a line: an inline style. */
@@ -71,41 +67,38 @@ export interface StylesOptions {
 }
 
 /** The Visual editors by document, so a style can be applied from outside the text style menu (search everywhere). */
-export interface StyleApplier extends VisualEditorContribution {
+export interface StyleApplier {
   /**
    * Applies `style` to the selection of `document`'s Visual editor as the text style menu does (with the import);
    * false if the document has no Visual editor or the style does not apply there (an inline style without a selection).
    */
   apply(document: TypstDocument, style: TypstStyle): boolean;
+  dispose(): void;
 }
 
 /** A `StyleApplier` over the Visual editors of every document (each followed from its creation to its end). */
-export function styleApplier(source: ProjectStyles): StyleApplier {
+export function registerStyleApplier(visualEditor: VisualEditorContributions, source: ProjectStyles): StyleApplier {
   const editors = new Map<TypstDocument, { editor: VisualEditorContext; tiptap: Editor }>();
+  const registration = visualEditor.registerTiptapExtension((editor) =>
+    Extension.create({
+      name: 'typstStyleApplier',
+      addProseMirrorPlugins() {
+        const tiptap = this.editor;
+        // a plugin view lives exactly as long as the editor's view (Tiptap's onCreate comes a tick later)
+        const follow = () => {
+          editors.set(editor.document, { editor, tiptap });
+          return { destroy: () => editors.get(editor.document)?.tiptap === tiptap && editors.delete(editor.document) };
+        };
+        return [new Plugin({ view: follow })];
+      },
+    }),
+  );
   return {
-    id: 'styles-applier',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerTiptapExtension((editor) =>
-          Extension.create({
-            name: 'typstStyleApplier',
-            addProseMirrorPlugins() {
-              const tiptap = this.editor;
-              // a plugin view lives exactly as long as the editor's view (Tiptap's onCreate comes a tick later)
-              const follow = () => {
-                editors.set(editor.document, { editor, tiptap });
-                return { destroy: () => editors.get(editor.document)?.tiptap === tiptap && editors.delete(editor.document) };
-              };
-              return [new Plugin({ view: follow })];
-            },
-          }),
-        ),
-      );
-    },
     apply(document, style) {
       const shown = editors.get(document);
       return shown ? applyTextStyle(textStyle(style, shown.editor, source), shown.tiptap) : false;
     },
+    dispose: () => registration.dispose(),
   };
 }
 

@@ -66,3 +66,12 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
   const after = $pos.after();
   return $pos.parent.content.size === 0 ? { from: $pos.before(), to: after } : { from: after, to: after };
 }
+
+/**
+ * A toolbar icon: 24×24 outline strokes in the text colour.
+ *
+ * @helper Stateless: no registry, no per-widget state.
+ */
+export function svg(body: string): string {
+  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}

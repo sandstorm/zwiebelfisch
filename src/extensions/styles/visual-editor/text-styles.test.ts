@@ -8,10 +8,10 @@ import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-d
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/typst-style-index';
 import { scanStyles, type TypstStyle } from '../model/discover';
-import { blockHandle, createVisualEditor, dragStart, drop } from '../../../testing/testing';
+import { blockHandle, createVisualEditor, dragStart, drop, visualEditorExtension } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { ProjectPath } from '../../../core/paths/paths';
-import { customStyles, styleApplier } from './visual-editor';
+import { registerCustomStyles, registerStyleApplier, type StyleApplier } from './visual-editor';
 
 const path = ProjectPath.of;
 
@@ -34,7 +34,7 @@ function setup(text: string, initial: TypstStyle[] = [NOTE, KEY], create = () =>
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualEditor(parent, doc, { contributions: [customStyles({ styles, create })] });
+  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles, create }))] });
   const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
   const choose = (value: string) => {
     menu.value = value;
@@ -156,7 +156,8 @@ describe('the Styles menu of the selection bar', () => {
 describe('the text style menu without headings', () => {
   it('offers normal text and the styles, but no heading levels, when no extension contributes headings', () => {
     const styles: ProjectStyles = { styles: () => [NOTE], onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
-    const contributions = VisualEditorHost.from([customStyles({ styles, create: () => {} })]);
+    const contributions = new VisualEditorHost();
+    registerCustomStyles(contributions, { styles, create: () => {} });
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualEditor(parent, new TypstDocument('Text\n'), contributions);
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
@@ -164,7 +165,7 @@ describe('the text style menu without headings', () => {
   });
 });
 
-describe('styleApplier', () => {
+describe('registerStyleApplier', () => {
   it("applies a style to the selection of a document's Visual editor as the menu does; false where it cannot", () => {
     const styles: ProjectStyles = {
       styles: () => [NOTE, KEY],
@@ -172,10 +173,10 @@ describe('styleApplier', () => {
       calculateImportChange: (document, style, use) =>
         calculateImportChange(document.text, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
     };
-    const applier = styleApplier(styles);
+    let applier!: StyleApplier;
     const doc = new TypstDocument('One\n');
     const parent = document.body.appendChild(document.createElement('div'));
-    const view = createVisualEditor(parent, doc, { contributions: [customStyles({ styles, create: () => {} }), applier] });
+    const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles, create: () => {} })), visualEditorExtension((visualEditor) => (applier = registerStyleApplier(visualEditor, styles)))] });
     view.reveal(SourceRange.of({ from: 1, to: 1 }));
     expect(applier.apply(doc, KEY)).toBe(false);
     expect(applier.apply(doc, NOTE)).toBe(true);

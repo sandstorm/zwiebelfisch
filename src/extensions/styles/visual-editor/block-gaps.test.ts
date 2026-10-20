@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualEditor, type } from '../../../testing/testing';
+import { createVisualEditor, type, visualEditorExtension } from '../../../testing/testing';
 import type { ProjectStyles } from '../model/typst-style-index';
-import { customStyles } from './visual-editor';
+import { registerCustomStyles } from './visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist (each line is then a text block's last).
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -46,7 +46,7 @@ const TWO_EXAMPLES = [
 function setup(text: string) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  const view = createVisualEditor(parent, doc, { contributions: [customStyles({ styles: EXAMPLE, create: () => {} })] });
+  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerCustomStyles(visualEditor, { styles: EXAMPLE, create: () => {} }))] });
   const editable = parent.querySelector<HTMLElement>('.ProseMirror')!;
   const tiptap = (editable as HTMLElement & { editor: Editor }).editor;
   /** Presses `key` in the text; whether something took it (the browser does nothing then). */

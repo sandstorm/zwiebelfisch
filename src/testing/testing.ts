@@ -29,10 +29,10 @@ import type { Commands } from '../hosts/commands/commands';
 import { LanguagesHost } from '../hosts/languages/languages';
 import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
-import { VisualEditor, VisualEditorHost, type ContributionContext, type VisualEditorContribution } from '../hosts/visual-editor/visual-editor';
+import { VisualEditor, VisualEditorHost, type VisualEditorContributions } from '../hosts/visual-editor/visual-editor';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
-import type { Workbench } from '../hosts/workbench/workbench';
+import type { Extension, ExtensionContext, Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
 
 /**
@@ -48,7 +48,7 @@ export function schemaWith(options: TestEditorOptions = {}): Schema {
 }
 
 /** The schema of a Visual editor with only `list` (built-in constructs or features), activated in that order. */
-export function schemaOf(list: readonly VisualEditorContribution[]): Schema {
+export function schemaOf(list: readonly Extension[]): Schema {
   return schemaFrom(activate(list));
 }
 
@@ -73,8 +73,8 @@ export interface TestEditorOptions {
   preview?: Partial<Pick<PreviewContributions, 'snippet' | 'onDidRender'>>;
   /** What the user answers when the editor asks (link URL, image, alt text, …); default: every question cancelled. */
   prompts?: TestPrompts;
-  /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
-  contributions?: readonly VisualEditorContribution[];
+  /** The extensions under test, activated after the built-ins (as the widget's features are). */
+  contributions?: readonly Extension[];
   /** The CodeMirror extensions of the raw boxes' code (the widget's: those for `editor: 'rawBox'`); default: none. */
   rawBoxCodeMirrorExtensions?: CodeExtension;
 }
@@ -152,10 +152,10 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * Visual editor's (style sheets, commands, custom editors, search providers, CodeMirror extensions) are accepted
  * and ignored.
  */
-function activate(contributions: readonly VisualEditorContribution[], options: TestEditorOptions = {}): VisualEditorHost {
+function activate(contributions: readonly Extension[], options: TestEditorOptions = {}): VisualEditorHost {
   const visualEditor = new VisualEditorHost({ rawBoxCodeMirrorExtensions: () => options.rawBoxCodeMirrorExtensions ?? [] });
   const context = { visualEditor, subscriptions: [], ...testContext(options) };
-  for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);
+  for (const contribution of contributions) contribution.activate(context as unknown as ExtensionContext);
   return visualEditor;
 }
 
@@ -210,9 +210,14 @@ if (typeof URL.createObjectURL !== 'function') {
   Object.assign(URL, { createObjectURL: () => `blob:test/${next++}`, revokeObjectURL: () => {} });
 }
 
-/** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
-export function builtins(): VisualEditorContribution[] {
+/** The built-in extensions with Visual-editor contributions, in the order the widget activates them. */
+export function builtins(): Extension[] {
   return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment(), blockHandleExtension(), blockGaps(), tabKeys(), undoRedo(), clipboard()];
+}
+
+/** A test's extension that registers `register`'s Visual-editor contributions (a feature's part, without its extension). */
+export function visualEditorExtension(register: (visualEditor: VisualEditorContributions) => { dispose(): unknown }): Extension {
+  return { id: 'test', activate: ({ visualEditor, subscriptions }) => void subscriptions.push(register(visualEditor)) };
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

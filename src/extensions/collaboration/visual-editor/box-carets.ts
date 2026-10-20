@@ -1,5 +1,5 @@
 // Remote carets inside a box: the presence decoration carries them to the box, whose code draws them. See
-// visualPresence in visual-editor.ts.
+// registerVisualPresence in visual-editor.ts.
 import { EditorState, type Extension as CodeExtension } from '@codemirror/state';
 import type { Decoration } from '@tiptap/pm/view';
 import type { PresenceUser } from '../presence/presence';

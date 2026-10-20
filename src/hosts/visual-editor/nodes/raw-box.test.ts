@@ -6,13 +6,13 @@ import type { Editor } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type RawBoxPictureHost, type VisualEditorContribution } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type RawBoxPictureHost } from '../visual-editor';
 
-function setup(text: string, contributions: readonly VisualEditorContribution[] = []) {
+function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualEditor(parent, doc, VisualEditorHost.from(contributions));
+  const view = new VisualEditor(parent, doc, new VisualEditorHost());
   const box = (selector: string) => {
     const dom = parent.querySelector<HTMLElement>(`${selector} .cm-content`)!;
     return EditorView.findFromDOM(dom)!;
@@ -135,7 +135,7 @@ describe('raw boxes', () => {
     const shadow = host.attachShadow({ mode: 'open' });
     const parent = document.createElement('div');
     shadow.append(parent);
-    new VisualEditor(parent, new TypstDocument(RAW), VisualEditorHost.from([]));
+    new VisualEditor(parent, new TypstDocument(RAW), new VisualEditorHost());
     const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.zwf-visual__raw-block .cm-content')!)!;
     expect(cm.root).toBe(shadow);
   });

@@ -3,11 +3,11 @@
 // toolbar's Insert ▾ → "Add label" and the selection bar's.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualEditor, opened, TestPrompts } from '../../../testing/testing';
+import { createVisualEditor, opened, TestPrompts, visualEditorExtension } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { references } from './visual-editor';
+import { registerReferences } from './visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -18,7 +18,7 @@ function setup(text: string) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': text });
-  const view = createVisualEditor(parent, doc, { contributions: [references({ labels: new LabelIndex(project), prompts: new TestPrompts() })] });
+  const view = createVisualEditor(parent, doc, { contributions: [visualEditorExtension((visualEditor) => registerReferences(visualEditor, { labels: new LabelIndex(project), prompts: new TestPrompts() }))] });
   const item = parent.querySelector<HTMLButtonElement>('[aria-label="Formatting"] button[aria-label="Add label"]')!;
   const barItem = parent.querySelector<HTMLButtonElement>('[aria-label="Selection"] button[aria-label="Add label"]')!;
   const draft = () => parent.querySelector<HTMLInputElement>('.ProseMirror input[aria-label="New label"]');

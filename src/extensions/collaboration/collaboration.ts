@@ -7,7 +7,7 @@ import { Account, SignInRequired } from './account';
 import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-editor/source-editor';
-import { visualPresence } from './visual-editor/visual-editor';
+import { registerVisualPresence } from './visual-editor/visual-editor';
 import { boxPresence } from './visual-editor/box-carets';
 import { AccountStatus } from './workbench/account';
 import { leaveWarning, presenceDecorations } from './workbench/workbench';
@@ -59,9 +59,9 @@ export function collaboration(options: CollaborationOptions): Extension {
           void window.showErrorMessage(SignInRequired.reason, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
       }, account);
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
-      visualPresence(presences, documents).activate({ visualEditor, subscriptions });
       subscriptions.push(
         presences,
+        registerVisualPresence(visualEditor, presences, documents),
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, sourcePresence(presences)),
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, perUserUndo),
         sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, boxPresence),

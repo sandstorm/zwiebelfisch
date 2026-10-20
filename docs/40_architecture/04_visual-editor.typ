@@ -71,7 +71,8 @@ What `ExtensionContext.visualEditor` is. *Experimental:* the shapes may change b
 )
 
 - *Register once, at activation;* the host applies it to every editor, also later ones. No contribution tracks editors.
-- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`, and the position map (`sourceToPos`, `posToSource`) over any document of the editor, e.g. a transaction's. Toolbar items made per editor also get Tiptap's `editor`.
+- *Per-editor things* come through `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()`, `isBox(node)`. Positions come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (e.g. a transaction's). Toolbar items made per editor also get Tiptap's `editor`.
+- *`svg(body)`* makes a toolbar icon (24×24 outline strokes in the text colour).
 - *`insertTypst(editor, source, at?)`* inserts Typst as the Visual editor reads it: inline content into the text, blocks after the block there. For Insert entries easier written as Typst ("Insert diagram") and help snippets.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
 - *Raw boxes' code* is a CodeMirror: extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the workbench hands them to the Visual editor host, which knows no Source editor.

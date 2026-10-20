@@ -1,8 +1,8 @@
 import type { Extension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments, registerShowComments } from './preview/preview';
-import { marginNotes } from './visual-editor/margin-notes';
-import { noteCards } from './visual-editor/note-cards/note-cards';
+import { registerMarginNotes } from './visual-editor/margin-notes';
+import { registerNoteCards } from './visual-editor/note-cards/note-cards';
 import { commentSearch } from './workbench/comment-search';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
@@ -25,20 +25,20 @@ export function comments(): Extension {
     },
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, commands, window, workbench, preview, subscriptions } = context;
-      const notes = noteCards({
+      const { project, commands, window, workbench, preview, visualEditor, subscriptions } = context;
+      const notes = registerNoteCards(visualEditor, {
         get user() {
           return workbench.user;
         },
       });
       subscriptions.push(
+        registerMarginNotes(visualEditor, { comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }),
+        notes,
         registerAddComment(context, notes),
         registerIncludeComments(preview, project),
         registerShowComments(preview, project),
         window.registerSearchProvider(commentSearch(context, notes)),
       );
-      marginNotes({ comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }).activate(context);
-      notes.activate(context);
     },
   };
 }

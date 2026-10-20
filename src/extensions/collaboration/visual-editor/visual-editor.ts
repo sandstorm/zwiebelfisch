@@ -3,12 +3,14 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
-import type { SourceHighlight, SourceHighlightProvider, VisualEditorContext, VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import type { SourceHighlight, SourceHighlightProvider, VisualEditorContext, VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
 import type { PlacedPresence, PresenceSource, PresenceUser } from '../presence/presence';
 import { caretElement } from '../source-editor/source-editor';
+import { posToSource, sourceToPos } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { boxCaretsSpec, type BoxCaret } from './box-carets';
 
 /**
@@ -17,16 +19,11 @@ import { boxCaretsSpec, type BoxCaret } from './box-carets';
  * edits. `documents`: the project's
  * documents now (any of them may have editors).
  */
-export function visualPresence(presences: PresenceSource, documents: () => readonly TypstDocument[]): VisualEditorContribution {
-  return {
-    id: 'collaboration.presence',
-    activate({ visualEditor, subscriptions }) {
-      subscriptions.push(
-        visualEditor.registerHighlights('collaboration.selections', selections(presences, documents)),
-        visualEditor.registerTiptapExtension((editor) => remoteCarets(editor, presences)),
-      );
-    },
-  };
+export function registerVisualPresence(visualEditor: VisualEditorContributions, presences: PresenceSource, documents: () => readonly TypstDocument[]): Disposable {
+  return Disposable.from(
+    visualEditor.registerHighlights('collaboration.selections', selections(presences, documents)),
+    visualEditor.registerTiptapExtension((editor) => remoteCarets(editor, presences)),
+  );
 }
 
 /** The others' selections in a document, tinted in their colors. */
@@ -89,7 +86,7 @@ function caretDecorations(editor: VisualEditorContext, doc: Node, presences: rea
     } else {
       // A caret sticks to the text before it: at the end of a line, the hidden line break or
       // blank line after it must not carry it to the start of the next one.
-      decorations.push(caret(editor.sourceToPos(doc, head, -1), id, user));
+      decorations.push(caret(sourceToPos(doc, head, -1), id, user));
     }
   }
   for (const [pos, { node, carets }] of boxes) decorations.push(boxOutline(pos, node, carets));
@@ -106,8 +103,8 @@ function boxAt(editor: VisualEditorContext, doc: Node, offset: SourceOffset): { 
   doc.descendants((node, pos) => {
     if (found) return false;
     if (!editor.isBox(node)) return true;
-    const start = editor.posToSource(doc, pos);
-    const end = editor.posToSource(doc, pos + node.nodeSize);
+    const start = posToSource(doc, pos);
+    const end = posToSource(doc, pos + node.nodeSize);
     if (node.isBlock ? start <= offset && offset <= end : start < offset && offset < end) found = { pos, node, start };
     return false;
   });

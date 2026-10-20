@@ -19,7 +19,7 @@ describe('renderedBoxes', () => {
     const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
     renderedBoxes().activate({ project, preview, visualEditor, workbench, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
-    const renderer = visualEditor.contributed().rawBoxRenderers[0]({ document, selection: () => SourceRange.of({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => SourceOffset.of(0), isBox: () => false })!;
+    const renderer = visualEditor.contributed().rawBoxRenderers[0]({ document, selection: () => SourceRange.of({ from: 0, to: 0 }), isBox: () => false })!;
     const box = { attrs: { src: '$x$' }, isInline: false } as unknown as Node;
     await renderer.render(box, SourceOffset.of(0));
     expect(preview.snippet).toHaveBeenCalledWith(path('/chapters/one.typ'), { from: 0, to: 3 }, '$x$');

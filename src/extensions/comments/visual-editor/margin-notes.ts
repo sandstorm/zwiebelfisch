@@ -7,7 +7,8 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
 import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import { Disposable } from '../../../core/disposable/disposable';
+import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContributions } from '../../../hosts/visual-editor/visual-editor';
 import { type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
@@ -18,20 +19,15 @@ import { type PlacedNode, type TypstMarkSpec, type TypstParseContext } from '../
  * Both keep `head` (the source before the first `[`, as written) and `note` (the note's markup). Other `margin-note`
  * calls stay raw.
  */
-export function marginNotes(options: MarginNotesOptions): VisualEditorContribution {
-  return {
-    id: 'margin-notes',
-    activate({ visualEditor, subscriptions }) {
-      const action = commentAction(options.comment);
-      subscriptions.push(
-        visualEditor.registerNode(POINT_NOTE),
-        visualEditor.registerMark(NOTE_RANGE),
-        visualEditor.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
-        visualEditor.registerToolbarItem({ group: 'comments', action }),
-        visualEditor.registerToolbarItem({ group: 'selection', order: 50, action }),
-      );
-    },
-  };
+export function registerMarginNotes(visualEditor: VisualEditorContributions, options: MarginNotesOptions): Disposable {
+  const action = commentAction(options.comment);
+  return Disposable.from(
+    visualEditor.registerNode(POINT_NOTE),
+    visualEditor.registerMark(NOTE_RANGE),
+    visualEditor.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
+    visualEditor.registerToolbarItem({ group: 'comments', action }),
+    visualEditor.registerToolbarItem({ group: 'selection', order: 50, action }),
+  );
 }
 
 export interface MarginNotesOptions {

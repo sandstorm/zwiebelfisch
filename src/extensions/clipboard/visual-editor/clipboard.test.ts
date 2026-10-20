@@ -5,7 +5,7 @@ import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { LanguagesHost, type DocumentPasteEditProvider } from '../../../hosts/languages/languages';
-import { VisualEditor, VisualEditorHost, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart, type TypstMarkSpec } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { PasteChoice, PasteChoices } from '../paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from '../pasted-typst';
@@ -21,7 +21,6 @@ const STRONG: TypstMarkSpec = {
     toTypst: () => ({ open: '*', close: '*' }),
   },
 };
-const strong = { id: 'strong', activate: ({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerMark(STRONG)) } satisfies VisualEditorContribution;
 
 const FIGURE = '#figure(\n  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),\n  caption: [The editor: …],\n)';
 
@@ -40,7 +39,7 @@ function setup(text: string, choices: PasteChoices = UNSEEN, provider?: Document
   languages.registerDocumentPasteEditProvider({ language: 'typst' }, new TypstPasteEditProvider(), TYPST_PASTE_METADATA);
   if (provider) languages.registerDocumentPasteEditProvider({ language: 'typst' }, provider, { providedPasteEditKinds: ['typst.loud'] });
   const host = new VisualEditorHost();
-  strong.activate({ visualEditor: host, subscriptions: [] });
+  host.registerMark(STRONG);
   const textOf = () => ({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: doc.text });
   host.registerTiptapExtension(({ document }) => typstClipboard(document, { languages, document: textOf, choices }));
   host.registerToolbarGroup(PASTE_BAR);
