@@ -36,7 +36,7 @@ The models everything builds on, in `src/core/`: text, files, paths, the Typst e
 
 - *Where it runs:* one wasm instance per worker; the preview owns the worker and sends it the files (@architecture-preview).
 - *Loaded on demand:* a font face's data when the layout first uses it (sync XHR), an `@preview/…` package when an import misses it.
-- *Memory:* after every `compile`, `compileHtml` and `exportPdf` the engine evicts the memoized results the last 10 did not use, as `typst watch` does; the devtools show `memoryInUse` (@configuration-embedding-devtools).
+- *Memory:* after every `compile`, `compileHtml` and `exportPdf` the engine evicts the memoized results the last 10 did not use, as `typst watch` does; the devtools show `memoryInUse`.
 - *Crashes* are logged; the preview then starts a new worker (@architecture-preview-rules).
 
 === Fonts <architecture-core-engine-fonts>

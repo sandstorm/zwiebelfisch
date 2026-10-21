@@ -31,7 +31,7 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
 - *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name (Local mode). In Collaborate and GitLab mode you sign in at the fake GitLab (the status bar's "Sign in", any name); a second user is a private window.
 - *Left rail*: Files, Find in files (the magnifier), search everywhere (a field over a list), Help.
 - *Editing area*: a Typst file has the tabs Visual and Source (switching keeps the cursor); spreadsheets, diagrams and text files open in their own editor.
-- *Right side*: the preview, or the devtools (@configuration-embedding-devtools).
+- *Right side*: the preview, or the devtools.
 - *Status bar*: errors and warnings; in GitLab mode what is not saved yet.
 
 *Examples:* start with *Simple*, which opens first: one page with the main features, each with what to try. *Advanced* is a report in several files (template, chapters, custom styles, a spreadsheet, diagrams, figures and references); GitLab mode always uses it. *Documentation* is this book; with `mise run demo` your edits are saved to `docs/`.

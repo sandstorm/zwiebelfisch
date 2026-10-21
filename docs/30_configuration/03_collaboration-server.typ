@@ -2,8 +2,6 @@
 
 = Collaboration server <configuration-collaboration-server>
 
-#unreviewed
-
 Several people can edit the same project at once (#link("https://yjs.dev/")[Yjs]). Add the `collaboration` extension with a connection:
 
 ```ts
@@ -32,7 +30,7 @@ The collaboration code loads on demand. `onDidChangeFiles` and `change` also fir
 
 == The server <configuration-collaboration-server-running>
 
-`server/` is a Go server that stores rooms in SQLite (@architecture-server). Its rooms are GitLab branches (@configuration-gitlab-integration); rooms of any other name (*plain rooms*) only when enabled. Run it with:
+`server/` is a Go server that stores rooms in SQLite (@architecture-server). Its rooms are GitLab folders (@configuration-gitlab-integration); rooms of any other name (*plain rooms*) only when enabled. Run it with:
 
 ```sh
 mise run server:dev    # ws://127.0.0.1:1234

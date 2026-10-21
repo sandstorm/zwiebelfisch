@@ -2,8 +2,6 @@
 
 = Embedding <configuration-embedding>
 
-#unreviewed
-
 You embed the editor as the element `<zwiebelfisch-editor>` or with `createEditor(host, options)`. Both take the same options (@configuration-options).
 
 - *`<zwiebelfisch-editor>`* needs no glue code: the text inside the tag, settings as an attribute, changes as DOM events. Use it in plain HTML or any framework that renders elements.
@@ -84,7 +82,7 @@ A complete page is `examples/plain-html/index.html`: serve the repository root a
   [`settings` property, `updateSettings(settings)`], [The current settings; merges, as `editor.updateSettings`.],
   [`value` property, attribute], [The main file's text. Setting it keeps cursor and undo history.],
   [`files` property], [Every file. Setting it replaces them all.],
-  [`executeCommand(id, ...args)`], [Runs an extension's command (the PDF: @configuration-embedding-pdf).],
+  [`executeCommand(id, ...args)`], [Runs an extension's command.],
   [`change` event], [`detail: { path, content }` for every changed file, the collaborators' edits included; `content: null` when it is gone.],
   [`main-file-change` event], [`detail: { path }`: another file became the main file, also by a collaborator.],
   [`open` event], [`detail: { path }`: another file is shown.],
@@ -147,12 +145,12 @@ It returns a `Editor`:
 
 === Events <configuration-embedding-events>
 
-The handle's events have VS Code's shape: `editor.onDid…(listener)` subscribes and returns a `Disposable`; `dispose()` on it unsubscribes. They fire only for changes after `createEditor` returned: the files you passed are not reported.
+The handle's events have VS Code's shape: `editor.onDid…(listener)` subscribes and returns a `Disposable`; `dispose()` on it unsubscribes.
 
 #table(
   columns: 2,
   [Event], [Fires with],
-  [`onDidChangeFiles`], [Each `FileChange` (@configuration-embedding-files).],
+  [`onDidChangeFiles`], [Each `FileChange` (@configuration-embedding-files): every content edit (`update`, with the full text), a file created, renamed or deleted, by the user, a collaborator or an assignment to `files` / `source`.],
   [`onDidChangeMainFile`], [The new main file's path: another file became the main file, also by a collaborator.],
   [`onDidChangeActiveFile`], [The path of the file now shown (`activeFile`), e.g. to keep it in the URL.],
 )
@@ -166,8 +164,6 @@ editor.open('/chapters/outro.typ');
 
 - Paths are *absolute*: they start with `/`.
 - *`onDidChangeFiles` is the one place to hear about changes*: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It covers edits, the file panel, collaborators and your own assignments.
-- Reuse the `Uint8Array` of unchanged files: only a new array is sent to the compiler again.
-- `#import "@preview/…"` works without configuration: packages are downloaded from `packages.typst.org` and cached.
 
 === PDF export <configuration-embedding-pdf>
 
@@ -187,17 +183,3 @@ createEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, w
 createEditor(host, { extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'pdf-export') });          // leave out
 createEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
-
-- Collaboration is not built in: add `collaboration(…)` (@configuration-collaboration-server).
-- The built-ins and their ids: @architecture-extensions-built-in. Writing one: @architecture-extensions.
-
-=== Devtools <configuration-embedding-devtools>
-
-"Devtools" on the right rail shows what the editor is made of while it runs, as your browser's devtools do for a page. Switch it off with `devtools.enabled: false`.
-
-- *Typst engine memory* on top: the engine's wasm memory only grows. A long document levels off; a value that keeps growing with every edit is a leak.
-- *Document*: the shown file's ProseMirror document as a tree, each node with its source range (@architecture-typst-conversion).
-- *Contributions*: every `register…` call and declared setting, by extension or by contribution point.
-- *Events*: every `onDid…` event as it fires, while the panel is shown.
-
-It sees only what any extension sees: each extension's context records its registrations.

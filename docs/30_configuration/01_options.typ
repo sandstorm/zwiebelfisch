@@ -2,8 +2,6 @@
 
 = Configuration options <configuration-options>
 
-#unreviewed
-
 `createEditor(host, options)` and `<zwiebelfisch-editor>` take one options object. Only its `settings` can change later, with `editor.updateSettings`. `files` and `source` are the starting content; from then on it changes through the user's edits and `editor.files`.
 
 == Options <configuration-options-editor>
@@ -41,8 +39,6 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
 <zwiebelfisch-editor settings='{"files.panel": "show", "pdfExport.download": false}'></zwiebelfisch-editor>
 ```
 
-- The editor *follows a change at once*. `editor.settings` is the current values.
-- On `<zwiebelfisch-editor>`, the attribute is read on connect and on every change; a new value replaces the attribute's own ids. `element.updateSettings` merges, as on the editor.
 - Unknown ids and values of the wrong type are ignored with a console warning.
 - An extension reads a setting with `workspace.getConfiguration('<section>').get('<key>')` and declares its own in `contributes.configuration` (@architecture-extensions-settings).
 
@@ -59,7 +55,7 @@ editor.updateSettings({ 'files.panel': undefined });    // back to the default
   [`previewSync.highlightSelection`], [`true`, `false` (`true`)], [Whether the text selected in the editor is shaded in the preview.],
   [`pdfExport.download`], [`true`, `false` (`true`)], [The preview's "Download PDF" button. The command `pdfExport.export` works either way.],
   [`diagrams.editorUrl`], [URL (`'https://embed.diagrams.net/'`)], [Where the draw.io editor comes from, e.g. your own drawio installation for use without internet access.],
-  [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail (@configuration-embedding-devtools).],
+  [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail.],
 )
 
 == PDF export options <configuration-options-pdf>

@@ -25,7 +25,7 @@ What `ExtensionContext.visualEditor` is (*experimental*): register nodes, marks,
 - *Positions* come from typst-conversion's `sourceToPos` / `posToSource`, over any document of the editor (a transaction's too); there is no other mapping.
 - *Order* of competing contributions (toolbar, box renderers, nodes and their parse rules): @architecture-extensions-rules.
 - *Raw boxes' code is a CodeMirror:* extensions add to it with `sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, ..)` (@architecture-source-editor-host); the widget hands those to this host (`rawBoxCodeMirrorExtensions`), which knows no Source editor.
-- *Links* are the `documentLinks` extension's (@architecture-source-editor-links): a Tiptap extension for the text, a raw box extension for boxes' pictures. The host knows no links.
+- *Links* are the `documentLinks` extension's: a Tiptap extension for the text, a raw box extension for boxes' pictures. The host knows no links.
 
 == Clipboard <architecture-visual-editor-clipboard>
 

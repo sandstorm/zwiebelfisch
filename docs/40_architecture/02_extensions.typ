@@ -144,7 +144,7 @@ Each has an explicit tie-breaker, so the result never depends on the list's orde
 
 == Built-in extensions <architecture-extensions-built-in>
 
-`createEditor` activates them in this order (`builtinExtensions()` in `src/editor/editor.ts`). `devtools` is not in the list: it wraps the final list and records every contribution in a right side panel (@configuration-embedding-devtools).
+`createEditor` activates them in this order (`builtinExtensions()` in `src/editor/editor.ts`). `devtools` is not in the list: it wraps the final list and records every contribution in a right side panel.
 
 #table(
   columns: (auto, 2fr, 1fr),
