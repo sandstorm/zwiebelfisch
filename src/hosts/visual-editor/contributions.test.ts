@@ -1,9 +1,10 @@
 // Tests for VisualEditorHost (visual-editor.ts) and the specs' order: priority, not registration order, decides where
 // contributions compete — box renderers by their registered priority, nodes and marks by their Tiptap extensions'.
 import { Mark, Node } from '@tiptap/core';
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it } from 'vitest';
 import { withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, serializeToTypst, parseTypst, starterKitPart, type TypstMarkSpec } from './typst-conversion/typst-conversion';
+import { createSchema, serializeToTypst, parseTypst, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { type RawBoxRendererProvider, type TypstNodeSpec, VisualEditorHost } from './visual-editor';
 
 const mark = (name: string, tiptap: TypstMarkSpec['tiptap']): TypstMarkSpec => ({ name, tiptap, typst: { toTypst: () => ({ open: '', close: '' }) } });
@@ -36,7 +37,7 @@ describe("the Tiptap extensions' priority", () => {
 
   it('nests marks by it (outer first), whatever the registration order', () => {
     const registry = new VisualEditorHost();
-    registry.registerMark(mark('bold', starterKitPart('testBold', { bold: {} })));
+    registry.registerMark(mark('bold', Bold));
     registry.registerMark(mark('inner', Mark.create({ name: 'inner', priority: 90 })));
     registry.registerMark(mark('note', Mark.create({ name: 'note', priority: 120 })));
     expect(marksOf(registry)).toEqual(['note', 'bold', 'inner']);

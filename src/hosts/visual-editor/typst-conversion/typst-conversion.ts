@@ -199,4 +199,4 @@ export interface TypstSerializeState {
   item(item: Node, pos: number, prefix: string, indent?: string): void;
 }
 
-export { createSchema, documentExtensions, starterKitPart, parseTypst, serializeToTypst, escapeTypst, attachGrammar, documentNodeSpec, onDidChangeGrammar, sourceToPos, posToSource, applyTypstChanges, typstChanges } from './typst-conversion-impl';
+export { createSchema, documentExtensions, parseTypst, serializeToTypst, escapeTypst, attachGrammar, documentNodeSpec, onDidChangeGrammar, sourceToPos, posToSource, applyTypstChanges, typstChanges } from './typst-conversion-impl';

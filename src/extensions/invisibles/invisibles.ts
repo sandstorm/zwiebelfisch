@@ -33,7 +33,7 @@ export function invisibles(): Extension {
       show(shown);
       subscriptions.push(
         window.registerStyleSheet(css),
-        window.registerMenuItem('view', { command: TOGGLE, title: 'Invisible characters', group: 'editor', toggled: () => shown }),
+        window.registerMenuItem('window/view', { command: TOGGLE, title: 'Invisible characters', group: 'editor', toggled: () => shown }),
         visualEditor.registerTiptapExtension(invisibleMarks({ shown: () => shown, onDidChange: changed.event })),
         commands.registerCommand(TOGGLE, () => {
           void globalState.update(SHOWN_KEY, !shown);

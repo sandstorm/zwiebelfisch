@@ -84,7 +84,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions): Editor 
     },
     set files(next: ProjectFiles) {
       project.replace(next); // listeners hear about every file
-      // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
+      // shown again: an editor shows the new content of a replaced file (a spreadsheet)
       widget.window.showDocument(widget.window.activeFile);
     },
     get source() {
@@ -234,7 +234,7 @@ export interface Editor {
 /**
  * The features of the widget and the Typst constructs of the Visual editor. Extensions never depend on each other, and
  * the order carries no meaning: where contributions compete their `priority` decides (box renderers, overlapping
- * document links, custom editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
+ * document links, editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
  * extensions); toolbar and menu items (the tab bar's too) have a `group` + `order`, status bar items an `alignment` +
  * `priority`. Collaboration is not among them: the host adds it with its connection. Nor are the devtools: they wrap
  * the final list (createEditor).

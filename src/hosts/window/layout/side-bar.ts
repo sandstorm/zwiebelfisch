@@ -367,7 +367,7 @@ export interface PanelCommands {
   keybindingLabel(id: string): string | undefined;
 }
 
-/** A rail button that runs `command` (an item of the menu `workbench/rail/<side>`). */
+/** A rail button that runs `command` (an item of the menu `window/railLeft`, `window/railRight`). */
 export interface RailAction {
   readonly command: string;
   /** Its tooltip and accessible name. */

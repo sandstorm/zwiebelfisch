@@ -1,9 +1,0 @@
-flowchart TD
-  markup["Typst markup"] -- "standsAlone" --> own["`block of its own
-  heading, list item`"]
-  markup -- "else, up to a paragraph break" --> run["run"]
-  run -- "has prose" --> para["paragraph"]
-  run -- "exactly one call" --> calls["calls rules"]
-  own -- "no rule takes it" --> raw["`rawBlock / rawInline
-  source verbatim`"]
-  calls -- "no rule takes it" --> raw

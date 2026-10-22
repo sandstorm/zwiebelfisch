@@ -1,4 +1,0 @@
-/* The preview-controls extension's styles: the preview's zoom and page number in the status bar.
-   See preview-controls.ts, which registers it; colors from the widget's --zwf-* tokens. */
-.zwf-preview-controls__zoom, .zwf-preview-controls__page-number { color: var(--zwf-muted); font-variant-numeric: tabular-nums; }
-.zwf-preview-controls__zoom[hidden], .zwf-preview-controls__page-number[hidden] { display: none; }

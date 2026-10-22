@@ -2,7 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import { FileContent, type Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
-import type { CustomEditorProvider } from '../../hosts/window/window';
+import type { EditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, diagramFigure, isDiagram } from './model/model';
@@ -15,7 +15,7 @@ import { newDiagram } from './window/new-diagram';
  * inside, so Typst shows it as an image (`#image("flow.drawio.png")`) and diagrams.net edits it again. Adds:
  * - the editor of diagrams: diagrams.net from the setting `diagrams.editorUrl`, saving every change; offline, it offers
  *   the picture instead
- * - "New diagram…" in the menu `file/newFile` and "Insert diagram" in the Visual editor's Insert menu
+ * - "New diagram…" in the menu `files/new` and "Insert diagram" in the Visual editor's Insert menu
  * - a diagram dropped into the text becomes a figure
  * - "Edit diagram" links on diagram paths, so ⌘/Ctrl+click opens the diagram
  *
@@ -42,9 +42,9 @@ export function diagrams(): Extension {
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         window.registerStyleSheet(css),
-        window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
+        window.registerEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
-        window.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
+        window.registerMenuItem('files/new', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
         registerInsertDiagram(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),
@@ -64,9 +64,9 @@ const NEW_DIAGRAM = 'diagrams.newDiagram';
 const DIAGRAMS_NET = 'https://embed.diagrams.net/';
 
 /** A DiagramEditor per opened diagram, saving into the project; a refused save is an error message. */
-function diagramEditor({ window, workspace }: ExtensionContext, editorUrl: () => string): CustomEditorProvider {
+function diagramEditor({ window, workspace }: ExtensionContext, editorUrl: () => string): EditorProvider {
   return {
-    resolveCustomEditor({ path, content }, panel) {
+    resolveEditor({ path, content }, panel) {
       const editor = new DiagramEditor(panel.element, {
         path,
         content: FileContent.bytes(content),

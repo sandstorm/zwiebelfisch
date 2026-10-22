@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 // Tests for clipboard.ts: copy, cut and paste of a Visual editor in Typst, and paste-as.ts: its "Paste as" chip.
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { LanguagesHost, type DocumentPasteEditProvider } from '../../../hosts/languages/languages';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
-import { starterKitPart, type TypstMarkSpec } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
+import type { TypstMarkSpec } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { PasteEdits, type PasteChoice, type PasteChoices } from '../paste-as';
 import { TYPST_PASTE_METADATA, TypstPasteEditProvider } from '../pasted-typst';
 import { typstClipboard } from './clipboard';
@@ -14,7 +15,7 @@ import { typstClipboard } from './clipboard';
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  tiptap: starterKitPart('testBold', { bold: {} }),
+  tiptap: Bold,
   typst: {
     parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
     toTypst: () => ({ open: '*', close: '*' }),

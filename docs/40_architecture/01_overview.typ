@@ -1,34 +1,47 @@
-#import "../template.typ": mermaid
+#import "../template.typ": mermaid, unreviewed
 
 = Architecture overview <architecture-overview>
 
-A Typst editor in the browser. Hosts are the mechanism of a view; extensions are every feature. All of them read and edit one text per file.
+Zwiebelfisch is a Typst editor that runs in the browser: no server needed to edit, compile or export. A server joins only for collaboration.
 
-*Read next:* @architecture-extensions, how a feature is built; the chapters after it each end with how extensions hook into their part.
+== Building blocks <architecture-overview-stack>
 
-== Layers <architecture-overview-layers>
+#figure(
+  mermaid(read("../diagrams/overview-stack.mmd"), width: 80%),
+  caption: [Main components],
+)
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Component Name][Explanation],
+  [Core model], [`src/core/`: the `Project` and one `TypstDocument` per `.typ` file, the single source of truth. Every view reads it and edits it with `TextChange`s (@architecture-data-model).],
+  [Typst compiler], [The official Rust code from`crates/typst-engine` is compiled to wasm. Runs in a Web Worker owned by the preview component. Compiles the project to SVG pages, HTML or PDF. Fonts and Typst packages (`@preview` ) load on demand.],
+  [Typst parser], [The Lezer grammar of `codemirror-lang-typst` is used for building the Visual editor document, highlights code, and feeds the indexes (labels, styles, imports). This runs on the browser's thread (and not in a web worker) on every keystroke],
+  [#link("https://tiptap.dev/")[Tiptap] / #link("https://prosemirror.net/")[ProseMirror]], [Basis for the Visual WYSIWYG editor.],
+  [#link("https://codemirror.net/")[CodeMirror] 6], [Used in the Source editor, the code of raw boxes (in the visual editor), and other text files' editor.],
+  [#link("https://yjs.dev/")[Yjs]], [Collaboration module (@architecture-data-model-collaboration).],
+  [Go server (optional)], [`server/`: relays and stores collaboration rooms over the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol, signs people in by OpenID Connect, backs a room with a GitLab branch.],
+)
+
+- *Two parsers:* the compiler's own parser stays in the worker; everything on the main thread reads Typst through Lezer.
+- *Only changes cross the worker boundary:* the preview sends a file once, then only when it changed; the worker sends back only pages whose SVG changed.
+
+== Code structure <architecture-overview-layers>
 
 #figure(
   mermaid(read("../diagrams/overview-layers.mmd"), width: 95%),
   caption: [The folders of `src/`; an arrow means "imports".],
 )
 
-- *`core/`* (@architecture-core); *`hosts/`*: @architecture-visual-editor (conversion: @architecture-typst-conversion), @architecture-source-editor, @architecture-preview, @architecture-window, the extension host (@architecture-extensions-host); *`extensions/`*: one folder per concept (@architecture-extensions-built-in).
-- *`editor/widget`* makes and wires the hosts for a `Project`; `src/testing/` composes the built-ins for `*.test.ts` only.
-- *Model, view, controller:* `core/` and an extension's `model/` have no DOM; the hosts and an extension's view folders are the views; an extension's `activate` is the controller.
+- *`core/`*: models without DOM like `TypstDocument`, `Project`.
+- *`hosts/`*: the main view components, and extension APIs: `visual-editor/`, `source-editor/`, `preview/`, `window/`, plus the namespaces `commands/`, `languages/`, `scm/` and `extension-host/` (with `workspace/`).
+- *`extensions/`*: one per feature, we try to push as much as possible into extensions. *Extensions cannot depend on other extensions*.
+- *`editor/`*: `createEditor` and the `Widget`, which makes and wires the hosts; *`editor-element/`*: the `<zwiebelfisch-editor>` custom element.
+- *`testing/`*: helpers for `*.test.ts` only.
 
-Who may import whom, and why extensions never depend on each other: @architecture-conventions.
+== Borrowed from VS Code <architecture-overview-vscode>
 
-== A keystroke's journey <architecture-overview-keystroke>
+The code is organized in a way inspired by VS Code. A *workbench* offers the main UI elements and extension APIs, and extensions implement features.
 
-#figure(
-  mermaid(read("../diagrams/keystroke.mmd"), width: 65%),
-  caption: [A keystroke in the Visual editor; the numbers are the listeners' subscription order.],
-)
-
-- *Only what was touched:* untouched nodes print their source verbatim (@architecture-visual-editor-class).
-- *The way back:* a Source editor edit reaches the Visual editor through `onDidChange`, which parses again and applies the smallest replacement (@architecture-typst-conversion-sync).
-
-== One edit format, one source of truth <architecture-overview-truth>
-
-Every `.typ` file is one `TypstDocument`; editors never talk to each other, and every edit is a `TextChange[]` with an `origin` (@architecture-core-document).
+- *We try to keep hosts as small as possible, and move as much logic as possible into extensions.*
+- *Extensions never import each other;* they meet at the hosts' contribution points (@architecture-extensions-points), e.g. by calling a command from another extension.

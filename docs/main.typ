@@ -45,14 +45,8 @@
 #[
   #set heading(offset: 1)
   #include "40_architecture/01_overview.typ"
-  #include "40_architecture/02_extensions.typ"
-  #include "40_architecture/03_core.typ"
-  #include "40_architecture/04_typst-conversion.typ"
-  #include "40_architecture/05_visual-editor.typ"
-  #include "40_architecture/06_source-editor.typ"
-  #include "40_architecture/07_preview.typ"
-  #include "40_architecture/08_window.typ"
-  #include "40_architecture/09_server.typ"
-  #include "40_architecture/10_conventions.typ"
-  #include "40_architecture/11_development.typ"
+  #include "40_architecture/02_data-model.typ"
+  #include "40_architecture/03_extensions.typ"
+  #include "40_architecture/04_conventions.typ"
+  #include "40_architecture/05_development.typ"
 ]

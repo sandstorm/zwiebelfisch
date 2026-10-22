@@ -1,11 +1,11 @@
-// The Tiptap nodes and marks of the minimum schema besides StarterKit's parts. See documentExtensions in
+// The Tiptap nodes and marks of the minimum schema besides Tiptap's paragraph and text. See documentExtensions in
 // typst-conversion.ts.
 import { Extension, Mark, Node, type AnyExtension } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import type { DocumentNodeSpec } from './typst-conversion';
 
 /**
- * The extension giving StarterKit's paragraphs their source anchors (`src`, their original Typst; a
+ * The extension giving Tiptap's paragraphs their source anchors (`src`, their original Typst; a
  * paragraph's `sep`, the whitespace to its next sibling), and the `labelled` node types of `specs` their `label`.
  * A paragraph made by a split in the editor has no anchors.
  */

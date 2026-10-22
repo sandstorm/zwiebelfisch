@@ -14,7 +14,7 @@ import { Project } from '../../core/project/project';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
-import type { CustomEditorPanel, SearchItem, WindowApi } from '../../hosts/window/window';
+import type { EditorPanel, SearchItem, WindowApi } from '../../hosts/window/window';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import { Widget } from '../../editor/widget/widget';
 import { search } from './search';
@@ -50,11 +50,11 @@ function setup(viewType?: string, main = 'Hello world\n\nThe world is round.\n',
     contributes: { languages: [{ id: 'plaintext', extensions: ['.txt'] }] },
     activate: (context) => {
       window = context.window;
-      const editor = { resolveCustomEditor: (_: unknown, panel: CustomEditorPanel) => void panel.onDidRequestReveal((range) => revealed.push(range)) };
+      const editor = { resolveEditor: (_: unknown, panel: EditorPanel) => void panel.onDidRequestReveal((range) => revealed.push(range)) };
       context.subscriptions.push(
-        window.registerCustomEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }),
+        window.registerEditorProvider('probe.text', editor, { filenamePattern: '*.txt', displayName: 'Text' }),
         // where search everywhere's rail button goes
-        context.window.registerMenuItem('workbench/rail/left', { command: 'probe.everywhere', title: 'Search everywhere', order: 15 }),
+        context.window.registerMenuItem('window/railLeft', { command: 'probe.everywhere', title: 'Search everywhere', order: 15 }),
       );
     },
   };
@@ -167,8 +167,8 @@ describe('search', () => {
 
   it('"Find in folder…" on a folder\'s row searches that folder and its subfolders', async () => {
     const { widget, panel, input } = setup();
-    expect(widget.window.getMenuItems('explorer/context', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
-    const [entry] = widget.window.getMenuItems('explorer/context', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
+    expect(widget.window.getMenuItems('files/row', { resourceKind: 'file' }).map((item) => item.title)).not.toContain('Find in folder…');
+    const [entry] = widget.window.getMenuItems('files/row', { resourceKind: 'folder' }).filter((item) => item.title === 'Find in folder…');
     input.value = 'round';
     await widget.commands.executeCommand(entry.command, path('/chapters'));
     await vi.runAllTimersAsync();

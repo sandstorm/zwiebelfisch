@@ -14,7 +14,7 @@ import { FILES_ICON } from './window/icons/icons';
  * (`files.file`: its name, size and type).
  *
  * Other extensions use it through:
- * - the menus `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context menu; context
+ * - the menus `files/new` ("New" in the panel's header) and `files/row` (a row's context menu; context
  *   `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row)
  * - the commands `files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, `files.setMainFile`
  * - FileDecorationProviders, whose decorations show as badges on the rows
@@ -64,7 +64,7 @@ export function files(): Extension {
         window.registerStyleSheet(css),
         side,
         panel,
-        window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*', displayName: 'File', priority: 'fallback' }),
+        window.registerEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*', displayName: 'File', priority: 'fallback' }),
         new Disposable(() => drops?.dispose()),
         registerOperations(context, panel),
         window.registerSearchProvider(fileSearch(project, window)),
@@ -124,7 +124,7 @@ function registerOperations({ commands, project, window }: ExtensionContext, pan
   );
 }
 
-/** The panel's own entries: in "New" (`file/newFile`) and in a row's context menu (`explorer/context`). */
+/** The panel's own entries: in "New" (`files/new`) and in a row's context menu (`files/row`). */
 const NEW_ENTRIES = [
   { command: 'files.newFile', order: 10 },
   { command: 'files.newFolder', order: 20 },

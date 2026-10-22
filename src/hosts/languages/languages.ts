@@ -11,7 +11,7 @@ import type { Command } from '../commands/commands';
  * - drop edits: what a project file dropped into a text becomes
  * - paste edits: other ways a paste can go in, and what else it changes
  * - help sheets, for the help panel
- * - known imports: the modules the names of a construct come from
+ * - import sources: the modules the names of a construct come from
  *
  * The host knows no language itself: whoever hands a text over says its language (`languageId`), and extensions declare
  * which file endings are which language (`contributes.languages`).
@@ -53,9 +53,9 @@ export interface Languages {
    * `@preview/merman:0.4.0`. An extension declares the names of its own constructs, so that whoever adds imports
    * (pasted text that uses the name) knows them without knowing the extension.
    */
-  registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable;
-  /** The known imports of `languageId`, in registration order. */
-  provideKnownImports(languageId: string): readonly KnownImport[];
+  registerImportSource(selector: DocumentSelector, source: ImportSource): Disposable;
+  /** The import sources of `languageId`, in registration order. */
+  provideImportSources(languageId: string): readonly ImportSource[];
   /**
    * Takes part in every copy from and paste into the documents `selector` matches until disposed, wherever an editor
    * runs the providers (the clipboard extension: the Visual and the Source editors, which offer the edits, ask every
@@ -114,7 +114,7 @@ export interface DocumentPasteEdit {
 }
 
 /** A name and the module it is imported from (`mermaid`, `@preview/merman:0.4.0`). */
-export interface KnownImport {
+export interface ImportSource {
   readonly name: string;
   /** The module as an import writes it: a package (`@preview/merman:0.4.0`). */
   readonly module: string;

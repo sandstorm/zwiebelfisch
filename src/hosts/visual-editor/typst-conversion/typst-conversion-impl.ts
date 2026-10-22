@@ -2,7 +2,9 @@
 import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
-import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
+import { UndoRedo } from '@tiptap/extensions';
 import { Disposable } from '../../../core/disposable/disposable';
 import { minimalChange, SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { TypstConversions } from './typst-conversions';
@@ -33,17 +35,7 @@ export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly
  */
 export function documentExtensions(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): AnyExtension[] {
   const contributed = [...nodes, ...marks].map((spec) => spec.tiptap).filter((extension) => extension !== undefined);
-  return [baseExtension(), ...new Set(contributed), TypstDocument, RawBlock, RawInline, SoftBreak, TypstSource, sourceAnchors([...BASE_NODES, ...nodes])];
-}
-
-/**
- * Some of Tiptap's StarterKit as one extension named `name`: the parts in
- * `parts` (with their options), no others. (The parts' own packages are not
- * dependencies of this package; StarterKit is.)
- */
-export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
-  const options = Object.fromEntries(STARTER_KIT_PARTS.map((part) => [part, part in parts ? parts[part] : false]));
-  return StarterKit.extend({ name }).configure(options);
+  return [Paragraph, Text, UndoRedo, ...new Set(contributed), TypstDocument, RawBlock, RawInline, SoftBreak, TypstSource, sourceAnchors([...BASE_NODES, ...nodes])];
 }
 
 /** The document `source` parses to, through the specs attached to `schema` (see `attachGrammar`). */
@@ -191,22 +183,11 @@ export function typstChanges(tr: Transaction, source: string = serializeToTypst(
   return changes;
 }
 
-/** The base: paragraphs, text, history. */
-function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, undoRedo: {} });
-}
-
 /** The minimum schema's own nodes, as the grammar sees them. */
 const BASE_NODES: readonly DocumentNodeSpec[] = [
   { name: 'paragraph', typst: { labelled: true } },
   { name: 'rawBlock', typst: { labelled: true } },
   { name: 'rawInline' },
-];
-
-/** Every part of StarterKit: each one not asked for is turned off. */
-const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
-  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
-  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
 ];
 
 /** The first index whose span satisfies `test`, which is monotonic over the spans; `spans.length` if none. */

@@ -159,7 +159,7 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('Hello\n');
   });
 
-  it("raw box extensions get each picture before the box listens to it: a stopped click keeps the box closed, a plain one edits", async () => {
+  it("raw box behaviors get each picture before the box listens to it: a stopped click keeps the box closed, a plain one edits", async () => {
     const { parent, sources, disposed } = setupPictures(RAW);
     const picture = await shownPicture(parent);
     expect(sources()).toEqual(['#set text(size: 12pt)']);
@@ -173,12 +173,12 @@ describe('raw boxes', () => {
     expect(disposed).toHaveBeenCalledTimes(1);
   });
 
-  it('raw box extensions are made per box (null: none), told of its new nodes and disposed with it', () => {
+  it('raw box behaviors are made per box (null: none), told of its new nodes and disposed with it', () => {
     const visualEditor = new VisualEditorHost();
     const updated: string[] = [];
     const disposed = vi.fn();
     const boxes: RawBoxContext[] = [];
-    visualEditor.registerRawBoxExtension((box) => {
+    visualEditor.registerRawBoxBehavior((box) => {
       boxes.push(box);
       return box.src().startsWith('#set') ? { update: (node) => updated.push(node.attrs.src), dispose: disposed } : null;
     });
@@ -228,13 +228,13 @@ describe('rendered raw boxes', () => {
 
 const modifier = { ctrlKey: true, metaKey: true };
 
-/** Raw boxes drawn as a picture, with a raw box extension that stops a click on the picture with Ctrl or ⌘ held. */
+/** Raw boxes drawn as a picture, with a raw box behavior that stops a click on the picture with Ctrl or ⌘ held. */
 function setupPictures(text: string) {
   const pictures: RawBoxContext[] = [];
   const disposed = vi.fn();
   const visualEditor = new VisualEditorHost();
   visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
-  visualEditor.registerRawBoxExtension((box) => {
+  visualEditor.registerRawBoxBehavior((box) => {
     pictures.push(box);
     box.picture!.addEventListener('mousedown', (event) => {
       if (event.ctrlKey) event.stopImmediatePropagation();

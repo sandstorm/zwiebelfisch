@@ -42,7 +42,7 @@ function setup(more: Extension[] = [], { mainLocked = false } = {}) {
 describe('files', () => {
   it('fills the panel\'s menus with its commands: "New" and the context menu of a row', () => {
     const { host, widget, contextMenu } = setup();
-    expect(widget.window.getMenuItems('file/newFile').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
+    expect(widget.window.getMenuItems('files/new').map((item) => item.command)).toEqual(['files.newFile', 'files.newFolder', 'files.upload']);
     host.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
     expect([...host.querySelectorAll('[role=menu] [role=menuitem]')].map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…']);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).toEqual(['New file…', 'New folder…', 'Upload files…', 'Rename…', 'Delete']);
@@ -67,7 +67,7 @@ describe('files', () => {
       activate: ({ commands, window, subscriptions }) =>
         subscriptions.push(
           commands.registerCommand('test.copyPath', (resource) => seen.push(resource)),
-          window.registerMenuItem('explorer/context', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
+          window.registerMenuItem('files/row', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
         ),
     }]);
     expect(contextMenu('chapters').map((entry) => entry.textContent)).not.toContain('Copy path');

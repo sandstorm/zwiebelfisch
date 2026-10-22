@@ -1,8 +1,8 @@
-// See CustomEditors in custom-editors.ts.
+// See Editors in editors.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 
 /**
- * The glob a custom editor is registered for (VS Code's `filenamePattern`), and how specific it is (which editor opens
+ * The glob an editor is registered for (VS Code's `filenamePattern`), and how specific it is (which editor opens
  * a file when several match). `*` any characters but `/`, `**` any characters, `?` one character but `/`, `{a,b}` one
  * of the alternatives (not nested). Without a `/` it matches the file's name (`*.drawio.png`), with one the path from
  * the project root without the leading slash (`diagrams/*.png`). Case-insensitive: `Logo.PNG` is an image.

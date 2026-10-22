@@ -26,7 +26,7 @@ const highlight = (page: Page) => visual(page).locator('mark.zwf-comments__range
 const ownMarkers = (page: Page) => visual(page).locator('[data-testid="zwf-note-marker"][title^="Demo user:"]');
 /** "Comment" in the Visual editor's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
-/** "Comment" in the tab bar (its menu `editor/title`), shown with the Source editor. */
+/** "Comment" in the tab bar (its menu `window/editorTitle`), shown with the Source editor. */
 const sourceCommentButton = (page: Page) => page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Comment' });
 /** The demo signs as "Demo user" (Local mode), with the local date. */
 const today = (() => {

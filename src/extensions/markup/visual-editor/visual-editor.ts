@@ -1,14 +1,21 @@
 // What the markup extension contributes to the Visual editor. See markup in ../markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Extension, Mark as TiptapMark, markInputRule, markPasteRule, mergeAttributes, type AnyExtension, type Editor, type Mark as MarkExtension } from '@tiptap/core';
+import Blockquote from '@tiptap/extension-blockquote';
+import Bold from '@tiptap/extension-bold';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
+import HardBreak from '@tiptap/extension-hard-break';
+import Italic from '@tiptap/extension-italic';
+import Link from '@tiptap/extension-link';
+import Strike from '@tiptap/extension-strike';
+import Underline from '@tiptap/extension-underline';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Anchor, type ChainButton, type FloatingBar, type TypstNodeSpec, type VisualEditorMenuContext } from '../../../hosts/visual-editor/visual-editor';
 import type { MenuItem } from '../../../hosts/commands/commands';
-import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
+import { type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, codeIndent, inlineCodeDelimiters, rawCode, type RawCode } from '../model/raw-code';
 
@@ -24,26 +31,20 @@ const STRONG_PASTE = /(?:^|\s)(\*(?!\s+\*)([^*]+)\*(?!\s+\*))/g;
 const EMPH_INPUT = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))$/;
 const EMPH_PASTE = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))/g;
 
-/** `part` (a StarterKit part bringing one mark) whose mark is typed as `input` and pasted as `paste` (null: not), nothing else. */
-function typedAs(part: AnyExtension, input: RegExp | null, paste: RegExp | null): AnyExtension {
-  return part.extend({
-    addExtensions() {
-      return (this.parent?.() ?? []).map((mark: AnyExtension) =>
-        (mark as MarkExtension).extend({
-          addInputRules() {
-            return input ? [markInputRule({ find: input, type: this.type })] : [];
-          },
-          addPasteRules() {
-            return paste ? [markPasteRule({ find: paste, type: this.type })] : [];
-          },
-        }),
-      );
+/** `mark` typed as `input` and pasted as `paste` (null: not), nothing else. */
+function typedAs(mark: MarkExtension, input: RegExp | null, paste: RegExp | null): AnyExtension {
+  return mark.extend({
+    addInputRules() {
+      return input ? [markInputRule({ find: input, type: this.type })] : [];
+    },
+    addPasteRules() {
+      return paste ? [markPasteRule({ find: paste, type: this.type })] : [];
     },
   });
 }
 
-/** Tiptap's bold, italic, underline, strike, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
-const Bold = typedAs(starterKitPart('typstBold', { bold: {} }), STRONG_INPUT, STRONG_PASTE);
+/** Tiptap's bold, italic, underline, strike, link and blockquote, configured for Typst: each spec brings its own. */
+const TypstBold = typedAs(Bold, STRONG_INPUT, STRONG_PASTE);
 
 /**
  * The specs of strong, emphasis, underline, strike and highlight, links, raw text (inline code, code blocks) and block
@@ -51,15 +52,15 @@ const Bold = typedAs(starterKitPart('typstBold', { bold: {} }), STRONG_INPUT, ST
  */
 export const BOLD: TypstMarkSpec = {
   name: 'bold',
-  tiptap: Bold,
+  tiptap: TypstBold,
   typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
 };
 
-const Italic = typedAs(starterKitPart('typstItalic', { italic: {} }), EMPH_INPUT, EMPH_PASTE);
+const TypstItalic = typedAs(Italic, EMPH_INPUT, EMPH_PASTE);
 
 export const ITALIC: TypstMarkSpec = {
   name: 'italic',
-  tiptap: Italic,
+  tiptap: TypstItalic,
   typst: { parseTypst: { syntaxNodes: { Emph: { inline: delimited('italic') } } }, toTypst: (_mark, around) => delimitedSyntax('_', 'emph', around) },
 };
 
@@ -81,18 +82,14 @@ function delimitedSyntax(delimiter: string, func: string, { before, after, first
 
 const WORD = /[\p{L}\p{N}_]/u;
 
-const Underline = starterKitPart('typstUnderline', { underline: {} });
-
 /**
  * `#underline[x]`, `#strike[x]`, `#highlight[x]` (no other arguments, one paragraph): their content with the mark;
  * other calls (`stroke:`, `fill:`, parentheses) stay raw, so an edited one prints back as it was written.
  */
 export const UNDERLINE: TypstMarkSpec = plainCallMark('underline', Underline);
 
-/** StarterKit's Strike, with its shortcut Mod-Shift-S; not typed as `~~x~~` (in Typst `~` is a non-breaking space). */
-const Strike = typedAs(starterKitPart('typstStrike', { strike: {} }), null, null);
-
-export const STRIKE: TypstMarkSpec = plainCallMark('strike', Strike);
+/** Tiptap's Strike, with its shortcut Mod-Shift-S; not typed as `~~x~~` (in Typst `~` is a non-breaking space). */
+export const STRIKE: TypstMarkSpec = plainCallMark('strike', typedAs(Strike, null, null));
 
 /**
  * Tiptap's Highlight is a package of its own; this is its plain form (no colour), without its shortcut Mod-Shift-H:
@@ -120,13 +117,9 @@ function plainCallMark(name: string, tiptap: AnyExtension): TypstMarkSpec {
 
 // -------------------------------------------------------------------- links
 
-const Link = starterKitPart('typstLink', {
-  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'zwf-markup__link', target: null, rel: null } },
-}).extend({
-  // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
-  addExtensions() {
-    return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
-  },
+const TypstLink = Link.configure({ openOnClick: false, autolink: false, HTMLAttributes: { class: 'zwf-markup__link', target: null, rel: null } }).extend({
+  // Tiptap's link mark comes with priority 1000 (outside everything): outside bold and italic (100) only
+  priority: 120,
 });
 
 /**
@@ -138,7 +131,7 @@ const Link = starterKitPart('typstLink', {
  */
 export const LINK: TypstMarkSpec = {
   name: 'link',
-  tiptap: Link,
+  tiptap: TypstLink,
   typst: {
     parseTypst: {
       syntaxNodes: { Link: { inline: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) } },
@@ -279,7 +272,7 @@ function codeLines(p: TypstParseContext, code: RawCode, indent: string): PlacedN
 
 // ------------------------------------------------------------------- quotes
 
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'zwf-markup__quote' } } }).extend({
+const TypstBlockquote = Blockquote.configure({ HTMLAttributes: { class: 'zwf-markup__quote' } }).extend({
   // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
   addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
 });
@@ -291,7 +284,7 @@ const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttribu
  */
 export const BLOCKQUOTE: TypstNodeSpec = {
   name: 'blockquote',
-  tiptap: Blockquote,
+  tiptap: TypstBlockquote,
   typst: {
     parseTypst: { calls: { quote: { block: parseBlockquote } } },
     toTypst: (state, quote, pos) => writeAround(state, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
@@ -449,7 +442,7 @@ function applyLink(editor: Editor, href: string): void {
 
 // -------------------------------------------------------------- line breaks
 
-const HardBreak = starterKitPart('typstHardBreak', { hardBreak: {} }).extend({
+const TypstHardBreak = HardBreak.extend({
   // `src`: the break as written (new: `\` and a newline)
   addGlobalAttributes: () => [{ types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } }],
 });
@@ -457,6 +450,6 @@ const HardBreak = starterKitPart('typstHardBreak', { hardBreak: {} }).extend({
 /** Typst's line break `\` (Tiptap's hard break, Shift+Enter): an inline atom printing its `src`. */
 export const HARD_BREAK: TypstNodeSpec = {
   name: 'hardBreak',
-  tiptap: HardBreak,
+  tiptap: TypstHardBreak,
   typst: { parseTypst: { syntaxNodes: { Linebreak: { inline: (p, node) => p.schema.nodes.hardBreak.create({ src: p.text(node) }) } } } },
 };

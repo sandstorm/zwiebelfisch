@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 // Tests for toolbar.ts, with items defined here. The built-in extensions'
 // items are tested together in editor/editor.toolbar.test.ts.
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
+import type { TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { CommandsHost, type MenuItem } from '../../commands/commands';
@@ -40,7 +41,7 @@ function testHosts() {
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  tiptap: starterKitPart('testBold', { bold: {} }),
+  tiptap: Bold,
   typst: {
     parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
     toTypst: () => ({ open: '*', close: '*' }),

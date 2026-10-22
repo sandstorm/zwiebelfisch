@@ -1,7 +1,7 @@
 // The file panel's own icons (16×16 strokes, currentColor). See FilePanel in ../file-panel.ts.
 
 /**
- * Typst files, other files without an icon of their own, folders, "New"; and the icons custom editors give the files
+ * Typst files, other files without an icon of their own, folders, "New"; and the icons editors give the files
  * they open (markup).
  */
 export function icon(doc: Document, name: IconName): SVGSVGElement {
@@ -16,7 +16,7 @@ export function icon(doc: Document, name: IconName): SVGSVGElement {
 export type IconName = keyof typeof ICONS;
 
 /**
- * An icon from SVG markup (a custom editor's `icon`, 16×16 strokes), styled as the panel's own; the panel's `data`
+ * An icon from SVG markup (an editor's `icon`, 16×16 strokes), styled as the panel's own; the panel's `data`
  * icon when the markup holds no SVG.
  */
 export function markupIcon(doc: Document, markup: string): Element {

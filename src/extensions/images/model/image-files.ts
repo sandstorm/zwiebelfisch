@@ -13,7 +13,7 @@ const MEDIA_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
 };
 
-/** The image files as a custom editor's file name pattern. */
+/** The image files as an editor's file name pattern. */
 export const IMAGE_FILES = `*.{${Object.keys(MEDIA_TYPES)
   .map((extension) => extension.slice(1))
   .join(',')}}`;

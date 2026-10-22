@@ -1,0 +1,26 @@
+flowchart TB
+  subgraph browser["the widget, in the browser"]
+    visual["`**Visual editor**
+    Tiptap → ProseMirror`"]
+    source["`**Source editor**
+    CodeMirror 6`"]
+    preview["`**Preview**
+    pages as SVG`"]
+    yjs["`**Collaboration**
+    Yjs`"]
+    model["`**Core model**
+    Project, one TypstDocument per file`"]
+    parser["`**Typst parser**
+    Lezer, codemirror-lang-typst`"]
+    engine["`**Typst compiler**
+    Rust → wasm, in a Web Worker`"]
+  end
+  server["`**Go server** (optional)
+  rooms, sign-in, GitLab`"]
+  visual <-- "TextChange" --> model
+  source <-- "TextChange" --> model
+  yjs <-- "TextChange" --> model
+  model -- "on changes" --> preview
+  model --> parser
+  preview <-- "render changed files" --> engine
+  yjs <-- "Hocuspocus WebSocket" --> server

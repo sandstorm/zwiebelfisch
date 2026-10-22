@@ -1,4 +1,4 @@
-/* The spreadsheets extension's styles: the spreadsheet (.ic) custom editor, IronCalc's workbook UI in the dark.
+/* The spreadsheets extension's styles: the spreadsheet (.ic) editor, IronCalc's workbook UI in the dark.
    See spreadsheets.ts, which registers it; colors from the widget's --zwf-* tokens. */
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .zwf-spreadsheets { flex: 1; min-height: 0; display: flex; flex-direction: column; }

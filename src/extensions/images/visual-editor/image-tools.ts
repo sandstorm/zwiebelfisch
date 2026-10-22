@@ -1,7 +1,7 @@
 // The resize handles of an image box. See images in ../images.ts.
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
-import type { RawBoxContext, RawBoxExtension } from '../../../hosts/visual-editor/visual-editor';
+import type { RawBoxContext, RawBoxBehavior } from '../../../hosts/visual-editor/visual-editor';
 import { imageWidthCss, withImageWidth } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 
@@ -13,7 +13,7 @@ import { type DragStart, resizedPercent } from '../model/resize';
  * A drag changes the width live and writes `width: NN%` once, on release: one undo step that rewrites only that
  * argument.
  */
-export class ImageTools implements RawBoxExtension {
+export class ImageTools implements RawBoxBehavior {
   private readonly frame: HTMLElement | null = null;
   private readonly badge: HTMLElement | null = null;
   private node: Node;

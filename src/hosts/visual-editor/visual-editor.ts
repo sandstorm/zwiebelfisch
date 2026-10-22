@@ -72,12 +72,12 @@ export interface VisualEditorContributions {
    * first: one that stops a `mousedown` there (`stopImmediatePropagation`) keeps the box from opening its code. What
    * it returns is told of the box's new nodes and disposed with the box.
    */
-  registerRawBoxExtension(provider: (box: RawBoxContext) => RawBoxExtension | null): Disposable;
+  registerRawBoxBehavior(provider: (box: RawBoxContext) => RawBoxBehavior | null): Disposable;
 }
 
 /**
- * The view type of the Visual editor's custom editor, for `window.showDocument(path, { viewType })`,
- * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
+ * The view type of the Visual editor, for `window.showDocument(path, { viewType })`,
+ * `TextEditor.viewType` and the menu context key `activeEditorId`.
  */
 export const VISUAL_EDITOR = 'visualEditor';
 
@@ -183,7 +183,7 @@ export type RawBoxRendererProvider = (editor: VisualEditorContext) => RawBoxRend
  */
 export const setRawBoxDecorations = StateEffect.define<readonly Decoration[]>();
 
-/** One raw box, as a raw box extension (`registerRawBoxExtension`) gets it. */
+/** One raw box, as a raw box behavior (`registerRawBoxBehavior`) gets it. */
 export interface RawBoxContext {
   /** The box's element. */
   readonly dom: HTMLElement;
@@ -207,8 +207,8 @@ export interface RawBoxContext {
   editCode(): void;
 }
 
-/** What a raw box extension adds to one box. */
-export interface RawBoxExtension {
+/** What a raw box behavior adds to one box. */
+export interface RawBoxBehavior {
   /** The box's node changed (e.g. its code was edited). */
   update?(node: Node): void;
   dispose(): void;

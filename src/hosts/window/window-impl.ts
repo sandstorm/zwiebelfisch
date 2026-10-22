@@ -6,7 +6,7 @@ import type { FileChange } from '../../core/project/project';
 import type { User } from '../../core/user/user';
 import type { CommandContribution, MenuItem } from '../commands/commands';
 import { ColorScheme } from './color-scheme/color-scheme';
-import { CustomEditors } from './custom-editors/custom-editors';
+import { Editors } from './editors/editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
 import { EditorTabs } from './layout/editor-tabs';
@@ -21,19 +21,19 @@ import { showSaveDialog } from './save-dialog/save-dialog';
 import { StatusBar } from './status-bar/status-bar';
 import { StyleSheets } from './style-sheets/style-sheets';
 import css from './window.css?inline';
-import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, StatusBarPlacement, FileDecoration, FileDecorationProvider, CustomEditorOptions, CustomEditorProvider, TextEditor, TextEditorSelectionChangeEvent, DocumentShowOptions, SidePanel, SidePanelOptions, WindowOptions } from './window';
+import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, StatusBarPlacement, FileDecoration, FileDecorationProvider, EditorProviderOptions, EditorProvider, TextEditor, TextEditorSelectionChangeEvent, DocumentShowOptions, SidePanel, SidePanelOptions, WindowOptions } from './window';
 
 /**
  * The `WindowApi` of one widget on `options.host`: its regions (the sides with their panels, the editing area with its
- * tabs and custom editors, the status bar), menus, messages and input, the style sheets and the color scheme.
+ * tabs and editors, the status bar), menus, messages and input, the style sheets and the color scheme.
  * It shows the main file once `open` is first called and keeps the editing area on an existing file as files change.
  */
 export class WindowHost implements WindowApi {
   #active: ProjectPath;
-  /** The view type of the custom editor shown; undefined while none is. */
-  #activeCustomEditorId: string | undefined;
+  /** The view type of the editor shown; undefined while none is. */
+  #activeEditorId: string | undefined;
   #user: User | undefined;
-  #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
+  #headerFooter: { header: HTMLElement; footer: HTMLElement } | null = null;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
   readonly #scheme: ColorScheme;
@@ -46,7 +46,7 @@ export class WindowHost implements WindowApi {
   readonly #contextMenu: ContextMenu;
   readonly #statusBar: StatusBar;
   readonly #progress: ProgressIndicators;
-  readonly #customEditors: CustomEditors;
+  readonly #editors: Editors;
   readonly #fileDecorations = new FileDecorations();
   readonly #searchProviders = new Set<SearchProvider>();
   readonly #shown = new EventEmitter<ProjectPath>();
@@ -70,7 +70,7 @@ export class WindowHost implements WindowApi {
     this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
     this.#tabs = new EditorTabs(this.#layout.editor, this.#menus, {
       onDidChoose: (viewType) => this.showDocument(this.#active, { viewType }),
-      context: () => ({ activeCustomEditorId: this.#activeCustomEditorId, resource: this.#active }),
+      context: () => ({ activeEditorId: this.#activeEditorId, resource: this.#active }),
       commands,
       showContextMenu: (menuId, menuOptions) => this.showContextMenu(menuId, menuOptions),
     });
@@ -79,7 +79,7 @@ export class WindowHost implements WindowApi {
     this.#contextMenu = new ContextMenu(host, this.#menus, commands);
     this.#statusBar = new StatusBar(this.#layout.statusBar);
     this.#progress = new ProgressIndicators(this.#layout.editor);
-    this.#customEditors = new CustomEditors(this.#layout.editor);
+    this.#editors = new Editors(this.#layout.editor);
     this.#subscriptions = Disposable.from(
       // retained panels follow a rename before the renamed file is shown again
       project.onDidChangeFile((change) => this.#changed(change)),
@@ -167,8 +167,8 @@ export class WindowHost implements WindowApi {
     return this.#statusBar.add(element, placement);
   }
 
-  registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable {
-    return this.#customEditors.register(viewType, provider, options);
+  registerEditorProvider(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable {
+    return this.#editors.register(viewType, provider, options);
   }
 
   registerFileDecorationProvider(provider: FileDecorationProvider): Disposable {
@@ -180,16 +180,16 @@ export class WindowHost implements WindowApi {
   }
 
   getFileIcon(path: ProjectPath): string | undefined {
-    return this.#customEditors.iconOf(path);
+    return this.#editors.iconOf(path);
   }
 
   showDocument(path: ProjectPath, options: DocumentShowOptions = {}): void {
     const { project } = this.options;
     if (!project.has(path)) return;
     this.#active = path;
-    this.#activeCustomEditorId = this.#customEditors.show({ path, content: project.content(path)! }, options.viewType, options.selection);
-    this.#tabs.update(this.#customEditors.choicesFor(path), this.#activeCustomEditorId);
-    this.#placeFrame();
+    this.#activeEditorId = this.#editors.show({ path, content: project.content(path)! }, options.viewType, options.selection);
+    this.#tabs.update(this.#editors.choicesFor(path), this.#activeEditorId);
+    this.#placeHeaderFooter();
     this.#shown.fire(path);
   }
 
@@ -198,7 +198,7 @@ export class WindowHost implements WindowApi {
   }
 
   get activeTextEditor(): TextEditor | null {
-    return this.#customEditors.shown?.textEditor ?? null;
+    return this.#editors.shown?.textEditor ?? null;
   }
 
   isEditorFocused(): boolean {
@@ -211,14 +211,14 @@ export class WindowHost implements WindowApi {
     return this.#layout.addPanel(id, options);
   }
 
-  registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
-    if (this.#frame) throw new Error('There is an editor frame already');
-    this.#frame = frame;
-    this.#placeFrame();
+  registerEditorHeaderFooter(headerFooter: { header: HTMLElement; footer: HTMLElement }): Disposable {
+    if (this.#headerFooter) throw new Error('There is an editor header and footer already');
+    this.#headerFooter = headerFooter;
+    this.#placeHeaderFooter();
     return new Disposable(() => {
-      this.#frame = null;
-      frame.top.remove();
-      frame.bottom.remove();
+      this.#headerFooter = null;
+      headerFooter.header.remove();
+      headerFooter.footer.remove();
     });
   }
 
@@ -236,7 +236,7 @@ export class WindowHost implements WindowApi {
 
   dispose(): void {
     this.#searchProviders.clear();
-    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations, this.#tabs, this.#menus, this.#drops).dispose();
+    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#editors, this.#fileDecorations, this.#tabs, this.#menus, this.#drops).dispose();
     this.#shown.dispose();
     const { host } = this.options;
     host.classList.remove('zwf-editor');
@@ -246,26 +246,26 @@ export class WindowHost implements WindowApi {
     this.#ownStyles.dispose();
   }
 
-  /** The editor frame in the shown panel around its `contentElement`, else around the panel; detached while none is shown. */
-  #placeFrame(): void {
-    if (!this.#frame) return;
-    const { top, bottom } = this.#frame;
-    const panel = this.#customEditors.shown;
+  /** The editor header and footer in the shown panel around its `contentElement`, else around the panel; detached while none is shown. */
+  #placeHeaderFooter(): void {
+    if (!this.#headerFooter) return;
+    const { header, footer } = this.#headerFooter;
+    const panel = this.#editors.shown;
     if (!panel) {
-      top.remove();
-      bottom.remove();
+      header.remove();
+      footer.remove();
     } else if (panel.contentElement) {
-      panel.element.insertBefore(top, panel.contentElement);
-      panel.element.append(bottom);
+      panel.element.insertBefore(header, panel.contentElement);
+      panel.element.append(footer);
     } else {
-      panel.element.before(top);
-      panel.element.after(bottom);
+      panel.element.before(header);
+      panel.element.after(footer);
     }
   }
 
   /** Retained panels follow the change; after a create / rename / delete an existing file stays shown (a renamed file too). */
   #changed(change: FileChange): void {
-    this.#customEditors.followFileChange(change);
+    this.#editors.followFileChange(change);
     if (change.kind === 'update') return;
     const { project } = this.options;
     const active = this.#active;
@@ -273,14 +273,15 @@ export class WindowHost implements WindowApi {
     else this.showDocument(project.has(active) ? active : project.main);
   }
 
-  /** The rail buttons of the menus `workbench/rail/left` and `workbench/rail/right`, anew when `menuId` is one of them. */
+  /** The rail buttons of the menus `window/railLeft` and `window/railRight`, anew when `menuId` is one of them. */
   #showRailActions(menuId: string): void {
-    const side = RAIL_MENUS.find((candidate) => menuId === `workbench/rail/${candidate}`);
+    const side = RAIL_SIDES.find((candidate) => menuId === RAIL_MENUS[candidate]);
     if (!side) return;
     const actions = this.#menus.items(menuId).map(({ command, title, icon, order }) => ({ command, title: title ?? command, icon: icon ?? '', order: order ?? 0 }));
     this.#layout.setRailActions(side, actions);
   }
 }
 
-/** The sides whose rail shows a menu's items (`workbench/rail/<side>`). */
-const RAIL_MENUS = ['left', 'right'] as const;
+/** The menu whose items each side's rail shows. */
+const RAIL_MENUS = { left: 'window/railLeft', right: 'window/railRight' } as const;
+const RAIL_SIDES = ['left', 'right'] as const;

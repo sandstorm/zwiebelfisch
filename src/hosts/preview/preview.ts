@@ -8,7 +8,7 @@ import type { ElementLocation, HtmlFile, TypstDiagnostic, PageIndex, PageRect, P
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, its view, and what its
  * engine answers about the project it compiles.
  *
- * Its toolbar shows the menu `preview/title` (as VS Code's `editor/title`; `window.registerMenuItem`): a button per
+ * Its toolbar shows the menu `preview/toolbar` (as VS Code's `window/editorTitle`; `window.registerMenuItem`): a button per
  * entry, in groups (the built-ins: `1_sync` "Follow cursor", `2_view` the renderers and zoom, `3_export` "Download
  * PDF", at the row's end). Its context and its commands' argument is a `PreviewMenuContext`.
  */
@@ -127,7 +127,7 @@ export interface PreviewContributions {
   setViewOptionValues(values: Readonly<Record<string, boolean>>): void;
 }
 
-/** What the menu `preview/title` is shown with, and what its commands get. */
+/** What the menu `preview/toolbar` is shown with, and what its commands get. */
 export interface PreviewMenuContext {
   /** The id of the renderer shown (`activeRenderer`): `pages`, `html`, … */
   readonly previewRenderer: string;

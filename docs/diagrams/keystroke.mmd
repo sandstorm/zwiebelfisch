@@ -1,11 +1,15 @@
-flowchart TD
-  visual["Visual editor"] -- "typstChanges(tr)" --> document["TypstDocument.change"]
-  document -- "1" --> project["Project"]
-  document -. "2: own origin, ignored" .-> visual
-  document -- "3" --> source["Source editor"]
-  document -- "4" --> binding["`Y.Text
-  (collaboration)`"]
-  project -- "onDidChangeFile" --> widget["Widget"]
-  project -- "onDidChangeFiles" --> host["host"]
-  widget -- "preview.update" --> worker["`worker: compile,
-  swap changed pages`"]
+sequenceDiagram
+  participant V as Visual editor
+  participant D as TypstDocument
+  participant P as Project
+  participant S as Source editor
+  participant Y as Y.Text
+  participant W as preview worker
+  V->>V: ProseMirror transaction
+  V->>D: change(typstChanges(tr), visual editor)
+  D->>P: onDidChange
+  P->>W: onDidChangeFile → preview.update (≤ every 150 ms)
+  Note over V: onDidChange with its own origin: skipped
+  D->>S: onDidChange → CodeMirror dispatch
+  D->>Y: onDidChange → one Y transaction → server
+  W-->>V: changed pages, diagnostics

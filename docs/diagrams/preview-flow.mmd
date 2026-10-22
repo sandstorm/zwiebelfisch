@@ -1,9 +1,0 @@
-sequenceDiagram
-  participant E as editors
-  participant P as Preview
-  participant W as worker
-  E->>P: update(files)
-  Note over P: LatestOnly, 150 ms
-  P->>W: changed files only
-  W-->>P: pages with changed hash, diagnostics
-  P-->>E: onDidRender, onDidChangeDiagnostics

@@ -29,7 +29,7 @@ export function searchEverywhere(): Extension {
       subscriptions.push(
         search,
         commands.registerCommand(SEARCH_EVERYWHERE, (value?: unknown) => search.show(typeof value === 'string' ? value : '')),
-        window.registerMenuItem('workbench/rail/left', { command: SEARCH_EVERYWHERE, title: 'Search everywhere', icon: SEARCH_ICON, order: 15 }),
+        window.registerMenuItem('window/railLeft', { command: SEARCH_EVERYWHERE, title: 'Search everywhere', icon: SEARCH_ICON, order: 15 }),
         window.registerSearchProvider(commandSearch(commands)),
         window.registerSearchProvider(settingSearch({ workspace, window })),
       );

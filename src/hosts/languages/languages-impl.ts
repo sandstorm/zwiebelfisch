@@ -2,14 +2,14 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset } from '../../core/typst-document/typst-document';
-import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, KnownImport, LanguageContribution, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
+import type { Languages, DocumentPasteProviderMetadata, DocumentPasteEditProvider, ImportSource, LanguageContribution, HelpSheet, TextDocument, DocumentSelector, DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentDropEditProvider, DocumentDropEdit } from './languages';
 
 /** The `Languages` of one widget. Each link remembers its provider, which resolves it on demand (`resolveDocumentLink`). */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
   readonly #helpSheets: { selector: DocumentSelector; sheet: HelpSheet }[] = [];
-  readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
+  readonly #importSources: { selector: DocumentSelector; source: ImportSource }[] = [];
   readonly #dropEditProviders: { selector: DocumentSelector; provider: DocumentDropEditProvider; priority: number }[] = [];
   readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider; metadata: DocumentPasteProviderMetadata; priority: number }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
@@ -44,12 +44,12 @@ export class LanguagesHost implements Languages {
     return this.#helpSheets.filter(({ selector }) => matches(selector, languageId)).map(({ sheet }) => sheet);
   }
 
-  registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable {
-    return add(this.#knownImports, { selector, known });
+  registerImportSource(selector: DocumentSelector, source: ImportSource): Disposable {
+    return add(this.#importSources, { selector, source });
   }
 
-  provideKnownImports(languageId: string): KnownImport[] {
-    return this.#knownImports.filter(({ selector }) => matches(selector, languageId)).map(({ known }) => known);
+  provideImportSources(languageId: string): ImportSource[] {
+    return this.#importSources.filter(({ selector }) => matches(selector, languageId)).map(({ source }) => source);
   }
 
   registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider, metadata: DocumentPasteProviderMetadata, options: { priority?: number } = {}): Disposable {

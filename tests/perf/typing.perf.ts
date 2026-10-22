@@ -2,7 +2,7 @@
 // Measures typing in the Visual editor of the whole widget (`mise run perf:typing`): per keystroke, the time the
 // keystroke's own handling blocks (sync) and the main thread's work in all (sync, timers, compile answers), with a CPU
 // profile summed up by module and function. The engine runs in-process (in-process-worker.ts) and is counted apart.
-// See docs/40_architecture/11_development.typ, "Performance".
+// See docs/40_architecture/05_development.typ, "Performance".
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Editor } from '@tiptap/core';

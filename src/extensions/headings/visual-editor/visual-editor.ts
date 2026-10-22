@@ -1,8 +1,8 @@
 // The heading node and its levels in the text style menu. See headings in ../headings.ts.
-import { textblockTypeInputRule, type AnyExtension, type Node as NodeExtension } from '@tiptap/core';
+import { textblockTypeInputRule } from '@tiptap/core';
+import Heading from '@tiptap/extension-heading';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { type ChainButton, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
-import { starterKitPart } from '../../../hosts/visual-editor/typst-conversion/typst-conversion';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own
@@ -13,24 +13,15 @@ import { starterKitPart } from '../../../hosts/visual-editor/typst-conversion/ty
  */
 export const HEADING: TypstNodeSpec = {
   name: 'heading',
-  // Tiptap's heading (StarterKit's), typed as in Typst, with the source anchors
-  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'zwf-headings__heading' } } })
-    .extend({
-      addExtensions() {
-        return (this.parent?.() ?? []).map((heading: AnyExtension) =>
-          (heading as NodeExtension).extend({
-            addInputRules() {
-              return [textblockTypeInputRule({ find: HEADING_INPUT, type: this.type, getAttributes: (match) => ({ level: match[1].length }) })];
-            },
-          }),
-        );
-      },
-    })
-    .extend({
-      addGlobalAttributes: () => [
-        { types: ['heading'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
-      ],
-    }),
+  // Tiptap's heading, typed as in Typst, with the source anchors
+  tiptap: Heading.configure({ HTMLAttributes: { class: 'zwf-headings__heading' } }).extend({
+    addInputRules() {
+      return [textblockTypeInputRule({ find: HEADING_INPUT, type: this.type, getAttributes: (match) => ({ level: match[1].length }) })];
+    },
+    addGlobalAttributes: () => [
+      { types: ['heading'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
+    ],
+  }),
   typst: {
     parseTypst: {
       syntaxNodes: {

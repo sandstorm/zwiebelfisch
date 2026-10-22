@@ -68,7 +68,7 @@ describe('describeValue', () => {
 describe('describeArguments', () => {
   it("names a registration by its strings and its objects' names, leaving out providers and long text", () => {
     expect(describeArguments(['files.newFile', () => {}])).toBe('files.newFile');
-    expect(describeArguments(['file/newFile', { command: 'files.newFile', title: 'New file…' }])).toBe('file/newFile · files.newFile');
+    expect(describeArguments(['files/new', { command: 'files.newFile', title: 'New file…' }])).toBe('files/new · files.newFile');
     expect(describeArguments([() => null, { priority: 110 }])).toBe('priority 110');
     expect(describeArguments(['.a { color: red }\n.b {}'])).toBe('(23 characters)');
   });

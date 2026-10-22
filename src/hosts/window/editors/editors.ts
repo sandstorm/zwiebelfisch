@@ -4,11 +4,11 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, FileContent } from '../../../core/project/project';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
-import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider, TextEditor } from '../window';
+import type { EditorProviderOptions, EditorPanel, EditorProvider, TextEditor } from '../window';
 import { FilenamePattern } from './filename-pattern';
 
 /**
- * The custom editors of the editing area (`window.registerCustomEditorProvider`, VS Code's custom editors): which
+ * The editors of the editing area (`window.registerEditorProvider`, VS Code's editors): which
  * editor shows a file, the editors a file can be switched between, and the panels. Opening a file picks the editor
  * asked for (`viewType`), else the one the user chose last among those offered for the file, else the one that matches
  * its name with the highest priority (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`),
@@ -17,7 +17,7 @@ import { FilenamePattern } from './filename-pattern';
  * an editor with `retainContextWhenHidden` (shown again when that file opens in it again, disposed when the file is
  * deleted).
  */
-export class CustomEditors {
+export class Editors {
   readonly #registrations: Registration[] = [];
   /** View types asked for, the latest first: the user's choice when a file offers several editors. */
   readonly #chosen: string[] = [];
@@ -27,8 +27,8 @@ export class CustomEditors {
 
   constructor(private readonly parent: HTMLElement) {}
 
-  register(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable {
-    if (this.#registrations.some((r) => r.viewType === viewType)) throw new Error(`A custom editor ${viewType} is registered already`);
+  register(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable {
+    if (this.#registrations.some((r) => r.viewType === viewType)) throw new Error(`An editor ${viewType} is registered already`);
     const { priority = 'default' } = options;
     const registration: Registration = {
       viewType,
@@ -74,12 +74,12 @@ export class CustomEditors {
     const panel = new Panel(this.parent, registration, file.path);
     if (registration.retainContextWhenHidden) this.#retained.push(panel);
     this.#shown = panel;
-    registration.provider.resolveCustomEditor({ path: file.path, content: file.content }, panel);
+    registration.provider.resolveEditor({ path: file.path, content: file.content }, panel);
     return panel;
   }
 
   /** The panel shown; null while none is. */
-  get shown(): CustomEditorPanel | null {
+  get shown(): EditorPanel | null {
     return this.#shown;
   }
 
@@ -87,7 +87,7 @@ export class CustomEditors {
    * The editors `path` can be shown in, best first: those matching it, apart from fallbacks, which only open files
    * nothing else does.
    */
-  choicesFor(path: ProjectPath): readonly CustomEditorChoice[] {
+  choicesFor(path: ProjectPath): readonly EditorChoice[] {
     return this.#ranked(path)
       .filter((r) => r.role !== 'fallback')
       .map(({ viewType, displayName }) => ({ viewType, displayName }));
@@ -152,7 +152,7 @@ export class CustomEditors {
 }
 
 /** An editor the user can switch the shown file to (the editing area's tabs). */
-export interface CustomEditorChoice {
+export interface EditorChoice {
   readonly viewType: string;
   readonly displayName: string;
 }
@@ -160,7 +160,7 @@ export interface CustomEditorChoice {
 interface Registration {
   readonly viewType: string;
   readonly displayName: string;
-  readonly provider: CustomEditorProvider;
+  readonly provider: EditorProvider;
   readonly pattern: FilenamePattern;
   readonly role: Role;
   /** Orders the ranked editors (higher first). */
@@ -176,7 +176,7 @@ interface Registration {
 type Role = 'ranked' | 'fallback' | 'option';
 
 /** A panel of the editing area; hidden rather than disposed for an editor that retains its context. */
-class Panel implements CustomEditorPanel {
+class Panel implements EditorPanel {
   readonly element: HTMLElement;
   readonly #viewState = new EventEmitter<void>();
   readonly #disposed = new EventEmitter<void>();
@@ -194,7 +194,7 @@ class Panel implements CustomEditorPanel {
     public path: ProjectPath,
   ) {
     this.element = parent.ownerDocument.createElement('div');
-    this.element.className = 'zwf-editor__custom-editor';
+    this.element.className = 'zwf-editor__panel';
     this.element.dataset.viewType = registration.viewType;
     parent.append(this.element);
   }

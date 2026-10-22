@@ -2,7 +2,7 @@
 
 = Development <architecture-development>
 
-#unreviewed
+*THIS CHAPTER IS FOR CODING AGENTS ONLY FOR NOW.*
 
 Every operation is a mise task in `mise-tasks/`; tools are pinned to exact versions in `mise.toml` and `package.json`.
 
@@ -28,7 +28,7 @@ The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collabora
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
   [`build:engine`], [Rust → wasm; skipped when the Rust sources are unchanged],
   [`test:e2e`], [Playwright in chromium, firefox and webkit, or one (`test:e2e chromium`); `test:e2e-all` runs every suite],
-  [`server:dev`], [the collaboration server with SQLite in `server/.data/`; GitLab rooms need `ZWF_GITLAB_URL` and `ZWF_GITLAB_TOKEN`, the sign-in `ZWF_AUTH_CLIENT_ID` and `ZWF_AUTH_CLIENT_SECRET` (@architecture-server)],
+  [`server:dev`], [the collaboration server with SQLite in `server/.data/`; GitLab rooms need `ZWF_GITLAB_URL` and `ZWF_GITLAB_TOKEN`, the sign-in `ZWF_AUTH_CLIENT_ID` and `ZWF_AUTH_CLIENT_SECRET` (@architecture-data-model-collaboration)],
   [`docs:pdf`], [this book → `dist/docs/zwiebelfisch.pdf`],
 )
 
@@ -75,8 +75,8 @@ A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag 
 
 - *Rename outside the repository* (`docs/2026_10_13_rename-zwiebelfisch.md`): the remote `git@github.com:sandstorm/zwiebelfisch.git`, the GitHub settings of @architecture-development-release, the local folder `typst-experiment` → `zwiebelfisch` (with Claude's memory folder), a user-set `TYPST_*` variable of ours (`.env`, `mise.local.toml`) as `ZWF_*`.
 - *Verification*: run every Playwright spec in all three browsers (`test:e2e-all`); many have never run in a browser. Try a real GitLab. Check by eye: IronCalc's dark palette, the diagrams.net embed parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and its export reply.
-- *Simplify* (snapshot: `docs/2026_10_13_feature-costs.md`; re-measure with `mise run quality:report 100000`, summed per `src/<layer>/<name>/`): page-margin rewriting in `comments`; own tests for `hosts/visual-editor/typst-conversion`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`, `registerEditorFrame`); `diagrams` and `spreadsheets` as extensions a host adds, like collaboration.
-- *Sign-in*: the user's tokens are kept (in memory) but not used yet: the project chooser (`read_api`) and refreshing them come with it. A sign-out does not end open connections. Cross-site embedding needs a short-lived ticket instead of the cookie (`POST /api/rooms/<room>/ticket`, @architecture-server). Not run yet: the e2e sign-in and `TestServerBinary` with a real issuer (they need ports); a real GitLab as the provider.
+- *Simplify* (snapshot: `docs/2026_10_13_feature-costs.md`; re-measure with `mise run quality:report 100000`, summed per `src/<layer>/<name>/`): page-margin rewriting in `comments`; own tests for `hosts/visual-editor/typst-conversion`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`, `registerEditorHeaderFooter`); `diagrams` and `spreadsheets` as extensions a host adds, like collaboration.
+- *Sign-in*: the user's tokens are kept (in memory) but not used yet: the project chooser (`read_api`) and refreshing them come with it. A sign-out does not end open connections. Cross-site embedding needs a short-lived ticket instead of the cookie (`POST /api/rooms/<room>/ticket`, @architecture-data-model-collaboration). Not run yet: the e2e sign-in and `TestServerBinary` with a real issuer (they need ports); a real GitLab as the provider.
 - *GitLab rooms*: highlight conflict ranges in the editors (the data is sent); report an asset changed on both sides (the room's wins today); don't commit an empty main file when the repository lacks it.
 - *Collaboration*: tell the user when the server is unreachable (it stays at "Connecting to the room…"); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
 - *Files*: empty folders live only in the panel; a folder rename, move or delete is one change per file and may stop half-way; file links don't follow paths built at run time; a dropped `.ic` gets no figure until its `.ic.gen.typ` exists; a dropped `.drawio` inserts nothing, a `.drawio.svg` becomes a plain `#image`.

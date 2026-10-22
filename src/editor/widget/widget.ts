@@ -59,7 +59,7 @@ export class Widget {
       styleSheet: options.styleSheet,
     });
     this.#visualEditor = this.#createVisualEditor();
-    // the custom editors of `*.typ`, registered before any extension's: they win ties
+    // the editors of `*.typ`, registered before any extension's: they win ties
     new DocumentEditors(project, {
       visualEditor: this.#visualEditor,
       sourceEditors: this.#sourceEditors,
@@ -147,7 +147,7 @@ export class Widget {
 
   /**
    * The preview, in the right side's built-in panel `preview` (registered before any extension, so first among equal
-   * orders), its toolbar the window's menu `preview/title`. It compiles whether shown or not: diagnostics, raw box snippets and the selection highlight never wait
+   * orders), its toolbar the window's menu `preview/toolbar`. It compiles whether shown or not: diagnostics, raw box snippets and the selection highlight never wait
    * for it to be shown.
    */
   #createPreview(): Preview {
@@ -178,7 +178,7 @@ export class Widget {
 /** What the widget is made with besides the project. */
 export interface WidgetOptions {
   /**
-   * The custom editor the main file opens in (its view type), the user's choice until they pick another tab; default:
+   * The editor the main file opens in (its view type), the user's choice until they pick another tab; default:
    * the one its name picks (for Typst files the Visual editor).
    */
   viewType?: string;

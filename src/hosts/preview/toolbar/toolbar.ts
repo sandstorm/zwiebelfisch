@@ -5,7 +5,7 @@ import { keyLabel, type MenuItem } from '../../commands/commands';
 import type { PreviewMenuContext } from '../preview';
 
 /**
- * The preview's toolbar: the menu `preview/title`, a group of buttons per entry group, the last group at the row's
+ * The preview's toolbar: the menu `preview/toolbar`, a group of buttons per entry group, the last group at the row's
  * end. A button shows its entry's icon, else its short title, else its title; its title and key as tooltip; pressed
  * (`aria-pressed`) while `toggled`, disabled while not `enabled`; `data-command` names its command. A click runs the
  * command with the menu context.
@@ -13,7 +13,7 @@ import type { PreviewMenuContext } from '../preview';
  * Shown anew on `refresh`, when the menu's entries change, after a setting changed (once its listeners ran), and when
  * a command run from it returned and settled. A button is made once per entry, so it keeps the focus.
  *
- * @internal Extensions fill it through `window.registerMenuItem('preview/title', …)`.
+ * @internal Extensions fill it through `window.registerMenuItem('preview/toolbar', …)`.
  */
 export class PreviewToolbar {
   /** The buttons of the entries shown so far. */
@@ -86,7 +86,7 @@ export class PreviewToolbar {
   }
 }
 
-/** Where the preview's toolbar gets the menu `preview/title` from: the window's menus and commands. */
+/** Where the preview's toolbar gets the menu `preview/toolbar` from: the window's menus and commands. */
 export interface PreviewMenus {
   /** The entries of `menuId` whose `when` holds in `context`, sorted (`window.getMenuItems`). */
   getMenuItems(menuId: string, context: PreviewMenuContext): readonly MenuItem<PreviewMenuContext>[];
@@ -108,4 +108,4 @@ export const NO_MENUS: PreviewMenus = {
 };
 
 /** The toolbar's menu. */
-const PREVIEW_TITLE = 'preview/title';
+const PREVIEW_TITLE = 'preview/toolbar';

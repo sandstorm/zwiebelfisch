@@ -57,8 +57,8 @@ describe('describeContribution', () => {
     });
   });
 
-  it('custom editors: view type, name, files, priority', () => {
-    expect(describeAt('window.registerCustomEditorProvider', 'diagrams.editor', {}, { displayName: 'Diagram', filenamePattern: '*.drawio.png', priority: 'option' })).toEqual({
+  it('editors: view type, name, files, priority', () => {
+    expect(describeAt('window.registerEditorProvider', 'diagrams.editor', {}, { displayName: 'Diagram', filenamePattern: '*.drawio.png', priority: 'option' })).toEqual({
       title: 'diagrams.editor',
       details: ['"Diagram"', '*.drawio.png', 'priority option'],
       rank: [2, -100],

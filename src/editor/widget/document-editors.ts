@@ -4,10 +4,10 @@ import type { Project } from '../../core/project/project';
 import type { SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
 import { SOURCE_EDITOR, type SourceEditor, type SourceEditorHost } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditor, type VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { CustomEditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../hosts/window/window';
+import type { EditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../hosts/window/window';
 
 /**
- * The Visual and Source editors as the two custom editors of `*.typ` (`visualEditor`, `sourceEditor`), with the
+ * The Visual and Source editors as the two editors of `*.typ` (`visualEditor`, `sourceEditor`), with the
  * `TextEditor` of each document over them as their panels' `textEditor`. Used by:
  * - Widget
  *
@@ -22,23 +22,23 @@ export class DocumentEditors {
     private readonly options: DocumentEditorsOptions,
   ) {}
 
-  /** Registers the Visual and the Source editor as the custom editors of `*.typ`, Visual first: the default. */
-  register(window: Pick<WindowApi, 'registerCustomEditorProvider'>): Disposable {
+  /** Registers the Visual and the Source editor as the editors of `*.typ`, Visual first: the default. */
+  register(window: Pick<WindowApi, 'registerEditorProvider'>): Disposable {
     return Disposable.from(
       ...[
         { viewType: VISUAL_EDITOR, displayName: 'Visual' },
         { viewType: SOURCE_EDITOR, displayName: 'Source' },
       ].map(({ viewType, displayName }) =>
-        window.registerCustomEditorProvider(
+        window.registerEditorProvider(
           viewType,
-          { resolveCustomEditor: (file, panel) => this.#resolve(viewType, this.project.document(file.path)!, panel) },
+          { resolveEditor: (file, panel) => this.#resolve(viewType, this.project.document(file.path)!, panel) },
           { filenamePattern: '*.typ', displayName, retainContextWhenHidden: true },
         ),
       ),
     );
   }
 
-  #resolve(viewType: string, document: TypstDocument, panel: CustomEditorPanel): void {
+  #resolve(viewType: string, document: TypstDocument, panel: EditorPanel): void {
     let documentEditor = this.#editors.get(document);
     if (!documentEditor) this.#editors.set(document, (documentEditor = new DocumentEditor(document)));
     const owner = documentEditor;
@@ -53,7 +53,7 @@ export class DocumentEditors {
     if (editor instanceof VisualEditor) editor.onDidChangeSelection(selected);
     owner.editors.set(viewType, editor);
     panel.textEditor = owner;
-    // the Visual editor's toolbar stays above the frame; the Source editor is all content
+    // the Visual editor's toolbar stays above the header; the Source editor is all content
     panel.contentElement = editor instanceof VisualEditor ? editor.content : (element.firstElementChild ?? undefined);
     const followVisibility = () => {
       if (panel.visible) owner.show(viewType);

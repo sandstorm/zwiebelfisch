@@ -1,4 +1,4 @@
-// EditorTitleMenu: the `editor/title` menu (VS Code's id) and the "View" menu at the end of the editing area's tab bar.
+// EditorTitleMenu: the `window/editorTitle` menu (VS Code's id) and the "View" menu at the end of the editing area's tab bar.
 // See registerMenuItem in ../window.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { CommandsHost } from '../../commands/commands';
@@ -7,12 +7,12 @@ import type { MenuContext } from '../../commands/commands';
 import type { Menus } from './menus';
 
 /**
- * A button per entry of `editor/title` whose `when` holds, in the menus' order, with its icon and title; then "View",
- * which pops up the menu `view` below it while that has entries (how the editors and the preview show things). Shown
+ * A button per entry of `window/editorTitle` whose `when` holds, in the menus' order, with its icon and title; then "View",
+ * which pops up the menu `window/view` below it while that has entries (how the editors and the preview show things). Shown
  * again on `update` (the tab or the file changed) and whenever either menu's entries change. Pressing a button keeps
  * the focus where it is, so the commands act on the editor's selection. A failing command is logged.
  *
- * @internal Extensions add to it through `window.registerMenuItem` (`editor/title`, `view`).
+ * @internal Extensions add to it through `window.registerMenuItem` (`window/editorTitle`, `window/view`).
  */
 export class EditorTitleMenu {
   readonly element: HTMLElement;
@@ -92,7 +92,7 @@ export class EditorTitleMenu {
 }
 
 export interface EditorTitleMenuOptions {
-  /** What the menus are shown for now (`activeCustomEditorId`, `resource`), asked on every `update` and for "View". */
+  /** What the menus are shown for now (`activeEditorId`, `resource`), asked on every `update` and for "View". */
   context(): MenuContext;
   /** Runs an entry's command (without arguments); names its key in the button's tooltip. */
   readonly commands: Pick<CommandsHost, 'executeCommand' | 'keybindingLabel'>;
@@ -102,8 +102,8 @@ export interface EditorTitleMenuOptions {
   onDidUpdate(): void;
 }
 
-const EDITOR_TITLE = 'editor/title';
-const VIEW = 'view';
+const EDITOR_TITLE = 'window/editorTitle';
+const VIEW = 'window/view';
 
 /** "View"'s mark that it opens a menu: a chevron pointing down. */
 const CHEVRON_ICON =

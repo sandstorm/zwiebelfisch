@@ -43,7 +43,7 @@ export function registerImages(context: Pick<ExtensionContext, 'visualEditor' | 
     }),
     // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
     visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
-    visualEditor.registerRawBoxExtension((box) => (box.node().type.name === 'image' ? new ImageTools(box) : null)),
+    visualEditor.registerRawBoxBehavior((box) => (box.node().type.name === 'image' ? new ImageTools(box) : null)),
   );
 }
 

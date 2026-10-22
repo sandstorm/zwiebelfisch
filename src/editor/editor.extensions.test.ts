@@ -142,9 +142,9 @@ function setup(options: EditorOptions) {
   return { host, editor, source, preview: previews.at(-1)! };
 }
 
-/** The commands of the preview toolbar's entries (menu `preview/title`) while the pages are shown. */
+/** The commands of the preview toolbar's entries (menu `preview/toolbar`) while the pages are shown. */
 function toolbarCommands(preview: FakePreview): string[] {
-  return preview.options.menus.getMenuItems('preview/title', { previewRenderer: 'pages' }).map((item) => item.command);
+  return preview.options.menus.getMenuItems('preview/toolbar', { previewRenderer: 'pages' }).map((item) => item.command);
 }
 
 function drop(target: HTMLElement, files: File[]) {
@@ -161,7 +161,7 @@ afterEach(() => {
   previews.length = 0;
 });
 
-describe('custom editors', () => {
+describe('editors', () => {
   it('shows an image in the image editor, and a Typst file in the tabs again', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/logo.png': new Uint8Array([1]) } });
     URL.createObjectURL = vi.fn(() => 'blob:1');
@@ -409,8 +409,8 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.zwf-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: "Follow cursor", zoom, then "Download PDF" while pdfExport.download is on; zoom and page number in the status bar', () => {
-    const { editor, preview, host } = setup({ source: '= Hi' });
+  it('fills the preview toolbar: "Follow cursor", zoom, then "Download PDF" while pdfExport.download is on', () => {
+    const { editor, preview } = setup({ source: '= Hi' });
     const zoom = ['previewControls.zoomOut', 'previewControls.zoomIn', 'previewControls.zoomFit', 'previewControls.zoomActualSize'];
     const all = ['previewSync.toggleFollowCursor', ...zoom, 'pdfExport.download'];
     expect(toolbarCommands(preview)).toEqual(all);
@@ -419,13 +419,11 @@ describe('the built-in extensions', () => {
     expect(toolbarCommands(preview)).toEqual(all.slice(0, -1));
     editor.updateSettings({ 'pdfExport.download': undefined });
     expect(toolbarCommands(preview)).toEqual(all);
-    expect(host.querySelector('[data-testid="zwf-preview-zoom"]')?.textContent).toBe('Fit · 100%');
-    expect(host.querySelector('[data-testid="zwf-preview-page-number"]')?.textContent).toBe('');
   });
 
   it('switches "Follow cursor" when the host changes previewSync.followCursor, and with its button', async () => {
     const { editor, preview, source } = setup({ source: '= Hi\n', settings: { 'previewSync.followCursor': false } });
-    const follow = () => preview.options.menus.getMenuItems('preview/title', { previewRenderer: 'pages' })[0].toggled!({ previewRenderer: 'pages' });
+    const follow = () => preview.options.menus.getMenuItems('preview/toolbar', { previewRenderer: 'pages' })[0].toggled!({ previewRenderer: 'pages' });
     expect(follow()).toBe(false);
     await editor.executeCommand('previewSync.toggleFollowCursor');
     expect(follow()).toBe(true);

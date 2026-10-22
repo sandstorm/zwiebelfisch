@@ -56,9 +56,9 @@ describe('registerViewOptionsMenu', () => {
     register(option('a.guides', 'Page guides'), option('b.outlines', 'Box outlines'));
     register(option('c.comments', 'Comments', true));
     expect(menu()).toEqual([
-      ['view', 'Page guides', 'preview', true],
-      ['view', 'Box outlines', 'preview', false],
-      ['view', 'Comments', 'preview', true],
+      ['window/view', 'Page guides', 'preview', true],
+      ['window/view', 'Box outlines', 'preview', false],
+      ['window/view', 'Comments', 'preview', true],
     ]);
     expect(items.map(([, item]) => item.order)).toEqual([0, 1, 2]);
     registration.dispose();

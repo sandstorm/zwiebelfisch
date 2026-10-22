@@ -5,16 +5,17 @@ import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { AllSelection, EditorState } from '@tiptap/pm/state';
 import { EditorView } from '@tiptap/pm/view';
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './typst-conversion';
+import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, type DocumentNodeSpec, type TypstMarkSpec } from './typst-conversion';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 import { TypstConversions } from './typst-conversions';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  tiptap: starterKitPart('testBold', { bold: {} }),
+  tiptap: Bold,
   typst: {
     parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
     toTypst: () => ({ open: '*', close: '*' }),

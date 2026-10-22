@@ -186,7 +186,7 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`, real commands (with the
  * extensions' declared keys) and menus (the Visual editor's toolbar shows them).
  * The languages are a real registry (the clipboard's paste edits take part in a paste); other registrations than the
- * Visual editor's (style sheets, custom editors, search providers, CodeMirror extensions) are accepted and ignored.
+ * Visual editor's (style sheets, editors, search providers, CodeMirror extensions) are accepted and ignored.
  */
 function activate(contributions: readonly Extension[], options: TestEditorOptions = {}): VisualEditorHost {
   const { visualEditor, commands, window: menus } = testHosts(options);
@@ -236,7 +236,7 @@ function testContext(options: TestEditorOptions) {
   return {
     project,
     window: {
-      registerCustomEditorProvider: ignored,
+      registerEditorProvider: ignored,
       registerSearchProvider: ignored,
       showInputBox: prompts.showInputBox,
       showQuickPick: prompts.showQuickPick,

@@ -1,12 +1,14 @@
 flowchart LR
   element["`editor-element/
-  the custom element`"] --> editor["`editor/
+  the custom element (optional)`"] --> editor["`editor/
+  main component,
   composition root`"]
   editor --> extensions["`extensions/
   every feature`"]
   editor --> hosts["`hosts/
-  a view's mechanism`"]
+  generic UI elements,
+  and registries for extensions`"]
   extensions --> hosts
   extensions --> core["`core/
-  models, no DOM`"]
+  data models`"]
   hosts --> core

@@ -6,7 +6,7 @@ import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
-import { setRawBoxDecorations, type RawBoxContext, type RawBoxExtension, type RawBoxRenderer, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
+import { setRawBoxDecorations, type RawBoxContext, type RawBoxBehavior, type RawBoxRenderer, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
 import { posToSource } from '../typst-conversion/typst-conversion';
 import { RenderedBox } from './rendered-box';
 
@@ -20,7 +20,7 @@ import { RenderedBox } from './rendered-box';
  * language and links, a picture instead of the code (box renderers), a title and what else a box does (an image's
  * resize handles, a picture's link).
  *
- * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxExtension`, a node
+ * @internal Extensions add to them through `visualEditor.registerRawBoxRenderer`, `registerRawBoxBehavior`, a node
  * spec's `view.title` and, to the code, `sourceEditor.registerCodeMirrorExtension`.
  */
 export function rawBoxes(boxes: RawBoxes): { readonly navigation: AnyExtension; readonly views: (tiptap: Editor) => NodeViewConstructor } {
@@ -38,8 +38,8 @@ export interface RawBoxes {
   readonly renderers: readonly RawBoxRenderer[];
   /** Extensions of every box's code editor. */
   readonly codeExtensions: CodeExtension;
-  /** Take part in every box (see `registerRawBoxExtension`). */
-  readonly extensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
+  /** Take part in every box (see `registerRawBoxBehavior`). */
+  readonly behaviors: readonly ((box: RawBoxContext) => RawBoxBehavior | null)[];
   /** What the specs ask the editor for, by node type name (a box's title). */
   readonly nodeViews: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
@@ -90,7 +90,7 @@ type OpenBoxes = WeakMap<globalThis.Node, RawBox>;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
  * Backspace in an empty box deletes it; Tab indents a block box's code. With a box renderer that draws it,
  * the box shows its picture instead of the code until the code gets focus.
- * Its spec's `view.title` may head it (an outline: "Table of contents"); raw box extensions add to it (an image's
+ * Its spec's `view.title` may head it (an outline: "Table of contents"); raw box behaviors add to it (an image's
  * resize handles), and may keep a click on the picture from opening the code.
  * What the outer editor drags (a block by its handle, text) lands beside a box it is dropped on, not in its code.
  */
@@ -101,8 +101,8 @@ class RawBox implements NodeView {
   private readonly label: HTMLElement | null;
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null;
-  /** What the raw box extensions add to this box. */
-  private extensions: RawBoxExtension[] = [];
+  /** What the raw box behaviors add to this box. */
+  private behaviors: RawBoxBehavior[] = [];
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
   private readonly tiptap: Editor;
@@ -111,7 +111,7 @@ class RawBox implements NodeView {
     private node: Node,
     private readonly getPos: () => number | undefined,
     decorations: readonly Decoration[],
-    { tiptap, boxes: { editor, renderers, codeExtensions, extensions, nodeViews }, open }: { tiptap: Editor; boxes: RawBoxes; open: OpenBoxes },
+    { tiptap, boxes: { editor, renderers, codeExtensions, behaviors, nodeViews }, open }: { tiptap: Editor; boxes: RawBoxes; open: OpenBoxes },
   ) {
     this.tiptap = tiptap;
     const inline = node.isInline;
@@ -126,9 +126,9 @@ class RawBox implements NodeView {
     this.code = this.createCode(wrapper, inline, codeExtensions);
     open.set(this.dom, this);
     this.showDecorations(decorations);
-    const extend = (picture: HTMLImageElement | null) => (this.extensions = this.extend(extensions, wrapper, picture, editor));
-    this.rendered = renderer ? this.createRendered(wrapper, renderer, extend) : null;
-    if (!this.rendered) extend(null);
+    const addBehaviors = (picture: HTMLImageElement | null) => (this.behaviors = this.addBehaviors(behaviors, wrapper, picture, editor));
+    this.rendered = renderer ? this.createRendered(wrapper, renderer, addBehaviors) : null;
+    if (!this.rendered) addBehaviors(null);
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
@@ -155,7 +155,7 @@ class RawBox implements NodeView {
     }
     this.updateLabel();
     this.showDecorations(decorations);
-    for (const extension of this.extensions) extension.update?.(node);
+    for (const behavior of this.behaviors) behavior.update?.(node);
     this.rendered?.update();
     return true;
   }
@@ -179,7 +179,7 @@ class RawBox implements NodeView {
   }
 
   destroy(): void {
-    for (const extension of this.extensions) extension.dispose();
+    for (const behavior of this.behaviors) behavior.dispose();
     this.rendered?.dispose();
     this.code.destroy();
   }
@@ -215,13 +215,13 @@ class RawBox implements NodeView {
     return true;
   }
 
-  /** The picture `renderer` draws in place of the code (`extend` adds the extensions to it); clicking it edits the code. */
-  private createRendered(code: HTMLElement, renderer: RawBoxRenderer, extend: (picture: HTMLImageElement) => void): RenderedBox {
-    return new RenderedBox({ dom: this.dom, code, source: () => this.source(), activate: () => this.focus(-1), extend }, renderer);
+  /** The picture `renderer` draws in place of the code (`addBehaviors` adds the behaviors to it); clicking it edits the code. */
+  private createRendered(code: HTMLElement, renderer: RawBoxRenderer, addBehaviors: (picture: HTMLImageElement) => void): RenderedBox {
+    return new RenderedBox({ dom: this.dom, code, source: () => this.source(), activate: () => this.focus(-1), addBehaviors }, renderer);
   }
 
   /** What `providers` add to this box (its code in `code`, its picture if rendered). */
-  private extend(providers: RawBoxes['extensions'], code: HTMLElement, picture: HTMLImageElement | null, editor: VisualEditorContext): RawBoxExtension[] {
+  private addBehaviors(providers: RawBoxes['behaviors'], code: HTMLElement, picture: HTMLImageElement | null, editor: VisualEditorContext): RawBoxBehavior[] {
     const box: RawBoxContext = {
       dom: this.dom,
       code,
@@ -233,7 +233,7 @@ class RawBox implements NodeView {
       getPos: this.getPos,
       editCode: () => this.focus(-1),
     };
-    return providers.map((provider) => provider(box)).filter((extension) => extension !== null);
+    return providers.map((provider) => provider(box)).filter((behavior) => behavior !== null);
   }
 
   /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setRawBoxDecorations`). */

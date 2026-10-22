@@ -6,7 +6,7 @@ import type { WindowApi } from '../../../hosts/window/window';
 import { stepZoom } from '../model/zoom';
 
 /**
- * Zoom out / in by one preset, fit the width, actual size: buttons in the preview's toolbar (menu `preview/title`,
+ * Zoom out / in by one preset, fit the width, actual size: buttons in the preview's toolbar (menu `preview/toolbar`,
  * group `3_zoom`) while the pages are shown, and their commands (`previewControls.zoomOut`, `zoomIn`, `zoomFit`,
  * `zoomActualSize`).
  */
@@ -15,7 +15,7 @@ export function registerZoomButtons({ preview, window, commands }: ZoomButtonsCo
   return Disposable.from(
     ...BUTTONS.flatMap(([command, shortTitle, title, to], order) => [
       commands.registerCommand(command, () => zoom(to)),
-      window.registerMenuItem<PreviewMenuContext>('preview/title', { command, title, shortTitle, group: '3_zoom', order, when: (context) => context.previewRenderer === 'pages' }),
+      window.registerMenuItem<PreviewMenuContext>('preview/toolbar', { command, title, shortTitle, group: '3_zoom', order, when: (context) => context.previewRenderer === 'pages' }),
     ]),
   );
 }

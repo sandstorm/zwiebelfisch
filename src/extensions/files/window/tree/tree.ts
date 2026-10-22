@@ -252,7 +252,7 @@ function chevron(doc: Document): SVGSVGElement {
   return svg;
 }
 
-/** The icon of the file `path`: the Typst icon, the one its custom editor gives, else the panel's icon for any file. */
+/** The icon of the file `path`: the Typst icon, the one its editor gives, else the panel's icon for any file. */
 function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
   if (ProjectPath.isTypst(path)) return icon(doc, 'typst');
   const markup = state.icon(path);

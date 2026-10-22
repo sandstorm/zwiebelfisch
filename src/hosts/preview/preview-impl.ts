@@ -33,7 +33,7 @@ import css from './preview.css?inline';
 
 /**
  * The live preview: compiles the project in a worker and shows the pages as SVG, under a toolbar (the menu
- * `preview/title`, from `options.menus`).
+ * `preview/toolbar`, from `options.menus`).
  *
  * The widget (editor/widget) makes it the right side's panel and gives it the project's files on every change. It compiles whether
  * shown or not, so diagnostics, snippets and clicks always belong to the newest files. Extensions add through

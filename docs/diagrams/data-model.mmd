@@ -1,0 +1,14 @@
+flowchart TD
+  project["`**Project**
+  every file of the widget`"] --> doc["`**TypstDocument**
+  per .typ file: the text`"]
+  project --> bytes["`bytes
+  images, data, …`"]
+  doc -- "parseTypst" --> pm["`Visual editor
+  ProseMirror document`"]
+  doc -- "text" --> cm["`Source editor
+  CodeMirror state`"]
+  doc -- "TextBinding" --> ytext["`collaboration
+  Y.Text`"]
+  project -- "files()" --> preview["`Preview
+  pages in the worker`"]

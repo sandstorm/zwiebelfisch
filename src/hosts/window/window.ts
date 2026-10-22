@@ -12,7 +12,7 @@ import type { CommandsHost, MenuContext, MenuItem } from '../commands/commands';
  *
  * Extensions use it to:
  * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
- * - fill places: side panels, the status bar, the editing area (custom editors), the editor frame, menus, file
+ * - fill places: side panels, the status bar, the editing area (editors), the editor header and footer, menus, file
  *   decorations, search providers, style sheets
  * - open files, and follow which file and which Typst editor the user works in
  */
@@ -63,7 +63,7 @@ export interface WindowApi {
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined>;
   /**
    * Pops up the menu `menuId` at `options.anchor` (as VS Code's workbench shows a contributed menu, e.g.
-   * `explorer/context`): the entries registered for it (`registerMenuItem`) whose `when` holds in
+   * `files/row`): the entries registered for it (`registerMenuItem`) whose `when` holds in
    * `options.context`, sorted, a separator between groups, a check mark at the entries whose `toggled` holds. Choosing one runs its command with `options.args`, after
    * the menu closed and gave the focus back. Nothing is shown while no entry applies. One at a time: a new menu closes
    * the open one; so do Escape and a press elsewhere.
@@ -89,14 +89,14 @@ export interface WindowApi {
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
   /**
    * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
-   * area, until disposed (VS Code's custom editors; the Typst files' Visual and Source editors are two of them,
+   * area, until disposed (VS Code's editors; the Typst files' Visual and Source editors are two of them,
    * `visualEditor` and `sourceEditor`). `viewType` names the editor (unique; an extension's `<extension>.<name>`),
    * e.g. for `showDocument(path, { viewType })`. When several match a file, the editing area's tabs switch between them
    * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
    * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
    * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen.
    */
-  registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable;
+  registerEditorProvider(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable;
 
   /**
    * Adds decorations to files (badges on their rows in the side panels that list files, such as other users' initials)
@@ -108,17 +108,17 @@ export interface WindowApi {
   /** Decorations changed: of these files, or of any (undefined). */
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
   /**
-   * The icon of `path` for a side panel that lists files: that of the custom editor opening it by default (its `icon`);
-   * undefined when it has none, or no custom editor opens it (a Typst file).
+   * The icon of `path` for a side panel that lists files: that of the editor opening it by default (its `icon`);
+   * undefined when it has none, or no editor opens it (a Typst file).
    */
   getFileIcon(path: ProjectPath): string | undefined;
 
   /**
    * Shows `path` in the editing area (VS Code's `window.showTextDocument`, for any file the project has), in a custom
-   * editor (`registerCustomEditorProvider`; a Typst file's are the Visual and the Source editor): the one `viewType`
+   * editor (`registerEditorProvider`; a Typst file's are the Visual and the Source editor): the one `viewType`
    * names, else the one the user chose last, else the default one; nothing without one. Showing the shown file again shows it again (an editor without
    * `retainContextWhenHidden` gets the current content in a new panel). `selection` is revealed in that editor
-   * (offsets into the file's text; a custom editor gets it as `onDidRequestReveal`).
+   * (offsets into the file's text; an editor gets it as `onDidRequestReveal`).
    */
   showDocument(path: ProjectPath, options?: DocumentShowOptions): void;
   /** The file shown in the editing area. */
@@ -143,12 +143,12 @@ export interface WindowApi {
    */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
-   * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: inside
+   * Shows `header` right before and `footer` right after the shown file's editor, across tab and file switches: inside
    * the panel of an editor that names its `contentElement` (a Typst file's; in the Visual editor below its toolbar),
-   * scrolling with it; around any other editor's panel, not scrolling. Detached while no editor is shown. One frame at
-   * a time.
+   * scrolling with it; around any other editor's panel, not scrolling. Detached while no editor is shown. Only one at a
+   * time.
    */
-  registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
+  registerEditorHeaderFooter(headerFooter: { header: HTMLElement; footer: HTMLElement }): Disposable;
   /**
    * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<zwiebelfisch-editor>`), after the
    * widget's own stylesheet, until disposed. An extension styles what it adds this way, under class names of its own,
@@ -165,13 +165,13 @@ export interface WindowApi {
   /**
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
-   * arguments. The window shows these: `editor/title`, buttons at the right end of the editing area's tab bar, and
-   * `view`, the "View" menu after them (context of both: `activeCustomEditorId` (the view type of the editor shown),
-   * `resource` (the shown file); no arguments); `workbench/rail/left` and `workbench/rail/right`, a button per item
+   * arguments. The window shows these: `window/editorTitle`, buttons at the right end of the editing area's tab bar, and
+   * `window/view`, the "View" menu after them (context of both: `activeEditorId` (the view type of the editor shown),
+   * `resource` (the shown file); no arguments); `window/railLeft` and `window/railRight`, a button per item
    * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
    * arguments). Other ids are menus that extensions show (`showContextMenu`), documented there (the file panel:
-   * `file/newFile`, `explorer/context`; the Visual editor's: `visualEditor/toolbar` and the others its host
-   * documents; the preview's toolbar: `preview/title`). `C` is the context the menu is shown in, as that menu documents it.
+   * `files/new`, `files/row`; the Visual editor's: `visualEditor/toolbar` and the others its host
+   * documents; the preview's toolbar: `preview/toolbar`). `C` is the context the menu is shown in, as that menu documents it.
    */
   registerMenuItem<C extends object = MenuContext>(menuId: string, item: MenuItem<C>): Disposable;
   /**
@@ -188,7 +188,7 @@ export interface DocumentShowOptions {
   /** A range of the file to reveal (offsets into its text). */
   selection?: SourceRange;
   /**
-   * The custom editor to open the file in, if it matches the file (its view type, e.g. `sourceEditor`); it is
+   * The editor to open the file in, if it matches the file (its view type, e.g. `sourceEditor`); it is
    * then the user's choice for later opens, too. Default: the one chosen last, else the one its name picks.
    */
   viewType?: string;
@@ -458,10 +458,10 @@ export interface FileDecorationProvider {
 }
 
 /**
- * Where a custom editor opens files (VS Code: the `selector`, `priority` and `displayName` of
+ * Where an editor opens files (VS Code: the `selector`, `priority` and `displayName` of
  * `contributes.customEditors`) and how its panels live.
  */
-export interface CustomEditorOptions {
+export interface EditorProviderOptions {
   /** What the editor is called: its tab, when a file can be shown in several editors ("Visual", "Diagram"). */
   readonly displayName: string;
   /**
@@ -489,22 +489,22 @@ export interface CustomEditorOptions {
 }
 
 /** Shows (and edits) files in the editing area (VS Code's CustomReadonlyEditorProvider, without documents of its own). */
-export interface CustomEditorProvider {
+export interface EditorProvider {
   /**
    * Fills `panel` with the editor of `document`: called whenever such a file is opened, each time with a new panel.
    * The editor stores what it changes through `workspace.applyEdit` (an `update` with the new content).
    */
-  resolveCustomEditor(document: CustomDocument, panel: CustomEditorPanel): void;
+  resolveEditor(document: EditorDocument, panel: EditorPanel): void;
 }
 
-/** The file a custom editor opens: where it is, and its content when it was opened. */
-export interface CustomDocument {
+/** The file an editor opens: where it is, and its content when it was opened. */
+export interface EditorDocument {
   readonly path: ProjectPath;
   readonly content: FileContent;
 }
 
-/** Where a custom editor shows one opened file (VS Code's WebviewPanel, with an element instead of a webview). */
-export interface CustomEditorPanel {
+/** Where an editor shows one opened file (VS Code's WebviewPanel, with an element instead of a webview). */
+export interface EditorPanel {
   /** The editor's place in the editing area (a flex column filling it); removed once the panel is disposed. */
   readonly element: HTMLElement;
   /** Whether the panel is shown (false while hidden; only with `retainContextWhenHidden`). */
@@ -525,19 +525,19 @@ export interface CustomEditorPanel {
   textEditor?: TextEditor;
   /**
    * The first element of the file's content in `element`, set by a provider whose editor scrolls the whole panel: the
-   * editor frame goes into the panel, right before it and at the panel's end.
+   * editor header and footer goes into the panel, right before it and at the panel's end.
    */
   contentElement?: Element;
 }
 
 /**
- * A Typst file's editor: its Visual and Source editors (the custom editors `visualEditor` and `sourceEditor`).
+ * A Typst file's editor: its Visual and Source editors (the editors `visualEditor` and `sourceEditor`).
  * One per document, for as long as one of them lives.
  */
 export interface TextEditor {
   readonly document: TypstDocument;
   /**
-   * The custom editor the document was shown in last (its view type: `VISUAL_EDITOR` or `SOURCE_EDITOR`), the
+   * The editor the document was shown in last (its view type: `VISUAL_EDITOR` or `SOURCE_EDITOR`), the
    * editor `selection` and `revealRange` use.
    */
   readonly viewType: string;

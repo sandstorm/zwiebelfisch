@@ -68,9 +68,9 @@ describe('PreviewToolbar', () => {
     const { buttons, button, menuChanged, configurationChanged, toolbar, element } = setup(items);
     const a = button('A');
     items.push({ command: 'test.b', title: 'B', when: () => shown });
-    menuChanged.fire('view');
+    menuChanged.fire('window/view');
     expect(buttons()).toHaveLength(1);
-    menuChanged.fire('preview/title');
+    menuChanged.fire('preview/toolbar');
     expect(buttons().map((each) => each.textContent)).toEqual(['A', 'B']);
     expect(button('A')).toBe(a);
     shown = false;

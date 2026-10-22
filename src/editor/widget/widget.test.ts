@@ -124,7 +124,7 @@ describe('Widget', () => {
     expect(shown()).toEqual(['preview']);
   });
 
-  it("shows the editor/title menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
+  it("shows the window/editorTitle menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
     const ran: string[] = [];
     const later = { registration: new Disposable(() => {}) };
     const { host, widget } = setup(({ commands, window, subscriptions }) => {
@@ -133,11 +133,11 @@ describe('Widget', () => {
         register('test.always'),
         register('test.visual'),
         register('test.other'),
-        window.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.activeCustomEditorId === VISUAL_EDITOR }),
-        window.registerMenuItem('editor/title', { command: 'test.always', title: 'Always', group: 'navigation', icon: '<svg></svg>' }),
-        window.registerMenuItem('editor/title', { command: 'test.other', title: 'In a.typ', when: (context) => context.resource === '/a.typ' }),
+        window.registerMenuItem('window/editorTitle', { command: 'test.visual', title: 'Visual only', when: (context) => context.activeEditorId === VISUAL_EDITOR }),
+        window.registerMenuItem('window/editorTitle', { command: 'test.always', title: 'Always', group: 'navigation', icon: '<svg></svg>' }),
+        window.registerMenuItem('window/editorTitle', { command: 'test.other', title: 'In a.typ', when: (context) => context.resource === '/a.typ' }),
       );
-      later.registration = window.registerMenuItem('editor/title', { command: 'test.later', title: 'Later', order: -1 });
+      later.registration = window.registerMenuItem('window/editorTitle', { command: 'test.later', title: 'Later', order: -1 });
     });
     const actions = () => [...host.querySelectorAll<HTMLButtonElement>('[role=toolbar][aria-label="Editor actions"] button')];
     expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Later']); // the Source tab, /main.typ
@@ -154,18 +154,18 @@ describe('Widget', () => {
     expect(press.defaultPrevented).toBe(true); // the editor keeps its selection
   });
 
-  it('shows "View" at the end of the tab bar while the menu `view` has entries, for any editor; it pops up the menu with check marks', async () => {
+  it('shows "View" at the end of the tab bar while the menu `window/view` has entries, for any editor; it pops up the menu with check marks', async () => {
     const ran: string[] = [];
     let wrapped = false;
     const view = { registration: new Disposable(() => {}) };
     const { host, widget } = setup(({ commands, window, subscriptions }) => {
       subscriptions.push(
         commands.registerCommand('test.wrap', () => ran.push('wrap')),
-        window.registerMenuItem('editor/title', { command: 'test.wrap', title: 'Wrap', when: (context) => context.resource === '/a.typ' }),
+        window.registerMenuItem('window/editorTitle', { command: 'test.wrap', title: 'Wrap', when: (context) => context.resource === '/a.typ' }),
       );
       view.registration = Disposable.from(
-        window.registerMenuItem('view', { command: 'test.wrap', title: 'Wrap lines', group: 'editor', toggled: () => wrapped }),
-        window.registerMenuItem('view', { command: 'test.zoom', title: 'Zoom', group: 'preview', when: (context) => context.activeCustomEditorId === SOURCE_EDITOR }),
+        window.registerMenuItem('window/view', { command: 'test.wrap', title: 'Wrap lines', group: 'editor', toggled: () => wrapped }),
+        window.registerMenuItem('window/view', { command: 'test.zoom', title: 'Zoom', group: 'preview', when: (context) => context.activeEditorId === SOURCE_EDITOR }),
       );
     });
     const bar = host.querySelector<HTMLElement>('.zwf-editor__tabs')!;
@@ -198,14 +198,14 @@ describe('Widget', () => {
     expect(bar.hidden).toBe(true);
   });
 
-  it('names the shown editor in the editor/title context (`activeCustomEditorId`) for any file, not only Typst files', () => {
+  it('names the shown editor in the window/editorTitle context (`activeEditorId`) for any file, not only Typst files', () => {
     const { host, widget } = setup(({ commands, window, subscriptions }) => {
       for (const [viewType, displayName] of [['test.image', 'Image'], ['test.pixels', 'Pixels']]) {
-        subscriptions.push(window.registerCustomEditorProvider(viewType, { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName }));
+        subscriptions.push(window.registerEditorProvider(viewType, { resolveEditor: () => {} }, { filenamePattern: '*.png', displayName }));
       }
       subscriptions.push(
         commands.registerCommand('test.zoom', () => {}),
-        window.registerMenuItem('editor/title', { command: 'test.zoom', title: 'Zoom', when: (context) => context.activeCustomEditorId === 'test.pixels' }),
+        window.registerMenuItem('window/editorTitle', { command: 'test.zoom', title: 'Zoom', when: (context) => context.activeEditorId === 'test.pixels' }),
       );
     });
     const actions = () => [...host.querySelectorAll('[role=toolbar][aria-label="Editor actions"] button')].map((button) => button.textContent);
@@ -277,38 +277,38 @@ describe('Widget', () => {
     expect(form.isConnected).toBe(false);
   });
 
-  it('refuses a second side panel with the same id, and a second editor frame', () => {
+  it('refuses a second side panel with the same id, and a second editor header and footer', () => {
     setup(({ window }) => {
       const doc = window.ownerDocument;
       window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' });
       expect(() => window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>' })).toThrow(/already/);
-      const frame = { top: doc.createElement('nav'), bottom: doc.createElement('nav') };
-      const registered = window.registerEditorFrame(frame);
-      expect(() => window.registerEditorFrame(frame)).toThrow(/already/);
+      const frame = { header: doc.createElement('nav'), footer: doc.createElement('nav') };
+      const registered = window.registerEditorHeaderFooter(frame);
+      expect(() => window.registerEditorHeaderFooter(frame)).toThrow(/already/);
       registered.dispose();
-      expect(() => window.registerEditorFrame(frame).dispose()).not.toThrow();
+      expect(() => window.registerEditorHeaderFooter(frame).dispose()).not.toThrow();
     });
   });
 
-  it('puts the editor frame into a Typst editor’s content, around any other editor’s panel, and takes it away', () => {
-    let frame!: { top: HTMLElement; bottom: HTMLElement };
+  it('puts the editor header and footer into a Typst editor’s content, around any other editor’s panel, and takes it away', () => {
+    let frame!: { header: HTMLElement; footer: HTMLElement };
     let registered!: Disposable;
     const { host, widget } = setup(({ window }) => {
-      frame = { top: window.ownerDocument.createElement('nav'), bottom: window.ownerDocument.createElement('nav') };
-      registered = window.registerEditorFrame(frame);
-      window.registerCustomEditorProvider('test.image', { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
+      frame = { header: window.ownerDocument.createElement('nav'), footer: window.ownerDocument.createElement('nav') };
+      registered = window.registerEditorHeaderFooter(frame);
+      window.registerEditorProvider('test.image', { resolveEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
     });
-    const source = host.querySelector('.zwf-editor__custom-editor[data-view-type="sourceEditor"]')!;
-    expect(frame.top.parentElement).toBe(source);
-    expect(source.lastElementChild).toBe(frame.bottom);
+    const source = host.querySelector('.zwf-editor__panel[data-view-type="sourceEditor"]')!;
+    expect(frame.header.parentElement).toBe(source);
+    expect(source.lastElementChild).toBe(frame.footer);
     widget.window.showDocument(path('/logo.png'));
-    const image = host.querySelector('.zwf-editor__custom-editor[data-view-type="test.image"]')!;
-    expect([frame.top.nextElementSibling, frame.bottom.previousElementSibling]).toEqual([image, image]);
+    const image = host.querySelector('.zwf-editor__panel[data-view-type="test.image"]')!;
+    expect([frame.header.nextElementSibling, frame.footer.previousElementSibling]).toEqual([image, image]);
     widget.window.showDocument(path('/a.typ'));
-    expect(frame.top.closest('[data-view-type="sourceEditor"]:not([hidden])')).not.toBeNull();
+    expect(frame.header.closest('[data-view-type="sourceEditor"]:not([hidden])')).not.toBeNull();
     widget.window.showDocument(path('/logo.png'));
     registered.dispose();
-    expect([frame.top.isConnected, frame.bottom.isConnected]).toEqual([false, false]);
+    expect([frame.header.isConnected, frame.footer.isConnected]).toEqual([false, false]);
   });
 
   it('opens a file at a range, in the Source editor when asked, which then stays the choice for Typst files', () => {
@@ -323,19 +323,19 @@ describe('Widget', () => {
     expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
   });
 
-  it('shows Typst files in the Visual and the Source editor, custom editors with tabs, kept while hidden', () => {
+  it('shows Typst files in the Visual and the Source editor, editors with tabs, kept while hidden', () => {
     const { host, widget, context } = setup(undefined, { viewType: VISUAL_EDITOR });
     const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
     expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
-    const visual = host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')!;
+    const visual = host.querySelector('.zwf-editor__panel[data-view-type="visualEditor"]')!;
     tabs()[1].click();
     expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
     expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(false);
     widget.window.showDocument(path('/logo.png'));
     expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(true);
     widget.window.showDocument(path('/main.typ'), { viewType: 'visualEditor' });
-    expect(host.querySelector('.zwf-editor__custom-editor[data-view-type="visualEditor"]')).toBe(visual);
-    expect(host.querySelectorAll('.zwf-editor__custom-editor[data-view-type$="Editor"]')).toHaveLength(2);
+    expect(host.querySelector('.zwf-editor__panel[data-view-type="visualEditor"]')).toBe(visual);
+    expect(host.querySelectorAll('.zwf-editor__panel[data-view-type$="Editor"]')).toHaveLength(2);
   });
 
   it('tells about a moved selection in an editor, after it has the new one', () => {
@@ -365,16 +365,16 @@ describe('Widget', () => {
       preview = context.preview;
       context.subscriptions.push(
         context.sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, EditorView.editorAttributes.of({ class: 'contributed' })),
-        context.window.registerMenuItem('preview/title', { command: 'test.run', when: (c: { previewRenderer: string }) => c.previewRenderer === 'pages' }),
+        context.window.registerMenuItem('preview/toolbar', { command: 'test.run', when: (c: { previewRenderer: string }) => c.previewRenderer === 'pages' }),
       );
     });
     widget.window.showDocument(path('/a.typ'));
     expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
     const { menus } = (preview as unknown as { options: { menus: { getMenuItems(menuId: string, context: object): readonly { command: string }[] } } }).options;
-    expect(menus.getMenuItems('preview/title', { previewRenderer: 'pages' }).map((item) => item.command)).toEqual(['test.run']);
-    expect(menus.getMenuItems('preview/title', { previewRenderer: 'html' })).toEqual([]);
+    expect(menus.getMenuItems('preview/toolbar', { previewRenderer: 'pages' }).map((item) => item.command)).toEqual(['test.run']);
+    expect(menus.getMenuItems('preview/toolbar', { previewRenderer: 'html' })).toEqual([]);
     widget.dispose();
-    expect(menus.getMenuItems('preview/title', { previewRenderer: 'pages' })).toEqual([]);
+    expect(menus.getMenuItems('preview/toolbar', { previewRenderer: 'pages' })).toEqual([]);
   });
 
   it("gives extensions the settings they declare, with the host's values, and tells them about changes", () => {
@@ -468,8 +468,8 @@ describe('Widget: declared keys and rail menus', () => {
     const { host, widget, ran } = setupKeys();
     host.querySelector('.cm-content')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC', ctrlKey: true, shiftKey: true, bubbles: true }));
     expect(ran).toEqual(['count']);
-    widget.window.registerMenuItem('view', { command: 'test.count', title: 'Count words' });
-    widget.window.registerMenuItem('editor/title', { command: 'test.count', title: 'Count' });
+    widget.window.registerMenuItem('window/view', { command: 'test.count', title: 'Count words' });
+    widget.window.registerMenuItem('window/editorTitle', { command: 'test.count', title: 'Count' });
     const button = host.querySelector<HTMLElement>('.zwf-editor__tab-action[data-command="test.count"]')!;
     expect(button.title).toBe('Count (Ctrl+Shift+C)');
     host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.click();
@@ -484,11 +484,11 @@ describe('Widget: declared keys and rail menus', () => {
   });
 
 
-  it("shows the items of workbench/rail/left among the left rail's panels by order, naming the key, running the command", () => {
+  it("shows the items of window/railLeft among the left rail's panels by order, naming the key, running the command", () => {
     const { host, widget, ran } = setupKeys();
     widget.window.registerSidePanel('help', { label: 'Help', icon: '<svg></svg>', order: 20 });
     widget.window.registerSidePanel('files', { label: 'Files', icon: '<svg></svg>', order: 10 });
-    const item = widget.window.registerMenuItem('workbench/rail/left', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
+    const item = widget.window.registerMenuItem('window/railLeft', { command: 'test.count', title: 'Count words', icon: '<svg></svg>', order: 15 });
     const buttons = () => [...host.querySelectorAll<HTMLElement>('.zwf-editor__side--left .zwf-editor__rail-button')].map((button) => button.dataset.testid ?? button.title);
     expect(buttons()).toEqual(['zwf-panel-toggle-files', 'Count words (Ctrl+Shift+C)', 'zwf-panel-toggle-help']);
     host.querySelector<HTMLElement>('.zwf-editor__rail [data-command="test.count"]')!.click();

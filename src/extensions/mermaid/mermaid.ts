@@ -14,7 +14,7 @@ import { MERMAID_HELP } from './window/mermaid-help';
  *   the import; so does a `.mmd` file dropped from the file panel into the text.
  * - The path of a project's `.mmd` file in Typst text is the link "Edit diagram", which opens the file.
  * - `.mmd` files get the help sheet "Mermaid basics".
- * - `mermaid` is a known import, so a pasted figure gets its import too.
+ * - `mermaid` has an import source, so a pasted figure gets its import too.
  */
 export function mermaid(): Extension {
   return {
@@ -26,7 +26,7 @@ export function mermaid(): Extension {
         languages.registerDocumentLinkProvider({ language: 'typst' }, mermaidLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, mermaidDrops),
         languages.registerHelpSheet({ language: 'mermaid' }, MERMAID_HELP),
-        languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: MERMAN }),
+        languages.registerImportSource({ language: 'typst' }, { name: 'mermaid', module: MERMAN }),
       );
     },
   };

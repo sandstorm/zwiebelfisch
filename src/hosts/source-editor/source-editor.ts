@@ -62,8 +62,8 @@ export interface SourceEditorOptions {
 }
 
 /**
- * The view type of the Source editor's custom editor, for `window.showDocument(path, { viewType })`,
- * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
+ * The view type of the Source editor, for `window.showDocument(path, { viewType })`,
+ * `TextEditor.viewType` and the menu context key `activeEditorId`.
  */
 export const SOURCE_EDITOR = 'sourceEditor';
 

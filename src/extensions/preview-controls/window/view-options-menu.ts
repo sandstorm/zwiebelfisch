@@ -6,7 +6,7 @@ import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento } from '../../../hosts/extension-host/extension-host';
 
 /**
- * An entry per registered view option (page guides, box outlines, comments) in the View menu (menu `view`, group
+ * An entry per registered view option (page guides, box outlines, comments) in the View menu (menu `window/view`, group
  * `preview`), checked while the option is on. Choosing one turns the option over at once. Each option starts as this
  * viewer left it last time (kept in `state`), else at its default, also an option registered later.
  */
@@ -21,7 +21,7 @@ export function registerViewOptionsMenu({ preview, window, commands, state }: Vi
         void state.update(VALUES_KEY, values);
         preview.setViewOptionValues(values);
       }),
-      window.registerMenuItem('view', { command, title: option.label, group: 'preview', order, toggled: on }),
+      window.registerMenuItem('window/view', { command, title: option.label, group: 'preview', order, toggled: on }),
     );
   };
   let entries = Disposable.from();

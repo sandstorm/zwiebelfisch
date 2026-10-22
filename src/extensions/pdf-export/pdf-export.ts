@@ -9,7 +9,7 @@ import { COMMAND, PdfDownload } from './preview/preview';
 /**
  * The project's PDF, used by:
  * - hosts, through the command `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>`
- * - users, through "Download PDF" in the preview's toolbar (menu `preview/title`, group `4_export`, the command
+ * - users, through "Download PDF" in the preview's toolbar (menu `preview/toolbar`, group `4_export`, the command
  *   `pdfExport.download`), while the setting `pdfExport.download` is on (the default); disabled while it makes a PDF
  *
  * The PDF is the project as it is now, with the export options set by id and the others at their default. A document
@@ -39,7 +39,7 @@ export function pdfExport(): Extension {
         download,
         preview.registerPaneOverlay(download.element),
         commands.registerCommand(COMMAND, () => download.run()),
-        window.registerMenuItem('preview/title', {
+        window.registerMenuItem('preview/toolbar', {
           command: COMMAND,
           title: 'Download PDF',
           group: '4_export',

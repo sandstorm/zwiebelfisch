@@ -2,18 +2,19 @@
 // Tests for visual-editor.ts.
 import { EditorState } from '@codemirror/state';
 import { EditorView as CodeView } from '@codemirror/view';
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import { children } from '../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from './typst-conversion/typst-conversion';
+import type { TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type VisualEditorContext } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  tiptap: starterKitPart('testBold', { bold: {} }),
+  tiptap: Bold,
   typst: {
     parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
     toTypst: () => ({ open: '*', close: '*' }),

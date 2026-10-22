@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant H as host page
+  participant W as Widget
+  participant E as ExtensionHost
+  participant X as each extension
+  H->>W: createEditor({ extensions })
+  W->>W: make the hosts (window, commands, editors, preview)
+  W->>E: activate(list)
+  E->>E: read every contributes
+  E->>X: activate(context), in list order
+  X->>W: register… (into subscriptions)
+  Note over W: editors are made later, per opened file,<br/>with every contribution
+  H->>W: dispose()
+  W->>X: subscriptions disposed, last first

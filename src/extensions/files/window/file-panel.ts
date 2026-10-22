@@ -10,8 +10,8 @@ import { icon } from './icons/icons';
 import { FileTree } from './tree/tree';
 
 /**
- * The file panel: a "Files" header with "New" (the menu `file/newFile`), and the project as a `FileTree` whose rows
- * have a context menu (`explorer/context`: right click, Shift+F10, the context menu key). The operations behind the
+ * The file panel: a "Files" header with "New" (the menu `files/new`), and the project as a `FileTree` whose rows
+ * have a context menu (`files/row`: right click, Shift+F10, the context menu key). The operations behind the
  * entries (`newFile`, `newFolder`, `upload`, `rename`, `delete`) act on a row: a file, or a folder with everything in
  * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
  * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
@@ -233,8 +233,8 @@ export class FilePanel {
 }
 
 /** The menus the panel shows (VS Code's ids): "New" in its header, and the context menu of a row. */
-export const NEW_FILE_MENU = 'file/newFile';
-export const CONTEXT_MENU = 'explorer/context';
+export const NEW_FILE_MENU = 'files/new';
+export const CONTEXT_MENU = 'files/row';
 
 /** What the panel asks the user with, and tells them: the window's input box, save dialog, menus and messages. */
 export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showContextMenu' | 'showWarningMessage' | 'showErrorMessage'>;
@@ -245,7 +245,7 @@ export interface FilePanelOptions {
   /** Someone asked for `change`. Resolves to why it was refused (an error message then), or null once applied. */
   onChange(change: FileChange): Promise<string | null>;
   prompts: FilePanelPrompts;
-  /** Whether a menu the panel shows (`file/newFile`) has entries in `context` ("New" is hidden while it has none). */
+  /** Whether a menu the panel shows (`files/new`) has entries in `context` ("New" is hidden while it has none). */
   hasMenuItems(menuId: string, context: MenuContext): boolean;
   /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
   state?: Memento;

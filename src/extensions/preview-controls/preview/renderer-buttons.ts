@@ -5,7 +5,7 @@ import type { PreviewContributions, PreviewMenuContext } from '../../../hosts/pr
 import type { WindowApi } from '../../../hosts/window/window';
 
 /**
- * A button per renderer in the preview's toolbar (menu `preview/title`, group `2_renderers`; the pages first, then
+ * A button per renderer in the preview's toolbar (menu `preview/toolbar`, group `2_renderers`; the pages first, then
  * the registered ones; none while there are only the pages), pressed while it is shown. Its command
  * `previewControls.showRenderer.<id>` shows that renderer and tells `onChoose`.
  */
@@ -25,7 +25,7 @@ export function registerRendererButtons({ preview, window, commands, onChoose }:
           preview.setActiveRenderer(id);
           onChoose(id);
         }),
-        window.registerMenuItem<PreviewMenuContext>('preview/title', { command, title: label, group: '2_renderers', order, toggled: (context) => context.previewRenderer === id }),
+        window.registerMenuItem<PreviewMenuContext>('preview/toolbar', { command, title: label, group: '2_renderers', order, toggled: (context) => context.previewRenderer === id }),
       );
     };
     buttons = Disposable.from(...(renderers.length < 2 ? [] : renderers.map(button)));

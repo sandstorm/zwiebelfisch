@@ -7,7 +7,7 @@ import { Menus } from './menus';
 
 afterEach(() => document.body.replaceChildren());
 
-/** The menu `explorer/context` as an extension might fill it: entries only for folders, one for anything. */
+/** The menu `files/row` as an extension might fill it: entries only for folders, one for anything. */
 const ENTRIES: MenuItem[] = [
   { command: 'files.rename', title: 'Rename…', group: 'edit' },
   { command: 'files.delete', title: 'Delete', group: 'edit' },
@@ -33,10 +33,10 @@ function setup() {
   const ran: unknown[][] = [];
   const menus = new ContextMenu(
     host,
-    menusWith('explorer/context', ENTRIES),
+    menusWith('files/row', ENTRIES),
     commandsWith({ executeCommand: async (command, ...args) => void ran.push([command, document.activeElement === trigger, ...args]), keybindingLabel: (command) => (command === 'files.delete' ? '⌫' : undefined) }),
   );
-  const show = (resourceKind = 'folder') => menus.show('explorer/context', { anchor: { x: 10, y: 20 }, title: 'chapters', context: { resourceKind }, args: ['/chapters'] });
+  const show = (resourceKind = 'folder') => menus.show('files/row', { anchor: { x: 10, y: 20 }, title: 'chapters', context: { resourceKind }, args: ['/chapters'] });
   const items = () => [...host.querySelectorAll<HTMLElement>('.zwf-context-menu__item')];
   const key = (key: string) => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   const isOpen = () => host.querySelector('[role=menu]') !== null;
@@ -62,8 +62,8 @@ describe('ContextMenu', () => {
       { command: 'x.guides', title: 'Guides', toggled: () => false },
       { command: 'x.reset', title: 'Reset', group: 'z' },
     ];
-    const menus = new ContextMenu(host, menusWith('view', items), commandsWith());
-    menus.show('view', { anchor: host, title: 'View', context: { wrap: true } });
+    const menus = new ContextMenu(host, menusWith('window/view', items), commandsWith());
+    menus.show('window/view', { anchor: host, title: 'View', context: { wrap: true } });
     const entries = [...host.querySelectorAll<HTMLElement>('.zwf-context-menu__item')];
     expect(entries.map((entry) => [entry.getAttribute('role'), entry.getAttribute('aria-checked'), entry.textContent])).toEqual([
       ['menuitemcheckbox', 'true', '✓Wrap'],
@@ -107,7 +107,7 @@ describe('ContextMenu', () => {
 
   it('shows nothing for a menu without entries that apply', () => {
     const { menus, isOpen } = setup();
-    menus.show('file/newFile', { anchor: { x: 0, y: 0 }, title: 'New' });
+    menus.show('files/new', { anchor: { x: 0, y: 0 }, title: 'New' });
     expect(isOpen()).toBe(false);
   });
 

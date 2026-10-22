@@ -1,12 +1,12 @@
-// The read-only editor of a file no other editor opens (the custom editor `files.file`, pattern `*`): its name, size
+// The read-only editor of a file no other editor opens (the editor `files.file`, pattern `*`): its name, size
 // and type. See files in ../files.ts.
-import type { CustomEditorProvider } from '../../../hosts/window/window';
+import type { EditorProvider } from '../../../hosts/window/window';
 import { ProjectPath } from '../../../core/paths/paths';
 import { FileContent } from '../../../core/project/project';
 
 /** Any other file in the editing area: what it is, without its content (fonts, archives, …). */
-export const fileInfoEditor: CustomEditorProvider = {
-  resolveCustomEditor({ path, content }, panel) {
+export const fileInfoEditor: EditorProvider = {
+  resolveEditor({ path, content }, panel) {
     const doc = panel.element.ownerDocument;
     const root = doc.createElement('div');
     root.className = 'zwf-files__info';

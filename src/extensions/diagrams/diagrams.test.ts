@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for diagrams.ts in the composed hosts (Widget): the custom editor, auto-save into the project, "New diagram…" (preview
+// Tests for diagrams.ts in the composed hosts (Widget): the editor, auto-save into the project, "New diagram…" (preview
 // mocked: no worker in jsdom; the iframe's window faked by its messages).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
@@ -60,7 +60,7 @@ describe('diagrams', () => {
 
   it('"New diagram…" in the file panel\'s "New" asks for a name in the row\'s folder, creates an empty diagram and opens it', async () => {
     const { host, widget, project, frame } = setup();
-    expect(widget.window.getMenuItems('file/newFile').map((item) => [item.command, item.title])).toEqual([['diagrams.newDiagram', 'New diagram…']]);
+    expect(widget.window.getMenuItems('files/new').map((item) => [item.command, item.title])).toEqual([['diagrams.newDiagram', 'New diagram…']]);
     const done = widget.commands.executeCommand('diagrams.newDiagram', path('/img/flow.drawio.png'));
     const form = host.querySelector<HTMLFormElement>('form[aria-label="New diagram"]')!;
     const input = form.querySelector('input')!;

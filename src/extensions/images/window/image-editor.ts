@@ -1,12 +1,12 @@
 // Image files read-only in the editing area. See images in ../images.ts.
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { CustomEditorProvider } from '../../../hosts/window/window';
+import type { EditorProvider } from '../../../hosts/window/window';
 import { imageBlob } from '../model/image-files';
 
 /** Image files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
-export const imageEditor: CustomEditorProvider = {
-  resolveCustomEditor(document, panel) {
+export const imageEditor: EditorProvider = {
+  resolveEditor(document, panel) {
     const editor = new ImageEditor(panel.element);
     editor.show(document.path, document.content);
     panel.onDidDispose(() => editor.dispose());

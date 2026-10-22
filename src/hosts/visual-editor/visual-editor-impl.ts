@@ -15,7 +15,7 @@ import { suggestions } from './suggestions/suggestions';
 import { Toolbar, type ToolbarMenus } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
-import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxExtension, CompletionTrigger, CompletionItemProvider, Submenu, FloatingBar } from './visual-editor';
+import type { VisualEditorContributions, TypstNodeSpec, SourceHighlight, SourceHighlightProvider, VisualEditorContext, RawBoxRendererProvider, RawBoxContext, RawBoxBehavior, CompletionTrigger, CompletionItemProvider, Submenu, FloatingBar } from './visual-editor';
 
 /**
  * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar. The
@@ -217,7 +217,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     submenus: [] as Submenu[],
     floatingBars: [] as FloatingBar[],
     highlights: [] as SourceHighlightProvider[],
-    rawBoxExtensions: [] as ((box: RawBoxContext) => RawBoxExtension | null)[],
+    rawBoxBehaviors: [] as ((box: RawBoxContext) => RawBoxBehavior | null)[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the editors (ProseMirror's own first), for the widget to put where the widget renders. */
@@ -266,8 +266,8 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerRawBoxExtension(provider: (box: RawBoxContext) => RawBoxExtension | null): Disposable {
-    return this.add(this.lists.rawBoxExtensions, provider);
+  registerRawBoxBehavior(provider: (box: RawBoxContext) => RawBoxBehavior | null): Disposable {
+    return this.add(this.lists.rawBoxBehaviors, provider);
   }
 
   /** The CodeMirror extensions of the raw boxes' code in `editor` (see the constructor). */
@@ -286,7 +286,7 @@ export class VisualEditorHost implements VisualEditorContributions {
       floatingBars: [...lists.floatingBars],
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
-      rawBoxExtensions: [...lists.rawBoxExtensions],
+      rawBoxBehaviors: [...lists.rawBoxBehaviors],
       completionItemProviders: [...lists.completionItemProviders],
     };
   }
@@ -309,7 +309,7 @@ export interface Contributed {
   readonly floatingBars: readonly FloatingBar[];
   readonly highlights: readonly SourceHighlightProvider[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
-  readonly rawBoxExtensions: readonly ((box: RawBoxContext) => RawBoxExtension | null)[];
+  readonly rawBoxBehaviors: readonly ((box: RawBoxContext) => RawBoxBehavior | null)[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
 
@@ -322,7 +322,7 @@ function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews:
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
     codeExtensions,
-    extensions: contributed.rawBoxExtensions,
+    behaviors: contributed.rawBoxBehaviors,
     nodeViews,
   };
 }

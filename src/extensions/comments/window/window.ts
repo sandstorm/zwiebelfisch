@@ -9,7 +9,7 @@ import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /**
  * "Comment" in the frame: the command `comments.addComment` adds a note in the active editor (Ctrl/Cmd+Alt+M runs
- * it: `contributes.keybindings`), and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual editor has "Comment" in its own
+ * it: `contributes.keybindings`), and the tab bar (menu `window/editorTitle`) offers it in the Source tab (the Visual editor has "Comment" in its own
  * toolbar).
  */
 export function registerAddComment({ commands, window }: CommentContext, cards: NoteCards): Disposable {
@@ -18,12 +18,12 @@ export function registerAddComment({ commands, window }: CommentContext, cards: 
       const editor = window.activeTextEditor;
       if (editor) addComment(editor, cards);
     }),
-    window.registerMenuItem('editor/title', {
+    window.registerMenuItem('window/editorTitle', {
       command: ADD_COMMENT,
       title: 'Comment',
       icon: COMMENT_ICON,
       group: 'navigation',
-      when: (context) => context.activeCustomEditorId === SOURCE_EDITOR,
+      when: (context) => context.activeEditorId === SOURCE_EDITOR,
     }),
   );
 }

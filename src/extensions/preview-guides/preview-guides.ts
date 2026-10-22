@@ -144,7 +144,7 @@ const BOX_OUTLINES: PreviewViewOption = {
  * item moved on to the next page, the marker stayed behind). The tags are labelled by page, so that each marker's
  * queries stay short. Paragraphs get no placed marker after them (it would drop a tight list's spacing). The `v` tags
  * are its own, so it works without "Box outlines", whose `v` bands it leaves alone. Three markers per block and
- * paragraph make long documents compile slower (docs/40_architecture/07_preview.typ, "View options").
+ * paragraph make long documents compile slower.
  */
 const GAPS = [
   ...BAND,

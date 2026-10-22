@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 // Tests for TextStyleMenu (text-style-menu.ts), through the Visual editor, with entries and a mark defined here.
+import Bold from '@tiptap/extension-bold';
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { CommandsHost, type MenuItem } from '../../commands/commands';
-import { starterKitPart, type TypstMarkSpec } from '../typst-conversion/typst-conversion';
+import type { TypstMarkSpec } from '../typst-conversion/typst-conversion';
 import { registerChainButton, VisualEditor, VisualEditorHost, type ChainButton, type VisualEditorMenuContext } from '../visual-editor';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
@@ -16,7 +17,7 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 /** `*x*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  tiptap: starterKitPart('testBold', { bold: {} }),
+  tiptap: Bold,
   typst: {
     parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
     toTypst: () => ({ open: '*', close: '*' }),

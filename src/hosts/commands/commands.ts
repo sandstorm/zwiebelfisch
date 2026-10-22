@@ -126,7 +126,7 @@ export interface MenuItem<C extends object = MenuContext> {
   readonly order?: number;
 }
 
-/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ activeCustomEditorId: 'sourceEditor', resource: '/main.typ' }`. */
+/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ activeEditorId: 'sourceEditor', resource: '/main.typ' }`. */
 export type MenuContext = Readonly<Record<string, unknown>>;
 
 export { CommandsHost } from './commands-impl';

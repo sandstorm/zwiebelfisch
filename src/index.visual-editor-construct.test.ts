@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tests for the public Visual-editor contribution API (index.ts): the example construct of
-// docs/40_architecture/05_visual-editor.typ, a `#callout(title: "…")[…]` box with a title field, written as if
+// Tests for the public Visual-editor contribution API (index.ts): the example construct
+// docs/40_architecture/03_extensions.typ points to, a `#callout(title: "…")[…]` box with a title field, written as if
 // outside the package — it imports only the package entry (and Tiptap, Lezer's types) — and run in a Visual editor with the built-ins.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
@@ -13,7 +13,7 @@ import {
 } from './index';
 import { createVisualEditor } from './testing/testing';
 
-// ----- the example, as in docs/40_architecture/05_visual-editor.typ (there it imports from 'zwiebelfisch') -----
+// ----- the example (a host page would import from 'zwiebelfisch') -----
 
 /** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
 interface CalloutLayout {

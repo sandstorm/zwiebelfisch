@@ -67,7 +67,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
   'visualEditor.registerHighlightProvider': ([provider]) => named(provider, 'highlight provider'),
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
-  'visualEditor.registerRawBoxExtension': ([provider]) => named(provider, 'raw box extension'),
+  'visualEditor.registerRawBoxBehavior': ([provider]) => named(provider, 'raw box behavior'),
   'sourceEditor.registerCodeMirrorExtension': ([selector, extension]) => {
     const { language, editor } = record(selector);
     return { ...named(extension, 'CodeMirror extensions'), details: [`language ${String(language ?? '*')}`, `editor ${String(editor ?? '*')}`] };
@@ -78,7 +78,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const where = side === 'right' ? 'right' : 'left';
     return { title: String(id), details: [`"${String(label)}"`, where, `order ${num(order, 0)}`], rank: [where, num(order, 0)] };
   },
-  'window.registerEditorFrame': () => ({ title: 'editor frame', details: [] }),
+  'window.registerEditorHeaderFooter': () => ({ title: 'editor header and footer', details: [] }),
   'window.registerMenuItem': ([menuId, item]) => {
     const { command, title, group, order, keybinding } = record(item);
     const place = typeof group === 'string' && group ? group : '';
@@ -99,7 +99,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
       rank: [alignment === 'left' ? 0 : 1, -num(priority, 0)],
     };
   },
-  'window.registerCustomEditorProvider': ([viewType, , options]) => {
+  'window.registerEditorProvider': ([viewType, , options]) => {
     const { displayName, filenamePattern, priority = 'default' } = record(options);
     // who opens a file: the ranked editors by priority, then the fallback, then those only chosen ('option')
     const role = priority === 'fallback' ? 1 : priority === 'option' ? 2 : 0;

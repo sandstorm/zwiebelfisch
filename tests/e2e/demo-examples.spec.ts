@@ -48,7 +48,7 @@ test('the documentation example is docs/ as a book with parts and chapters', asy
   await expect(examples(page).getByRole('link', { name: 'Documentation' })).toHaveAttribute('aria-current', 'page');
   await expect(fileRow(page, 'template.typ')).toBeVisible();
   await fileRow(page, '40_architecture').click();
-  await expect(fileRow(page, '40_architecture/08_window.typ')).toBeVisible();
+  await expect(fileRow(page, '40_architecture/01_overview.typ')).toBeVisible();
   await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
   await expect(preview(page).locator('.zwf-preview__page').first()).toBeVisible();
 });

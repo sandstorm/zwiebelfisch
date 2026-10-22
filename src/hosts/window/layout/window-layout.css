@@ -1,5 +1,5 @@
 /* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
-   editors' panels, the editor/title menu) and the status bar. See WindowHost in ../window-impl.ts, which puts it in
+   editors' panels, the window/editorTitle menu) and the status bar. See WindowHost in ../window-impl.ts, which puts it in
    first, after the tokens and the frame of editor.css. */
 .zwf-editor__side {
   grid-row: 1;
@@ -116,7 +116,7 @@
 .zwf-editor__pane { overflow: auto; }
 .zwf-editor__tabs[hidden] { display: none; }
 .zwf-editor.zwf-editor--dropping { outline: 2px dashed var(--zwf-accent); outline-offset: -4px; }
-/* The editor/title menu and "View": at the end of the tab bar (e.g. Comment, Save to GitLab…, View ▾). */
+/* The window/editorTitle menu and "View": at the end of the tab bar (e.g. Comment, Save to GitLab…, View ▾). */
 .zwf-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
 .zwf-editor__tab-actions:empty { display: none; }
 .zwf-editor__tab-action {

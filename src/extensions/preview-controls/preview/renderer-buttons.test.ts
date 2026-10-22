@@ -17,7 +17,7 @@ it('offers a button per renderer while there are several, pressed while shown; i
     preview: { renderers: () => renderers, setActiveRenderer: (id) => void active.push(id), onDidChangeRenderers: changed.event },
     window: {
       registerMenuItem: (menuId, item) => {
-        expect(menuId).toBe('preview/title');
+        expect(menuId).toBe('preview/toolbar');
         items.push(item as MenuItem<PreviewMenuContext>);
         return new Disposable(() => items.splice(items.indexOf(item as MenuItem<PreviewMenuContext>), 1));
       },

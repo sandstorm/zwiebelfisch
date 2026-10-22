@@ -9,7 +9,7 @@ import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports
  *
  * Where the import comes from:
  * - a copy from a Typst file: the imports of that file the copied text uses, the path written from the target file
- * - text from elsewhere: what extensions declare for their constructs (`languages.registerKnownImport`)
+ * - text from elsewhere: what extensions declare for their constructs (`languages.registerImportSource`)
  *
  * Star imports do not travel.
  */
@@ -27,7 +27,7 @@ export function imports(): Extension {
             },
             resolveDocumentPasteEdit(edit, document, ranges, dataTransfer) {
               const copied = parseCopiedImports(dataTransfer.getData(IMPORTS_TYPE));
-              const imports = calculatePastedImports(document, { ranges, text: edit.insertText }, copied, languages.provideKnownImports('typst'));
+              const imports = calculatePastedImports(document, { ranges, text: edit.insertText }, copied, languages.provideImportSources('typst'));
               return { ...edit, additionalEdit: [...(edit.additionalEdit ?? []), ...imports] };
             },
           },

@@ -42,9 +42,9 @@ function setup() {
     id: 'probe',
     activate(given: ExtensionContext) {
       context = given;
-      given.window.registerCustomEditorProvider(
+      given.window.registerEditorProvider(
         'probe.text',
-        { resolveCustomEditor: (document, panel) => panel.element.append(Object.assign(host.ownerDocument.createElement('pre'), { className: 'probe-text', textContent: String(document.content) })) },
+        { resolveEditor: (document, panel) => panel.element.append(Object.assign(host.ownerDocument.createElement('pre'), { className: 'probe-text', textContent: String(document.content) })) },
         { filenamePattern: '*.mmd', displayName: 'Text' },
       );
     },

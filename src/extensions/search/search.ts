@@ -73,7 +73,7 @@ export function search(): Extension {
           side.show(true);
           panel.find({}, { scope: { kind: 'folder', path: folder } });
         }),
-        window.registerMenuItem('explorer/context', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
+        window.registerMenuItem('files/row', { command: FIND_IN_FOLDER, title: 'Find in folder…', group: 'search', when: (menu) => menu.resourceKind === 'folder' }),
         context.window.registerSearchProvider(findInFilesRow(commands)),
       );
     },

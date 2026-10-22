@@ -27,7 +27,7 @@ function setup() {
       registerDocumentLinkProvider: (registeredFor: DocumentSelector, registered: DocumentLinkProvider) => ((selector = registeredFor), (provider = registered), new Disposable(() => {})),
     },
     sourceEditor: { registerCodeMirrorExtension: ignored },
-    visualEditor: { registerTiptapExtension: ignored, registerRawBoxExtension: ignored },
+    visualEditor: { registerTiptapExtension: ignored, registerRawBoxBehavior: ignored },
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,
     window,

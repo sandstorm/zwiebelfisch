@@ -8,7 +8,7 @@ import type { RawBoxPicture, RawBoxRenderer } from '../visual-editor';
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of the code while the box does not have focus.
  *
- * Clicking the picture activates the box, unless a raw box extension stopped the click. Until the renderer has a
+ * Clicking the picture activates the box, unless a raw box behavior stopped the click. Until the renderer has a
  * picture the box shows its code, and a new picture is decoded before it replaces what was shown, so the box never
  * shows a blank picture. Only boxes near the view (one viewport above and below) are redrawn
  * when the renderer changes; the others once they come near.
@@ -39,8 +39,8 @@ export class RenderedBox {
     this.picture.alt = '';
     this.picture.hidden = true;
     dom.insertBefore(this.picture, code);
-    // the extensions' listeners first: they may stop a click
-    host.extend(this.picture);
+    // the behaviors' listeners first: they may stop a click
+    host.addBehaviors(this.picture);
     this.picture.addEventListener('mousedown', (event) => {
       event.preventDefault();
       host.activate();
@@ -130,8 +130,8 @@ export interface BoxHost {
   source(): { node: Node; from: SourceOffset } | null;
   /** The picture was clicked (focus the code, or select the box). */
   activate(): void;
-  /** Adds what the raw box extensions do to the box, its picture `picture` (in place, before the box's own listeners). */
-  extend(picture: HTMLImageElement): void;
+  /** Adds what the raw box behaviors do to the box, its picture `picture` (in place, before the box's own listeners). */
+  addBehaviors(picture: HTMLImageElement): void;
 }
 
 /** Once the image at `url` is decoded (or failed to; then the box shows it as the browser does), where the browser can tell. */

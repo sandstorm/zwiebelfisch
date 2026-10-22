@@ -124,7 +124,7 @@ describe('track-size columns', () => {
   });
 
   describe('the extension list of the architecture docs', () => {
-    const docs = readFileSync(new URL('../../../../docs/40_architecture/02_extensions.typ', import.meta.url), 'utf8');
+    const docs = readFileSync(new URL('../../../../docs/40_architecture/03_extensions.typ', import.meta.url), 'utf8');
 
     it('is an editable table that round-trips', () => {
       const doc = parseTypst(docs);

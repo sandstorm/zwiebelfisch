@@ -16,10 +16,10 @@ export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
 export type { ExtensionContext, ExtensionContributions, Memento, Extension } from './hosts/extension-host/extension-host';
 export type { Command, Commands, MenuContext, MenuItem } from './hosts/commands/commands';
 export type {
-  CustomDocument,
-  CustomEditorOptions,
-  CustomEditorPanel,
-  CustomEditorProvider,
+  EditorDocument,
+  EditorProviderOptions,
+  EditorPanel,
+  EditorProvider,
   DocumentShowOptions,
   FileDecoration,
   FileDecorationProvider,
@@ -75,7 +75,7 @@ export type {
   CompletionTrigger,
   FloatingBar,
   RawBoxContext,
-  RawBoxExtension,
+  RawBoxBehavior,
   RawBoxPicture,
   RawBoxRenderer,
   RawBoxRendererProvider,

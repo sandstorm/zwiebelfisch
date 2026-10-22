@@ -130,7 +130,7 @@ describe('sourceControl extension', () => {
     expect(menu).toEqual([]);
     controls.push(sourceControl);
     changed.fire();
-    expect(window.registerMenuItem).toHaveBeenLastCalledWith('editor/title', expect.objectContaining({ command: 'sourceControl.commit' }));
+    expect(window.registerMenuItem).toHaveBeenLastCalledWith('window/editorTitle', expect.objectContaining({ command: 'sourceControl.commit' }));
     expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
     await commands.get('sourceControl.commit')!();
     expect(committed).toEqual(['Saved']);

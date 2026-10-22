@@ -9,7 +9,7 @@ import css from './preview-sync.css?inline';
 /**
  * Keeps the editor and the preview in step, both ways:
  * - Follow cursor: the preview scrolls to the selection of the focused editor. "Follow cursor" in the preview's toolbar
- *   (menu `preview/title`, the command `previewSync.toggleFollowCursor`, pressed while on) turns it on and off; it
+ *   (menu `preview/toolbar`, the command `previewSync.toggleFollowCursor`, pressed while on) turns it on and off; it
  *   starts as the setting `previewSync.followCursor` says, else as this viewer chose last, else on.
  * - Shading: while `previewSync.highlightSelection` is on (the default), the text selected in the shown file is shaded
  *   in the preview, a moment after the selection settles.
@@ -44,7 +44,7 @@ export function previewSync(): Extension {
           void globalState.update(FOLLOW_KEY, following);
           if (following) revealSelection();
         }),
-        window.registerMenuItem('preview/title', { command: TOGGLE_FOLLOW, title: 'Follow cursor', group: '1_sync', order: 10, toggled: () => following }),
+        window.registerMenuItem('preview/toolbar', { command: TOGGLE_FOLLOW, title: 'Follow cursor', group: '1_sync', order: 10, toggled: () => following }),
         outline,
         highlight,
         workspace.onDidChangeConfiguration((event) => {

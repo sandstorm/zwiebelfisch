@@ -25,25 +25,22 @@ test.beforeEach(async ({ page }) => {
 
 test('zooms in, out, to 100% and back to fit width', async ({ page }) => {
   const toolbar = page.getByTestId('zwf-preview-toolbar');
-  const zoom = page.getByTestId('zwf-preview-zoom');
   const width = () => pages(page).first().evaluate((el) => el.getBoundingClientRect().width);
   const fitWidth = await width();
-  await expect(zoom).toHaveText(/^Fit · \d+%$/);
+  // the demo page is 16cm wide: 16 / 2.54 × 96 px
+  const actual = (16 / 2.54) * 96;
 
   await toolbar.getByRole('button', { name: 'Actual size' }).click();
-  await expect(zoom).toHaveText('100%');
-  // the demo page is 16cm wide: 16 / 2.54 × 96 px
-  expect(await width()).toBeCloseTo((16 / 2.54) * 96, 0);
+  await expect.poll(width).toBeCloseTo(actual, 0);
 
   await toolbar.getByRole('button', { name: 'Zoom in' }).click();
-  await expect(zoom).toHaveText('125%');
+  await expect.poll(width).toBeCloseTo(actual * 1.25, 0);
   await toolbar.getByRole('button', { name: 'Zoom out' }).click();
   await toolbar.getByRole('button', { name: 'Zoom out' }).click();
-  await expect(zoom).toHaveText('75%');
+  await expect.poll(width).toBeCloseTo(actual * 0.75, 0);
 
   await toolbar.getByRole('button', { name: 'Fit width' }).click();
-  await expect(zoom).toHaveText(/^Fit/);
-  expect(await width()).toBeCloseTo(fitWidth, 0);
+  await expect.poll(width).toBeCloseTo(fitWidth, 0);
 });
 
 test('clicking keeps working when zoomed in', async ({ page }) => {
@@ -108,14 +105,12 @@ test.describe('a 30-page document', () => {
     await expect(pages(page)).toHaveCount(30);
   });
 
-  test('renders SVG only for pages near the viewport and shows page numbers', async ({ page }) => {
+  test('renders SVG only for pages near the viewport', async ({ page }) => {
     const rendered = await pages(page).locator('svg').count();
     expect(rendered).toBeGreaterThan(0);
     expect(rendered).toBeLessThan(10);
-    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('1 / 30');
 
     await scroller(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
-    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('30 / 30');
     await expect(pages(page).last().locator('svg')).toBeVisible();
     await expect(pages(page).first().locator('svg')).toHaveCount(0);
   });
@@ -146,7 +141,6 @@ test.describe('a 30-page document', () => {
     await page.keyboard.press('ControlOrMeta+End');
     await page.keyboard.press('ArrowUp'); // into the text of the last page
     await expect.poll(() => scroller(page).evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
-    await expect(page.getByTestId('zwf-preview-page-number')).toHaveText('30 / 30');
   });
 });
 

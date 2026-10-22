@@ -34,7 +34,7 @@ export function documentLinks(): Extension {
         window.registerStyleSheet(css),
         sourceEditor.registerCodeMirrorExtension({}, ({ languageId, path }) => linkExtension(actions, languageId, path)),
         visualEditor.registerTiptapExtension((editor) => textLinks(editor, actions, pathOf(editor.document))),
-        visualEditor.registerRawBoxExtension((box) => pictureLink(box, actions, pathOf(box.editor.document))),
+        visualEditor.registerRawBoxBehavior((box) => pictureLink(box, actions, pathOf(box.editor.document))),
         languages.registerDocumentLinkProvider({ language: 'typst' }, new FilePathLinks(project)),
         commands.registerCommand(CREATE_FILE, async (path: string) => {
           const target = ProjectPath.parse(path);

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for document-editors.ts, shown through the window's custom editors.
+// Tests for document-editors.ts, shown through the window's editors.
 import { history, undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
@@ -38,7 +38,7 @@ function setup() {
     layoutState: { get: () => undefined, update: async () => {} },
   });
   new DocumentEditors(project, { visualEditor: new VisualEditorHost(), sourceEditors, onSelection: (textEditor) => selections.fire({ textEditor }) }).register(window);
-  window.registerCustomEditorProvider('test.image', { resolveCustomEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });
+  window.registerEditorProvider('test.image', { resolveEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });
   const show = (at: string, viewType?: string) => window.showDocument(path(at), { viewType });
   const visible = () => [...area.querySelectorAll<HTMLElement>('.zwf-editor__pane')].filter((pane) => !pane.hidden);
   const change = (fileChange: FileChange) => project.apply(fileChange);
@@ -141,12 +141,12 @@ describe('DocumentEditors', () => {
   });
 });
 
-describe('DocumentEditors in the editor frame', () => {
+describe('DocumentEditors in the editor header and footer', () => {
   it('puts the frame elements first and last in the visible editor, following editor and document switches', () => {
     const { area, editors, show, visible } = setup();
     const top = document.createElement('nav');
     const bottom = document.createElement('nav');
-    editors.registerEditorFrame({ top, bottom });
+    editors.registerEditorHeaderFooter({ header: top, footer: bottom });
     show('/main.typ');
     const pane = () => visible()[0];
     // Visual: below the toolbar, right before the text; last in the pane
@@ -160,7 +160,7 @@ describe('DocumentEditors in the editor frame', () => {
     expect(pane().contains(top)).toBe(true);
     // any other editor: around its panel
     show('/logo.png');
-    const image = area.querySelector('.zwf-editor__custom-editor[data-view-type="test.image"]');
+    const image = area.querySelector('.zwf-editor__panel[data-view-type="test.image"]');
     expect([top.nextElementSibling, bottom.previousElementSibling]).toEqual([image, image]);
   });
 
@@ -168,7 +168,7 @@ describe('DocumentEditors in the editor frame', () => {
     const { editors, show } = setup();
     const top = document.createElement('nav');
     const bottom = document.createElement('nav');
-    const frame = editors.registerEditorFrame({ top, bottom });
+    const frame = editors.registerEditorHeaderFooter({ header: top, footer: bottom });
     show('/main.typ');
     frame.dispose();
     expect([top.isConnected, bottom.isConnected]).toEqual([false, false]);

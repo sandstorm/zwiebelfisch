@@ -1,18 +1,18 @@
 // @vitest-environment jsdom
-// Tests for custom-editors.ts and filename-pattern.ts.
+// Tests for editors.ts and filename-pattern.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import type { CustomDocument, CustomEditorPanel, CustomEditorProvider } from '../window';
-import { CustomEditors } from './custom-editors';
+import type { EditorDocument, EditorPanel, EditorProvider } from '../window';
+import { Editors } from './editors';
 import { FilenamePattern } from './filename-pattern';
 
 const path = ProjectPath.of;
 
 function provider() {
-  const opened: { document: CustomDocument; panel: CustomEditorPanel; disposed: boolean }[] = [];
-  const created: CustomEditorProvider = {
-    resolveCustomEditor: vi.fn((document, panel) => {
+  const opened: { document: EditorDocument; panel: EditorPanel; disposed: boolean }[] = [];
+  const created: EditorProvider = {
+    resolveEditor: vi.fn((document, panel) => {
       const entry = { document, panel, disposed: false };
       panel.onDidDispose(() => {
         // the element is still in place while the editor stores what is pending
@@ -27,7 +27,7 @@ function provider() {
 
 /** The editors the images, files, spreadsheets and diagrams extensions register. */
 function builtins(parent: HTMLElement) {
-  const editors = new CustomEditors(parent);
+  const editors = new Editors(parent);
   const images = provider();
   const files = provider();
   const sheets = provider();
@@ -39,7 +39,7 @@ function builtins(parent: HTMLElement) {
   return { editors, images, files, sheets, diagrams };
 }
 
-const show = (editors: CustomEditors, at: string, viewType?: string) => editors.show({ path: path(at), content: new Uint8Array([1]) }, viewType);
+const show = (editors: Editors, at: string, viewType?: string) => editors.show({ path: path(at), content: new Uint8Array([1]) }, viewType);
 
 describe('FilenamePattern', () => {
   it('matches the file name (or the path with a /), case-insensitively, with * ** ? and {a,b}', () => {
@@ -62,7 +62,7 @@ describe('FilenamePattern', () => {
   });
 });
 
-describe('CustomEditors', () => {
+describe('Editors', () => {
   it('opens a file in the matching editor of the highest priority, then the most specific pattern', () => {
     const { editors, images, files, sheets, diagrams } = builtins(document.createElement('div'));
     show(editors, '/a.drawio.png');
@@ -77,7 +77,7 @@ describe('CustomEditors', () => {
   });
 
   it('with equal priority and specificity the editor registered first wins; option editors only when asked for', () => {
-    const editors = new CustomEditors(document.createElement('div'));
+    const editors = new Editors(document.createElement('div'));
     const first = provider();
     const second = provider();
     const optional = provider();
@@ -94,7 +94,7 @@ describe('CustomEditors', () => {
   });
 
   it('opens a file in a fallback editor only when no other editor matches; a low number is no fallback', () => {
-    const editors = new CustomEditors(document.createElement('div'));
+    const editors = new Editors(document.createElement('div'));
     editors.register('a.fallback', provider().provider, { displayName: 'File', filenamePattern: '*.txt', priority: 'fallback' });
     editors.register('a.low', provider().provider, { displayName: 'Low', filenamePattern: '*.csv', priority: -5 });
     editors.register('a.table', provider().provider, { displayName: 'Table', filenamePattern: '*.csv', priority: 'option' });
@@ -111,7 +111,7 @@ describe('CustomEditors', () => {
   });
 
   it("gives a file the icon of the editor that opens it by default, not an option editor's", () => {
-    const editors = new CustomEditors(document.createElement('div'));
+    const editors = new Editors(document.createElement('div'));
     editors.register('a.any', provider().provider, { displayName: 'Editor', filenamePattern: '*', icon: '<svg id="any"/>' });
     editors.register('a.csv', provider().provider, { displayName: 'Editor', filenamePattern: '*.csv' });
     editors.register('a.table', provider().provider, { displayName: 'Editor', filenamePattern: '*.csv', priority: 'option', icon: '<svg id="table"/>' });
@@ -137,7 +137,7 @@ describe('CustomEditors', () => {
 
   it('shows nothing for a file no editor matches; disposing the provider or the editors disposes its panel', () => {
     const parent = document.createElement('div');
-    const editors = new CustomEditors(parent);
+    const editors = new Editors(parent);
     const sheets = provider();
     const registration = editors.register('spreadsheets.editor', sheets.provider, { displayName: 'Editor', filenamePattern: '*.ic' });
     show(editors, '/a.png');
@@ -173,7 +173,7 @@ describe('CustomEditors', () => {
 
   it('keeps the panel of a retaining editor while another is shown, hidden, and shows it again', () => {
     const parent = document.createElement('div');
-    const editors = new CustomEditors(parent);
+    const editors = new Editors(parent);
     const typst = provider();
     const states: boolean[] = [];
     editors.register('a.typst', typst.provider, { displayName: 'Typst', filenamePattern: '*.typ', retainContextWhenHidden: true });
@@ -193,7 +193,7 @@ describe('CustomEditors', () => {
   });
 
   it('asks the editor shown to reveal a selection, once its panel is shown again', () => {
-    const editors = new CustomEditors(document.createElement('div'));
+    const editors = new Editors(document.createElement('div'));
     const typst = provider();
     const revealed: string[] = [];
     editors.register('a.typst', typst.provider, { displayName: 'Typst', filenamePattern: '*.typ', retainContextWhenHidden: true });
@@ -207,7 +207,7 @@ describe('CustomEditors', () => {
   });
 
   it('keeps a retained panel with its file: on a rename it follows, on a delete it goes', () => {
-    const editors = new CustomEditors(document.createElement('div'));
+    const editors = new Editors(document.createElement('div'));
     const typst = provider();
     editors.register('a.typst', typst.provider, { displayName: 'Typst', filenamePattern: '*.typ', retainContextWhenHidden: true });
     show(editors, '/a.typ');

@@ -103,7 +103,7 @@ describe('pdfExport', () => {
 
   it('puts "Download PDF" into the preview toolbar while pdfExport.download is on', () => {
     const [[menuId, item]] = setup().menu;
-    expect([menuId, item.command, item.title, item.group, item.when?.({}), item.enabled?.({})]).toEqual(['preview/title', 'pdfExport.download', 'Download PDF', '4_export', true, true]);
+    expect([menuId, item.command, item.title, item.group, item.when?.({}), item.enabled?.({})]).toEqual(['preview/toolbar', 'pdfExport.download', 'Download PDF', '4_export', true, true]);
   });
 
   it('downloads the file under the name of the main file', async () => {

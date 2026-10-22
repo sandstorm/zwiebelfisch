@@ -45,7 +45,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
       onOpen,
       onChange: change,
       prompts,
-      hasMenuItems: (menuId) => hasNewEntries && menuId === 'file/newFile',
+      hasMenuItems: (menuId) => hasNewEntries && menuId === 'files/new',
       state: memory,
       decorations: (file) => decorations[file] ?? [],
       icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
@@ -105,7 +105,7 @@ describe('FilePanel', () => {
     expect(item('chapters').classList.contains('zwf-files__row--folder')).toBe(true);
   });
 
-  it('shows a Typst icon for Typst files, the icon a custom editor gives other files, else the icon for any file', () => {
+  it('shows a Typst icon for Typst files, the icon an editor gives other files, else the icon for any file', () => {
     const { item } = setup(undefined, { ...state, paths: [path('/main.typ'), path('/logo.png'), path('/data.csv')] });
     const iconOf = (name: string) => item(name).querySelector('svg.zwf-files__icon')!;
     expect(iconOf('logo.png').querySelector('circle')).not.toBeNull();
@@ -134,13 +134,13 @@ describe('FilePanel', () => {
   describe('menus', () => {
     const row = (resource: string, resourceKind = 'file', resourceIsMain = false) => ({ view: 'files', resource, resourceKind, resourceIsMain });
 
-    it('"New" shows the window\'s file/newFile menu below it, for the focused row (its commands get the row)', () => {
+    it('"New" shows the window\'s files/new menu below it, for the focused row (its commands get the row)', () => {
       const { parent, item, menus } = setup(undefined, nested);
       item('chapters').click();
       const button = parent.querySelector<HTMLButtonElement>('button[aria-label=New]')!;
       expect(button.getAttribute('aria-haspopup')).toBe('menu');
       button.click();
-      expect(menus).toEqual([{ menuId: 'file/newFile', anchor: button, title: 'New', context: row('/chapters', 'folder'), args: ['/chapters'] }]);
+      expect(menus).toEqual([{ menuId: 'files/new', anchor: button, title: 'New', context: row('/chapters', 'folder'), args: ['/chapters'] }]);
     });
 
     it('"New" is hidden while its menu has no entries', () => {
@@ -148,7 +148,7 @@ describe('FilePanel', () => {
       expect(parent.querySelector<HTMLButtonElement>('button[aria-label=New]')!.hidden).toBe(true);
     });
 
-    it("a right click shows the row's explorer/context menu at the pointer", () => {
+    it("a right click shows the row's files/row menu at the pointer", () => {
       const { item, menus } = setup(undefined, nested);
       const contextMenu = (name: string) => {
         const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 6 });
@@ -158,8 +158,8 @@ describe('FilePanel', () => {
       expect(contextMenu('chapters').defaultPrevented).toBe(true);
       contextMenu('main.typ');
       expect(menus).toEqual([
-        { menuId: 'explorer/context', anchor: { x: 5, y: 6 }, title: 'chapters', context: row('/chapters', 'folder'), args: ['/chapters'] },
-        { menuId: 'explorer/context', anchor: { x: 5, y: 6 }, title: 'main.typ', context: row('/main.typ', 'file', true), args: ['/main.typ'] },
+        { menuId: 'files/row', anchor: { x: 5, y: 6 }, title: 'chapters', context: row('/chapters', 'folder'), args: ['/chapters'] },
+        { menuId: 'files/row', anchor: { x: 5, y: 6 }, title: 'main.typ', context: row('/main.typ', 'file', true), args: ['/main.typ'] },
       ]);
     });
 

@@ -31,7 +31,7 @@ export function images(): Extension {
       subscriptions.push(
         window.registerStyleSheet(css),
         projectImages,
-        window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
+        window.registerEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops(project)),
         registerImages(context, {
           assets: (document) => projectImages.forDocument(document).assets,

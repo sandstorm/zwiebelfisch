@@ -1,7 +1,7 @@
 import { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
 import type { LanguageContribution } from '../../hosts/languages/languages';
-import type { CustomEditorProvider } from '../../hosts/window/window';
+import type { EditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './text-files.css?inline';
 import { BIBTEX_HELP } from './window/bibtex-help';
@@ -12,7 +12,7 @@ import { textSearch } from './window/text-search';
  * The text files a Typst project reads, editable: data (CSV, JSON, YAML, TOML, XML), bibliographies, plain text,
  * Markdown and Mermaid.
  *
- * - The custom editor `textFiles.editor` shows them in plain CodeMirror and saves the whole file a moment after the
+ * - The editor `textFiles.editor` shows them in plain CodeMirror and saves the whole file a moment after the
  *   last edit. Where others edit it too, the last save wins: text files are not merged as they are typed.
  * - Their languages are declared (`.bib` is `bibtex`, `.mmd` is `mermaid`, …), with the help sheet "BibTeX".
  * - Search everywhere gets the group "Text": lines in these files and in the Typst files.
@@ -25,7 +25,7 @@ export function textFiles(): Extension {
       const { project, window, languages, subscriptions } = context;
       subscriptions.push(
         window.registerStyleSheet(css),
-        window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
+        window.registerEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
         languages.registerHelpSheet({ language: 'bibtex' }, BIBTEX_HELP),
         window.registerSearchProvider(textSearch({ project, window, isTextFile: (path) => isTextFile(path) })),
       );
@@ -37,9 +37,9 @@ export function textFiles(): Extension {
  * A TextFileEditor per opened file, saving into the project, following the file's changes from elsewhere and
  * selecting what is to be revealed (`window.showDocument(path, { selection })`).
  */
-function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext): CustomEditorProvider {
+function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext): EditorProvider {
   return {
-    resolveCustomEditor({ path, content }, panel) {
+    resolveEditor({ path, content }, panel) {
       const editor = new TextFileEditor(panel.element, {
         path,
         text: text(content),

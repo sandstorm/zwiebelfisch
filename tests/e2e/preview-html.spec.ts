@@ -39,7 +39,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
 });
 
-test('switches to HTML and back: zoom and page number only with the pages, the choice remembered', async ({ page }) => {
+test('switches to HTML and back, the choice remembered', async ({ page }) => {
   const switcher = page.getByTestId('zwf-preview-toolbar');
   await expect(switcher.getByRole('button', { name: 'Pages', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await setSource(page, PLAIN);
@@ -47,8 +47,6 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
   await expect(switcher.getByRole('button', { name: 'HTML', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(heading(page, 'Hello')).toBeVisible();
   await expect(page.getByTestId('zwf-preview')).toBeHidden();
-  await expect(page.getByTestId('zwf-preview-zoom')).toBeHidden();
-  await expect(page.getByTestId('zwf-preview-page-number')).toBeHidden();
   await expect(page.getByTestId('zwf-status')).toHaveText(/✓ compiled/);
 
   // the demo's document again (Local mode keeps no edits), shown as HTML
@@ -58,7 +56,6 @@ test('switches to HTML and back: zoom and page number only with the pages, the c
   await expect(heading(page, 'Hello')).toBeVisible();
   await switchTo(page, 'Pages');
   await expect(page.getByTestId('zwf-preview').locator('.zwf-preview__page svg').first()).toBeVisible();
-  await expect(page.getByTestId('zwf-preview-zoom')).toBeVisible();
 });
 
 test('shows a bundle page by page: links switch pages, URLs open a new tab', async ({ page, context }) => {

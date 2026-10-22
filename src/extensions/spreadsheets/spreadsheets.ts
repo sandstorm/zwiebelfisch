@@ -14,9 +14,9 @@ import type { WorkbookEdit } from './window/workbook';
 /**
  * Spreadsheets (`.ic` files), edited in IronCalc's workbook UI and used in documents as Typst tables.
  *
- * - The custom editor `spreadsheets.editor` shows a spreadsheet. Every edit saves the file and writes
+ * - The editor `spreadsheets.editor` shows a spreadsheet. Every edit saves the file and writes
  *   `name.ic.gen.typ` next to it, the Typst file documents import, so Typst never needs a spreadsheet engine.
- * - "New spreadsheet…" (menu `file/newFile`) creates an empty one.
+ * - "New spreadsheet…" (menu `files/new`) creates an empty one.
  * - "Insert spreadsheet" (Insert menu) creates one with a starter table and inserts it as a figure; so does a
  *   spreadsheet dropped from the file panel into the text.
  * - The path of a spreadsheet's Typst file in Typst text is the link "Edit spreadsheet", which opens the spreadsheet.
@@ -35,10 +35,10 @@ export function spreadsheets(): Extension {
       const { project, commands, window, languages, subscriptions } = context;
       subscriptions.push(
         window.registerStyleSheet(css),
-        window.registerCustomEditorProvider(
+        window.registerEditorProvider(
           'spreadsheets.editor',
           {
-            resolveCustomEditor(document, panel) {
+            resolveEditor(document, panel) {
               const editor = new SpreadsheetEditor(panel.element, (path, edit) => save(context, path, edit), (css) => window.registerStyleSheet(css));
               void editor.show(document.path, document.content);
               panel.onDidDispose(() => editor.dispose());
@@ -47,7 +47,7 @@ export function spreadsheets(): Extension {
           { filenamePattern: '*.ic', displayName: 'Spreadsheet', icon: SPREADSHEET_ICON },
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
-        window.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
+        window.registerMenuItem('files/new', { command: NEW_SPREADSHEET, group: 'navigation', order: 15 }),
         languages.registerHelpSheet({ language: 'ironcalc' }, SPREADSHEET_HELP),
         languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),

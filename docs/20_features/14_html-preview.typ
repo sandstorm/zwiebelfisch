@@ -27,7 +27,7 @@ A document can be *a whole website*: one page per `#document`, and files next to
 - *The preview follows you:* put the cursor into the text of "About us", and the preview shows `about.html`, scrolled to that text. Text every page has (a header from your template) keeps the page you are on.
 - *Links work:* a link to another page of the site opens it in the preview, a link to the web opens a new tab.
 - *Warnings* about what HTML leaves out (a `pagebreak`, page margins) are underlined in the editor like any other.
-- Zoom and the page number (in the status bar) are for pages; in HTML they are hidden.
+- Zoom is for pages; in HTML it is hidden.
 
 *Try it on these docs:* they are such a website. Open the Documentation example, right click `site.typ` in the file panel → "Set as main file", click "HTML", then open a chapter and move the cursor around.
 

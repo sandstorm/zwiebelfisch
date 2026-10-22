@@ -64,7 +64,7 @@ export function fileNavigation(): Extension {
         show();
       };
       subscriptions.push(
-        window.registerEditorFrame({ top, bottom: readingOrder.bottom }),
+        window.registerEditorHeaderFooter({ header: top, footer: readingOrder.bottom }),
         window.onDidChangeActiveFile(opened),
         project.onDidChangeFile((change) => {
           history.followFileChange(change);

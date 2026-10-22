@@ -1,4 +1,4 @@
-// The zoom presets and how a zoom is named. Pure. See previewControls in ../preview-controls.ts.
+// The zoom presets. Pure. See previewControls in ../preview-controls.ts.
 
 /** The next preset scale above (`direction` 1) or below (-1) `scale`, clamped to the range. */
 export function stepZoom(scale: number, direction: 1 | -1): number {
@@ -7,13 +7,4 @@ export function stepZoom(scale: number, direction: 1 | -1): number {
   return [...PRESETS].reverse().find((preset) => preset < scale - epsilon) ?? PRESETS[0];
 }
 
-/** The zoom as the status bar shows it: "Fit · 83%" while fitting the width (at `scale`), else "125%". */
-export function zoomText(zoom: 'fit' | number, scale: number): string {
-  return zoom === 'fit' ? `Fit · ${zoomLabel(scale)}` : zoomLabel(zoom);
-}
-
 const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
-
-function zoomLabel(scale: number): string {
-  return `${Math.round(scale * 100)}%`;
-}
