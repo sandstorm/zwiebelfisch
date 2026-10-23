@@ -5,7 +5,8 @@
 //   - the Docker image
 //
 // The fake project demo/report holds demo/examples/advanced, so run it from the repository root. Anyone signs
-// in under any name, without a password, as a Developer. Nothing is stored. Any branch works:
+// in under any name, without a password, as a Developer; what the server does in GitLab it does with their
+// token. Nothing is stored (the git clones are in memory too). Any branch works:
 // gitlab:demo/report@<branch> starts at main.
 //
 // Environment: as package config, except that the database, sign-in and GitLab settings are ignored, and
@@ -72,8 +73,7 @@ func run() error {
 			ClientSecret: fakegitlab.ClientSecret, Client: fake.Client(), Log: log.With().Str("module", "auth").Logger(),
 		}),
 		GitLab: &gitlab.Options{
-			URL: fakegitlab.URL, Token: fakegitlab.Token, Client: fake.Client(),
-			WebhookSecret: webhookSecret, AutoCommit: autoCommit,
+			URL: fakegitlab.URL, Client: fake.Client(), WebhookSecret: webhookSecret, AutoCommit: autoCommit,
 		},
 	})
 	if err != nil {

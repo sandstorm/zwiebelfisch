@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -93,15 +94,53 @@ func TestTheSignInPageSignsInAsTheNamePicked(t *testing.T) {
 	require.True(t, strings.HasPrefix(res.Header().Get("Location"), "http://127.0.0.1:1234/api/public/auth/callback?"))
 }
 
-func TestMembersAndProtectedBranches(t *testing.T) {
+func TestMembers(t *testing.T) {
 	g := newGitLab()
 	ann := g.SetAccess("Ann", fakegitlab.Reporter)
-	g.Protect("main", fakegitlab.Maintainer)
-	member := call(t, g, "GET", "/members/all/"+strconv.Itoa(ann.ID), nil)
+	bob := g.TokenOf("Bob")
+	member := call(t, g, bob, "/members/all/"+strconv.Itoa(ann.ID))
 	require.Equal(t, http.StatusOK, member.status)
 	require.Equal(t, float64(fakegitlab.Reporter), member.json(t)["access_level"])
-	require.Equal(t, http.StatusNotFound, call(t, g, "GET", "/members/all/999", nil).status)
-	require.Equal(t, true, call(t, g, "GET", "/repository/branches/main", nil).json(t)["protected"])
-	g.Push("draft", fakegitlab.Files{"/draft.typ": []byte("x")}, "Draft")
-	require.Equal(t, false, call(t, g, "GET", "/repository/branches/draft", nil).json(t)["protected"])
+	require.Equal(t, http.StatusNotFound, call(t, g, bob, "/members/all/999").status)
+}
+
+func TestRefreshRotatesTheTokens(t *testing.T) {
+	g := newGitLab()
+	g.IdentityProvider().SetTokenLifetime(time.Second)
+	verifier := "a-verifier-of-enough-length-for-pkce-0123456789"
+	sum := sha256.Sum256([]byte(verifier))
+	redirect := "http://127.0.0.1:1234/api/public/auth/callback"
+	res := httptest.NewRecorder()
+	g.IdentityProvider().ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+url.Values{
+		"client_id": {fakegitlab.ClientID}, "redirect_uri": {redirect}, "response_type": {"code"},
+		"code_challenge": {base64.RawURLEncoding.EncodeToString(sum[:])}, "code_challenge_method": {"S256"}, "user": {"Ann"},
+	}.Encode(), nil))
+	back, err := url.Parse(res.Header().Get("Location"))
+	require.NoError(t, err)
+	type tokens struct {
+		Access    string `json:"access_token"`
+		Refresh   string `json:"refresh_token"`
+		ExpiresIn int    `json:"expires_in"`
+	}
+	grant := func(form url.Values) (tokens, int) {
+		req, _ := http.NewRequest(http.MethodPost, fakegitlab.URL+"/oauth/token", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth(fakegitlab.ClientID, fakegitlab.ClientSecret)
+		res, err := g.Client().Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+		var got tokens
+		_ = json.NewDecoder(res.Body).Decode(&got)
+		return got, res.StatusCode
+	}
+	first, status := grant(url.Values{"grant_type": {"authorization_code"}, "code": {back.Query().Get("code")}, "code_verifier": {verifier}, "redirect_uri": {redirect}})
+	require.Equal(t, http.StatusOK, status)
+	require.Equal(t, 1, first.ExpiresIn)
+	second, status := grant(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {first.Refresh}})
+	require.Equal(t, http.StatusOK, status)
+	require.NotEqual(t, first.Refresh, second.Refresh)
+	require.Equal(t, http.StatusUnauthorized, call(t, g, first.Access, "").status, "the old access token stopped working")
+	require.Equal(t, http.StatusOK, call(t, g, second.Access, "").status)
+	_, status = grant(url.Values{"grant_type": {"refresh_token"}, "refresh_token": {first.Refresh}})
+	require.Equal(t, http.StatusBadRequest, status, "a refresh token works once")
 }

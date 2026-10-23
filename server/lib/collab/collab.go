@@ -157,7 +157,7 @@ func (s *Server) join(p *Peer) (*room, error) {
 		}
 		r := s.rooms[p.room]
 		if r == nil {
-			r = newRoom(s, p.room)
+			r = newRoom(s, p.room, p.user)
 			s.rooms[p.room] = r
 			s.wg.Add(1)
 			go func() { defer s.wg.Done(); r.run() }()

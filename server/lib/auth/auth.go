@@ -7,18 +7,26 @@
 //	Logout    POST /api/auth/logout           ends it (signed in only)
 //	Me        GET  /api/me                    the Identity (signed in only)
 //
+// Token hands the rest of the server a signed-in user's OAuth access token (for calls in their name),
+// refreshed when it expired.
+//
 // Guarantees:
-//   - A sign-in finishes only in the browser that began it.
-//   - Sessions, with the user's tokens, live in this process's memory only: nothing secret is stored, and a
-//     restart signs everyone out.
+//   - A sign-in finishes only in the browser that began it. A sign-in on its way keeps no state on the
+//     server: it is in the login cookie, sealed with a key made at start (a restart only fails the sign-ins
+//     on their way).
+//   - Sessions, with the user's tokens, live in this process's memory only: no token is stored, logged or
+//     put in an error, and a restart signs everyone out.
 //   - A request whose Origin is another host is never identified, a WebSocket included: the app's page and
 //     the server must be on the same host (ports may differ).
 package auth
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,28 +76,31 @@ type Identity struct {
 
 // Auth is the sign-in and its sessions. Create it with New.
 type Auth struct {
-	opts Options
+	opts  Options
+	login cipher.AEAD // seals the login cookie; its key lives in memory only
 
 	mu       sync.Mutex
 	provider *oidc.Provider // nil until discovered (on the first sign-in, so a server starts without it)
 	verifier *oidc.IDTokenVerifier
-	logins   map[string]login    // by state: sign-ins on their way through the provider
 	sessions map[string]*session // by id (the cookie's value)
 }
 
+// login is a sign-in on its way through the provider, sealed in the login cookie.
 type login struct {
-	nonce, verifier string
-	redirect        string // the redirect URL sent with it (the token request repeats it)
-	back            string // where to go afterwards
-	expires         time.Time
+	State    string `json:"s"`
+	Nonce    string `json:"n"`
+	Verifier string `json:"v"` // PKCE
+	Redirect string `json:"r"` // the redirect URL sent with it (the token request repeats it)
+	Back     string `json:"b"` // where to go afterwards
+	Expires  int64  `json:"e"` // Unix seconds
 }
 
 type session struct {
 	identity Identity
-	// token is the user's access (and refresh) token, for calls in the user's name (the project chooser,
-	// later). Here only: never written anywhere.
-	token   *oauth2.Token
-	expires time.Time
+	expires  time.Time
+
+	mu    sync.Mutex    // one refresh at a time
+	token *oauth2.Token // the user's access and refresh token; here only, never written anywhere
 }
 
 // CallbackPath is where the provider sends the browser back (Callback): the redirect URI to register, on this
@@ -102,7 +113,6 @@ const (
 	// SessionLifetime is how long a sign-in lasts (or until the server restarts).
 	SessionLifetime = 7 * 24 * time.Hour
 	loginLifetime   = 10 * time.Minute
-	maxLogins       = 10_000 // sign-ins begun and not finished, at most (each costs memory until it expires)
 )
 
 // New returns the sign-in for o. The provider is asked for its configuration on the first sign-in.
@@ -116,7 +126,11 @@ func New(o Options) *Auth {
 	if o.now == nil {
 		o.now = time.Now
 	}
-	return &Auth{opts: o, logins: map[string]login{}, sessions: map[string]*session{}}
+	key := make([]byte, 32)
+	_, _ = rand.Read(key) // crypto/rand does not fail
+	block, _ := aes.NewCipher(key)
+	aead, _ := cipher.NewGCM(block)
+	return &Auth{opts: o, login: aead, sessions: map[string]*session{}}
 }
 
 // Identify is who sent r: the session its cookie names. False without a session, with an expired one, or
@@ -183,30 +197,23 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := r.URL.Query()
-	state := rand.Text()
 	l := login{
-		nonce: rand.Text(), verifier: oauth2.GenerateVerifier(), redirect: a.redirectURL(r),
-		back: returnURL(r, query.Get("return")), expires: a.opts.now().Add(loginLifetime),
+		State: rand.Text(), Nonce: rand.Text(), Verifier: oauth2.GenerateVerifier(), Redirect: a.redirectURL(r),
+		Back: returnURL(r, query.Get("return")), Expires: a.opts.now().Add(loginLifetime).Unix(),
 	}
-	if !a.begin(state, l) {
-		http.Error(w, "Too many sign-ins at once; try again in a few minutes.", http.StatusServiceUnavailable)
-		return
-	}
-	http.SetCookie(w, cookie(r, loginCookie, state, "/api/public/auth/", loginLifetime))
-	options := []oauth2.AuthCodeOption{oidc.Nonce(l.nonce), oauth2.S256ChallengeOption(l.verifier)}
+	http.SetCookie(w, cookie(r, loginCookie, a.seal(l), "/api/public/auth/", loginLifetime))
+	options := []oauth2.AuthCodeOption{oidc.Nonce(l.Nonce), oauth2.S256ChallengeOption(l.Verifier)}
 	if hint := query.Get("login_hint"); hint != "" {
 		options = append(options, oauth2.SetAuthURLParam("login_hint", hint))
 	}
-	http.Redirect(w, r, a.config(provider, l.redirect).AuthCodeURL(state, options...), http.StatusFound)
+	http.Redirect(w, r, a.config(provider, l.Redirect).AuthCodeURL(l.State, options...), http.StatusFound)
 }
 
 // Callback is where the provider sends the browser back (CallbackPath): it starts the session.
 func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	state := query.Get("state")
-	l, ok := a.finish(state)
-	began, err := r.Cookie(loginCookie)
-	if !ok || err != nil || subtle.ConstantTimeCompare([]byte(began.Value), []byte(state)) != 1 {
+	l, ok := a.began(r)
+	if !ok || subtle.ConstantTimeCompare([]byte(l.State), []byte(query.Get("state"))) != 1 {
 		http.Error(w, "This sign-in expired or began elsewhere: sign in again.", http.StatusBadRequest)
 		return
 	}
@@ -228,7 +235,34 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 	a.mu.Unlock()
 	a.opts.Log.Info().Str("provider", identity.Provider).Str("user", identity.Subject).Str("name", identity.Name).Msg("signed in")
 	http.SetCookie(w, cookie(r, sessionCookie, id, "/", SessionLifetime))
-	http.Redirect(w, r, l.back, http.StatusSeeOther)
+	http.Redirect(w, r, l.Back, http.StatusSeeOther)
+}
+
+// seal is l as the login cookie's value: encrypted and authenticated with the key made at start.
+func (a *Auth) seal(l login) string {
+	plain, _ := json.Marshal(l)
+	nonce := make([]byte, a.login.NonceSize())
+	_, _ = rand.Read(nonce)
+	return base64.RawURLEncoding.EncodeToString(a.login.Seal(nonce, nonce, plain, []byte(loginCookie)))
+}
+
+// began is the sign-in r's login cookie seals, unless it is missing, forged or expired.
+func (a *Auth) began(r *http.Request) (login, bool) {
+	c, err := r.Cookie(loginCookie)
+	if err != nil {
+		return login{}, false
+	}
+	sealed, err := base64.RawURLEncoding.DecodeString(c.Value)
+	n := a.login.NonceSize()
+	if err != nil || len(sealed) < n {
+		return login{}, false
+	}
+	plain, err := a.login.Open(nil, sealed[:n], sealed[n:], []byte(loginCookie))
+	var l login
+	if err != nil || json.Unmarshal(plain, &l) != nil {
+		return login{}, false
+	}
+	return l, a.opts.now().Unix() < l.Expires
 }
 
 // exchange trades the code for tokens and reads who signed in from the verified ID token (the provider's
@@ -239,7 +273,7 @@ func (a *Auth) exchange(ctx context.Context, l login, code string) (Identity, *o
 		return Identity{}, nil, err
 	}
 	ctx = oidc.ClientContext(ctx, a.opts.Client)
-	token, err := a.config(provider, l.redirect).Exchange(ctx, code, oauth2.VerifierOption(l.verifier))
+	token, err := a.config(provider, l.Redirect).Exchange(ctx, code, oauth2.VerifierOption(l.Verifier))
 	if err != nil {
 		return Identity{}, nil, fmt.Errorf("the provider did not accept the code: %w", err)
 	}
@@ -251,7 +285,7 @@ func (a *Auth) exchange(ctx context.Context, l login, code string) (Identity, *o
 	if err != nil {
 		return Identity{}, nil, err
 	}
-	if subtle.ConstantTimeCompare([]byte(idToken.Nonce), []byte(l.nonce)) != 1 {
+	if subtle.ConstantTimeCompare([]byte(idToken.Nonce), []byte(l.Nonce)) != 1 {
 		return Identity{}, nil, errors.New("the ID token is not for this sign-in (nonce)")
 	}
 	var claims profile
@@ -277,6 +311,61 @@ type profile struct {
 	PreferredUsername string `json:"preferred_username"`
 	Nickname          string `json:"nickname"`
 	Email             string `json:"email"`
+}
+
+// ErrNoToken: the user has no live session with a token that works (signed out, expired, or the provider
+// refused the refresh).
+var ErrNoToken = errors.New("auth: no live sign-in of this user")
+
+// Token is an OAuth access token of the signed-in user subject (an Identity's Subject), from any of their
+// live sessions; an expired one is refreshed first (one refresh per session at a time; a rotated refresh
+// token replaces the old one in the session). ErrNoToken when none has a token that works.
+func (a *Auth) Token(ctx context.Context, subject string) (string, error) {
+	now := a.opts.now()
+	var candidates []*session
+	a.mu.Lock()
+	for _, s := range a.sessions {
+		if s.identity.Subject == subject && now.Before(s.expires) {
+			candidates = append(candidates, s)
+		}
+	}
+	a.mu.Unlock()
+	for _, s := range candidates {
+		token, err := a.fresh(ctx, s)
+		if err == nil {
+			return token, nil
+		}
+		a.opts.Log.Warn().Str("user", subject).Msg("cannot refresh a GitLab token: " + refreshFailure(err))
+	}
+	return "", ErrNoToken
+}
+
+// fresh is s's access token, refreshed if it expired.
+func (a *Auth) fresh(ctx context.Context, s *session) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.token.Valid() {
+		return s.token.AccessToken, nil
+	}
+	provider, _, err := a.discover(ctx)
+	if err != nil {
+		return "", err
+	}
+	token, err := a.config(provider, "").TokenSource(oidc.ClientContext(ctx, a.opts.Client), s.token).Token()
+	if err != nil {
+		return "", err
+	}
+	s.token = token
+	return token.AccessToken, nil
+}
+
+// refreshFailure is why a refresh failed, without anything the provider sent back.
+func refreshFailure(err error) string {
+	var refused *oauth2.RetrieveError
+	if errors.As(err, &refused) {
+		return "the provider refused (" + first(refused.ErrorCode, "no reason given") + ")"
+	}
+	return "the provider cannot be reached"
 }
 
 // Logout ends the session (POST /api/auth/logout).
@@ -339,37 +428,9 @@ func (a *Auth) redirectURL(r *http.Request) string {
 	return scheme + "://" + r.Host + CallbackPath
 }
 
-// begin remembers a sign-in until the provider sends the browser back; false when too many are open.
-func (a *Auth) begin(state string, l login) bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if len(a.logins) >= maxLogins {
-		a.prune()
-		if len(a.logins) >= maxLogins {
-			return false
-		}
-	}
-	a.logins[state] = l
-	return true
-}
-
-// finish takes the sign-in state names (once), unless it expired.
-func (a *Auth) finish(state string) (login, bool) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	l, ok := a.logins[state]
-	delete(a.logins, state)
-	return l, ok && a.opts.now().Before(l.expires)
-}
-
-// prune drops expired sign-ins and sessions. Called with mu held.
+// prune drops expired sessions. Called with mu held.
 func (a *Auth) prune() {
 	now := a.opts.now()
-	for state, l := range a.logins {
-		if now.After(l.expires) {
-			delete(a.logins, state)
-		}
-	}
 	for id, s := range a.sessions {
 		if now.After(s.expires) {
 			delete(a.sessions, id)

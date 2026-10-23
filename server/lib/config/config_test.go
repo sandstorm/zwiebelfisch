@@ -26,7 +26,7 @@ func TestEnvironment(t *testing.T) {
 	c, err := config.Load([]string{
 		"PORT=4321", "ZWF_ADDRESS=0.0.0.0", "ZWF_COLLAB_DB=:memory:",
 		"ZWF_LOG_LEVEL=debug", "ZWF_LOG_FORMAT=json", "ZWF_PLAIN_ROOMS=1",
-		"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_GITLAB_TOKEN=bot", "ZWF_GITLAB_WEBHOOK_SECRET=hook",
+		"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_GITLAB_WEBHOOK_SECRET=hook",
 		"ZWF_GITLAB_AUTHOR_EMAIL=a@example.org", "ZWF_GITLAB_AUTO_COMMIT=off",
 		"ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=s=1", "ZWF_AUTH_REDIRECT_URL=https://editor.example/api/public/auth/callback",
 	})
@@ -42,7 +42,6 @@ func TestEnvironment(t *testing.T) {
 	require.Equal(t, "json", c.Log.Format)
 	require.True(t, c.Rooms.Plain)
 	require.Equal(t, "https://gitlab.example", c.GitLab.URL)
-	require.Equal(t, "bot", c.GitLab.Token)
 	require.Equal(t, "hook", c.GitLab.WebhookSecret)
 	require.Equal(t, "a@example.org", c.GitLab.AuthorEmail)
 	require.Equal(t, "off", c.GitLab.AutoCommit)

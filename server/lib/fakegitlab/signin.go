@@ -6,11 +6,14 @@ package fakegitlab
 //	GET  /.well-known/openid-configuration  discovery
 //	GET  /oauth/authorize                   the browser: signs in as ?user= or ?login_hint= at once, else a
 //	                                        page asks for a name (no password: anyone is anyone)
-//	POST /oauth/token                       code (+ PKCE verifier) → access token and ID token
+//	POST /oauth/token                       code (+ PKCE verifier) → access, refresh and ID token; or a
+//	                                        refresh token → new access and refresh tokens (the old ones stop
+//	                                        working, as GitLab rotates them)
 //	GET  /oauth/discovery/keys              the key ID tokens are signed with (generated at start)
 //	GET  /oauth/userinfo                    who the access token belongs to
 //
-// Every name is an account: the first sign-in as "Ann" creates her (ids from 2; 1 is the bot).
+// Every name is an account: the first sign-in as "Ann" creates her (ids from 2). Access tokens last two
+// hours (SetTokenLifetime).
 
 import (
 	"crypto/ecdsa"
@@ -50,10 +53,23 @@ type IdentityProvider struct {
 	issuer, authorizeURL string
 	key                  *ecdsa.PrivateKey
 
-	mu     sync.Mutex
-	users  map[string]*User // by username
-	codes  map[string]grant
-	tokens map[string]*User // access tokens
+	mu       sync.Mutex
+	users    map[string]*User // by username
+	codes    map[string]grant
+	tokens   map[string]issued  // access tokens
+	refresh  map[string]renewal // refresh tokens
+	lifetime time.Duration
+}
+
+type issued struct {
+	user    *User
+	expires time.Time
+}
+
+// renewal is what a refresh token renews: its user's access token issued with it.
+type renewal struct {
+	user   *User
+	access string
 }
 
 type grant struct {
@@ -72,8 +88,43 @@ func NewIdentityProvider(issuer, authorizeURL string) *IdentityProvider {
 	}
 	return &IdentityProvider{
 		issuer: strings.TrimSuffix(issuer, "/"), authorizeURL: authorizeURL, key: key,
-		users: map[string]*User{}, codes: map[string]grant{}, tokens: map[string]*User{},
+		users: map[string]*User{}, codes: map[string]grant{}, tokens: map[string]issued{}, refresh: map[string]renewal{},
+		lifetime: 2 * time.Hour,
 	}
+}
+
+// SetTokenLifetime is how long access tokens issued from now on work (as expires_in).
+func (p *IdentityProvider) SetTokenLifetime(d time.Duration) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.lifetime = d
+}
+
+// issue is a new access token of the account named name.
+func (p *IdentityProvider) issue(name string) string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	access, _ := p.issueTo(p.user(name))
+	return access
+}
+
+// issueTo makes an access and a refresh token for u. Called with mu held.
+func (p *IdentityProvider) issueTo(u *User) (access, refresh string) {
+	access, refresh = rand.Text(), rand.Text()
+	p.tokens[access] = issued{u, time.Now().Add(p.lifetime)}
+	p.refresh[refresh] = renewal{u, access}
+	return access, refresh
+}
+
+// holder is whose access token token is (false: none, or it expired).
+func (p *IdentityProvider) holder(token string) (User, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	t, ok := p.tokens[token]
+	if !ok || time.Now().After(t.expires) {
+		return User{}, false
+	}
+	return *t.user, true
 }
 
 // SignIn is the account named name, created on first use. Usernames are names in lower case.
@@ -133,7 +184,7 @@ func (p *IdentityProvider) discovery(w http.ResponseWriter) {
 		"response_types_supported":              []string{"code"},
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{string(jose.ES256)},
-		"scopes_supported":                      []string{"openid", "profile", "email", "read_api", "read_user"},
+		"scopes_supported":                      []string{"openid", "profile", "email", "read_api", "read_user", "write_repository"},
 		"code_challenge_methods_supported":      []string{"plain", "S256"},
 	})
 }
@@ -204,7 +255,12 @@ func (p *IdentityProvider) token(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusUnauthorized, "invalid_client")
 		return
 	}
-	if r.PostForm.Get("grant_type") != "authorization_code" {
+	switch r.PostForm.Get("grant_type") {
+	case "authorization_code":
+	case "refresh_token":
+		p.refreshed(w, r.PostForm.Get("refresh_token"))
+		return
+	default:
 		oauthError(w, http.StatusBadRequest, "unsupported_grant_type")
 		return
 	}
@@ -224,14 +280,38 @@ func (p *IdentityProvider) token(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusInternalServerError, "server_error")
 		return
 	}
-	access := rand.Text()
 	p.mu.Lock()
-	p.tokens[access] = g.user
+	access, refresh := p.issueTo(g.user)
+	lifetime := p.lifetime
 	p.mu.Unlock()
 	w.Header().Set("Cache-Control", "no-store")
 	reply(w, http.StatusOK, map[string]any{
-		"access_token": access, "token_type": "Bearer", "expires_in": 7200, "refresh_token": rand.Text(),
-		"scope": "openid profile email read_api", "id_token": idToken, "created_at": time.Now().Unix(),
+		"access_token": access, "token_type": "Bearer", "expires_in": int(lifetime.Seconds()), "refresh_token": refresh,
+		"scope": scopes, "id_token": idToken, "created_at": time.Now().Unix(),
+	})
+}
+
+const scopes = "openid profile email read_api write_repository"
+
+// refreshed answers a refresh: new tokens for the refresh token's user; the old access and refresh tokens
+// stop working.
+func (p *IdentityProvider) refreshed(w http.ResponseWriter, refresh string) {
+	p.mu.Lock()
+	old, ok := p.refresh[refresh]
+	if !ok {
+		p.mu.Unlock()
+		oauthError(w, http.StatusBadRequest, "invalid_grant")
+		return
+	}
+	delete(p.refresh, refresh)
+	delete(p.tokens, old.access)
+	access, next := p.issueTo(old.user)
+	lifetime := p.lifetime
+	p.mu.Unlock()
+	w.Header().Set("Cache-Control", "no-store")
+	reply(w, http.StatusOK, map[string]any{
+		"access_token": access, "token_type": "Bearer", "expires_in": int(lifetime.Seconds()), "refresh_token": next,
+		"scope": scopes, "created_at": time.Now().Unix(),
 	})
 }
 
@@ -267,14 +347,12 @@ func profile(u *User) map[string]any {
 
 func (p *IdentityProvider) userinfo(w http.ResponseWriter, r *http.Request) {
 	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	p.mu.Lock()
-	u := p.tokens[token]
-	p.mu.Unlock()
-	if u == nil {
+	u, ok := p.holder(token)
+	if !ok {
 		fail(w, http.StatusUnauthorized, "401 Unauthorized")
 		return
 	}
-	reply(w, http.StatusOK, profile(u))
+	reply(w, http.StatusOK, profile(&u))
 }
 
 func oauthError(w http.ResponseWriter, status int, code string) {

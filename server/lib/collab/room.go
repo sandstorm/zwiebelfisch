@@ -26,11 +26,12 @@ type room struct {
 	storeAt    *time.Timer
 	unloaded   bool
 	ext        Handler // nil: the extension left the room alone
+	opener     User    // whose join loads the room
 }
 
-func newRoom(s *Server, name string) *room {
+func newRoom(s *Server, name string, opener User) *room {
 	return &room{
-		s: s, name: name, log: s.opts.Log.With().Str("room", name).Logger(),
+		s: s, name: name, opener: opener, log: s.opts.Log.With().Str("room", name).Logger(),
 		inbox: make(chan func()), done: make(chan struct{}),
 		awareness: ydoc.NewAwareness(), peers: map[*Peer]struct{}{},
 	}
@@ -92,7 +93,7 @@ func (r *room) load() {
 		r.changed()
 	})
 	if x := r.s.opts.Extension; x != nil {
-		if r.ext, err = x.Open(&Room{r}, r.doc); err != nil {
+		if r.ext, err = x.Open(&Room{r}, r.doc, r.opener); err != nil {
 			r.log.Warn().Err(err).Msg("cannot open the room")
 			r.loadErr = err
 			return
@@ -135,7 +136,7 @@ func (r *room) leave(p *Peer) {
 	r.s.wg.Add(1) // the room's goroutine counts too, so a Close waiting for wg is not done yet
 	go func() {
 		defer r.s.wg.Done()
-		r.ext.Left(r.s.ctx)
+		r.ext.Left(r.s.ctx, p.user)
 		r.do(func() {
 			if len(r.peers) == 0 && !r.unloaded {
 				r.store()

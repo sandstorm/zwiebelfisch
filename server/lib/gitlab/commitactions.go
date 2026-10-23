@@ -1,6 +1,9 @@
 package gitlab
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"maps"
 	"slices"
 	"sort"
@@ -45,7 +48,7 @@ func textActions(base, texts map[string]string) []Action {
 		case !ok:
 			created = append(created, path)
 		case old != texts[path]:
-			actions = append(actions, Action{Kind: ActionUpdate, Path: path, Content: []byte(texts[path]), Text: true})
+			actions = append(actions, Action{Kind: ActionUpdate, Path: path, Content: []byte(texts[path])})
 		}
 	}
 	for _, path := range slices.Sorted(maps.Keys(base)) {
@@ -54,12 +57,12 @@ func textActions(base, texts map[string]string) []Action {
 		}
 	}
 	for _, pair := range pairRenames(deleted, created, func(from, to string) float64 { return similarity(base[from], texts[to]) }) {
-		actions = append(actions, Action{Kind: ActionMove, Path: pair[1], PreviousPath: pair[0], Content: []byte(texts[pair[1]]), Text: true})
+		actions = append(actions, Action{Kind: ActionMove, Path: pair[1], PreviousPath: pair[0], Content: []byte(texts[pair[1]])})
 		deleted = slices.DeleteFunc(deleted, func(p string) bool { return p == pair[0] })
 		created = slices.DeleteFunc(created, func(p string) bool { return p == pair[1] })
 	}
 	for _, path := range created {
-		actions = append(actions, Action{Kind: ActionCreate, Path: path, Content: []byte(texts[path]), Text: true})
+		actions = append(actions, Action{Kind: ActionCreate, Path: path, Content: []byte(texts[path])})
 	}
 	for _, path := range deleted {
 		actions = append(actions, Action{Kind: ActionDelete, Path: path})
@@ -151,4 +154,13 @@ func assetActions(base map[string]string, assets map[string]any) []Action {
 		actions = append(actions, Action{Kind: ActionDelete, Path: path})
 	}
 	return actions
+}
+
+// blobSha is the git blob id of content (what a repository tree lists as a file's id), so the room's files
+// can be compared with the repository's without reading them.
+func blobSha(content []byte) string {
+	h := sha1.New()
+	fmt.Fprintf(h, "blob %d\x00", len(content))
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
 }

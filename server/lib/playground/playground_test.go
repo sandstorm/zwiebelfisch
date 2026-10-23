@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -150,10 +151,11 @@ func TestOutage(t *testing.T) {
 	s := newSetup(t)
 	_, body := s.request(t, "POST", "/playground/outage?room="+room)
 	require.Equal(t, map[string]any{"branch": "main", "reachable": false}, body)
-	branch := fakegitlab.URL + "/api/v4/projects/demo%2Freport/repository/branches/main"
-	get := func() error {
-		req, _ := http.NewRequest("GET", branch, nil)
-		req.Header.Set("PRIVATE-TOKEN", fakegitlab.Token)
+	push := strings.Repeat("0", 40) + " " + strings.Repeat("1", 40) + " refs/heads/main\x00report-status\n"
+	get := func() error { // a git push to main (its first line suffices to tell the branch)
+		req, _ := http.NewRequest("POST", fakegitlab.URL+"/demo/report.git/git-receive-pack", strings.NewReader(fmt.Sprintf("%04x", len(push)+4)+push+"0000"))
+		req.Header.Set("Content-Type", "application/x-git-receive-pack-request")
+		req.SetBasicAuth("oauth2", s.gitlab.TokenOf("Ann"))
 		res, err := s.gitlab.Client().Do(req)
 		if err == nil {
 			_, _ = io.Copy(io.Discard, res.Body)

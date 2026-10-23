@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
@@ -65,7 +66,7 @@ func (s *testServer) identified(req *http.Request) *http.Request {
 
 func fakeGitLab() (*fakegitlab.GitLab, *gitlab.Options) {
 	fake := fakegitlab.New(playground.Project, fakegitlab.Files{"/main.typ": []byte("= Report\n"), "/logo.png": {1, 2, 3}})
-	return fake, &gitlab.Options{URL: fakegitlab.URL, Token: fakegitlab.Token, Client: fake.Client(), WebhookSecret: "hook"}
+	return fake, &gitlab.Options{URL: fakegitlab.URL, Client: fake.Client(), WebhookSecret: "hook"}
 }
 
 // signIn signs name in through the server (the fake's page served next to it, as fake-gitlab does) and
@@ -162,6 +163,29 @@ func TestWhoOpensWhichRoom(t *testing.T) {
 	}
 	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", ann)), "gitlab:no-branch")
 	require.Contains(t, reason(err), "only GitLab rooms", "not a GitLab room name, and no plain rooms here")
+}
+
+// GitLab rooms ask GitLab with the signed-in user's own token, refreshed when it expired.
+func TestGitLabIsAskedWithTheUsersToken(t *testing.T) {
+	fake, gl := fakeGitLab()
+	fake.IdentityProvider().SetTokenLifetime(time.Second) // expired at once: every use refreshes it
+	s := newServer(t, fake, Options{GitLab: gl})
+	ann := signIn(t, fake, s, "Ann")
+	first, err := s.auth.Token(context.Background(), "2")
+	require.NoError(t, err)
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", ann)), "gitlab:demo/report@main")
+	require.NoError(t, err, "asked with a refreshed token")
+	second, err := s.auth.Token(context.Background(), "2")
+	require.NoError(t, err)
+	require.NotEqual(t, first, second, "rotated")
+	require.Contains(t, fake.Requests(), "GET /members/all/2")
+	require.Contains(t, fake.Requests(), "GET /repository/branches/main")
+
+	_, err = s.auth.Token(context.Background(), "3")
+	require.ErrorIs(t, err, auth.ErrNoToken, "nobody signed in as 3")
+	require.Equal(t, http.StatusNoContent, get(t, s, request("POST", host+"/api/auth/logout", ann)).StatusCode)
+	_, err = s.auth.Token(context.Background(), "2")
+	require.ErrorIs(t, err, auth.ErrNoToken, "signed out: the token is gone")
 }
 
 func TestHTTPServerBoundsSlowAndIdleClients(t *testing.T) {

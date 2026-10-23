@@ -16,7 +16,7 @@ import {
 
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them, shaped as the scm host's `SourceControl`:
- * - `commit` asks the server to commit the room's changes as `author` (`busy` until it answers)
+ * - `commit` asks the server to commit the room's changes in the signed-in user's name (`busy` until it answers)
  * - the server's answers (saved, nothing to save, a conflict, a failure) and news (upstream merged) go to `tell`
  * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
@@ -40,7 +40,6 @@ export class GitLabSourceControl {
     ydoc: Y.Doc,
     private readonly channel: StatelessChannel,
     private readonly tell: Tell,
-    private readonly author?: { name: string },
   ) {
     this.#meta = ydoc.getMap(META_MAP);
     this.#meta.observe(this.#metaChanged);
@@ -103,7 +102,7 @@ export class GitLabSourceControl {
   };
 
   commit(message: string): void {
-    const request: ClientMessage = { type: 'gitlab:save', message, ...(this.author ? { author: this.author } : {}) };
+    const request: ClientMessage = { type: 'gitlab:save', message };
     this.#setBusy(true);
     this.channel.send(JSON.stringify(request));
   }

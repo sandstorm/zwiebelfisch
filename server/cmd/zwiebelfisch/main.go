@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -82,22 +83,28 @@ func signInWith(cfg config.Config, log zerolog.Logger) (*auth.Auth, error) {
 	}
 	if cfg.GitLab.URL != "" && strings.TrimSuffix(a.Issuer, "/") == strings.TrimSuffix(cfg.GitLab.URL, "/") {
 		o.Provider = gitlab.DefaultID
-		o.Scopes = []string{"openid", "profile", "email", "read_api"} // read_api: the project chooser, later
+		// read_api: who may edit and push; write_repository: fetch and push (git over HTTP)
+		o.Scopes = []string{"openid", "profile", "email", "read_api", "write_repository"}
 	}
 	return auth.New(o), nil
 }
 
-// gitlabOptions are the GitLab rooms cfg configures (nil: none, without URL or token).
+// gitlabOptions are the GitLab rooms cfg configures (nil: none, without URL). The git clones go next to the
+// database (in memory with it).
 func gitlabOptions(cfg config.Config) (*gitlab.Options, error) {
-	if cfg.GitLab.URL == "" || cfg.GitLab.Token == "" {
+	if cfg.GitLab.URL == "" {
 		return nil, nil
 	}
 	autoCommit, err := gitlab.ParseAutoCommit(cfg.GitLab.AutoCommit)
 	if err != nil {
 		return nil, err
 	}
+	dir := ""
+	if cfg.Collab.DB != store.Memory {
+		dir = filepath.Join(filepath.Dir(cfg.Collab.DB), "repositories")
+	}
 	return &gitlab.Options{
-		URL: cfg.GitLab.URL, Token: cfg.GitLab.Token, WebhookSecret: cfg.GitLab.WebhookSecret,
+		URL: cfg.GitLab.URL, Dir: dir, WebhookSecret: cfg.GitLab.WebhookSecret,
 		AuthorEmail: cfg.GitLab.AuthorEmail, AutoCommit: autoCommit,
 	}, nil
 }

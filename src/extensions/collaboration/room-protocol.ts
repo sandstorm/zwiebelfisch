@@ -83,10 +83,8 @@ export interface CommitFailure {
 /** Client → server stateless messages. */
 export type ClientMessage = {
   type: 'gitlab:save';
-  /** Commit message (default 'Edit via Zwiebelfisch'). */
+  /** Commit message (default 'Edit via Zwiebelfisch'). The commit is by the signed-in user who saves. */
   message?: string;
-  /** Who saves, named in `gitlab:saved` when the server knows no name for the client (the commit's author is the server's bot). */
-  author?: { name: string; email?: string };
 };
 
 /** A range of a file's current text that could not be merged with upstream (UTF-16 offsets). */

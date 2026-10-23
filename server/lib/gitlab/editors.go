@@ -112,6 +112,17 @@ func (e *editors) userIDs() []string {
 	return ids
 }
 
+// find is the editor who signed in as user (nil: they did not edit).
+func (e *editors) find(user collab.User) *person {
+	if user.ID == "" {
+		return nil
+	}
+	if ed := e.by[person{User: user}.key()]; ed != nil {
+		return &ed.person
+	}
+	return nil
+}
+
 // mostEdits is the editor with the most edits (the first of them on a tie); nil when nobody is known.
 func (e *editors) mostEdits() *person {
 	var best *editor
@@ -126,23 +137,25 @@ func (e *editors) mostEdits() *person {
 	return &best.person
 }
 
-// withCoAuthors is message with a Co-authored-by trailer per editor (the convention GitLab shows). The
-// commit's author is the server's bot, so everyone who edited is named here.
-func withCoAuthors(message string, e editors) string {
-	if len(e.order) == 0 {
-		return message
-	}
+// withCoAuthors is message with a Co-authored-by trailer (the convention GitLab shows) per editor but the
+// commit's author.
+func withCoAuthors(message string, e editors, author person) string {
 	var b strings.Builder
-	b.WriteString(message + "\n")
+	b.WriteString(message)
+	sep := "\n\n"
 	for _, p := range e.people() {
-		fmt.Fprintf(&b, "\nCo-authored-by: %s <%s>", p.Name, p.Email)
+		if p.key() == author.key() {
+			continue
+		}
+		fmt.Fprintf(&b, "%sCo-authored-by: %s <%s>", sep, p.Name, p.Email)
+		sep = "\n"
 	}
 	return b.String()
 }
 
-// automaticMessage is the message of a commit the server makes by itself: "Edits by Ann, Bob:
-// chapters/intro.typ, results.typ" (at most namedPaths paths), the editors as co-authors.
-func automaticMessage(e editors, paths []string) string {
+// automaticMessage is the message of a commit the server makes by itself, by author: "Edits by Ann, Bob:
+// chapters/intro.typ, results.typ" (at most namedPaths paths), the other editors as co-authors.
+func automaticMessage(e editors, paths []string, author person) string {
 	shown := paths
 	if len(shown) > namedPaths {
 		shown = shown[:namedPaths]
@@ -159,7 +172,7 @@ func automaticMessage(e editors, paths []string) string {
 	if len(paths) > namedPaths {
 		subject += fmt.Sprintf(" and %d more", len(paths)-namedPaths)
 	}
-	return withCoAuthors(subject, e)
+	return withCoAuthors(subject, e, author)
 }
 
 // namedPaths is how many paths a generated commit message names; it counts the others.

@@ -6,7 +6,7 @@
 // signed-in user (requireSignIn: 401 otherwise, for a WebSocket before its upgrade). New lists every route.
 //
 // Who opens which room:
-//   - a GitLab room (when configured): anyone signed in whose GitLab role lets them edit
+//   - a GitLab room (when configured): anyone signed in with GitLab whose role lets them edit
 //   - any other room without a colon in its name (a plain room, only when enabled): anyone signed in
 //
 // A refused client is told why, in words the widget shows. GET /api/public/info tells clients beforehand
@@ -40,7 +40,7 @@ type Options struct {
 	Auth *auth.Auth
 	// PlainRooms enables rooms that are not GitLab rooms.
 	PlainRooms bool
-	// GitLab enables GitLab rooms (nil: none). Its Authenticate and Log are set here.
+	// GitLab enables GitLab rooms (nil: none). Its Authenticate, Token (Auth's) and Log are set here.
 	GitLab *gitlab.Options
 	Log    zerolog.Logger
 }
@@ -63,7 +63,7 @@ const PublicPrefix = "/api/public/"
 // error.
 func New(o Options) (*Server, error) {
 	if !o.PlainRooms && o.GitLab == nil {
-		return nil, errors.New("no rooms to serve: configure GitLab (ZWF_GITLAB_URL, ZWF_GITLAB_TOKEN) or enable plain rooms (ZWF_PLAIN_ROOMS=1)")
+		return nil, errors.New("no rooms to serve: configure GitLab (ZWF_GITLAB_URL) or enable plain rooms (ZWF_PLAIN_ROOMS=1)")
 	}
 	if o.Auth == nil {
 		return nil, errors.New("no sign-in: configure it (ZWF_AUTH_CLIENT_ID, ZWF_AUTH_CLIENT_SECRET)")
@@ -72,7 +72,7 @@ func New(o Options) (*Server, error) {
 	var extension collab.Extension
 	if o.GitLab != nil {
 		g := *o.GitLab
-		g.Authenticate, g.Log = s.authenticate, o.Log.With().Str("module", "gitlab").Logger()
+		g.Authenticate, g.Token, g.Log = s.authenticate, o.Auth.Token, o.Log.With().Str("module", "gitlab").Logger()
 		s.gitlab = gitlab.New(g)
 		extension = s.gitlab
 	}
@@ -92,7 +92,7 @@ func New(o Options) (*Server, error) {
 	signedIn := newRoutes("/api/")
 	signedIn.Handle("GET /api/collaboration", s.rooms) // the WebSocket (COLLABORATION_PATH in src/extensions/collaboration/room-protocol.ts)
 	signedIn.HandleFunc("GET /api/me", o.Auth.Me)
-	signedIn.HandleFunc("POST /api/auth/logout", o.Auth.Logout)
+	signedIn.HandleFunc("POST /api/auth/logout", s.logout(o.Auth))
 	if s.gitlab != nil {
 		signedIn.HandleFunc("GET /api/rooms/{room}/files/{path...}", s.gitlab.ServeFile)
 	}
@@ -142,6 +142,21 @@ func (rs *routes) HandleFunc(pattern string, h func(http.ResponseWriter, *http.R
 	rs.Handle(pattern, http.HandlerFunc(h))
 }
 
+// logout signs out (auth's Logout), after the GitLab rooms committed what the user has not committed yet
+// (while their token still works).
+func (s *Server) logout(a *auth.Auth) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if identity, ok := auth.SignedIn(r); ok && s.gitlab != nil {
+			s.gitlab.SignedOut(userOf(identity))
+		}
+		a.Logout(w, r)
+	}
+}
+
+func userOf(identity auth.Identity) collab.User {
+	return collab.User{Provider: identity.Provider, ID: identity.Subject, Name: identity.Name, Email: identity.Email}
+}
+
 // GitLab are the GitLab rooms (nil: none), for the demo playground's endpoints.
 func (s *Server) GitLab() *gitlab.Rooms { return s.gitlab }
 
@@ -174,7 +189,7 @@ func (s *Server) authenticate(r *http.Request, room string) (collab.User, error)
 		return collab.User{}, collab.Refusal{Reason: fmt.Sprintf(
 			"Room names with a colon are not plain rooms, and this server opens no %q.", room)}
 	}
-	user := collab.User{Provider: identity.Provider, ID: identity.Subject, Name: identity.Name, Email: identity.Email}
+	user := userOf(identity)
 	if isGitLab {
 		if err := s.gitlab.Authorize(r.Context(), user, room); err != nil {
 			return collab.User{}, err

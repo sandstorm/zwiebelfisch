@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
@@ -24,7 +26,7 @@ import (
 // is decided as the app does (Authorize, here with users by the session cookie's id).
 func TestRoomInTheCollaborationServer(t *testing.T) {
 	repo := newFakeRepo(initialFiles())
-	x := New(Options{AutoCommit: time.Hour, Log: zerolog.Nop(), repository: func(string) Repository { return repo }})
+	x := New(Options{AutoCommit: time.Hour, Log: zerolog.Nop(), Token: (&fakeTokens{}).Token, repository: func(string) Repository { return repo }, access: repo.Access})
 	x.leaveDelay = 20 * time.Millisecond
 	st, err := store.Open(store.Memory)
 	require.NoError(t, err)
@@ -48,8 +50,9 @@ func TestRoomInTheCollaborationServer(t *testing.T) {
 
 	a.send(msgTypeStateless, varString(`{"type":"gitlab:save","message":"Reword"}`))
 	b.eventually("everyone hears of the commit", func() bool { return len(b.stateless) == 1 })
-	require.Equal(t, message{Type: msgSaved, Sha: repo.head("main").sha, Author: "Zwiebelfisch"}, b.stateless[0])
-	require.Equal(t, "Reword\n\nCo-authored-by: Ann <zwiebelfisch@localhost>", repo.head("main").message, "named by the awareness")
+	require.Equal(t, message{Type: msgSaved, Sha: repo.head("main").sha, Author: "Ann"}, b.stateless[0], "named by the awareness")
+	require.Equal(t, "Reword", repo.head("main").message, "the saver made the edits: no co-authors")
+	require.Equal(t, Signature{"Ann", "zwiebelfisch@localhost"}, repo.head("main").author)
 
 	a.send(msgTypeStateless, varString(`{"type":"gitlab:save"}`))
 	a.eventually("only the saver hears there is nothing to commit", func() bool {
@@ -79,10 +82,68 @@ func TestRoomInTheCollaborationServer(t *testing.T) {
 	a.close()
 	b.close()
 	committed := func() bool {
-		return repo.head("main").message == "Edits by Ann: main.typ\n\nCo-authored-by: Ann <zwiebelfisch@localhost>"
+		return repo.head("main").message == "Edits by Ann: main.typ"
 	}
 	require.Eventually(t, committed, 5*time.Second, time.Millisecond, "committed by itself after everyone left")
 	require.Eventually(t, func() bool { x.mu.Lock(); defer x.mu.Unlock(); return len(x.open) == 0 }, 5*time.Second, time.Millisecond, "unloaded")
+}
+
+// The same against the fake GitLab, over git and REST with each user's own token: the clone in memory (as
+// fake-gitlab has it) and on disk.
+func TestRoomAgainstTheFakeGitLab(t *testing.T) {
+	for _, where := range []string{"memory", "disk"} {
+		t.Run(where, func(t *testing.T) {
+			fake := newFake()
+			ann, bob := fake.SetAccess("Ann", fakegitlab.Developer), fake.SetAccess("Bob", fakegitlab.Developer)
+			names := map[string]string{strconv.Itoa(ann.ID): "Ann", strconv.Itoa(bob.ID): "Bob"}
+			dir := ""
+			if where == "disk" {
+				dir = t.TempDir()
+			}
+			x := New(Options{
+				URL: fakegitlab.URL, Client: fake.Client(), Dir: dir, AutoCommit: time.Hour, Log: zerolog.Nop(),
+				Token: func(_ context.Context, user string) (string, error) { return fake.TokenOf(names[user]), nil },
+			})
+			x.leaveDelay = 20 * time.Millisecond
+			st, err := store.Open(store.Memory)
+			require.NoError(t, err)
+			defer st.Close()
+			authenticate := func(r *http.Request, room string) (collab.User, error) {
+				c, _ := r.Cookie("session")
+				user := collab.User{Provider: DefaultID, ID: c.Value, Name: names[c.Value], Email: strings.ToLower(names[c.Value]) + "@example.com"}
+				return user, x.Authorize(r.Context(), user, room)
+			}
+			s := collab.New(collab.Options{Store: st, Authenticate: authenticate, Extension: x, Debounce: 10 * time.Millisecond, Log: zerolog.Nop()})
+			defer x.Close()
+			defer func() { require.NoError(t, s.Close(context.Background())) }()
+
+			a := join(t, s, strconv.Itoa(ann.ID))
+			a.eventually("a has the branch", func() bool { return a.doc.Texts(filesMap)[mainTyp] == mainText })
+			b := join(t, s, strconv.Itoa(bob.ID))
+			b.eventually("b has the branch", func() bool { return b.doc.Texts(filesMap)[mainTyp] == mainText })
+			b.edit(func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+			a.eventually("a has b's edit", func() bool { return strings.Contains(a.doc.Texts(filesMap)[mainTyp], "Opening") })
+			a.send(msgTypeStateless, varString(`{"type":"gitlab:save","message":"Reword"}`))
+			b.eventually("saved", func() bool { return len(b.stateless) == 1 })
+			head := fake.Head("main")
+			require.Equal(t, message{Type: msgSaved, Sha: head.SHA, Author: "Ann"}, b.stateless[0])
+			require.Equal(t, fakegitlab.Author{Name: "Ann", Email: "ann@example.com"}, head.Author)
+			require.Equal(t, "Reword\n\nCo-authored-by: Bob <bob@example.com>", head.Message)
+
+			fake.Push("main", fakegitlab.Files{"/chapters/one.typ": []byte("= One, pushed\n")}, "a colleague")
+			x.pushed(context.Background(), []string{"group/report"}, "main")
+			b.eventually("b has the push", func() bool { return b.doc.Texts(filesMap)["/chapters/one.typ"] == "= One, pushed\n" })
+
+			b.edit(func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
+			a.eventually("a has it", func() bool { return strings.Contains(a.doc.Texts(filesMap)[mainTyp], "2nd") })
+			a.close()
+			b.close()
+			require.Eventually(t, func() bool { return fake.Head("main").Message == "Edits by Bob: main.typ" }, 5*time.Second, time.Millisecond,
+				"committed by itself after everyone left, as Bob (who left last)")
+			require.Equal(t, fakegitlab.Author{Name: "Bob", Email: "bob@example.com"}, fake.Head("main").Author)
+			require.Equal(t, "= One, pushed\n", fake.Text("main")["/chapters/one.typ"])
+		})
+	}
 }
 
 const (

@@ -5,8 +5,14 @@
 //   - a room's files (images, data): GET /rooms/<room>/files/<path>
 //   - GitLab's push webhook: POST /gitlab/webhook
 //
-// Commits are made with the server's bot token: the bot is the author, the editors are Co-authored-by
-// trailers. No user's token is used or kept; who may join and save is asked with the bot's token.
+// Everything is done in a signed-in user's name, with their OAuth token (Options.Token; the server holds no
+// GitLab token of its own):
+//   - who may join and save: asked with that user's token (access.go)
+//   - a room loads with the token of who opens it, merges a push with the token of someone in it
+//   - a save commits with the saver's token, an auto-save with an editor's: that user is the commit's
+//     author, the other editors are Co-authored-by trailers, the committer is Zwiebelfisch
+//
+// Each project's repository is a git clone in Options.Dir (git.go); tokens never go into it.
 package gitlab
 
 import (
@@ -15,7 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,29 +42,35 @@ const DefaultID = "gitlab"
 // Options configure Rooms. URL and Token are required.
 type Options struct {
 	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>`), and the provider of the
-	// users it lets in (their collab.User.ID is a user id of
-	// this instance). Default DefaultID.
+	// users it lets in (their collab.User.ID is a user id of this instance). Default DefaultID.
 	ID string
-	// URL is the GitLab instance, e.g. https://gitlab.com; Token a bot token with `api` scope (server-side,
-	// never sent to clients): the author of every commit.
-	URL, Token string
-	// Client makes the REST calls (default: one with a 30 s timeout).
+	// URL is the GitLab instance, e.g. https://gitlab.com.
+	URL string
+	// Token is the OAuth access token (scopes read_api, write_repository) of the signed-in user with this
+	// instance's user id user, from any live sign-in; an error when they have none (package auth's
+	// Auth.Token). It keeps tokens out of its errors.
+	Token func(ctx context.Context, user string) (string, error)
+	// Dir is the folder of the projects' git clones, one folder each; "": in memory (gone with the process).
+	Dir string
+	// Client makes the requests to GitLab (default: one with a 30 s timeout; git calls use its transport
+	// only).
 	Client *http.Client
 	// Authenticate decides who may read a room's files (as for the WebSocket: the app's check, which
 	// includes Authorize).
 	Authenticate collab.Authenticate
 	// WebhookSecret is what GitLab sends as X-Gitlab-Token with push events (ServeWebhook; "": none).
 	WebhookSecret string
-	// AuthorEmail is the email of an editor whose email is not known (in Co-authored-by trailers). Default
-	// zwiebelfisch@localhost.
+	// AuthorEmail is the email of an editor whose email is not known (in a commit's author or
+	// Co-authored-by trailers), and of the committer Zwiebelfisch. Default zwiebelfisch@localhost.
 	AuthorEmail string
 	// AutoCommit is the time without edits after which a room commits its changes by itself (also
 	// LeaveDelay after the last user left); 0: never, only "Save to GitLab…". See ParseAutoCommit.
 	AutoCommit time.Duration
 	Log        zerolog.Logger
 
-	repository func(project string) Repository // tests: instead of GitLab's API
-	clock      clock                           // tests: instead of time
+	repository func(project string) Repository                                                // tests: instead of git clones
+	access     func(ctx context.Context, token, project, branch, user string) (Access, error) // tests: instead of GitLab's API
+	clock      clock                                                                          // tests: instead of time
 }
 
 // Rooms are the GitLab rooms of a server. Create them with New, pass them as collab.Options.Extension, mount
@@ -67,7 +81,6 @@ type Rooms struct {
 	authorEmail string
 	autoCommit  time.Duration
 	leaveDelay  time.Duration
-	blobs       *blobCache
 	accessCache accessCache
 	clock       clock
 	log         zerolog.Logger
@@ -75,8 +88,9 @@ type Rooms struct {
 	cancel      context.CancelFunc
 
 	mu            sync.Mutex
-	open          map[string]*room // by room name
-	autoCommitOff map[string]bool  // rooms that never commit by themselves (SetAutoCommit), by room name
+	repos         map[string]Repository // by project
+	open          map[string]*room      // by room name
+	autoCommitOff map[string]bool       // rooms that never commit by themselves (SetAutoCommit), by room name
 	closed        bool
 	tasks         sync.WaitGroup
 }
@@ -92,8 +106,19 @@ func New(opts Options) *Rooms {
 	if opts.Client == nil {
 		opts.Client = &http.Client{Timeout: 30 * time.Second}
 	}
+	gitlab := api{instance: opts.URL, client: opts.Client}
 	if opts.repository == nil {
-		opts.repository = func(p string) Repository { return newProject(opts.URL, opts.Token, p, opts.Client) }
+		committer := Signature{Name: nobody, Email: opts.AuthorEmail}
+		opts.repository = func(p string) Repository {
+			dir := ""
+			if opts.Dir != "" {
+				dir = filepath.Join(opts.Dir, "p-"+url.PathEscape(p)) // never "." or ".."
+			}
+			return newGitRepo(p, dir, gitlab, committer)
+		}
+	}
+	if opts.access == nil {
+		opts.access = gitlab.userAccess
 	}
 	if opts.clock == nil {
 		opts.clock = realClock{}
@@ -101,8 +126,9 @@ func New(opts Options) *Rooms {
 	ctx, cancel := context.WithCancel(context.Background())
 	x := &Rooms{
 		opts: opts, prefix: opts.ID + ":", authorEmail: opts.AuthorEmail, autoCommit: opts.AutoCommit,
-		leaveDelay: LeaveDelay, blobs: newBlobCache(64 << 20), accessCache: accessCache{entries: map[accessKey]cachedAccess{}},
-		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel, open: map[string]*room{}, autoCommitOff: map[string]bool{},
+		leaveDelay: LeaveDelay, accessCache: accessCache{entries: map[accessKey]cachedAccess{}},
+		clock: opts.clock, log: opts.Log, ctx: ctx, cancel: cancel,
+		repos: map[string]Repository{}, open: map[string]*room{}, autoCommitOff: map[string]bool{},
 	}
 	return x
 }
@@ -132,29 +158,60 @@ func ParseAutoCommit(value string) (time.Duration, error) {
 }
 
 // Open makes a room named `<ID>:<project>@<branch>` a GitLab room: a new one loads the branch, a stored
-// one merges what was pushed meanwhile. Other rooms are left alone.
-func (x *Rooms) Open(r *collab.Room, doc *ydoc.Doc) (collab.Handler, error) {
-	g, err := x.openRoom(r.Name(), r, doc)
+// one merges what was pushed meanwhile, with the token of by (who opens it). Other rooms are left alone.
+func (x *Rooms) Open(r *collab.Room, doc *ydoc.Doc, by collab.User) (collab.Handler, error) {
+	g, err := x.openRoom(r.Name(), r, doc, by)
 	if g == nil {
 		return nil, err // not a nil *room in a non-nil Handler
 	}
 	return g, err
 }
 
-// openRoom opens the room name in h (nil: not a GitLab room).
-func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc) (*room, error) {
+// openRoom opens the room name in h as by (nil: not a GitLab room).
+func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc, by collab.User) (*room, error) {
 	project, branch, ok := x.parseRoomName(name)
 	if !ok {
 		return nil, nil
 	}
-	g := &room{x: x, host: h, repo: x.opts.repository(project), name: name, project: project, branch: branch}
-	if err := g.open(x.ctx, doc); err != nil {
+	g := &room{x: x, host: h, repo: x.repository(project), name: name, project: project, branch: branch}
+	if err := g.open(x.ctx, doc, by); err != nil {
 		return nil, fmt.Errorf("gitlab: open %s@%s: %w", project, branch, err)
 	}
 	x.mu.Lock()
 	x.open[name] = g
 	x.mu.Unlock()
 	return g, nil
+}
+
+// repository is project's repository, one for all its rooms.
+func (x *Rooms) repository(project string) Repository {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	r := x.repos[project]
+	if r == nil {
+		r = x.opts.repository(project)
+		x.repos[project] = r
+	}
+	return r
+}
+
+// SignedOut: user signs out (call it before their sign-in and its token end). Each open room with edits
+// of theirs not committed yet commits them as an auto-save would, in their name if the rules let it; it
+// returns when done.
+func (x *Rooms) SignedOut(user collab.User) {
+	x.mu.Lock()
+	var rooms []*room
+	for _, r := range x.open {
+		rooms = append(rooms, r)
+	}
+	x.mu.Unlock()
+	for _, r := range rooms {
+		x.task(func() {
+			if r.autoCommit() > 0 && r.hasEditsBy(user) {
+				r.autoCommitNow(user)
+			}
+		})
+	}
 }
 
 // SetAutoCommit turns committing by itself off (or back to Options.AutoCommit) for the room name, open or
@@ -294,8 +351,8 @@ func (x *Rooms) person(user collab.User, name, email string) *person {
 	return &person{User: user, Name: name, Email: email}
 }
 
-// ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in;
-// blob bytes are cached by sha. CORS is the app's.
+// ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in,
+// fetched with their token if the clone does not have it yet. CORS is the app's.
 //
 // Every answer is passive content: nosniff and a sandboxing CSP (no script runs, also in an SVG opened as
 // a page); images, PDF, fonts and text files are served inline under their type (text as text/plain),
@@ -308,7 +365,8 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
+	user, err := x.opts.Authenticate(r, name)
+	if err != nil { // first: whether a room is open is no one else's business
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -319,7 +377,7 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	content, ok, err := open.asset(r.Context(), file)
+	content, ok, err := open.asset(r.Context(), user, file)
 	if err != nil {
 		http.Error(w, failureMessage(err), http.StatusBadGateway)
 		return
@@ -391,7 +449,8 @@ func (x *Rooms) ServeWebhook(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("Accepted"))
 }
 
-// pushed merges a push into the open rooms of that branch and tells their clients.
+// pushed merges a push into the open rooms of that branch and tells their clients, each fetched with the
+// token of someone in it; a room with nobody signed in fetches it when someone joins (Authorize).
 func (x *Rooms) pushed(ctx context.Context, projects []string, branch string) {
 	x.mu.Lock()
 	var affected []*room
@@ -407,11 +466,13 @@ func (x *Rooms) pushed(ctx context.Context, projects []string, branch string) {
 		go func() {
 			defer wg.Done()
 			x.task(func() {
-				result, err := r.pull(ctx)
-				r.logErr(err, "cannot merge the push")
-				if result != nil {
-					r.host.BroadcastStateless(result.json())
+				for _, user := range r.host.Users() {
+					if token, err := x.token(ctx, user); err == nil {
+						r.pullWith(ctx, token)
+						return
+					}
 				}
+				r.stale.Store(true)
 			})
 		}()
 	}

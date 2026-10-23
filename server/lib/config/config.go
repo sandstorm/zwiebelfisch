@@ -2,17 +2,18 @@
 //
 //	PORT                (default 1234)
 //	ZWF_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
-//	ZWF_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing)
+//	ZWF_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing) the rooms; the GitLab
+//	                    projects' git clones go in the folder repositories/ next to it
 //	ZWF_PLAIN_ROOMS   (default off) 1/true: also serve plain rooms (any other name), backed by nothing but the DB
 //	ZWF_LOG_LEVEL     (default info) debug, info, warn, error
 //	ZWF_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
 //
-// GitLab rooms (`gitlab:<project id or path>@<branch>`), enabled when URL and token are set:
+// GitLab rooms (`gitlab:<project id or path>@<branch>`), enabled when the URL is set. Everything is done
+// with the signed-in user's own OAuth token (the sign-in's scopes include read_api and write_repository):
 //
 //	ZWF_GITLAB_URL             e.g. https://gitlab.com
-//	ZWF_GITLAB_TOKEN           the bot's token (`api` scope), the author of every commit
 //	ZWF_GITLAB_WEBHOOK_SECRET  (optional) enables POST /api/public/gitlab/webhook for push events
-//	ZWF_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in Co-authored-by trailers when theirs is unknown
+//	ZWF_GITLAB_AUTHOR_EMAIL    (optional) an editor's email in commits when theirs is unknown, and the committer's
 //	ZWF_GITLAB_AUTO_COMMIT     (default 10) minutes without edits before a room commits by itself; off: never
 //
 // Sign-in (OpenID Connect, required; package auth). The default provider is the GitLab instance:
@@ -53,7 +54,6 @@ type Config struct {
 	} `koanf:"rooms"`
 	GitLab struct {
 		URL           string `koanf:"url"`
-		Token         string `koanf:"token"`
 		WebhookSecret string `koanf:"webhook_secret"`
 		AuthorEmail   string `koanf:"author_email"`
 		// AutoCommit as written (gitlab.ParseAutoCommit reads it).
@@ -87,7 +87,6 @@ var envKeys = map[string]string{
 	"ZWF_AUTH_REDIRECT_URL":  "auth.redirect_url",
 
 	"ZWF_GITLAB_URL":            "gitlab.url",
-	"ZWF_GITLAB_TOKEN":          "gitlab.token",
 	"ZWF_GITLAB_WEBHOOK_SECRET": "gitlab.webhook_secret",
 	"ZWF_GITLAB_AUTHOR_EMAIL":   "gitlab.author_email",
 	"ZWF_GITLAB_AUTO_COMMIT":    "gitlab.auto_commit",

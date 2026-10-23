@@ -42,12 +42,13 @@ func initialFiles() map[string]any {
 }
 
 type env struct {
-	t     *testing.T
-	repo  *fakeRepo
-	clock *fakeClock
-	x     *Rooms
-	host  *fakeHost
-	room  *room
+	t      *testing.T
+	repo   *fakeRepo
+	tokens *fakeTokens
+	clock  *fakeClock
+	x      *Rooms
+	host   *fakeHost
+	room   *room
 }
 
 type setupOptions struct {
@@ -65,11 +66,12 @@ func setup(t *testing.T, o setupOptions) *env {
 	if o.repo == nil {
 		o.repo = newFakeRepo(o.files)
 	}
-	e := &env{t: t, repo: o.repo, clock: &fakeClock{now: atTen}}
+	e := &env{t: t, repo: o.repo, tokens: &fakeTokens{}, clock: &fakeClock{now: atTen}}
 	e.x = New(Options{
-		URL: "https://gitlab.test", Token: "bot-token", Authenticate: signedIn,
+		URL: "https://gitlab.test", Token: e.tokens.Token, Authenticate: signedIn,
 		WebhookSecret: "hook-secret", AutoCommit: o.autoCommit, Log: zerolog.Nop(),
 		repository: func(p string) Repository { require.Equal(t, projectPath, p); return e.repo },
+		access:     e.repo.Access,
 		clock:      e.clock,
 	})
 	doc := ydoc.New()
@@ -78,9 +80,9 @@ func setup(t *testing.T, o setupOptions) *env {
 		doc, err = ydoc.Load(o.state)
 		require.NoError(t, err)
 	}
-	e.host = &fakeHost{doc: doc}
+	e.host = &fakeHost{doc: doc, users: []collab.User{ann.User()}}
 	var err error
-	e.host.Do(func(doc *ydoc.Doc) { e.room, err = e.x.openRoom(roomName, e.host, doc) })
+	e.host.Do(func(doc *ydoc.Doc) { e.room, err = e.x.openRoom(roomName, e.host, doc, ann.User()) })
 	require.NoError(t, err)
 	t.Cleanup(e.unload)
 	return e
@@ -95,11 +97,13 @@ func (e *env) unload() {
 	e.x.Close()
 }
 
-// save is a client pressing "Save version" (as Stateless does, without a connection to answer).
-func (e *env) save(text string) message {
-	who, text, ok := parseSave(collab.User{}, `{"type":"gitlab:save","message":`+quote(text)+`,"author":{"name":"Ann"}}`)
+// save is Ann pressing "Save version" (as Stateless does, without a connection to answer).
+func (e *env) save(text string) message { return e.saveAs(ann, text) }
+
+func (e *env) saveAs(c *testClient, text string) message {
+	text, ok := parseSave(`{"type":"gitlab:save","message":` + quote(text) + `}`)
 	require.True(e.t, ok)
-	return e.room.save(context.Background(), who, text)
+	return e.room.save(context.Background(), *e.x.editorOf(c), text)
 }
 
 func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"` }
@@ -130,9 +134,10 @@ func replace(t *testing.T, w *ydoc.Writer, doc *ydoc.Doc, path, from, to string)
 }
 
 var (
-	ann  = &testClient{"Ann", "ann@example.com", "1"}
-	bob  = &testClient{"Bob", "bob@example.com", "2"}
-	cleo = &testClient{"Cleo", "cleo@example.com", "3"}
+	ann     = &testClient{"Ann", "ann@example.com", "1"}
+	bob     = &testClient{"Bob", "bob@example.com", "2"}
+	cleo    = &testClient{"Cleo", "cleo@example.com", "3"}
+	clients = map[string]*testClient{"ann": ann, "bob": bob, "cleo": cleo}
 )
 
 func (e *env) text(path string) string {
@@ -194,12 +199,13 @@ func (e *env) conflict() *roomConflict {
 	return &c
 }
 
-// signedIn lets in requests with a session cookie (the stand-in for the app's check).
+// signedIn lets in requests with a session cookie naming a test client (the stand-in for the app's check).
 func signedIn(r *http.Request, _ string) (collab.User, error) {
-	if c, err := r.Cookie("session"); err != nil || c.Value == "" {
+	c, err := r.Cookie("session")
+	if err != nil || clients[c.Value] == nil {
 		return collab.User{}, collab.Refusal{Reason: "Sign in"}
 	}
-	return collab.User{}, nil
+	return clients[c.Value].User(), nil
 }
 
 // routes are the handlers as package app mounts them.
@@ -248,9 +254,11 @@ func TestLoading(t *testing.T) {
 		require.Equal(t, mainText, b.Texts[mainTyp])
 		require.Equal(t, map[string]string{"/img/logo.png": blobSha(logo)}, b.Assets)
 		require.Nil(t, e.changes())
+		require.Equal(t, 1, e.repo.count("blobs "+blobSha([]byte("= One\n\nText of one.\n"))+" "+blobSha([]byte(mainText))+" "+blobSha([]byte("old\n"))), "the .typ files at once")
+		require.Equal(t, []string{"token-1", "token-1"}, e.repo.usedTokens(), "with the token of who opened it")
 	})
 
-	t.Run("loads a large tree", func(t *testing.T) { // its pages: api_test.go
+	t.Run("loads a large tree", func(t *testing.T) {
 		files := map[string]any{mainTyp: "main"}
 		for i := range 150 {
 			files["/data/"+string(rune('a'+i/26))+string(rune('a'+i%26))+".csv"] = "row"
@@ -259,16 +267,25 @@ func TestLoading(t *testing.T) {
 		require.Len(t, e.assets(), 150)
 	})
 
-	t.Run("serves the other files over HTTP to whom Authenticate lets in, blobs cached by sha", func(t *testing.T) {
+	t.Run("serves the other files over HTTP to whom Authenticate lets in, read with their token", func(t *testing.T) {
 		e := setup(t, setupOptions{})
-		res := e.get("/img/logo.png", "ann")
+		e.repo.usedTokens()
+		res := e.get("/img/logo.png", "bob")
 		require.Equal(t, http.StatusOK, res.Code)
 		require.Equal(t, "image/png", res.Header().Get("Content-Type"))
 		require.Equal(t, logo, res.Body.Bytes())
-		e.get("/img/logo.png", "ann")
-		require.Equal(t, 1, e.repo.count("blob "+blobSha(logo)))
+		require.Equal(t, []string{"token-2"}, e.repo.usedTokens())
 		require.Equal(t, http.StatusUnauthorized, e.get("/img/logo.png", "").Code)
 		require.Equal(t, http.StatusNotFound, e.get("/missing.png", "ann").Code)
+		e.tokens.signOut("2")
+		require.Equal(t, http.StatusBadGateway, e.get("/img/logo.png", "bob").Code, "no token to read it with")
+	})
+
+	t.Run("refuses to read a file larger than the limit", func(t *testing.T) {
+		e := setup(t, setupOptions{files: map[string]any{mainTyp: mainText, "/big.bin": make([]byte, maxBlobSize+1)}})
+		res := e.get("/big.bin", "ann")
+		require.Equal(t, http.StatusBadGateway, res.Code)
+		require.Contains(t, res.Body.String(), "larger than 32 MiB")
 	})
 
 	t.Run("serves files as passive content only: no page of the room's files runs on the app's origin", func(t *testing.T) {
@@ -320,18 +337,47 @@ func TestLoading(t *testing.T) {
 		again := setup(t, setupOptions{repo: first.repo, state: state})
 		require.Equal(t, strings.Replace(mainText, "First", "Opening", 1), again.text(mainTyp))
 
-		x := New(Options{repository: func(string) Repository { return first.repo }, Log: zerolog.Nop()})
+		x := New(Options{Token: (&fakeTokens{}).Token, repository: func(string) Repository { return first.repo }, Log: zerolog.Nop()})
 		defer x.Close()
 		host := &fakeHost{doc: ydoc.New()}
-		_, err := x.openRoom(roomName, host, host.doc)
+		_, err := x.openRoom(roomName, host, host.doc, ann.User())
 		require.ErrorIs(t, err, errUnreachable)
+	})
+
+	t.Run("a new room does not open for who has no token; a stored one does, and fetches at the next join", func(t *testing.T) {
+		first := setup(t, setupOptions{})
+		var state []byte
+		first.host.Do(func(doc *ydoc.Doc) { state = doc.State() })
+		first.unload()
+		tokens := &fakeTokens{}
+		tokens.signOut("1")
+		x := New(Options{Token: tokens.Token, repository: func(string) Repository { return first.repo }, access: first.repo.Access, Log: zerolog.Nop()})
+		defer x.Close()
+		host := &fakeHost{doc: ydoc.New()}
+		_, err := x.openRoom(roomName, host, host.doc, ann.User())
+		require.ErrorIs(t, err, errSignedOut)
+
+		doc, err := ydoc.Load(state)
+		require.NoError(t, err)
+		stored := &fakeHost{doc: doc}
+		var r *room
+		stored.Do(func(doc *ydoc.Doc) { r, err = x.openRoom(roomName, stored, doc, ann.User()) })
+		require.NoError(t, err)
+		defer stored.Do(func(*ydoc.Doc) { r.Close() })
+		sha := first.repo.push("main", map[string]any{"/ch1.typ": "pushed"})
+		require.NoError(t, x.Authorize(context.Background(), bob.User(), roomName))
+		require.Eventually(t, func() bool {
+			var b *base
+			stored.Do(func(doc *ydoc.Doc) { b = readMeta(doc) })
+			return b.Sha == sha
+		}, 5*time.Second, time.Millisecond, "Bob's join fetched it, with his token")
 	})
 
 	t.Run("leaves other rooms alone", func(t *testing.T) {
 		x := New(Options{Log: zerolog.Nop()})
 		defer x.Close()
 		for _, name := range []string{"plain", "gitlab:", "gitlab:@main", "gitlab:p@", "github:p@main"} {
-			r, err := x.openRoom(name, &fakeHost{}, ydoc.New())
+			r, err := x.openRoom(name, &fakeHost{}, ydoc.New(), ann.User())
 			require.NoError(t, err)
 			require.Nil(t, r, name)
 			require.False(t, x.Handles(name), name)
@@ -344,12 +390,15 @@ func TestLoading(t *testing.T) {
 }
 
 func TestSaving(t *testing.T) {
-	t.Run("commits the changed files as one commit by the bot, names who saved, and moves the base", func(t *testing.T) {
+	t.Run("commits the changed files as one commit by who saved, with their token, and moves the base", func(t *testing.T) {
 		e := setup(t, setupOptions{})
 		e.edit(mainTyp, "First", "Opening")
-		got := e.save("Reword the opening")
+		e.repo.usedTokens()
+		got := e.saveAs(bob, "Reword the opening")
 		head := e.repo.head("main")
-		require.Equal(t, message{Type: msgSaved, Sha: head.sha, Author: "Ann"}, got)
+		require.Equal(t, message{Type: msgSaved, Sha: head.sha, Author: "Bob"}, got)
+		require.Equal(t, Signature{"Bob", "bob@example.com"}, head.author)
+		require.Equal(t, []string{"token-2"}, e.repo.usedTokens())
 		require.Equal(t, "Reword the opening", head.message, "nobody known edited: no co-authors")
 		require.Equal(t, strings.Replace(mainText, "First", "Opening", 1), e.repo.texts()[mainTyp])
 		require.Equal(t, head.sha, e.base().Sha)
@@ -365,15 +414,23 @@ func TestSaving(t *testing.T) {
 		require.Equal(t, "Edit via Zwiebelfisch", e.repo.head("main").message)
 	})
 
-	t.Run("names who saves: the user, else whom the client names, else the editor", func(t *testing.T) {
-		who, text, ok := parseSave(collab.User{Name: "Verified"}, `{"type":"gitlab:save","message":" Fix ","author":{"name":"Claimed"}}`)
-		require.Equal(t, []any{"Verified", "Fix", true}, []any{who, text, ok})
-		who, _, _ = parseSave(collab.User{}, `{"type":"gitlab:save"}`)
-		require.Equal(t, "Zwiebelfisch", who)
-		_, _, ok = parseSave(collab.User{}, `{"type":"other"}`)
+	t.Run("reads a save's message", func(t *testing.T) {
+		text, ok := parseSave(`{"type":"gitlab:save","message":" Fix ","author":{"name":"Claimed"}}`)
+		require.Equal(t, []any{"Fix", true}, []any{text, ok})
+		text, _ = parseSave(`{"type":"gitlab:save"}`)
+		require.Equal(t, defaultCommitMessage, text)
+		_, ok = parseSave(`{"type":"other"}`)
 		require.False(t, ok)
-		_, _, ok = parseSave(collab.User{}, `not json`)
+		_, ok = parseSave(`not json`)
 		require.False(t, ok)
+	})
+
+	t.Run("does not commit for a saver who signed out meanwhile", func(t *testing.T) {
+		e := setup(t, setupOptions{})
+		e.edit(mainTyp, "First", "Opening")
+		e.tokens.signOut("1")
+		require.Equal(t, message{Type: msgError, Message: "Sign in with GitLab again."}, e.save(""))
+		require.Zero(t, e.repo.count("commit main"))
 	})
 
 	t.Run("commits creates, renames and deletes made by a client", func(t *testing.T) {
@@ -407,8 +464,7 @@ func TestSaving(t *testing.T) {
 		require.Equal(t, upload, files["/img/upload.png"])
 		require.Equal(t, blobSha(upload), e.assets()["/img/upload.png"], "the upload is a repository file now")
 		require.Equal(t, map[string]string{"/img/upload.png": blobSha(upload), "/renamed.png": blobSha(logo)}, e.base().Assets)
-		require.Equal(t, upload, e.get("/img/upload.png", "ann").Body.Bytes(), "from the cache")
-		require.Zero(t, e.repo.count("blob "+blobSha(upload)))
+		require.Equal(t, upload, e.get("/img/upload.png", "ann").Body.Bytes(), "from the repository")
 	})
 }
 
@@ -484,14 +540,33 @@ func TestUpstreamChanges(t *testing.T) {
 		require.Equal(t, e.repo.texts()[mainTyp], e.text(mainTyp))
 	})
 
-	t.Run("takes in a push to another file that landed under its commit", func(t *testing.T) {
+	t.Run("merges a push to another file that came first, and commits on top of it", func(t *testing.T) {
 		e := setup(t, setupOptions{})
 		e.edit(mainTyp, "First", "Opening")
-		e.repo.failNext = &failure{push: map[string]any{"/ch1.typ": "pushed"}, under: true}
+		e.repo.failNext = &failure{push: map[string]any{"/ch1.typ": "pushed"}}
 		require.Equal(t, msgSaved, e.save("").Type)
 		require.Equal(t, "pushed", e.text("/ch1.typ"))
 		require.Equal(t, e.repo.head("main").sha, e.base().Sha)
 		require.Equal(t, "pushed", e.base().Texts["/ch1.typ"])
+		require.Equal(t, "pushed", e.repo.texts()["/ch1.typ"])
+	})
+
+	t.Run("merges a webhook's push with the token of someone in the room; with nobody, at the next join", func(t *testing.T) {
+		e := setup(t, setupOptions{})
+		e.host.setUsers(collab.User{}, bob.User()) // someone signed in otherwise, and Bob
+		e.repo.usedTokens()
+		sha := e.repo.push("main", map[string]any{"/ch1.typ": "pushed"})
+		e.webhook("hook-secret")
+		require.Equal(t, sha, e.base().Sha)
+		require.Equal(t, []string{"token-2", "token-2"}, e.repo.usedTokens())
+
+		e.host.setUsers()
+		sha = e.repo.push("main", map[string]any{"/ch1.typ": "pushed again"})
+		e.webhook("hook-secret")
+		require.NotEqual(t, sha, e.base().Sha, "nobody to fetch it for")
+		require.NoError(t, e.x.Authorize(context.Background(), cleo.User(), roomName))
+		require.Eventually(t, func() bool { return e.base().Sha == sha }, 5*time.Second, time.Millisecond)
+		require.Contains(t, e.repo.usedTokens(), "token-3")
 	})
 
 	t.Run("reports a true conflict to the clients and keeps the room and the branch as they are", func(t *testing.T) {
@@ -563,6 +638,10 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		e.editAs(cleo, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
 		e.save("Reword")
 		require.Equal(t, "Reword\n\nCo-authored-by: Bob <bob@example.com>\nCo-authored-by: Cleo <cleo@example.com>", e.repo.head("main").message)
+		e.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Opening", "Start") })
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "2nd", "Second") })
+		e.save("Again")
+		require.Equal(t, "Again\n\nCo-authored-by: Bob <bob@example.com>", e.repo.head("main").message, "the saver is the author, not a co-author")
 	})
 
 	t.Run("keeps the editors when a commit fails", func(t *testing.T) {
@@ -573,7 +652,7 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		c := e.changes()
 		require.Equal(t, ms(atTen), c.Since)
 		require.Equal(t, []string{"Ann"}, c.Editors)
-		e.save("")
+		e.saveAs(bob, "")
 		require.Equal(t, "Edit via Zwiebelfisch\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
 	})
 
@@ -586,13 +665,13 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		first.unload()
 		again := setup(t, setupOptions{repo: first.repo, state: state})
 		require.Equal(t, []string{"Ann"}, again.changes().Editors)
-		again.save("")
+		again.saveAs(bob, "")
 		require.Equal(t, "Edit via Zwiebelfisch\n\nCo-authored-by: Ann <zwiebelfisch@localhost>", again.repo.head("main").message)
 	})
 }
 
 func TestAutoCommit(t *testing.T) {
-	t.Run("commits on the branch itself after the room was idle: named after who edited most, the editors as co-authors", func(t *testing.T) {
+	t.Run("commits on the branch itself after the room was idle: by who edited most, the others as co-authors", func(t *testing.T) {
 		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
 		var minutes float64
 		require.True(t, e.meta(metaAutoCommit, &minutes))
@@ -608,7 +687,8 @@ func TestAutoCommit(t *testing.T) {
 		e.clock.Advance(time.Minute)
 		head := e.repo.head("main")
 		require.Equal(t, parent, head.parent)
-		require.Equal(t, "Edits by Ann, Bob: chapters/new.typ, main.typ\n\nCo-authored-by: Ann <ann@example.com>\nCo-authored-by: Bob <bob@example.com>", head.message)
+		require.Equal(t, "Edits by Ann, Bob: chapters/new.typ, main.typ\n\nCo-authored-by: Ann <ann@example.com>", head.message)
+		require.Equal(t, Signature{"Bob", "bob@example.com"}, head.author)
 		require.Equal(t, "newer\n", e.repo.texts()["/chapters/new.typ"])
 		require.Equal(t, []message{{Type: msgSaved, Sha: head.sha, Author: "Bob", Automatic: true}}, e.host.takeSent())
 		require.Nil(t, e.changes())
@@ -622,7 +702,7 @@ func TestAutoCommit(t *testing.T) {
 			}
 		})
 		e.clock.Advance(time.Minute)
-		require.Equal(t, "Edits by Ann: a.typ, b.typ, c.typ and 2 more\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
+		require.Equal(t, "Edits by Ann: a.typ, b.typ, c.typ and 2 more", e.repo.head("main").message)
 	})
 
 	t.Run("commits a little while after the last user left, unless someone is back by then", func(t *testing.T) {
@@ -641,7 +721,51 @@ func TestAutoCommit(t *testing.T) {
 		left = e.left()
 		e.clock.Advance(LeaveDelay)
 		<-left
-		require.Equal(t, "Edits by Ann: main.typ\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
+		require.Equal(t, "Edits by Ann: main.typ", e.repo.head("main").message)
+	})
+
+	t.Run("after the last user left, commits as them if they edited; the others are co-authors", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
+		e.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Third", "3rd") })
+		e.host.setEmpty(true)
+		e.repo.usedTokens()
+		left := e.leftBy(bob)
+		e.clock.Advance(LeaveDelay)
+		<-left
+		head := e.repo.head("main")
+		require.Equal(t, Signature{"Bob", "bob@example.com"}, head.author)
+		require.Equal(t, "Edits by Ann, Bob: main.typ\n\nCo-authored-by: Ann <ann@example.com>", head.message)
+		require.Equal(t, "token-2", e.repo.usedTokens()[2], "asked Ann, Bob, then committed as Bob")
+	})
+
+	t.Run("does not commit by itself when an editor is not signed in any more (a restart): the changes stay", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		parent := e.repo.head("main").sha
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Third", "3rd") })
+		e.tokens.signOut("2")
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, e.repo.head("main").sha)
+		const skipped = "Auto-save skipped: Bob is not signed in; someone who may push to main must save."
+		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
+		require.Equal(t, skipped, e.commitFailure().Message)
+		require.Equal(t, []string{"Ann", "Bob"}, e.changes().Editors)
+	})
+
+	t.Run("a sign-out commits the user's edits first, as them", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		parent := e.repo.head("main").sha
+		e.x.SignedOut(cleo.User())
+		require.Equal(t, parent, e.repo.head("main").sha, "no edits of Cleo's")
+		e.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Third", "3rd") })
+		e.x.SignedOut(ann.User())
+		head := e.repo.head("main")
+		require.Equal(t, parent, head.parent)
+		require.Equal(t, Signature{"Ann", "ann@example.com"}, head.author)
+		require.Equal(t, "Edits by Bob, Ann: main.typ\n\nCo-authored-by: Bob <bob@example.com>", head.message)
 	})
 
 	t.Run("never commits by itself when off", func(t *testing.T) {
@@ -714,7 +838,7 @@ func TestAutoCommit(t *testing.T) {
 		host := &fakeHost{doc: ydoc.New()}
 		var opened *room
 		var err error
-		host.Do(func(doc *ydoc.Doc) { opened, err = e.x.openRoom(roomName, host, doc) })
+		host.Do(func(doc *ydoc.Doc) { opened, err = e.x.openRoom(roomName, host, doc, ann.User()) })
 		require.NoError(t, err)
 		t.Cleanup(func() { host.Do(func(*ydoc.Doc) { opened.Close() }) })
 		var minutes *float64
@@ -748,12 +872,12 @@ func TestAutoCommit(t *testing.T) {
 		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
 
 		require.Equal(t, msgSaved, e.save("Reviewed").Type)
-		require.Equal(t, "Reviewed\n\nCo-authored-by: Bob <bob@example.com>\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
+		require.Equal(t, "Reviewed\n\nCo-authored-by: Bob <bob@example.com>", e.repo.head("main").message)
 		require.Nil(t, e.commitFailure())
 
 		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Third", "3rd") })
 		e.clock.Advance(10 * time.Minute)
-		require.Equal(t, "Edits by Ann: main.typ\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message, "Ann's alone")
+		require.Equal(t, "Edits by Ann: main.typ", e.repo.head("main").message, "Ann's alone")
 		require.Equal(t, 3, e.repo.count("access 2 main"), "asked afresh each time")
 	})
 
@@ -818,11 +942,13 @@ func TestAutoCommit(t *testing.T) {
 	})
 }
 
-// left runs Left as the collaboration server does when the last client left, and waits until it waits for
-// the leave delay (or has returned); the channel closes when it returns.
-func (e *env) left() <-chan struct{} {
+// left runs Left as the collaboration server does when the last client (Ann) left, and waits until it
+// waits for the leave delay (or has returned); the channel closes when it returns.
+func (e *env) left() <-chan struct{} { return e.leftBy(ann) }
+
+func (e *env) leftBy(last *testClient) <-chan struct{} {
 	done := make(chan struct{})
-	go func() { defer close(done); e.room.Left(context.Background()) }()
+	go func() { defer close(done); e.room.Left(context.Background(), last.User()) }()
 	require.Eventually(e.t, func() bool {
 		select {
 		case <-done:
@@ -867,6 +993,15 @@ func TestFailedCommits(t *testing.T) {
 		e.repo.push("main", map[string]any{"/ch1.typ": "pushed"})
 		e.webhook("hook-secret")
 		require.Nil(t, e.commitFailure())
+	})
+
+	t.Run("a commit by itself that cannot ask GitLab who may push says so", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Edit(filesMap, mainTyp, 0, 0, "Hello. ") })
+		e.repo.unreachable = true
+		e.clock.Advance(10 * time.Minute)
+		const skipped = "Auto-save skipped: cannot ask GitLab whether Ann may push to main (GitLab could not be reached (fetch failed))."
+		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
 	})
 
 	t.Run("gives way to a conflict: GitLab answered, the conflict is what blocks the commit now", func(t *testing.T) {

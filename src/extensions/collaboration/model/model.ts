@@ -54,7 +54,7 @@ export class Collaboration {
     const { project, user } = shared;
     this.signedOut = server?.signedOut ?? new Promise<void>(() => {});
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
-      this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, user && { name: user.name });
+      this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell);
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);

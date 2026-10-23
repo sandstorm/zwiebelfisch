@@ -131,3 +131,16 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [`assets`], [the other files: blob sha, or uploaded bytes not committed yet], [GitLab],
   [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`], [GitLab],
 )
+
+=== GitLab rooms <architecture-data-model-gitlab>
+
+The server holds no GitLab token of its own: everything a GitLab room does, it does with the token of a signed-in user (package `auth` keeps the tokens in memory and refreshes them; package `gitlab` asks it for one by user id).
+
+#figure(
+  mermaid(read("../diagrams/gitlab-tokens.mmd"), width: 85%),
+  caption: [Whose token a GitLab room uses: the user it acts for.],
+)
+
+- *Loading, merging:* the token of who opens the room; a webhook's push, of someone in it (nobody: at the next join).
+- *Saving:* the saver's, who is the commit's author; an auto-save, an editor's (who left last, else who edited most). The other editors are `Co-authored-by:` trailers, the committer is Zwiebelfisch.
+- *The repository* is one bare git clone per project next to the SQLite file (`repositories/`), partial (no blobs until a room reads them: the `.typ` files at once, other files on request), with commits built in memory and pushed only if the branch did not move. No token is ever written to it.

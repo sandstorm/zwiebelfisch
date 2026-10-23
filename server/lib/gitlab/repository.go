@@ -5,45 +5,36 @@ import (
 	"errors"
 )
 
-// Repository is a branch-holding repository as a room needs it: read a commit's files, commit the room's
-// changes, tell who may do so. GitLab's is project (api.go).
+// Repository is a project's repository as a room needs it: fetch a branch, read a commit's files, commit
+// the room's changes. Every call that talks to GitLab takes the OAuth token of the user it acts for.
+// GitLab's is the git clone of git.go.
 type Repository interface {
-	// Head is the commit branch points at.
-	Head(ctx context.Context, branch string) (string, error)
-	// Tree lists every file (blob) of the commit sha.
-	Tree(ctx context.Context, sha string) ([]TreeEntry, error)
-	// Blob returns the bytes of a blob.
-	Blob(ctx context.Context, sha string) ([]byte, error)
-	// Commit makes one commit of actions on top of ExpectedHead, which must still be the branch's head (else
-	// ErrConflict: upstream moved, nothing was committed).
-	Commit(ctx context.Context, c CommitRequest) (Commit, error)
-	// Access is what user (the provider's user id) may do with branch, as the repository's credentials (the
-	// bot's) can tell.
-	Access(ctx context.Context, user, branch string) (Access, error)
-}
-
-// Access is what a user may do with a branch.
-type Access struct {
-	// Role is the user's role on the project in the provider's words ("Reporter"); "": not a member.
-	Role string
-	// Edit: the role may change the branch (GitLab: Developer or more): join the room.
-	Edit bool
-	// Push: no protection of the branch keeps the user from pushing to it: save.
-	Push bool
+	// Head fetches branch (its commits and trees) and returns the commit it points at; Tree then knows it.
+	Head(ctx context.Context, token, branch string) (string, error)
+	// Tree lists every file (blob) of the commit sha, fetched before.
+	Tree(sha string) ([]TreeEntry, error)
+	// Blobs returns the bytes of the blobs shas, in their order, fetching the ones not here yet in one
+	// request. A blob larger than maxBlobSize is not read: errTooLarge.
+	Blobs(ctx context.Context, token string, shas []string) ([][]byte, error)
+	// Commit makes one commit of actions on top of ExpectedHead and pushes it, unless the branch is no longer
+	// at ExpectedHead (ErrConflict: nothing was committed) or an action's path is not one git takes
+	// (errBadPath). It returns the commit's sha.
+	Commit(ctx context.Context, token string, c CommitRequest) (string, error)
 }
 
 // TreeEntry is a file of a commit: its path in the repository ("/chapter.typ") and blob sha.
 type TreeEntry struct{ Path, Sha string }
 
-// CommitRequest is one commit. Its author is whoever the repository's credentials belong to (the bot);
-// the editors are named in Message.
+// CommitRequest is one commit: by Author (the user whose token pushes it), the other editors named in
+// Message.
 type CommitRequest struct {
 	Branch, ExpectedHead, Message string
+	Author                        Signature
 	Actions                       []Action
 }
 
-// Commit is a commit made: its sha and its parent's.
-type Commit struct{ Sha, Parent string }
+// Signature is who made a commit.
+type Signature struct{ Name, Email string }
 
 // Action is one change of a commit.
 type Action struct {
@@ -51,7 +42,6 @@ type Action struct {
 	Path         string // "/chapter.typ"
 	PreviousPath string // ActionMove: where the file was
 	Content      []byte // ActionCreate, ActionUpdate; ActionMove with new content (nil: the content stays)
-	Text         bool   // Content is text (else binary)
 }
 
 type ActionKind string
@@ -65,3 +55,13 @@ const (
 
 // ErrConflict: the branch is not at the commit expected; nothing was committed.
 var ErrConflict = errors.New("gitlab: the branch moved")
+
+// maxBlobSize is the largest file a room reads from the repository.
+const maxBlobSize = 32 << 20
+
+// errBadPath: a commit names a file git does not take (an empty, ".", ".." or ".git" part, or a file where
+// a folder is); nothing was committed.
+var errBadPath = errors.New("is not a file name git takes")
+
+// errTooLarge: a file is larger than maxBlobSize.
+var errTooLarge = errors.New("a file is larger than 32 MiB, more than Zwiebelfisch reads")

@@ -51,7 +51,7 @@ A server without sign-in, or with neither GitLab nor plain rooms, does not start
 
 === Sign-in <configuration-collaboration-server-sign-in>
 
-People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.html")[OpenID Connect] provider, by default the GitLab instance (@configuration-gitlab-integration): register an application there (GitLab: _Edit profile → Applications_, or an instance or group application), confidential, with the callback URL `https://<server>/api/public/auth/callback` and the scopes `openid profile email read_api`.
+People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.html")[OpenID Connect] provider, by default the GitLab instance (@configuration-gitlab-integration): register an application there (GitLab: _Edit profile → Applications_, or an instance or group application), confidential, with the callback URL `https://<server>/api/public/auth/callback` and the scopes `openid profile email read_api write_repository` (the last two: GitLab rooms work in the user's name).
 
 #table(
   columns: 2,
@@ -62,7 +62,7 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
   [`ZWF_AUTH_ISSUER`], [The provider (default `ZWF_GITLAB_URL`). Another one signs people in, but GitLab rooms refuse them: their GitLab account is unknown.],
 )
 
-- The server keeps who signed in in memory, with the user's tokens: nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise.
+- The server keeps who signed in in memory, with the user's tokens (refreshed when they expire): nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise. A sign-in on its way keeps nothing on the server: its state is in a cookie sealed with a key made at start.
 - The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
 - Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
 
@@ -74,5 +74,5 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 - *Sign in* with the status bar's "Sign in": the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
 - *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
-- `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes the fake GitLab unreachable (`&on=false` ends it).
+- `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes pushes to that branch fail as if the fake GitLab were unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

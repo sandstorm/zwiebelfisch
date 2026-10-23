@@ -54,8 +54,8 @@ type Options struct {
 //     is its repository.
 //   - POST /playground/upstream?room=gitlab:<project>@<branch>[&change=append|heading]: commits a change to
 //     that branch, as a colleague pushing would, then delivers GitLab's push webhook. Answers {sha, path, message}.
-//   - POST /playground/outage?room=gitlab:<project>@<branch>[&on=false]: GitLab cannot be reached for that
-//     branch until called with on=false. Answers {branch, reachable}.
+//   - POST /playground/outage?room=gitlab:<project>@<branch>[&on=false]: pushes to that branch fail as when
+//     GitLab cannot be reached, until called with on=false. Answers {branch, reachable}.
 //   - POST /playground/auto-commit?room=gitlab:<project>@<branch>[&on=true]: that room (open or not yet)
 //     never commits by itself, until called with on=true (the server's setting, ZWF_GITLAB_AUTO_COMMIT,
 //     which the other rooms keep). Answers {room, autoCommit}.

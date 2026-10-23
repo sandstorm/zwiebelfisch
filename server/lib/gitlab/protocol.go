@@ -57,10 +57,6 @@ type commitFailure struct {
 type clientMessage struct {
 	Type    string `json:"type"` // gitlab:save
 	Message string `json:"message"`
-	Author  *struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	} `json:"author"`
 }
 
 // message is a stateless message to clients: the outcome of a save, a commit by the server or a merge.

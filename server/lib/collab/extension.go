@@ -10,10 +10,10 @@ import (
 // commit it and merge upstream pushes.
 type Extension interface {
 	// Open is called on the room's goroutine once its document is loaded from the store, before anyone
-	// joins, so it may take its time (e.g. load the room from elsewhere). doc may be used during Open only;
-	// later through Room.Do. Open returns what the room does from now on, or nil to leave the room alone; an
-	// error refuses the clients that came to open it.
-	Open(r *Room, doc *ydoc.Doc) (Handler, error)
+	// joins, so it may take its time (e.g. load the room from elsewhere). by is the user whose join loads
+	// the room. doc may be used during Open only; later through Room.Do. Open returns what the room does
+	// from now on, or nil to leave the room alone; an error refuses the clients that came to open it.
+	Open(r *Room, doc *ydoc.Doc, by User) (Handler, error)
 }
 
 // Handler is what an extension does in one room. Stateless and Close are called on the room's goroutine
@@ -21,10 +21,10 @@ type Extension interface {
 type Handler interface {
 	// Stateless receives a stateless message from p's client.
 	Stateless(p *Peer, payload string)
-	// Left is called when the last client left, on a goroutine of its own. The room stays loaded (and
-	// joinable) until Left returns; then it unloads, unless someone came back. ctx ends when the server
-	// closes.
-	Left(ctx context.Context)
+	// Left is called when the last client left (last is its user), on a goroutine of its own. The room
+	// stays loaded (and joinable) until Left returns; then it unloads, unless someone came back. ctx ends
+	// when the server closes.
+	Left(ctx context.Context, last User)
 	// Close: the room unloads (its document is stored).
 	Close()
 }
@@ -45,6 +45,18 @@ func (r *Room) Do(fn func(doc *ydoc.Doc)) bool {
 // BroadcastStateless sends a stateless message to every client in the room.
 func (r *Room) BroadcastStateless(payload string) {
 	r.r.do(func() { r.r.broadcast(msgStateless, new(encoder).string(payload).buf) })
+}
+
+// Users are the users of the clients in the room now (a user with two clients twice; none once it has
+// unloaded).
+func (r *Room) Users() []User {
+	var users []User
+	r.r.call(func() {
+		for p := range r.r.peers {
+			users = append(users, p.user)
+		}
+	})
+	return users
 }
 
 // Empty is whether no client is in the room (also true once it has unloaded).

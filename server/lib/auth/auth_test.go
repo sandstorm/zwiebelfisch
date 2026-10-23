@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -184,13 +186,34 @@ func TestCallbackRefusals(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, status, "not signed in as Mallory")
 	})
 
-	t.Run("a callback used twice", func(t *testing.T) {
+	t.Run("a callback used twice: the provider takes a code once", func(t *testing.T) {
 		b := newBrowser(t, Options{})
 		res := b.do(http.MethodGet, server+"/api/public/auth/login?login_hint=Ann")
 		callback := b.do(http.MethodGet, server+res.Header().Get("Location")).Header().Get("Location")
 		login := b.cookies[loginCookie]
 		require.Equal(t, http.StatusSeeOther, b.do(http.MethodGet, callback).Code)
 		b.cookies[loginCookie] = login
+		require.Equal(t, http.StatusBadGateway, b.do(http.MethodGet, callback).Code)
+		require.Len(t, b.auth.sessions, 1, "no second session")
+	})
+
+	t.Run("a login cookie forged, from another server, or expired", func(t *testing.T) {
+		now := time.Now()
+		b := newBrowser(t, Options{now: func() time.Time { return now }})
+		res := b.do(http.MethodGet, server+"/api/public/auth/login?login_hint=Ann")
+		callback := b.do(http.MethodGet, server+res.Header().Get("Location")).Header().Get("Location")
+		login := *b.cookies[loginCookie]
+		forged := login
+		forged.Value = login.Value[:len(login.Value)-2] + "AA"
+		b.cookies[loginCookie] = &forged
+		require.Equal(t, http.StatusBadRequest, b.do(http.MethodGet, callback).Code)
+
+		restarted := newBrowser(t, Options{}) // its key is another
+		restarted.cookies[loginCookie] = &login
+		require.Equal(t, http.StatusBadRequest, restarted.do(http.MethodGet, callback).Code)
+
+		now = now.Add(loginLifetime + time.Second)
+		b.cookies[loginCookie] = &login
 		require.Equal(t, http.StatusBadRequest, b.do(http.MethodGet, callback).Code)
 	})
 
@@ -282,4 +305,58 @@ func TestProviderUnreachable(t *testing.T) {
 	mount(a).ServeHTTP(res, httptest.NewRequest(http.MethodGet, server+"/api/public/auth/login", nil))
 	require.Equal(t, http.StatusBadGateway, res.Code)
 	require.Contains(t, res.Body.String(), "cannot be reached")
+}
+
+func TestTokenOfASignedInUser(t *testing.T) {
+	ctx := context.Background()
+	b := newBrowser(t, Options{})
+	b.signIn("Ann", "/")
+	_, err := b.auth.Token(ctx, "3")
+	require.ErrorIs(t, err, ErrNoToken, "nobody signed in as 3")
+	token, err := b.auth.Token(ctx, "2")
+	require.NoError(t, err)
+	again, err := b.auth.Token(ctx, "2")
+	require.NoError(t, err)
+	require.Equal(t, token, again, "still valid: no refresh")
+
+	t.Run("an expired token is refreshed once at a time, and the rotated refresh token kept", func(t *testing.T) {
+		b := newBrowser(t, Options{})
+		b.fake.IdentityProvider().SetTokenLifetime(time.Second) // expired at once (oauth2 renews 10 s early)
+		b.signIn("Ann", "/")
+		var wg sync.WaitGroup
+		tokens := make([]string, 8)
+		for i := range tokens {
+			wg.Go(func() {
+				var err error
+				tokens[i], err = b.auth.Token(ctx, "2")
+				require.NoError(t, err)
+			})
+		}
+		wg.Wait()
+		second, err := b.auth.Token(ctx, "2") // a third refresh: works only with the rotated refresh token
+		require.NoError(t, err)
+		require.NotContains(t, tokens, second)
+	})
+
+	t.Run("from any live session; none after signing out of all", func(t *testing.T) {
+		b := newBrowser(t, Options{})
+		b.signIn("Ann", "/")
+		other := &browser{t: t, auth: b.auth, server: b.server, fake: b.fake, cookies: map[string]*http.Cookie{}}
+		other.signIn("Ann", "/")
+		require.Equal(t, http.StatusNoContent, b.do(http.MethodPost, server+"/api/auth/logout").Code)
+		_, err := b.auth.Token(ctx, "2")
+		require.NoError(t, err, "the other browser's session")
+		require.Equal(t, http.StatusNoContent, other.do(http.MethodPost, server+"/api/auth/logout").Code)
+		_, err = b.auth.Token(ctx, "2")
+		require.ErrorIs(t, err, ErrNoToken)
+	})
+
+	t.Run("not from an expired session", func(t *testing.T) {
+		now := time.Now()
+		b := newBrowser(t, Options{now: func() time.Time { return now }})
+		b.signIn("Ann", "/")
+		now = now.Add(SessionLifetime + time.Minute)
+		_, err := b.auth.Token(ctx, "2")
+		require.ErrorIs(t, err, ErrNoToken)
+	})
 }

@@ -16,7 +16,7 @@ function setup() {
   const channel = { send: (payload: string) => void sent.push(payload), onDidReceiveMessage: messages.event };
   const receive = (payload: string) => messages.fire(payload);
   const told: { message: string; severity: string }[] = [];
-  const sourceControl = new GitLabSourceControl(ydoc, channel, (message, severity) => told.push({ message, severity }), { name: 'Ann' });
+  const sourceControl = new GitLabSourceControl(ydoc, channel, (message, severity) => told.push({ message, severity }));
   let changes = 0;
   sourceControl.onDidChange(() => changes++);
   return { meta, sent, receive, sourceControl, told, changes: () => changes };
@@ -30,11 +30,11 @@ describe('GitLabSourceControl', () => {
     expect(GitLabSourceControl.isGitLabRoom(ydoc)).toBe(true);
   });
 
-  it('commits as its author, busy until the server answers; tells the answer and the news', () => {
+  it('commits, busy until the server answers; tells the answer and the news', () => {
     const { sent, receive, sourceControl, told, changes } = setup();
     expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Zwiebelfisch' });
     sourceControl.commit('Fix typo');
-    expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo', author: { name: 'Ann' } });
+    expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo' });
     expect(sourceControl.busy).toBe(true);
     receive('{"type":"gitlab:merged","sha":"s"}');
     expect(sourceControl.busy).toBe(true);

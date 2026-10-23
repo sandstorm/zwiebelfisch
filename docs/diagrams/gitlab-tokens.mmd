@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant B as browser
+  participant A as auth (memory)
+  participant R as GitLab rooms
+  participant C as git clone (disk)
+  participant G as GitLab
+  B->>A: sign in (read_api, write_repository)
+  B->>R: join, edit, save
+  R->>A: a token of this user (refreshed)
+  R->>G: REST: role, can_push
+  R->>C: fetch, build the commit
+  C->>G: git fetch, push (the token in this call only)

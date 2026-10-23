@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"maps"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,18 +20,20 @@ import (
 // branch check done right), the collaboration room around a GitLab room, a clock the test moves, and
 // clients (as origins of edits).
 
-// fakeRepo is a Repository in memory: one project, its branches, commits with full snapshots. A test acts
-// as GitLab's other users and failures: push as a colleague, failNext, unreachable.
+// fakeRepo is a Repository in memory: one project, its branches, commits with full snapshots, and what its
+// users may do (the access hook). A test acts as GitLab's other users and failures: push as a colleague,
+// failNext, unreachable.
 type fakeRepo struct {
 	mu       sync.Mutex
 	commits  map[string]*fakeCommit
 	branches map[string]string
 	n        int
-	calls    []string // "head main", "tree <sha>", "blob <sha>", "commit main"
-	// failNext happens to the next commit: a push lands first (under: and the commit goes on top of it,
-	// as GitLab's API cannot refuse that), then err is the answer (nil: the commit goes on).
+	calls    []string // "head main", "blobs <sha>…", "commit main", "access <user> main"
+	tokens   []string // the token of each call that talks to GitLab
+	// failNext happens to the next commit: a push lands first, then err is the answer (nil: the commit
+	// goes on, and is refused as the branch moved)
 	failNext *failure
-	// unreachable: asking for a branch's head or committing fails as when the network is down
+	// unreachable: fetching, committing and asking for access fail as when the network is down
 	unreachable bool
 	// alwaysMove: someone pushes before every commit
 	alwaysMove bool
@@ -39,19 +42,19 @@ type fakeRepo struct {
 }
 
 type failure struct {
-	err   error
-	push  map[string]any
-	under bool
+	err  error
+	push map[string]any
 }
 
 type fakeCommit struct {
 	sha, parent, message string
+	author               Signature
 	files                map[string][]byte
 }
 
 func newFakeRepo(files map[string]any) *fakeRepo {
 	r := &fakeRepo{commits: map[string]*fakeCommit{}, branches: map[string]string{}, access: map[string]Access{}}
-	r.branches["main"] = r.record("", files, "Initial commit").sha
+	r.branches["main"] = r.record("", files, "Initial commit", Signature{"Upstream", "upstream@test"}).sha
 	return r
 }
 
@@ -59,12 +62,12 @@ func newFakeRepo(files map[string]any) *fakeRepo {
 func (r *fakeRepo) push(branch string, files map[string]any) string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	c := r.record(r.branches[branch], files, "Upstream change")
+	c := r.record(r.branches[branch], files, "Upstream change", Signature{"Upstream", "upstream@test"})
 	r.branches[branch] = c.sha
 	return c.sha
 }
 
-func (r *fakeRepo) record(parent string, changes map[string]any, message string) *fakeCommit {
+func (r *fakeRepo) record(parent string, changes map[string]any, message string, author Signature) *fakeCommit {
 	files := map[string][]byte{}
 	if p := r.commits[parent]; p != nil {
 		maps.Copy(files, p.files)
@@ -81,7 +84,7 @@ func (r *fakeRepo) record(parent string, changes map[string]any, message string)
 	}
 	r.n++
 	sum := sha1.Sum(fmt.Appendf(nil, "commit %d %s", r.n, parent))
-	c := &fakeCommit{sha: fmt.Sprintf("%x", sum), parent: parent, message: message, files: files}
+	c := &fakeCommit{sha: fmt.Sprintf("%x", sum), parent: parent, message: message, author: author, files: files}
 	r.commits[c.sha] = c
 	return c
 }
@@ -113,29 +116,43 @@ func (r *fakeRepo) count(call string) int {
 	return n
 }
 
-var errUnreachable = errors.New("fetch failed")
+// called records a call with token. Called with mu held.
+func (r *fakeRepo) called(call, token string) {
+	r.calls = append(r.calls, call)
+	r.tokens = append(r.tokens, token)
+}
 
-func (r *fakeRepo) Head(_ context.Context, branch string) (string, error) {
+// usedTokens are the tokens of the calls so far, and forgets them.
+func (r *fakeRepo) usedTokens() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.calls = append(r.calls, "head "+branch)
+	used := r.tokens
+	r.tokens = nil
+	return used
+}
+
+var errUnreachable = errors.New("fetch failed")
+
+func (r *fakeRepo) Head(_ context.Context, token, branch string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.called("head "+branch, token)
 	if r.unreachable {
 		return "", errUnreachable
 	}
 	sha, ok := r.branches[branch]
 	if !ok {
-		return "", &APIError{Status: 404, Message: "404 Branch Not Found"}
+		return "", &APIError{Status: 404, Message: "GitLab has no branch " + branch}
 	}
 	return sha, nil
 }
 
-func (r *fakeRepo) Tree(_ context.Context, sha string) ([]TreeEntry, error) {
+func (r *fakeRepo) Tree(sha string) ([]TreeEntry, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.calls = append(r.calls, "tree "+sha)
 	c := r.commits[sha]
 	if c == nil {
-		return nil, &APIError{Status: 404, Message: "404 Tree Not Found"}
+		return nil, errors.New("object not found")
 	}
 	var entries []TreeEntry
 	for path, content := range c.files {
@@ -145,60 +162,60 @@ func (r *fakeRepo) Tree(_ context.Context, sha string) ([]TreeEntry, error) {
 	return entries, nil
 }
 
-func (r *fakeRepo) Blob(_ context.Context, sha string) ([]byte, error) {
+func (r *fakeRepo) Blobs(_ context.Context, token string, shas []string) ([][]byte, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.calls = append(r.calls, "blob "+sha)
-	for _, c := range r.commits {
-		for _, content := range c.files {
-			if blobSha(content) == sha {
-				return content, nil
+	if len(shas) == 0 {
+		return nil, nil
+	}
+	r.called("blobs "+strings.Join(shas, " "), token)
+	out := make([][]byte, len(shas))
+	for i, sha := range shas {
+		found := false
+		for _, c := range r.commits {
+			for _, content := range c.files {
+				if blobSha(content) == sha {
+					out[i], found = content, true
+				}
 			}
 		}
+		if !found {
+			return nil, errors.New("object not found")
+		}
+		if len(out[i]) > maxBlobSize {
+			return nil, errTooLarge
+		}
 	}
-	return nil, &APIError{Status: 404, Message: "404 Blob Not Found"}
+	return out, nil
 }
 
-func (r *fakeRepo) Commit(_ context.Context, req CommitRequest) (Commit, error) {
+func (r *fakeRepo) Commit(_ context.Context, token string, req CommitRequest) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.calls = append(r.calls, "commit "+req.Branch)
+	r.called("commit "+req.Branch, token)
 	if r.unreachable {
-		return Commit{}, errUnreachable
+		return "", errUnreachable
 	}
 	if r.alwaysMove {
-		r.branches[req.Branch] = r.record(r.branches[req.Branch], map[string]any{"/moving.typ": fmt.Sprint(r.n)}, "Upstream change").sha
+		r.branches[req.Branch] = r.record(r.branches[req.Branch], map[string]any{"/moving.typ": fmt.Sprint(r.n)}, "Upstream change", Signature{}).sha
 	}
 	if f := r.failNext; f != nil {
 		r.failNext = nil
 		if f.push != nil {
-			pushed := r.record(r.branches[req.Branch], f.push, "Upstream change")
-			r.branches[req.Branch] = pushed.sha
-			if f.under {
-				req.ExpectedHead = pushed.sha
-			}
+			r.branches[req.Branch] = r.record(r.branches[req.Branch], f.push, "Upstream change", Signature{}).sha
 		}
 		if f.err != nil {
-			return Commit{}, f.err
+			return "", f.err
 		}
 	}
 	head := r.commits[r.branches[req.Branch]]
 	if head.sha != req.ExpectedHead {
-		return Commit{}, ErrConflict
+		return "", ErrConflict
 	}
 	changes := map[string]any{}
 	for _, a := range req.Actions {
-		_, exists := head.files[a.Path]
 		switch a.Kind {
-		case ActionCreate:
-			if exists {
-				return Commit{}, &APIError{Status: 400, Message: "A file with this name already exists"}
-			}
-			changes[a.Path] = a.Content
-		case ActionUpdate:
-			if !exists {
-				return Commit{}, &APIError{Status: 400, Message: "A file with this name doesn't exist"}
-			}
+		case ActionCreate, ActionUpdate:
 			changes[a.Path] = a.Content
 		case ActionDelete:
 			changes[a.Path] = nil
@@ -210,15 +227,16 @@ func (r *fakeRepo) Commit(_ context.Context, req CommitRequest) (Commit, error) 
 			changes[a.PreviousPath], changes[a.Path] = nil, content
 		}
 	}
-	c := r.record(head.sha, changes, req.Message)
+	c := r.record(head.sha, changes, req.Message, req.Author)
 	r.branches[req.Branch] = c.sha
-	return Commit{Sha: c.sha, Parent: head.sha}, nil
+	return c.sha, nil
 }
 
-func (r *fakeRepo) Access(_ context.Context, user, branch string) (Access, error) {
+// Access is the access hook: what user may do (setAccess), asked with token.
+func (r *fakeRepo) Access(_ context.Context, token, _, branch, user string) (Access, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.calls = append(r.calls, "access "+user+" "+branch)
+	r.called("access "+user+" "+branch, token)
 	if r.unreachable {
 		return Access{}, errUnreachable
 	}
@@ -235,6 +253,30 @@ func (r *fakeRepo) setAccess(user string, a Access) {
 	r.access[user] = a
 }
 
+// fakeTokens are the users' sign-ins: a user (by id) has the token "token-<id>" unless signed out.
+type fakeTokens struct {
+	mu        sync.Mutex
+	signedOut map[string]bool
+}
+
+func (f *fakeTokens) Token(_ context.Context, user string) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.signedOut[user] {
+		return "", errors.New("no sign-in")
+	}
+	return "token-" + user, nil
+}
+
+func (f *fakeTokens) signOut(user string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.signedOut == nil {
+		f.signedOut = map[string]bool{}
+	}
+	f.signedOut[user] = true
+}
+
 // fakeHost is the collaboration room around a GitLab room: one document, run under a lock.
 type fakeHost struct {
 	mu       sync.Mutex
@@ -244,6 +286,7 @@ type fakeHost struct {
 	sentMu sync.Mutex
 	sent   []message
 	empty  bool
+	users  []collab.User
 }
 
 func (h *fakeHost) Do(fn func(doc *ydoc.Doc)) bool {
@@ -264,6 +307,19 @@ func (h *fakeHost) BroadcastStateless(payload string) {
 		panic("not a message: " + payload)
 	}
 	h.sent = append(h.sent, m)
+}
+
+// Users are who is in the room: those set with setUsers.
+func (h *fakeHost) Users() []collab.User {
+	h.sentMu.Lock()
+	defer h.sentMu.Unlock()
+	return h.users
+}
+
+func (h *fakeHost) setUsers(users ...collab.User) {
+	h.sentMu.Lock()
+	defer h.sentMu.Unlock()
+	h.users = users
 }
 
 func (h *fakeHost) Empty() bool {

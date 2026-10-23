@@ -29,6 +29,7 @@ import (
 //
 // A room stored and loaded again continues where it was; only the count of edits per editor starts over.
 // Save, pull and commit run one at a time, and clients keep editing while they talk to the repository.
+// Each talks to it with the token of the user it acts for: who opens, who is in the room, who saves.
 type room struct {
 	x       *Rooms
 	host    host
@@ -39,6 +40,7 @@ type room struct {
 
 	ops      sync.Mutex // one operation at a time
 	disposed atomic.Bool
+	stale    atomic.Bool // a push came while nobody signed in was here to fetch it
 
 	// on the host's goroutine (Open, Handler methods, update listeners, Do)
 	editors      editors
@@ -52,15 +54,16 @@ type host interface {
 	Do(fn func(doc *ydoc.Doc)) bool
 	BroadcastStateless(payload string)
 	Empty() bool
+	Users() []collab.User
 }
 
 // errGone: the room unloaded while an operation ran.
 var errGone = errors.New("gitlab: the room was unloaded")
 
-// open loads the branch into a room that has no base yet; brings a stored room up to date with upstream
-// instead (or opens it as it is when the repository cannot be reached; the next pull or save catches up).
-// Called on the host's goroutine, before anyone joins.
-func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
+// open loads the branch into a room that has no base yet, with by's token; brings a stored room up to date
+// with upstream instead (or opens it as it is when the repository cannot be reached; the next pull or save
+// catches up). Called on the host's goroutine, before anyone joins.
+func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 	var stored roomChanges
 	if readValue(doc, metaChanges, &stored) {
 		r.editors.since = stored.Since
@@ -77,18 +80,26 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
 	if err := r.writeAutoCommit(doc); err != nil {
 		return err
 	}
+	token, tokenErr := r.x.token(ctx, by)
 	if b := readMeta(doc); b != nil {
-		if head, err := r.repo.Head(ctx, r.branch); err == nil && head != b.Sha {
-			if upstream, err := r.snapshot(ctx, head); err == nil {
+		if tokenErr != nil {
+			r.stale.Store(true)
+		} else if head, err := r.repo.Head(ctx, token, r.branch); err != nil {
+			r.stale.Store(true)
+		} else if head != b.Sha {
+			if upstream, err := r.snapshot(ctx, token, head); err == nil {
 				r.applyMerge(doc, upstream)
 			}
 		}
 	} else {
-		head, err := r.repo.Head(ctx, r.branch)
+		if tokenErr != nil {
+			return tokenErr
+		}
+		head, err := r.repo.Head(ctx, token, r.branch)
 		if err != nil {
 			return err
 		}
-		snapshot, err := r.snapshot(ctx, head)
+		snapshot, err := r.snapshot(ctx, token, head)
 		if err != nil {
 			return err
 		}
@@ -113,17 +124,21 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
 // Stateless handles a client's save (gitlab:save), if the client's user may push to the branch: the
 // outcome goes to everyone, or (nothing to commit, an error, a refusal) to the saving client only.
 func (r *room) Stateless(p *collab.Peer, payload string) {
-	user := p.User()
-	name, text, ok := parseSave(user, payload)
+	text, ok := parseSave(payload)
 	if !ok {
 		return
 	}
+	saver := r.x.editorOf(p)
 	r.x.goTask(func() {
-		if err := r.x.mayPush(r.x.ctx, user, r.project, r.branch); err != nil {
+		if saver == nil {
+			p.SendStateless(message{Type: msgError, Message: errSignedOut.Error()}.json())
+			return
+		}
+		if err := r.x.mayPush(r.x.ctx, saver.User, r.project, r.branch); err != nil {
 			p.SendStateless(message{Type: msgError, Message: err.Error()}.json())
 			return
 		}
-		result := r.save(r.x.ctx, name, text)
+		result := r.save(r.x.ctx, *saver, text)
 		if result.Type == msgUnchanged || result.Type == msgError {
 			p.SendStateless(result.json())
 		} else {
@@ -132,30 +147,22 @@ func (r *room) Stateless(p *collab.Peer, payload string) {
 	})
 }
 
-// parseSave reads a save (gitlab:save) by user: who saves (the user, else whom the client names) and the
-// commit message (default "Edit via Zwiebelfisch").
-func parseSave(user collab.User, payload string) (who, text string, ok bool) {
+// parseSave reads a save (gitlab:save): the commit message (default "Edit via Zwiebelfisch").
+func parseSave(payload string) (text string, ok bool) {
 	var m clientMessage
 	if json.Unmarshal([]byte(payload), &m) != nil || m.Type != "gitlab:save" {
-		return "", "", false
-	}
-	who = user.Name
-	if who == "" && m.Author != nil {
-		who = m.Author.Name
-	}
-	if who == "" {
-		who = nobody
+		return "", false
 	}
 	if text = strings.TrimSpace(m.Message); text == "" {
 		text = defaultCommitMessage
 	}
-	return who, text, true
+	return text, true
 }
 
-// Left: the last user left. meta.changes is told now (the room is stored as it is when Left returns).
-// With auto-commit, the room commits its changes after leaveDelay, unless someone is back by then (a
-// reload).
-func (r *room) Left(ctx context.Context) {
+// Left: the last user (last) left. meta.changes is told now (the room is stored as it is when Left
+// returns). With auto-commit, the room commits its changes after leaveDelay (in last's name, if the rules
+// let it), unless someone is back by then (a reload).
+func (r *room) Left(ctx context.Context, last collab.User) {
 	r.x.task(func() {
 		r.host.Do(r.tellChanges)
 		if r.autoCommit() == 0 || !r.hasChanges() {
@@ -164,7 +171,7 @@ func (r *room) Left(ctx context.Context) {
 		if !r.x.sleep(ctx, r.x.leaveDelay) || !r.host.Empty() {
 			return
 		}
-		r.autoCommitNow()
+		r.autoCommitNow(last)
 	})
 }
 
@@ -182,34 +189,39 @@ func (r *room) Close() {
 	r.x.forget(r)
 }
 
-// save commits the room's changes since its base as one commit, the editors as co-authors; who saved is
-// named in the outcome. When upstream moved meanwhile, it merges upstream first and tries again; a
+// save commits the room's changes since its base as one commit by saver (with their token), the other
+// editors as co-authors. When upstream moved meanwhile, it merges upstream first and tries again; a
 // conflict ends the save.
-func (r *room) save(ctx context.Context, who, text string) message {
+func (r *room) save(ctx context.Context, saver person, text string) message {
 	return r.run(func() message {
-		return r.commitNow(ctx, func(e editors, _ []string) (string, string, string) { return who, withCoAuthors(text, e), "" })
+		return r.commitNow(ctx, func(e editors, _ []string) (commitBy, string) {
+			token, err := r.x.token(ctx, saver.User)
+			if err != nil {
+				return commitBy{}, err.Error()
+			}
+			return commitBy{saver, token, withCoAuthors(text, e, saver)}, ""
+		})
 	})
 }
 
 // autoCommitNow commits by itself, if there is anything to commit and everyone whose edits it contains may
-// push to the branch (asked afresh), and tells everyone how it went: as save does, named after whoever
-// made the most edits, with a message naming the editors and files. Skipped, the changes stay in the room
-// and the reason is a failed commit.
-func (r *room) autoCommitNow() {
+// push to the branch (asked afresh, with each one's own token: so each must still be signed in), and tells
+// everyone how it went. The commit is by prefer if they edited, else by whoever made the most edits, with
+// a message naming the editors and files. Skipped, the changes stay in the room and the reason is a failed
+// commit.
+func (r *room) autoCommitNow(prefer collab.User) {
 	if r.disposed.Load() || !r.hasChanges() {
 		return
 	}
 	result := r.run(func() message {
-		m := r.commitNow(r.x.ctx, func(e editors, paths []string) (string, string, string) {
-			if skipped := r.mayNotAutoCommit(e); skipped != "" {
+		m := r.commitNow(r.x.ctx, func(e editors, paths []string) (commitBy, string) {
+			by, skipped := r.autoCommitter(e, prefer)
+			if skipped != "" {
 				r.x.log.Info().Str("project", r.project).Str("branch", r.branch).Msg(skipped)
-				return "", "", skipped
+				return commitBy{}, skipped
 			}
-			who := nobody
-			if p := e.mostEdits(); p != nil {
-				who = p.Name
-			}
-			return who, automaticMessage(e, paths), ""
+			by.text = automaticMessage(e, paths, by.author)
+			return by, ""
 		})
 		m.Automatic = m.Type == msgSaved
 		return m
@@ -219,23 +231,69 @@ func (r *room) autoCommitNow() {
 	}
 }
 
-// mayNotAutoCommit is why the edits e may not be committed by the server itself ("": they may): someone
-// who made them may not push to the branch, or is not known.
-func (r *room) mayNotAutoCommit(e editors) string {
+// autoCommitter is who commits the edits e by itself (prefer if they edited, else who edited most), or why
+// nobody may ("": someone may): someone who made them may not push to the branch, is not signed in any
+// more, or is not known, or GitLab cannot be asked.
+func (r *room) autoCommitter(e editors, prefer collab.User) (commitBy, string) {
 	people := e.people()
 	if len(people) == 0 {
-		return fmt.Sprintf("Auto-save skipped: who edited is not known; someone who may push to %s must save.", r.branch)
+		return commitBy{}, fmt.Sprintf("Auto-save skipped: who edited is not known; someone who may push to %s must save.", r.branch)
 	}
 	for _, p := range people {
-		if r.x.mayPush(r.x.ctx, p.User, r.project, r.branch) != nil {
-			return fmt.Sprintf("Auto-save skipped: %s may not push to %s; someone who may push must save.", p.Name, r.branch)
+		a, err := r.x.access(r.x.ctx, p.User, r.project, r.branch, false)
+		var refusal collab.Refusal
+		switch {
+		case err == errSignedOut:
+			return commitBy{}, fmt.Sprintf("Auto-save skipped: %s is not signed in; someone who may push to %s must save.", p.Name, r.branch)
+		case err != nil && !errors.As(err, &refusal):
+			return commitBy{}, fmt.Sprintf("Auto-save skipped: cannot ask GitLab whether %s may push to %s (%s).", p.Name, r.branch, failureMessage(err))
+		case err != nil || !a.Edit || !a.Push:
+			return commitBy{}, fmt.Sprintf("Auto-save skipped: %s may not push to %s; someone who may push must save.", p.Name, r.branch)
 		}
 	}
-	return ""
+	author := e.mostEdits()
+	if p := e.find(prefer); p != nil {
+		author = p
+	}
+	token, err := r.x.token(r.x.ctx, author.User)
+	if err != nil {
+		return commitBy{}, fmt.Sprintf("Auto-save skipped: %s is not signed in; someone who may push to %s must save.", author.Name, r.branch)
+	}
+	return commitBy{author: *author, token: token}, ""
+}
+
+// hasEditsBy is whether user made edits the branch does not have yet.
+func (r *room) hasEditsBy(user collab.User) bool {
+	found := false
+	r.host.Do(func(*ydoc.Doc) { found = r.editors.find(user) != nil })
+	return found && r.hasChanges()
+}
+
+// pullAs merges upstream changes into the room with user's token and tells the clients; without a token
+// (or when GitLab cannot be reached) the room stays stale for the next join.
+func (r *room) pullAs(ctx context.Context, user collab.User) {
+	token, err := r.x.token(ctx, user)
+	if err != nil {
+		r.stale.Store(true)
+		return
+	}
+	r.pullWith(ctx, token)
+}
+
+// pullWith merges upstream changes into the room with token and tells the clients.
+func (r *room) pullWith(ctx context.Context, token string) {
+	result, err := r.pull(ctx, token)
+	r.logErr(err, "cannot merge the push")
+	if err != nil {
+		r.stale.Store(true)
+	}
+	if result != nil {
+		r.host.BroadcastStateless(result.json())
+	}
 }
 
 // pull merges upstream changes of the branch into the room (nil: there were none).
-func (r *room) pull(ctx context.Context) (*message, error) {
+func (r *room) pull(ctx context.Context, token string) (*message, error) {
 	var result *message
 	var err error
 	r.run(func() message {
@@ -245,11 +303,11 @@ func (r *room) pull(ctx context.Context) (*message, error) {
 			return message{}
 		}
 		var head string
-		if head, err = r.repo.Head(ctx, r.branch); err != nil || head == b.Sha {
+		if head, err = r.repo.Head(ctx, token, r.branch); err != nil || head == b.Sha {
 			return message{}
 		}
 		var m message
-		if m, err = r.merge(ctx, head); err == nil {
+		if m, err = r.merge(ctx, token, head); err == nil {
 			result = &m
 		}
 		return m
@@ -257,8 +315,9 @@ func (r *room) pull(ctx context.Context) (*message, error) {
 	return result, err
 }
 
-// asset returns the bytes of one of the room's other files (false: no such file).
-func (r *room) asset(ctx context.Context, path string) ([]byte, bool, error) {
+// asset returns the bytes of one of the room's other files (false: no such file), fetched with user's token
+// if need be.
+func (r *room) asset(ctx context.Context, user collab.User, path string) ([]byte, bool, error) {
 	var value any
 	if !r.host.Do(func(doc *ydoc.Doc) { value = doc.Values(assetsMap)[path] }) {
 		return nil, false, nil
@@ -267,8 +326,15 @@ func (r *room) asset(ctx context.Context, path string) ([]byte, bool, error) {
 	case []byte:
 		return v, true, nil
 	case string:
-		content, err := r.x.blobs.get(v, func() ([]byte, error) { return r.repo.Blob(ctx, v) })
-		return content, err == nil, err
+		token, err := r.x.token(ctx, user)
+		if err != nil {
+			return nil, false, err
+		}
+		blobs, err := r.repo.Blobs(ctx, token, []string{v})
+		if err != nil {
+			return nil, false, err
+		}
+		return blobs[0], true, nil
 	}
 	return nil, false, nil
 }
@@ -306,7 +372,7 @@ func (r *room) updated(_ []byte, origin any) {
 		r.idleTimer = nil
 	}
 	if after := r.autoCommit(); after > 0 {
-		r.idleTimer = r.x.clock.AfterFunc(after, func() { r.x.task(r.autoCommitNow) })
+		r.idleTimer = r.x.clock.AfterFunc(after, func() { r.x.task(func() { r.autoCommitNow(collab.User{}) }) })
 	}
 }
 
@@ -379,9 +445,16 @@ func (r *room) commitNow(ctx context.Context, compose compose) message {
 	return result
 }
 
-// compose names who commits (for the outcome) and the commit message, for a commit of edits that changes
-// the files at paths; or why there is no commit (refused: not "").
-type compose func(e editors, paths []string) (who, text, refused string)
+// compose is who commits the edits e, which change the files at paths, and the commit message; or why
+// there is no commit (refused: not "").
+type compose func(e editors, paths []string) (by commitBy, refused string)
+
+// commitBy is a commit's author, with their token, and its message.
+type commitBy struct {
+	author person
+	token  string
+	text   string
+}
 
 // commitAttempts tries until a commit is done or a conflict ends it.
 func (r *room) commitAttempts(ctx context.Context, compose compose) (message, error) {
@@ -419,36 +492,34 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 	for _, f := range changedFiles(actions) {
 		paths = append(paths, f.Path)
 	}
-	who, text, refused := compose(edits, paths)
+	by, refused := compose(edits, paths)
 	if refused != "" {
 		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
 		return message{Type: msgError, Message: refused}, true, nil
 	}
-	c, err := r.repo.Commit(ctx, CommitRequest{Branch: r.branch, ExpectedHead: b.Sha, Message: text, Actions: actions})
+	sha, err := r.repo.Commit(ctx, by.token, CommitRequest{
+		Branch: r.branch, ExpectedHead: b.Sha, Message: by.text, Actions: actions,
+		Author: Signature{Name: by.author.Name, Email: by.author.Email},
+	})
 	if err != nil {
 		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
 		if !errors.Is(err, ErrConflict) {
 			return message{}, true, err
 		}
-		head, err := r.repo.Head(ctx, r.branch)
+		head, err := r.repo.Head(ctx, by.token, r.branch)
 		if err != nil {
 			return message{}, true, err
 		}
-		merged, err := r.merge(ctx, head)
+		merged, err := r.merge(ctx, by.token, head)
 		return merged, err != nil || merged.Type == msgConflict, err
 	}
-	r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, c.Sha) })
-	if c.Parent != b.Sha {
-		// someone else's commit landed between our base and ours (the repository could not refuse it)
-		_, err := r.merge(ctx, c.Sha)
-		r.logErr(err, "cannot merge what landed under the commit")
-	}
-	return message{Type: msgSaved, Sha: c.Sha, Author: who}, true, nil
+	r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, sha) })
+	return message{Type: msgSaved, Sha: sha, Author: by.author.Name}, true, nil
 }
 
 // merge merges the branch at head into the room (see applyMerge).
-func (r *room) merge(ctx context.Context, head string) (message, error) {
-	upstream, err := r.snapshot(ctx, head)
+func (r *room) merge(ctx context.Context, token, head string) (message, error) {
+	upstream, err := r.snapshot(ctx, token, head)
 	if err != nil {
 		return message{}, err
 	}
@@ -542,7 +613,6 @@ func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha string) {
 				}
 			case []byte:
 				assets[path] = blobSha(v)
-				r.x.blobs.put(assets[path], v)
 				if still, ok := now[path].([]byte); ok && bytes.Equal(still, v) {
 					w.Set(assetsMap, path, assets[path])
 				}
@@ -552,40 +622,28 @@ func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha string) {
 	}), "cannot write the commit")
 }
 
-// snapshot reads the repository at sha: .typ files as text, the other files by blob sha.
-func (r *room) snapshot(ctx context.Context, sha string) (base, error) {
-	entries, err := r.repo.Tree(ctx, sha)
+// snapshot reads the repository at sha (fetched before): .typ files as text (their blobs fetched at once,
+// with token), the other files by blob sha.
+func (r *room) snapshot(ctx context.Context, token, sha string) (base, error) {
+	entries, err := r.repo.Tree(sha)
 	if err != nil {
 		return base{}, err
 	}
 	snapshot := base{Sha: sha, Texts: map[string]string{}, Assets: map[string]string{}}
-	var typst []TreeEntry
+	var typst, shas []string
 	for _, e := range entries {
 		if strings.HasSuffix(e.Path, ".typ") {
-			typst = append(typst, e)
+			typst, shas = append(typst, e.Path), append(shas, e.Sha)
 		} else {
 			snapshot.Assets[e.Path] = e.Sha
 		}
 	}
-	texts := make([]string, len(typst))
-	errs := make([]error, len(typst))
-	var wg sync.WaitGroup
-	limit := make(chan struct{}, parallelReads)
-	for i, e := range typst {
-		wg.Add(1)
-		limit <- struct{}{}
-		go func() {
-			defer func() { <-limit; wg.Done() }()
-			content, err := r.x.blobs.get(e.Sha, func() ([]byte, error) { return r.repo.Blob(ctx, e.Sha) })
-			texts[i], errs[i] = decodeText(content), err
-		}()
-	}
-	wg.Wait()
-	if err := errors.Join(errs...); err != nil {
+	contents, err := r.repo.Blobs(ctx, token, shas)
+	if err != nil {
 		return base{}, err
 	}
-	for i, e := range typst {
-		snapshot.Texts[e.Path] = texts[i]
+	for i, path := range typst {
+		snapshot.Texts[path] = decodeText(contents[i])
 	}
 	return snapshot, nil
 }
@@ -621,24 +679,28 @@ func (r *room) logErr(err error, msg string) {
 	}
 }
 
-// failureMessage is what went wrong in a commit: the repository's answer, or that it could not be reached.
+// failureMessage is what went wrong talking to GitLab: its answer, why the room could not ask, or that it
+// could not be reached.
 func failureMessage(err error) string {
 	var refused *APIError
-	if errors.As(err, &refused) {
+	var refusal collab.Refusal
+	switch {
+	case errors.As(err, &refused):
 		return refused.Message
+	case errors.As(err, &refusal):
+		return refusal.Reason
+	case errors.Is(err, errTooLarge), errors.Is(err, errBadPath):
+		return err.Error()
 	}
 	return fmt.Sprintf("GitLab could not be reached (%v)", err)
 }
 
 const (
-	// nobody commits when nobody is known to have edited (a stored room's edits, made before the server
-	// started), and saves for a client that names nobody
+	// nobody is the committer of every commit, and the name of an editor who names nobody
 	nobody               = "Zwiebelfisch"
 	defaultCommitMessage = "Edit via Zwiebelfisch"
 	// changesDelay is the time between an edit and meta.changes telling it (edits within it are told together)
 	changesDelay = 500 * time.Millisecond
 	// saveAttempts is how often a save merges upstream and tries again when the branch keeps moving
 	saveAttempts = 3
-	// parallelReads bounds the blobs read at once when loading a commit
-	parallelReads = 8
 )

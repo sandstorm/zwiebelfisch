@@ -397,6 +397,7 @@ type extension struct {
 	opened    chan *collab.Room
 	left      chan chan struct{} // per Left call: closed by the test to let it return
 	closed    chan string
+	by, last  chan collab.User // who opened a room, who left it last
 }
 
 type got struct {
@@ -405,10 +406,12 @@ type got struct {
 }
 
 func newExtension() *extension {
-	return &extension{stateless: make(chan got, 8), opened: make(chan *collab.Room, 8), left: make(chan chan struct{}, 8), closed: make(chan string, 8)}
+	return &extension{stateless: make(chan got, 8), opened: make(chan *collab.Room, 8), left: make(chan chan struct{}, 8), closed: make(chan string, 8),
+		by: make(chan collab.User, 8), last: make(chan collab.User, 8)}
 }
 
-func (x *extension) Open(r *collab.Room, doc *ydoc.Doc) (collab.Handler, error) {
+func (x *extension) Open(r *collab.Room, doc *ydoc.Doc, by collab.User) (collab.Handler, error) {
+	x.by <- by
 	if r.Name() == "x-broken" {
 		return nil, errors.New("cannot open")
 	}
@@ -433,7 +436,8 @@ func (h *handler) Stateless(p *collab.Peer, payload string) {
 	go h.r.BroadcastStateless("to all")
 }
 
-func (h *handler) Left(ctx context.Context) {
+func (h *handler) Left(ctx context.Context, last collab.User) {
+	h.x.last <- last
 	release := make(chan struct{})
 	h.x.left <- release
 	select {
@@ -499,6 +503,27 @@ func TestExtensionKeepsTheRoomUntilLeftReturns(t *testing.T) {
 	c.edit(func(w *ydoc.Writer) { w.SetText("files", "/p", "plain") })
 	c.eventually("acknowledged", func() bool { return c.acks >= 1 })
 	require.Empty(t, x.opened)
+}
+
+func TestExtensionLearnsWhoOpenedWhoIsInAndWhoLeftLast(t *testing.T) {
+	x := newExtension()
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) { return collab.User{ID: session(r)}, nil }
+		o.Extension = x
+	})
+	a := dial(t, s, "x-who", "ann")
+	room := <-x.opened
+	require.Equal(t, collab.User{ID: "ann"}, <-x.by)
+	b := dial(t, s, "x-who", "bob")
+	b.eventually("joined", func() bool { return len(room.Users()) == 2 })
+	require.ElementsMatch(t, []collab.User{{ID: "ann"}, {ID: "bob"}}, room.Users())
+	a.close()
+	require.Eventually(t, func() bool { return len(room.Users()) == 1 }, 5*time.Second, time.Millisecond)
+	b.close()
+	close(<-x.left)
+	require.Equal(t, collab.User{ID: "bob"}, <-x.last)
+	require.Equal(t, "x-who", <-x.closed)
+	require.Empty(t, room.Users(), "unloaded")
 }
 
 func TestCloseEndsWhatTheExtensionWaitsFor(t *testing.T) {

@@ -1,34 +1,41 @@
-// Package fakegitlab is an in-memory GitLab for tests and the demo playground: one project, its branches,
-// commits with full snapshots, its members and protected branches, and a sign-in.
+// Package fakegitlab is an in-memory GitLab for tests and the demo playground: one project as a git
+// repository (its branches and commits), its members and protected branches, and a sign-in.
 //
-// GitLab answers, as an http.Handler, the REST endpoints (API v4) a GitLab client calls for one project;
-// Client serves them in-process, without network, ports or secrets. A test also plays GitLab's other users
-// and failures:
+// GitLab answers, as an http.Handler, what a GitLab client asks for one project:
+//   - git over smart HTTP at URL/<project>.git (go-git's server; no partial clone)
+//   - the REST endpoints (API v4) of api.go
+//   - the sign-in of signin.go
+//
+// Client serves it all in-process, without network, ports or secrets. Every request needs a user's access
+// token as its sign-in issues them (TokenOf): Bearer for REST, basic auth oauth2:<token> for git. A test
+// also plays GitLab's other users and failures:
 //   - a colleague's push (Push, PushBeforeNextCommit)
-//   - a failing commit, an unreachable branch (FailNextCommit, SetUnreachable)
+//   - a failing push, an unreachable branch (FailNextCommit, SetUnreachable)
 //   - who may do what (SetAccess, Protect)
 //
-// Everyone who signs in is a Developer unless told otherwise. Commits follow GitLab's Commits API where a
-// client could notice.
+// Everyone who signs in is a Developer unless told otherwise.
 package fakegitlab
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"maps"
+	"io"
+	"path"
+	"sort"
+	"strings"
 	"sync"
+	"time"
+
+	git "github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/filemode"
+	"github.com/go-git/go-git/v6/plumbing/object"
+	"github.com/go-git/go-git/v6/storage/memory"
 )
 
-const (
-	// URL is the instance the fake plays; Client answers requests to it.
-	URL = "https://gitlab.test"
-	// Token is the only token it accepts (as PRIVATE-TOKEN or Bearer): the server's bot token.
-	Token = "server-token"
-	// BotName and BotEmail are the token's user: the author of commits that name none.
-	BotName  = "Typst bot"
-	BotEmail = "bot@gitlab.test"
-)
+// URL is the instance the fake plays; Client answers requests to it.
+const URL = "https://gitlab.test"
 
 // Files are a commit's files by absolute project path ("/chapters/a.typ"). In a change, nil deletes.
 type Files = map[string][]byte
@@ -38,12 +45,12 @@ type Commit struct {
 	SHA    string
 	Parent string // "" for the first commit
 	// Message as sent, trailers included.
-	Message string
-	Author  Author
-	Files   Files
+	Message           string
+	Author, Committer Author
+	Files             Files
 }
 
-// Author is a commit's author.
+// Author is a commit's author or committer.
 type Author struct{ Name, Email string }
 
 // GitLab is the fake instance with its one project. Safe for concurrent use.
@@ -52,9 +59,7 @@ type GitLab struct {
 	signIn  *IdentityProvider
 
 	mu           sync.Mutex
-	commits      map[string]*Commit
-	branches     map[string]string // branch → commit sha
-	counter      int
+	repo         *git.Repository // in memory, bare
 	requests     []string
 	race         *race
 	failure      *failure
@@ -92,11 +97,16 @@ type failure struct {
 
 // New returns a GitLab whose project (path with namespace, e.g. "demo/report") has branch main with files.
 func New(project string, files Files) *GitLab {
-	g := &GitLab{
-		project: project, signIn: NewIdentityProvider(URL, "/oauth/authorize"),
-		commits: map[string]*Commit{}, branches: map[string]string{}, unreachable: map[string]bool{}, access: map[int]int{},
+	repo, err := git.Init(memory.NewStorage())
+	if err != nil {
+		panic(err) // in memory: does not fail
 	}
-	g.branches["main"] = g.record("", files, "Initial commit", upstream).SHA
+	g := &GitLab{
+		project: project, signIn: NewIdentityProvider(URL, "/oauth/authorize"), repo: repo,
+		unreachable: map[string]bool{}, access: map[int]int{},
+	}
+	g.push("main", files, "Initial commit")
+	_ = repo.Storer.SetReference(plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")))
 	return g
 }
 
@@ -105,6 +115,10 @@ var upstream = Author{Name: "Upstream", Email: "upstream@test"}
 // IdentityProvider is the fake's sign-in, with issuer URL. Its page (the authorization endpoint) is
 // /oauth/authorize on the host that sent the browser there: whoever serves the fake to browsers mounts it.
 func (g *GitLab) IdentityProvider() *IdentityProvider { return g.signIn }
+
+// TokenOf is an access token of the user named name (an account, created if new), as their sign-in would
+// get one.
+func (g *GitLab) TokenOf(name string) string { return g.signIn.issue(name) }
 
 // SetAccess gives the user named name (an account, created if new) access level to the project (NoAccess:
 // not a member).
@@ -131,8 +145,8 @@ func (g *GitLab) Protect(pattern string, pushLevel int, users ...string) {
 // Project is the project's path with namespace.
 func (g *GitLab) Project() string { return g.project }
 
-// SetAutoBranches makes branches nobody created yet start at main when first asked for (one fresh branch
-// per e2e test, any branch in the playground).
+// SetAutoBranches makes branches nobody created yet start at main when first asked for over REST (one fresh
+// branch per e2e test, any branch in the playground).
 func (g *GitLab) SetAutoBranches(on bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -148,33 +162,36 @@ func (g *GitLab) Push(branch string, changes Files, message string) string {
 }
 
 func (g *GitLab) push(branch string, changes Files, message string) string {
-	parent, ok := g.branches[branch]
-	if !ok && g.autoBranches {
-		parent = g.branches["main"]
+	parent := g.head(branch)
+	if parent.IsZero() && g.autoBranches {
+		parent = g.head("main")
 	}
-	sha := g.record(parent, changes, message, upstream).SHA
-	g.branches[branch] = sha
-	return sha
+	sha, err := g.record(parent, changes, message)
+	if err != nil {
+		panic(err) // in memory: does not fail
+	}
+	g.setBranch(branch, sha)
+	return sha.String()
 }
 
-// PushBeforeNextCommit has a colleague push changes to the branch of the next commit request just before
-// it is handled: the race the branch-level conflict check exists for.
+// PushBeforeNextCommit has a colleague push changes to the branch of the next git push just before it is
+// received: the race the push's compare-and-swap exists for.
 func (g *GitLab) PushBeforeNextCommit(changes Files, message string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.race = &race{changes, message}
 }
 
-// FailNextCommit answers the next commit request with status and message (after PushBeforeNextCommit's
-// push, if any).
+// FailNextCommit answers the next git push with status and message (after PushBeforeNextCommit's push, if
+// any).
 func (g *GitLab) FailNextCommit(status int, message string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.failure = &failure{status, message}
 }
 
-// SetUnreachable makes requests about branch (its head, a commit to it) fail as when the network is down
-// (the connection drops without an answer), or ends that. Per branch, so an outage leaves the others alone.
+// SetUnreachable makes git pushes to branch fail as when the network is down (the connection drops
+// without an answer), or ends that. Per branch, so an outage leaves the others alone.
 func (g *GitLab) SetUnreachable(branch string, down bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -189,21 +206,42 @@ func (g *GitLab) SetUnreachable(branch string, down bool) {
 func (g *GitLab) HasBranch(branch string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	_, ok := g.branches[branch]
-	return ok
+	return !g.head(branch).IsZero()
 }
 
 // Head is the commit branch points at (the zero Commit if there is no such branch).
 func (g *GitLab) Head(branch string) Commit {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	c := g.commits[g.branches[branch]]
-	if c == nil {
+	sha := g.head(branch)
+	if sha.IsZero() {
 		return Commit{}
 	}
-	copy := *c
-	copy.Files = maps.Clone(c.Files)
-	return copy
+	c, err := g.repo.CommitObject(sha)
+	if err != nil {
+		panic(err)
+	}
+	out := Commit{
+		SHA: sha.String(), Message: c.Message, Files: Files{},
+		Author: Author{c.Author.Name, c.Author.Email}, Committer: Author{c.Committer.Name, c.Committer.Email},
+	}
+	if len(c.ParentHashes) > 0 {
+		out.Parent = c.ParentHashes[0].String()
+	}
+	files, err := c.Files()
+	if err != nil {
+		panic(err)
+	}
+	_ = files.ForEach(func(f *object.File) error {
+		r, err := f.Reader()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		out.Files["/"+f.Name], err = io.ReadAll(r)
+		return err
+	})
+	return out
 }
 
 // Text is the files of branch as text.
@@ -215,58 +253,125 @@ func (g *GitLab) Text(branch string) map[string]string {
 	return texts
 }
 
-// Requests are the API requests so far, each as "METHOD path?query" below the project's URL (as sent,
-// escaped), e.g. "GET /repository/branches/main".
+// Requests are the requests so far: REST as "METHOD path?query" below the project's URL (as sent,
+// escaped), e.g. "GET /repository/branches/main"; git as "GIT <service>", e.g. "GIT git-receive-pack".
 func (g *GitLab) Requests() []string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return append([]string(nil), g.requests...)
 }
 
-// record stores a commit of parent's files with changes applied. Called with mu held.
-func (g *GitLab) record(parent string, changes Files, message string, author Author) *Commit {
-	files := Files{}
-	if p := g.commits[parent]; p != nil {
-		files = maps.Clone(p.Files)
+// head is branch's commit (zero: no such branch). Called with mu held.
+func (g *GitLab) head(branch string) plumbing.Hash {
+	ref, err := g.repo.Reference(plumbing.NewBranchReferenceName(branch), true)
+	if err != nil {
+		return plumbing.ZeroHash
 	}
-	for path, content := range changes {
+	return ref.Hash()
+}
+
+func (g *GitLab) setBranch(branch string, sha plumbing.Hash) {
+	_ = g.repo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName(branch), sha))
+}
+
+// record writes a commit by upstream of parent's files (zero: none) with changes applied. Called with mu
+// held.
+func (g *GitLab) record(parent plumbing.Hash, changes Files, message string) (plumbing.Hash, error) {
+	files := map[string]plumbing.Hash{} // "chapters/a.typ" → blob
+	if !parent.IsZero() {
+		c, err := g.repo.CommitObject(parent)
+		if err != nil {
+			return plumbing.ZeroHash, err
+		}
+		tree, err := c.Tree()
+		if err != nil {
+			return plumbing.ZeroHash, err
+		}
+		walker := object.NewTreeWalker(tree, true, nil)
+		for {
+			name, e, err := walker.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return plumbing.ZeroHash, err
+			}
+			if e.Mode != filemode.Dir {
+				files[name] = e.Hash
+			}
+		}
+		walker.Close()
+	}
+	for p, content := range changes {
+		p = strings.TrimPrefix(p, "/")
 		if content == nil {
-			delete(files, path)
+			delete(files, p)
+			continue
+		}
+		blob := g.repo.Storer.NewEncodedObject()
+		blob.SetType(plumbing.BlobObject)
+		w, _ := blob.Writer()
+		_, _ = w.Write(content)
+		_ = w.Close()
+		h, err := g.repo.Storer.SetEncodedObject(blob)
+		if err != nil {
+			return plumbing.ZeroHash, err
+		}
+		files[p] = h
+	}
+	root, err := g.writeTree(files, "")
+	if err != nil {
+		return plumbing.ZeroHash, err
+	}
+	when := time.Now()
+	c := &object.Commit{
+		Author:    object.Signature{Name: upstream.Name, Email: upstream.Email, When: when},
+		Committer: object.Signature{Name: upstream.Name, Email: upstream.Email, When: when},
+		Message:   message, TreeHash: root,
+	}
+	if !parent.IsZero() {
+		c.ParentHashes = []plumbing.Hash{parent}
+	}
+	return g.write(c)
+}
+
+// writeTree writes the tree of the files below dir ("" or "chapters/") and returns its id.
+func (g *GitLab) writeTree(files map[string]plumbing.Hash, dir string) (plumbing.Hash, error) {
+	t := &object.Tree{}
+	subdirs := map[string]bool{}
+	for p, h := range files {
+		rest, ok := strings.CutPrefix(p, dir)
+		if !ok {
+			continue
+		}
+		if sub, _, nested := strings.Cut(rest, "/"); nested {
+			subdirs[sub] = true
 		} else {
-			files[path] = content
+			t.Entries = append(t.Entries, object.TreeEntry{Name: rest, Mode: filemode.Regular, Hash: h})
 		}
 	}
-	g.counter++
-	sum := sha1.Sum(fmt.Appendf(nil, "commit %d %s", g.counter, parent))
-	c := &Commit{SHA: hex.EncodeToString(sum[:]), Parent: parent, Message: message, Author: author, Files: files}
-	g.commits[c.SHA] = c
-	return c
-}
-
-// resolve is the commit ref names: a branch or a sha. Called with mu held.
-func (g *GitLab) resolve(ref string) *Commit {
-	if sha, ok := g.branches[ref]; ok {
-		return g.commits[sha]
-	}
-	return g.commits[ref]
-}
-
-// lastCommit is the commit that last changed path, up to c. Called with mu held.
-func (g *GitLab) lastCommit(c *Commit, path string) string {
-	for {
-		parent := g.commits[c.Parent]
-		if parent == nil {
-			return c.SHA
+	for sub := range subdirs {
+		h, err := g.writeTree(files, path.Join(dir, sub)+"/")
+		if err != nil {
+			return plumbing.ZeroHash, err
 		}
-		before, ok := parent.Files[path]
-		if !ok || BlobSHA(before) != BlobSHA(c.Files[path]) {
-			return c.SHA
-		}
-		c = parent
+		t.Entries = append(t.Entries, object.TreeEntry{Name: sub, Mode: filemode.Dir, Hash: h})
 	}
+	sort.Sort(object.TreeEntrySorter(t.Entries))
+	return g.write(t)
 }
 
-// BlobSHA is the git blob id of content (what GitLab's tree lists as a file's id).
+func (g *GitLab) write(o interface {
+	Encode(plumbing.EncodedObject) error
+}) (plumbing.Hash, error) {
+	encoded := g.repo.Storer.NewEncodedObject()
+	if err := o.Encode(encoded); err != nil {
+		return plumbing.ZeroHash, err
+	}
+	return g.repo.Storer.SetEncodedObject(encoded)
+}
+
+// BlobSHA is the git blob id of content (what a tree lists as a file's id).
 func BlobSHA(content []byte) string {
 	h := sha1.New()
 	fmt.Fprintf(h, "blob %d\x00", len(content))
