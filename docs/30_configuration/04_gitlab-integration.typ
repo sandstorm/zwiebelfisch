@@ -29,7 +29,7 @@ Configure the server with environment variables, e.g. in a git-ignored `mise.loc
 )
 
 - *Who may edit:* members of the project with the Developer role or more (checked with the bot's token when they join; the answer is kept a minute). Others are refused, and the widget says why.
-- *Who may save:* who may also push to the branch: a protected branch's rules (roles, users, groups; wildcards) are checked again on every save, since the bot would bypass them.
+- *Who may save:* who may also push to the branch: a protected branch's rules (roles, users, groups; wildcards) are checked again on every save, since the bot would bypass them. A room saves by itself only if everyone whose edits it contains may push (asked afresh); else it says so and waits for a save by someone who may.
 - Commits are the bot's; everyone who edited is a `Co-authored-by:` trailer. No user's token is used for them, and none is stored.
 - Other room names (plain rooms) need `ZWF_PLAIN_ROOMS=1` (@configuration-collaboration-server-running).
 - Files other than `.typ` are fetched from the server (`GET /api/rooms/<room>/files/<path>`, with the session cookie, as the room), so it must be reachable over HTTP too.

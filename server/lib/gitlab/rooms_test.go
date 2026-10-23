@@ -130,9 +130,9 @@ func replace(t *testing.T, w *ydoc.Writer, doc *ydoc.Doc, path, from, to string)
 }
 
 var (
-	ann  = &testClient{"Ann", "ann@example.com"}
-	bob  = &testClient{"Bob", "bob@example.com"}
-	cleo = &testClient{"Cleo", "cleo@example.com"}
+	ann  = &testClient{"Ann", "ann@example.com", "1"}
+	bob  = &testClient{"Bob", "bob@example.com", "2"}
+	cleo = &testClient{"Cleo", "cleo@example.com", "3"}
 )
 
 func (e *env) text(path string) string {
@@ -269,6 +269,32 @@ func TestLoading(t *testing.T) {
 		require.Equal(t, 1, e.repo.count("blob "+blobSha(logo)))
 		require.Equal(t, http.StatusUnauthorized, e.get("/img/logo.png", "").Code)
 		require.Equal(t, http.StatusNotFound, e.get("/missing.png", "ann").Code)
+	})
+
+	t.Run("serves files as passive content only: no page of the room's files runs on the app's origin", func(t *testing.T) {
+		page := []byte(`<script>alert(document.cookie)</script>`)
+		svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+		e := setup(t, setupOptions{files: map[string]any{mainTyp: mainText, "/img/logo.png": logo, "/committed.html": page}})
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) {
+			w.Set(assetsMap, "/uploaded.html", page)
+			w.Set(assetsMap, "/img/figure.svg", svg)
+			w.Set(assetsMap, "/refs.bib", []byte("@book{a}"))
+		})
+		const csp = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox"
+		for _, c := range []struct{ path, contentType, disposition string }{
+			{"/img/logo.png", "image/png", ""},
+			{"/img/figure.svg", "image/svg+xml", ""},
+			{"/refs.bib", "text/plain; charset=utf-8", ""},
+			{"/committed.html", "application/octet-stream", "attachment"},
+			{"/uploaded.html", "application/octet-stream", "attachment"},
+		} {
+			res := e.get(c.path, "ann")
+			require.Equal(t, http.StatusOK, res.Code, c.path)
+			require.Equal(t, c.contentType, res.Header().Get("Content-Type"), c.path)
+			require.Equal(t, c.disposition, res.Header().Get("Content-Disposition"), c.path)
+			require.Equal(t, "nosniff", res.Header().Get("X-Content-Type-Options"), c.path)
+			require.Equal(t, csp, res.Header().Get("Content-Security-Policy"), c.path)
+		}
 	})
 
 	t.Run("a stored room opens with its own state and merges what was pushed meanwhile", func(t *testing.T) {
@@ -489,7 +515,7 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
 		require.Nil(t, e.changes())
 		e.clock.Advance(500 * time.Millisecond)
-		require.Equal(t, &roomChanges{Files: []changedFile{{mainTyp, "modified"}}, Since: ms(atTen), Editors: []string{"Ann"}}, e.changes())
+		require.Equal(t, &roomChanges{Files: []changedFile{{mainTyp, "modified"}}, Since: ms(atTen), Editors: []string{"Ann"}, EditorIDs: []string{"1"}}, e.changes())
 
 		e.clock.Advance(time.Minute)
 		e.editAs(bob, func(w *ydoc.Writer, _ *ydoc.Doc) {
@@ -501,7 +527,7 @@ func TestWhatIsNotInGitLabYet(t *testing.T) {
 		e.clock.Advance(500 * time.Millisecond)
 		require.Equal(t, &roomChanges{
 			Files: []changedFile{{"/img/upload.png", "added"}, {mainTyp, "modified"}, {"/new.typ", "added"}, {"/old.typ", "deleted"}},
-			Since: ms(atTen), Editors: []string{"Ann", "Bob"},
+			Since: ms(atTen), Editors: []string{"Ann", "Bob"}, EditorIDs: []string{"1", "2"},
 		}, e.changes())
 
 		require.Equal(t, msgSaved, e.save("").Type)
@@ -693,6 +719,90 @@ func TestAutoCommit(t *testing.T) {
 		t.Cleanup(func() { host.Do(func(*ydoc.Doc) { opened.Close() }) })
 		var minutes *float64
 		host.Do(func(doc *ydoc.Doc) { require.False(t, readValue(doc, metaAutoCommit, &minutes), "null") })
+	})
+
+	t.Run("commits by itself only the edits of people who may push to the branch; a save by a pusher commits them all", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		parent := e.repo.head("main").sha
+		e.repo.setAccess("2", Access{Role: "Developer", Edit: true}) // Bob: main is protected for him
+		const skipped = "Auto-save skipped: Bob may not push to main; someone who may push must save."
+
+		e.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, e.repo.head("main").sha, "idle")
+		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
+		require.Equal(t, skipped, e.commitFailure().Message, "for everyone, also who joins later")
+		require.Equal(t, []string{"Bob"}, e.changes().Editors, "the changes stay in the room")
+
+		e.host.setEmpty(true)
+		left := e.left()
+		e.clock.Advance(LeaveDelay)
+		<-left
+		require.Equal(t, parent, e.repo.head("main").sha, "the last user left")
+		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
+		e.host.setEmpty(false)
+
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, e.repo.head("main").sha, "Ann's edits and Bob's")
+		require.Equal(t, []message{{Type: msgError, Message: skipped}}, e.host.takeSent())
+
+		require.Equal(t, msgSaved, e.save("Reviewed").Type)
+		require.Equal(t, "Reviewed\n\nCo-authored-by: Bob <bob@example.com>\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message)
+		require.Nil(t, e.commitFailure())
+
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Third", "3rd") })
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, "Edits by Ann: main.typ\n\nCo-authored-by: Ann <ann@example.com>", e.repo.head("main").message, "Ann's alone")
+		require.Equal(t, 3, e.repo.count("access 2 main"), "asked afresh each time")
+	})
+
+	t.Run("tells editors apart by user, not by the name a client shows", func(t *testing.T) {
+		e := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		parent := e.repo.head("main").sha
+		e.repo.setAccess("4", Access{Role: "Developer", Edit: true})
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		e.editAs(&testClient{"Ann", "other@example.com", "4"}, func(w *ydoc.Writer, doc *ydoc.Doc) {
+			replace(t, w, doc, mainTyp, "Second", "2nd")
+		})
+		e.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, e.repo.head("main").sha)
+		require.Equal(t, []message{{Type: msgError, Message: "Auto-save skipped: Ann may not push to main; someone who may push must save."}}, e.host.takeSent())
+	})
+
+	t.Run("a room stored right after an edit keeps its editor", func(t *testing.T) {
+		first := setup(t, setupOptions{}) // no auto-commit: the room unloads as soon as the last user left
+		first.repo.setAccess("2", Access{Role: "Developer", Edit: true})
+		first.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		first.host.setEmpty(true)
+		<-first.left()
+		var state []byte
+		first.host.Do(func(doc *ydoc.Doc) { state = doc.State() })
+		first.unload()
+		parent := first.repo.head("main").sha
+
+		again := setup(t, setupOptions{autoCommit: 10 * time.Minute, repo: first.repo, state: state})
+		again.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
+		again.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, again.repo.head("main").sha)
+		require.Equal(t, []message{{Type: msgError, Message: "Auto-save skipped: Bob may not push to main; someone who may push must save."}}, again.host.takeSent())
+	})
+
+	t.Run("asks about the editors of a stored room too", func(t *testing.T) {
+		first := setup(t, setupOptions{autoCommit: 10 * time.Minute})
+		first.repo.setAccess("2", Access{Role: "Developer", Edit: true})
+		first.editAs(bob, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "First", "Opening") })
+		first.clock.Advance(500 * time.Millisecond)
+		var state []byte
+		first.host.Do(func(doc *ydoc.Doc) { state = doc.State() })
+		first.unload()
+		parent := first.repo.head("main").sha
+
+		again := setup(t, setupOptions{autoCommit: 10 * time.Minute, repo: first.repo, state: state})
+		again.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) { replace(t, w, doc, mainTyp, "Second", "2nd") })
+		again.clock.Advance(10 * time.Minute)
+		require.Equal(t, parent, again.repo.head("main").sha)
+		require.Equal(t, []message{{Type: msgError, Message: "Auto-save skipped: Bob may not push to main; someone who may push must save."}}, again.host.takeSent())
 	})
 
 	t.Run("reads its setting", func(t *testing.T) {

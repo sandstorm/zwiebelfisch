@@ -64,9 +64,14 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc) error {
 	var stored roomChanges
 	if readValue(doc, metaChanges, &stored) {
 		r.editors.since = stored.Since
-		for _, name := range stored.Editors {
-			r.editors.edited(&person{name, r.x.authorEmail}, stored.Since)
-			r.editors.by[name].edits = 0
+		for i, name := range stored.Editors {
+			var user collab.User
+			if i < len(stored.EditorIDs) && stored.EditorIDs[i] != "" {
+				user = collab.User{Provider: r.x.opts.ID, ID: stored.EditorIDs[i]}
+			}
+			p := r.x.person(user, name, "")
+			r.editors.edited(p, stored.Since)
+			r.editors.by[p.key()].edits = 0
 		}
 	}
 	if err := r.writeAutoCommit(doc); err != nil {
@@ -147,10 +152,12 @@ func parseSave(user collab.User, payload string) (who, text string, ok bool) {
 	return who, text, true
 }
 
-// Left: the last user left. With auto-commit, the room commits its changes after leaveDelay, unless
-// someone is back by then (a reload).
+// Left: the last user left. meta.changes is told now (the room is stored as it is when Left returns).
+// With auto-commit, the room commits its changes after leaveDelay, unless someone is back by then (a
+// reload).
 func (r *room) Left(ctx context.Context) {
 	r.x.task(func() {
+		r.host.Do(r.tellChanges)
 		if r.autoCommit() == 0 || !r.hasChanges() {
 			return
 		}
@@ -180,23 +187,29 @@ func (r *room) Close() {
 // conflict ends the save.
 func (r *room) save(ctx context.Context, who, text string) message {
 	return r.run(func() message {
-		return r.commitNow(ctx, func(e editors, _ []string) (string, string) { return who, withCoAuthors(text, e) })
+		return r.commitNow(ctx, func(e editors, _ []string) (string, string, string) { return who, withCoAuthors(text, e), "" })
 	})
 }
 
-// autoCommitNow commits by itself, if there is anything to commit, and tells everyone how it went: as
-// save does, named after whoever made the most edits, with a message naming the editors and files.
+// autoCommitNow commits by itself, if there is anything to commit and everyone whose edits it contains may
+// push to the branch (asked afresh), and tells everyone how it went: as save does, named after whoever
+// made the most edits, with a message naming the editors and files. Skipped, the changes stay in the room
+// and the reason is a failed commit.
 func (r *room) autoCommitNow() {
 	if r.disposed.Load() || !r.hasChanges() {
 		return
 	}
 	result := r.run(func() message {
-		m := r.commitNow(r.x.ctx, func(e editors, paths []string) (string, string) {
+		m := r.commitNow(r.x.ctx, func(e editors, paths []string) (string, string, string) {
+			if skipped := r.mayNotAutoCommit(e); skipped != "" {
+				r.x.log.Info().Str("project", r.project).Str("branch", r.branch).Msg(skipped)
+				return "", "", skipped
+			}
 			who := nobody
 			if p := e.mostEdits(); p != nil {
 				who = p.Name
 			}
-			return who, automaticMessage(e, paths)
+			return who, automaticMessage(e, paths), ""
 		})
 		m.Automatic = m.Type == msgSaved
 		return m
@@ -204,6 +217,21 @@ func (r *room) autoCommitNow() {
 	if result.Type != msgUnchanged {
 		r.host.BroadcastStateless(result.json())
 	}
+}
+
+// mayNotAutoCommit is why the edits e may not be committed by the server itself ("": they may): someone
+// who made them may not push to the branch, or is not known.
+func (r *room) mayNotAutoCommit(e editors) string {
+	people := e.people()
+	if len(people) == 0 {
+		return fmt.Sprintf("Auto-save skipped: who edited is not known; someone who may push to %s must save.", r.branch)
+	}
+	for _, p := range people {
+		if r.x.mayPush(r.x.ctx, p.User, r.project, r.branch) != nil {
+			return fmt.Sprintf("Auto-save skipped: %s may not push to %s; someone who may push must save.", p.Name, r.branch)
+		}
+	}
+	return ""
 }
 
 // pull merges upstream changes of the branch into the room (nil: there were none).
@@ -322,7 +350,7 @@ func (r *room) tellChanges(doc *ydoc.Doc) {
 		if r.editors.since == 0 {
 			r.editors.since = r.x.clock.Now().UnixMilli()
 		}
-		changes = &roomChanges{Files: files, Since: r.editors.since, Editors: r.editors.names()}
+		changes = &roomChanges{Files: files, Since: r.editors.since, Editors: r.editors.names(), EditorIDs: r.editors.userIDs()}
 	}
 	var stored *roomChanges
 	if s := new(roomChanges); readValue(doc, metaChanges, s) {
@@ -352,8 +380,8 @@ func (r *room) commitNow(ctx context.Context, compose compose) message {
 }
 
 // compose names who commits (for the outcome) and the commit message, for a commit of edits that changes
-// the files at paths.
-type compose func(e editors, paths []string) (who, text string)
+// the files at paths; or why there is no commit (refused: not "").
+type compose func(e editors, paths []string) (who, text, refused string)
 
 // commitAttempts tries until a commit is done or a conflict ends it.
 func (r *room) commitAttempts(ctx context.Context, compose compose) (message, error) {
@@ -391,7 +419,11 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 	for _, f := range changedFiles(actions) {
 		paths = append(paths, f.Path)
 	}
-	who, text := compose(edits, paths)
+	who, text, refused := compose(edits, paths)
+	if refused != "" {
+		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
+		return message{Type: msgError, Message: refused}, true, nil
+	}
 	c, err := r.repo.Commit(ctx, CommitRequest{Branch: r.branch, ExpectedHead: b.Sha, Message: text, Actions: actions})
 	if err != nil {
 		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })

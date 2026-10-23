@@ -3,15 +3,29 @@ package gitlab
 import (
 	"fmt"
 	"strings"
+
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 )
 
 // Who edited a room since its last commit, how often and since when; and the commit messages naming them.
 
-// person is someone who edits, as a commit names them (Co-authored-by: Name <Email>).
-type person struct{ Name, Email string }
+// person is someone who edits: the user they signed in as, and how a commit names them (Co-authored-by:
+// Name <Email>).
+type person struct {
+	User        collab.User
+	Name, Email string
+}
 
-// editors is the tally of a room's edits not committed yet, by editor (a name; the first person seen under
-// it), counted per change of the document. A commit takes the tally and puts it back if it did not happen
+// key is who p is to the tally: the user (by provider and id), else (no id) the name.
+func (p person) key() string {
+	if p.User.ID != "" {
+		return "user\x00" + p.User.Provider + "\x00" + p.User.ID
+	}
+	return "name\x00" + p.Name
+}
+
+// editors is the tally of a room's edits not committed yet, by editor (person.key; the first person seen
+// under it), counted per change of the document. A commit takes the tally and puts it back if it did not happen
 // (restore), so edits made while it runs stay for the next one. The zero value is empty.
 type editors struct {
 	since int64 // milliseconds since the epoch of the first edit not committed; 0: none
@@ -32,15 +46,16 @@ func (e *editors) edited(p *person, at int64) {
 	if p == nil {
 		return
 	}
-	if ed := e.by[p.Name]; ed != nil {
+	key := p.key()
+	if ed := e.by[key]; ed != nil {
 		ed.edits++
 		return
 	}
 	if e.by == nil {
 		e.by = map[string]*editor{}
 	}
-	e.by[p.Name] = &editor{*p, 1}
-	e.order = append(e.order, p.Name)
+	e.by[key] = &editor{*p, 1}
+	e.order = append(e.order, key)
 }
 
 // take hands over the tally and starts an empty one.
@@ -58,26 +73,50 @@ func (e *editors) restore(taken editors) {
 		e.since = later.since
 	}
 	for _, t := range []editors{taken, later} {
-		for _, name := range t.order {
-			ed := t.by[name]
-			if mine := e.by[name]; mine != nil {
+		for _, key := range t.order {
+			ed := t.by[key]
+			if mine := e.by[key]; mine != nil {
 				mine.edits += ed.edits
 				continue
 			}
 			e.edited(&ed.person, e.since)
-			e.by[name].edits = ed.edits
+			e.by[key].edits = ed.edits
 		}
 	}
 }
 
+// people are the editors, in the order of their first edit.
+func (e *editors) people() []person {
+	people := make([]person, 0, len(e.order))
+	for _, key := range e.order {
+		people = append(people, e.by[key].person)
+	}
+	return people
+}
+
 // names are the editors' names, in the order of their first edit.
-func (e *editors) names() []string { return append([]string{}, e.order...) }
+func (e *editors) names() []string {
+	names := make([]string, 0, len(e.order))
+	for _, p := range e.people() {
+		names = append(names, p.Name)
+	}
+	return names
+}
+
+// userIDs are the editors' user ids, in the order of their first edit ("": none known).
+func (e *editors) userIDs() []string {
+	ids := make([]string, 0, len(e.order))
+	for _, p := range e.people() {
+		ids = append(ids, p.User.ID)
+	}
+	return ids
+}
 
 // mostEdits is the editor with the most edits (the first of them on a tie); nil when nobody is known.
 func (e *editors) mostEdits() *person {
 	var best *editor
-	for _, name := range e.order {
-		if ed := e.by[name]; best == nil || ed.edits > best.edits {
+	for _, key := range e.order {
+		if ed := e.by[key]; best == nil || ed.edits > best.edits {
 			best = ed
 		}
 	}
@@ -95,8 +134,7 @@ func withCoAuthors(message string, e editors) string {
 	}
 	var b strings.Builder
 	b.WriteString(message + "\n")
-	for _, name := range e.order {
-		p := e.by[name].person
+	for _, p := range e.people() {
 		fmt.Fprintf(&b, "\nCo-authored-by: %s <%s>", p.Name, p.Email)
 	}
 	return b.String()
@@ -115,7 +153,7 @@ func automaticMessage(e editors, paths []string) string {
 	}
 	subject := "Edits"
 	if len(e.order) > 0 {
-		subject = "Edits by " + strings.Join(e.order, ", ")
+		subject = "Edits by " + strings.Join(e.names(), ", ")
 	}
 	subject += ": " + strings.Join(parts, ", ")
 	if len(paths) > namedPaths {

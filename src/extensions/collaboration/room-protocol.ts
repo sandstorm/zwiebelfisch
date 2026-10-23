@@ -57,6 +57,8 @@ export interface RoomChanges {
   since: number;
   /** Who made them, by name, in the order of their first edit. */
   editors: string[];
+  /** Their user ids on the server's GitLab, as `editors` (`''`: not known): whom the server asks whether it may commit by itself. */
+  editorIds?: string[];
 }
 
 /** A file of the room that differs from the base: new, changed, or gone (a rename is both). */

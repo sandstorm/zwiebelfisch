@@ -368,10 +368,17 @@ func slicesDelete(timers []*fakeTimer, t *fakeTimer) []*fakeTimer {
 	return out
 }
 
-// testClient is a client as the origin of its edits (a collab.Peer in the server).
+// testClient is a client as the origin of its edits (a collab.Peer in the server): a GitLab user (id "":
+// signed in otherwise).
 type testClient struct {
-	name, email string
+	name, email, id string
 }
 
-func (c *testClient) Name() string      { return c.name }
-func (c *testClient) User() collab.User { return collab.User{Name: c.name, Email: c.email} }
+func (c *testClient) Name() string { return c.name }
+func (c *testClient) User() collab.User {
+	u := collab.User{Name: c.name, Email: c.email, ID: c.id}
+	if c.id != "" {
+		u.Provider = DefaultID
+	}
+	return u
+}

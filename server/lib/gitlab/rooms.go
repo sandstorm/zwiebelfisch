@@ -14,7 +14,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
-	"mime"
 	"net/http"
 	"path"
 	"slices"
@@ -271,22 +270,39 @@ type client interface {
 	User() collab.User
 }
 
-// editorOf is who made a change, by its origin (nil: unknown).
+// editorOf is who made a change, by its origin (nil: unknown). A user without a name is named nobody.
 func (x *Rooms) editorOf(origin any) *person {
 	c, ok := origin.(client)
-	if !ok || c.Name() == "" {
+	if !ok {
 		return nil
 	}
-	email := c.User().Email
+	user, name := c.User(), c.Name()
+	if name == "" && user.ID == "" {
+		return nil
+	}
+	if name == "" {
+		name = nobody
+	}
+	return x.person(user, name, user.Email)
+}
+
+// person is user as an editor named name (email "": AuthorEmail).
+func (x *Rooms) person(user collab.User, name, email string) *person {
 	if email == "" {
 		email = x.authorEmail
 	}
-	return &person{c.Name(), email}
+	return &person{User: user, Name: name, Email: email}
 }
 
 // ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in;
 // blob bytes are cached by sha. CORS is the app's.
+//
+// Every answer is passive content: nosniff and a sandboxing CSP (no script runs, also in an SVG opened as
+// a page); images, PDF, fonts and text files are served inline under their type (text as text/plain),
+// anything else as an application/octet-stream attachment.
 func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox")
 	name, file := r.PathValue("room"), "/"+r.PathValue("path")
 	if x.opts.Authenticate == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -312,26 +328,27 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Type", contentType(file))
+	if t, inline := passiveTypes[strings.ToLower(path.Ext(file))]; inline {
+		w.Header().Set("Content-Type", t)
+	} else {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment")
+	}
 	w.Header().Set("Cache-Control", "private, no-cache")
 	_, _ = w.Write(content)
 }
 
-func contentType(file string) string {
-	ext := strings.ToLower(path.Ext(file))
-	if t, ok := imageTypes[ext]; ok {
-		return t
-	}
-	if t := mime.TypeByExtension(ext); t != "" {
-		return t
-	}
-	return "application/octet-stream"
+// passiveTypes are the files ServeFile answers inline, by extension: what a Typst document reads (images,
+// fonts, data) and PDF.
+var passiveTypes = map[string]string{
+	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+	".avif": "image/avif", ".svg": "image/svg+xml", ".pdf": "application/pdf",
+	".ttf": "font/ttf", ".otf": "font/otf", ".ttc": "font/collection", ".woff": "font/woff", ".woff2": "font/woff2",
+	".typ": textPlain, ".txt": textPlain, ".bib": textPlain, ".csv": textPlain, ".json": textPlain,
+	".yaml": textPlain, ".yml": textPlain, ".toml": textPlain, ".xml": textPlain, ".md": textPlain,
 }
 
-var imageTypes = map[string]string{
-	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
-	".svg": "image/svg+xml", ".webp": "image/webp", ".pdf": "application/pdf",
-}
+const textPlain = "text/plain; charset=utf-8"
 
 // ServeWebhook takes GitLab's push events, with X-Gitlab-Token (WebhookSecret; none without it), and merges
 // a push into the open rooms of that branch.

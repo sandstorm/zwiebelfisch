@@ -13,7 +13,7 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *Click "Save to GitLab…"* to commit every change since the last commit, with a message you enter.
 
-*It saves by itself* when nobody edited for 10 minutes, and when the last user leaves.
+*It saves by itself* when nobody edited for 10 minutes, and when the last user leaves; only if everyone who edited may push to the branch, else someone who may must save.
 
 *Commits are the server's:* their author is the server's GitLab account; everyone who edited is named as a co-author.
 

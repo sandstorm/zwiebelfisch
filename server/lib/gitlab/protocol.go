@@ -34,6 +34,8 @@ type roomChanges struct {
 	Files   []changedFile `json:"files"`
 	Since   int64         `json:"since"` // milliseconds since the epoch, the server's clock
 	Editors []string      `json:"editors"`
+	// EditorIDs are the editors' user ids on this GitLab (as Editors; "": not known), for the server
+	EditorIDs []string `json:"editorIds"`
 }
 
 type changedFile struct {
