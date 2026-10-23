@@ -21,6 +21,7 @@ import {
  * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
  *   warning entry until the next commit or merge
+ * - the files' texts at the last commit (`meta.base`) are its quick diff's originals
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -91,6 +92,15 @@ export class GitLabSourceControl {
     if (typeof sha !== 'string') return warning;
     return [...warning, { title: `Saved · ${sha.slice(0, 8)}`, tooltip: `Everything is in GitLab (commit ${sha.slice(0, 8)}). Click to save.` }];
   }
+
+  /** The text of a file at the last commit (`meta.base`); '' for a file added since. */
+  readonly quickDiffProvider = {
+    provideOriginalText: (path: ProjectPath): string => {
+      const base = this.#meta.get('base') as Record<string, unknown> | null | undefined;
+      const text = base?.[path];
+      return typeof text === 'string' ? text : '';
+    },
+  };
 
   commit(message: string): void {
     const request: ClientMessage = { type: 'gitlab:save', message, ...(this.author ? { author: this.author } : {}) };

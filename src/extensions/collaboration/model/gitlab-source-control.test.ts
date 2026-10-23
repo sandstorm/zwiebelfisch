@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import { ProjectPath } from '../../../core/paths/paths';
 import { META_MAP } from '../room-protocol';
 import { GitLabSourceControl } from './gitlab-source-control';
 
@@ -193,5 +194,17 @@ describe('GitLabSourceControl messages', () => {
   it('lists the conflicting files', () => {
     const files = [{ path: '/main.typ', ranges: [] }, { path: '/a.typ', ranges: [{ from: 0, to: 1 }] }];
     expect(statusAfter({ type: 'gitlab:conflict', sha: 's', files })).toEqual({ message: 'Changes on GitLab conflict with edits in /main.typ, /a.typ; not saved', severity: 'warning' });
+  });
+});
+
+describe('GitLabSourceControl: quick diff', () => {
+  it('gives a file\'s text at the last commit, \'\' for a file added since, and tells when the base moves', () => {
+    const { meta, sourceControl, changes } = setup();
+    const path = ProjectPath.of('/main.typ');
+    expect(sourceControl.quickDiffProvider.provideOriginalText(path)).toBe('');
+    meta.set('base', { '/main.typ': '= Intro\n' });
+    expect(sourceControl.quickDiffProvider.provideOriginalText(path)).toBe('= Intro\n');
+    expect(sourceControl.quickDiffProvider.provideOriginalText(ProjectPath.of('/new.typ'))).toBe('');
+    expect(changes()).toBe(1);
   });
 });

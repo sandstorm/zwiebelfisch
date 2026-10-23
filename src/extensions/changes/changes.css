@@ -1,0 +1,29 @@
+/* The changes extension's styles: in the Visual editor, new text green (tinted, underlined), new blocks and boxes
+   with a green bar, deleted text red and struck through; light and dark through the theme's success and danger
+   tokens. See changes.ts, which registers it. */
+.zwf-changes__inserted {
+  background: var(--zwf-success-soft);
+  text-decoration: underline var(--zwf-success);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.zwf-changes__inserted-block {
+  box-shadow: -3px 0 0 var(--zwf-success);
+}
+.zwf-changes__deleted,
+.zwf-changes__deleted-block {
+  color: var(--zwf-danger);
+  background: var(--zwf-danger-soft);
+  text-decoration: line-through;
+  user-select: none;
+}
+.zwf-changes__deleted-block {
+  display: block;
+  margin: 0.25em 0;
+  padding: 0.1em 0.4em;
+  box-shadow: -3px 0 0 var(--zwf-danger);
+}
+.zwf-changes__deleted-block > del {
+  display: block;
+  min-height: 1em;
+}

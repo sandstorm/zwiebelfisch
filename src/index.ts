@@ -37,7 +37,7 @@ export type {
   WindowApi,
 } from './hosts/window/window';
 export { ProgressLocation } from './hosts/window/window';
-export type { Scm, SourceControl, SourceControlStatusBarItem } from './hosts/scm/scm';
+export type { QuickDiffProvider, Scm, SourceControl, SourceControlStatusBarItem } from './hosts/scm/scm';
 export type {
   DocumentFilter,
   DocumentLink,

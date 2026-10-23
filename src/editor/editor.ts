@@ -23,6 +23,7 @@ import { textFiles } from '../extensions/text-files/text-files';
 import { styles } from '../extensions/styles/styles';
 import { slashCommands } from '../extensions/slash-commands/slash-commands';
 import { sourceControl } from '../extensions/source-control/source-control';
+import { changes } from '../extensions/changes/changes';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { invisibles } from '../extensions/invisibles/invisibles';
@@ -259,6 +260,7 @@ function builtinExtensions(): Extension[] {
     mermaid(),
     diagnostics(),
     sourceControl(),
+    changes(),
     markup(),
     math(),
     headings(),

@@ -110,6 +110,9 @@ importers:
       lucide-react:
         specifier: 1.55.0
         version: 1.55.0(@types/react@19.3.0)(react@19.3.0)
+      prosemirror-changeset:
+        specifier: 2.4.4
+        version: 2.4.4
       react:
         specifier: 19.3.0
         version: 19.3.0

@@ -38,13 +38,21 @@ export interface SourceControl {
    * commits: whoever shows source controls asks for the message, as for any commit.
    */
   readonly statusBarItems?: readonly SourceControlStatusBarItem[];
-  /** `busy`, `resourceStates` or `statusBarItems` changed. */
+  /** The files' texts at the last commit, for showing what changed since (VS Code: its `quickDiffProvider`). */
+  readonly quickDiffProvider?: QuickDiffProvider;
+  /** `busy`, `resourceStates`, `statusBarItems` or what `quickDiffProvider` provides changed. */
   readonly onDidChange: Event<void>;
   /**
    * Commits the project's current state with `message` (VS Code: its accept-input command). `busy` meanwhile;
    * the source control tells the outcome itself (`window.show…Message`), as it tells its news.
    */
   commit(message: string): void;
+}
+
+/** The original of a file: its text at the last commit (VS Code's QuickDiffProvider, giving the text itself). */
+export interface QuickDiffProvider {
+  /** The text of `path` at the last commit: '' for a file added since; undefined: the file is not this source control's. */
+  provideOriginalText(path: ProjectPath): string | undefined;
 }
 
 /** A file with changes not committed (VS Code's SourceControlResourceState). */

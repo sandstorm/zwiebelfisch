@@ -1,0 +1,5 @@
+flowchart LR
+  B["meta.base<br/>(texts at the last commit)"] --> Q["GitLabSourceControl<br/>quickDiffProvider"]
+  Q -- "provideOriginalText(path)" --> C["changes extension"]
+  D["Visual editor document"] --> C
+  C -- "parseTypst + prosemirror-changeset" --> R["decorations:<br/>inserted · deleted"]
