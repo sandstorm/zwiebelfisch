@@ -59,7 +59,7 @@ func run() error {
 		return fmt.Errorf("the fake repository's files: run from the repository root (%s): %v", projectDir, err)
 	}
 	files[playground.FolderMain] = []byte(playground.FolderMainText)
-	fake := fakegitlab.New(playground.Project, files)
+	fake := playground.NewGitLab(files)
 	fake.SetAutoBranches(true)
 
 	st, err := store.Open(store.Memory)

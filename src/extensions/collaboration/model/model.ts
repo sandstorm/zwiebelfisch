@@ -12,6 +12,7 @@ import { gitlabRoomFolder, roomFilePath } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
+import { GitLabHistory } from './gitlab-history';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
 import { RoomFolder } from './room-folder';
 import { SharedAssets } from './shared-assets';
@@ -24,7 +25,8 @@ import { SharedProject } from './shared-project';
  * - each Typst file's text (SharedProject)
  * - the main file (SharedMainFile), except in a GitLab-backed room, where it stays each user's own
  * - the users' places (RemoteCursors)
- * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch (GitLabSourceControl);
+ * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch and its history
+ *   (GitLabSourceControl, GitLabHistory);
  *   in a room of one folder of the branch, also its main file and the files from outside it the compiler misses
  *   (RoomFolder)
  *
@@ -51,6 +53,7 @@ export class Collaboration {
     private readonly server: {
       provider: HocuspocusProvider;
       files: (path: ProjectPath) => Promise<Uint8Array>;
+      history: (ydoc: Y.Doc) => GitLabHistory;
       tell: Tell;
       signedOut: Promise<void>;
       folder: ProjectPath | null;
@@ -59,9 +62,10 @@ export class Collaboration {
     const { project, user } = shared;
     this.signedOut = server?.signedOut ?? new Promise<void>(() => {});
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
-      this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell);
-      this.assets = new SharedAssets(project, ydoc, server.files);
+      this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, server.history(ydoc));
+      // before the files are shared, so the host's files outside the folder are not
       if (server.folder) this.folder = new RoomFolder(server.folder, project, ydoc, statelessChannel(server.provider));
+      this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
     // after the files, so the room's main file is there to take
@@ -102,7 +106,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell, signedOut, folder: gitlabRoomFolder(options.room) });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, folder: gitlabRoomFolder(options.room) });
   }
 
   /**

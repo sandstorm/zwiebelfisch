@@ -95,6 +95,8 @@ func New(o Options) (*Server, error) {
 	signedIn.HandleFunc("POST /api/auth/logout", s.logout(o.Auth))
 	if s.gitlab != nil {
 		signedIn.HandleFunc("GET /api/rooms/{room}/files/{path...}", s.gitlab.ServeFile)
+		signedIn.HandleFunc("GET /api/rooms/{room}/history", s.gitlab.ServeHistory)
+		signedIn.HandleFunc("GET /api/rooms/{room}/compare", s.gitlab.ServeCompare)
 	}
 
 	s.public, s.signedIn, s.mux = public, signedIn, http.NewServeMux()

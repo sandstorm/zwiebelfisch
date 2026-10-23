@@ -251,3 +251,15 @@ func TestReadProjectFiles(t *testing.T) {
 	_, err = playground.ReadProjectFiles(filepath.Join(t.TempDir(), "missing"))
 	require.Error(t, err)
 }
+
+func TestNewGitLabHasAHistory(t *testing.T) {
+	project := files()
+	project["/chapters/method.typ"] = []byte("= Method\n")
+	project[playground.FolderMain] = []byte(playground.FolderMainText)
+	fake := playground.NewGitLab(project)
+	require.Equal(t, project, fake.Head("main").Files, "ends at the files")
+	head := fake.Head("main")
+	require.Equal(t, fakegitlab.Author{Name: "Grace Example", Email: "grace@example.com"}, head.Author)
+	require.Contains(t, head.Message, "Co-authored-by: Ada Example <ada@example.com>")
+	require.NotEmpty(t, head.Parent)
+}

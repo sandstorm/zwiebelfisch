@@ -9,7 +9,7 @@
 // Client serves it all in-process, without network, ports or secrets. Every request needs a user's access
 // token as its sign-in issues them (TokenOf): Bearer for REST, basic auth oauth2:<token> for git. A test
 // also plays GitLab's other users and failures:
-//   - a colleague's push (Push, PushBeforeNextCommit)
+//   - a colleague's push (Push, PushAs, PushBeforeNextCommit)
 //   - a failing push, an unreachable branch (FailNextCommit, SetUnreachable)
 //   - who may do what (SetAccess, Protect)
 //
@@ -105,7 +105,7 @@ func New(project string, files Files) *GitLab {
 		project: project, signIn: NewIdentityProvider(URL, "/oauth/authorize"), repo: repo,
 		unreachable: map[string]bool{}, access: map[int]int{},
 	}
-	g.push("main", files, "Initial commit")
+	g.push(upstream, "main", files, "Initial commit")
 	_ = repo.Storer.SetReference(plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")))
 	return g
 }
@@ -156,17 +156,22 @@ func (g *GitLab) SetAutoBranches(on bool) {
 // Push commits changes (nil deletes) on branch, as someone pushing would, and returns the new sha. A branch
 // nobody created yet starts at main with SetAutoBranches, else from nothing.
 func (g *GitLab) Push(branch string, changes Files, message string) string {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.push(branch, changes, message)
+	return g.PushAs(upstream, branch, changes, message)
 }
 
-func (g *GitLab) push(branch string, changes Files, message string) string {
+// PushAs is Push with author as the commit's author and committer.
+func (g *GitLab) PushAs(author Author, branch string, changes Files, message string) string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.push(author, branch, changes, message)
+}
+
+func (g *GitLab) push(author Author, branch string, changes Files, message string) string {
 	parent := g.head(branch)
 	if parent.IsZero() && g.autoBranches {
 		parent = g.head("main")
 	}
-	sha, err := g.record(parent, changes, message)
+	sha, err := g.record(parent, author, changes, message)
 	if err != nil {
 		panic(err) // in memory: does not fail
 	}
@@ -274,9 +279,9 @@ func (g *GitLab) setBranch(branch string, sha plumbing.Hash) {
 	_ = g.repo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName(branch), sha))
 }
 
-// record writes a commit by upstream of parent's files (zero: none) with changes applied. Called with mu
+// record writes a commit by author of parent's files (zero: none) with changes applied. Called with mu
 // held.
-func (g *GitLab) record(parent plumbing.Hash, changes Files, message string) (plumbing.Hash, error) {
+func (g *GitLab) record(parent plumbing.Hash, author Author, changes Files, message string) (plumbing.Hash, error) {
 	files := map[string]plumbing.Hash{} // "chapters/a.typ" → blob
 	if !parent.IsZero() {
 		c, err := g.repo.CommitObject(parent)
@@ -325,8 +330,8 @@ func (g *GitLab) record(parent plumbing.Hash, changes Files, message string) (pl
 	}
 	when := time.Now()
 	c := &object.Commit{
-		Author:    object.Signature{Name: upstream.Name, Email: upstream.Email, When: when},
-		Committer: object.Signature{Name: upstream.Name, Email: upstream.Email, When: when},
+		Author:    object.Signature{Name: author.Name, Email: author.Email, When: when},
+		Committer: object.Signature{Name: author.Name, Email: author.Email, When: when},
 		Message:   message, TreeHash: root,
 	}
 	if !parent.IsZero() {

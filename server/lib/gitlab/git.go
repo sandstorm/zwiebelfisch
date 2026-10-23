@@ -39,7 +39,7 @@ type gitRepo struct {
 	client    *http.Client // git over HTTP: no overall timeout (gitTimeout per call)
 	committer Signature
 
-	mu     sync.Mutex
+	mu     sync.RWMutex    // reads: RLock
 	repo   *git.Repository // nil until the first call; its remote: <instance>/<path>.git
 	writes int             // since the last upkeep
 }
@@ -65,8 +65,8 @@ func (g *gitRepo) Head(ctx context.Context, token, branch string) (string, error
 }
 
 func (g *gitRepo) Tree(sha string) ([]TreeEntry, error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	if g.repo == nil {
 		return nil, plumbing.ErrObjectNotFound
 	}
@@ -85,8 +85,8 @@ func (g *gitRepo) Tree(sha string) ([]TreeEntry, error) {
 }
 
 func (g *gitRepo) Blobs(shas []string) ([][]byte, error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	if g.repo == nil {
 		return nil, plumbing.ErrObjectNotFound
 	}
@@ -474,4 +474,186 @@ func (g *gitRepo) writeTree(entries map[string]object.TreeEntry) (plumbing.Hash,
 		return g.write(t)
 	}
 	return write(root)
+}
+
+func (g *gitRepo) Log(q LogQuery) ([]CommitInfo, string, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.repo == nil {
+		return nil, "", plumbing.ErrObjectNotFound
+	}
+	from, skip := q.Sha, 0
+	if q.Cursor != "" {
+		var ok bool
+		if from, skip, ok = parseLogCursor(q.Cursor); !ok {
+			return nil, "", errBadCursor
+		}
+	}
+	start, err := g.repo.CommitObject(plumbing.NewHash(from))
+	if err != nil {
+		return nil, "", err
+	}
+	commits := object.NewCommitIterCTime(start, nil, nil)
+	defer commits.Close()
+	var out []CommitInfo
+	checked := 0
+	for walked := 1; ; walked++ {
+		c, err := commits.Next()
+		if errors.Is(err, io.EOF) {
+			return out, "", nil
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		if walked <= skip {
+			continue
+		}
+		checked++
+		changed, err := g.changes(c, q.Path)
+		if err != nil {
+			return nil, "", err
+		}
+		if !changed {
+			if checked >= logWork {
+				return out, logCursor(from, walked), nil
+			}
+			continue
+		}
+		info := CommitInfo{Sha: c.Hash.String(), Message: c.Message, Author: Signature{c.Author.Name, c.Author.Email}, At: c.Committer.When}
+		for _, p := range c.ParentHashes {
+			info.Parents = append(info.Parents, p.String())
+		}
+		if out = append(out, info); len(out) >= q.Limit || checked >= logWork {
+			return out, logCursor(from, walked), nil
+		}
+	}
+}
+
+// logWork is the most commits one Log checks against its path.
+var logWork = 1000
+
+// logCursor is where a Log from sha goes on: after the first walked commits of the walk.
+func logCursor(sha string, walked int) string {
+	return sha + "." + strconv.Itoa(walked)
+}
+
+func parseLogCursor(cursor string) (sha string, walked int, ok bool) {
+	sha, n, found := strings.Cut(cursor, ".")
+	walked, err := strconv.Atoi(n)
+	return sha, walked, found && err == nil && walked > 0 && plumbing.IsHash(sha)
+}
+
+// changes is whether commit c changes p ("" any file, "/dir/" a folder, "/a.typ" a file) against its first
+// parent. Called with mu held.
+func (g *gitRepo) changes(c *object.Commit, p string) (bool, error) {
+	if p == "" {
+		return true, nil
+	}
+	here, err := g.hashAt(c, p)
+	if err != nil || len(c.ParentHashes) == 0 {
+		return !here.IsZero(), err
+	}
+	parent, err := g.repo.CommitObject(c.ParentHashes[0])
+	if err != nil {
+		return false, err
+	}
+	before, err := g.hashAt(parent, p)
+	return here != before, err
+}
+
+// hashAt is the id of p's tree ("/dir/") or blob ("/a.typ") in commit c; zero: none there. Called with mu
+// held.
+func (g *gitRepo) hashAt(c *object.Commit, p string) (plumbing.Hash, error) {
+	t, err := c.Tree()
+	if err != nil {
+		return plumbing.ZeroHash, err
+	}
+	folder := strings.HasSuffix(p, "/")
+	e, err := t.FindEntry(strings.Trim(p, "/"))
+	if errors.Is(err, object.ErrEntryNotFound) || errors.Is(err, object.ErrDirectoryNotFound) || (err == nil && (e.Mode == filemode.Dir) != folder) {
+		return plumbing.ZeroHash, nil
+	}
+	if err != nil {
+		return plumbing.ZeroHash, err
+	}
+	return e.Hash, nil
+}
+
+func (g *gitRepo) Compare(sha string) ([]FileChange, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.repo == nil {
+		return nil, plumbing.ErrObjectNotFound
+	}
+	c, err := g.repo.CommitObject(plumbing.NewHash(sha))
+	if err != nil {
+		return nil, err
+	}
+	after, err := c.Tree()
+	if err != nil {
+		return nil, err
+	}
+	var before *object.Tree
+	if len(c.ParentHashes) > 0 {
+		parent, err := g.repo.CommitObject(c.ParentHashes[0])
+		if err != nil {
+			return nil, err
+		}
+		if before, err = parent.Tree(); err != nil {
+			return nil, err
+		}
+	}
+	changes, err := object.DiffTreeWithOptions(context.Background(), before, after, &object.DiffTreeOptions{DetectRenames: true, OnlyExactRenames: true})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]FileChange, 0, len(changes))
+	for _, ch := range changes {
+		from, to := ch.From.Name, ch.To.Name
+		switch {
+		case from == "":
+			out = append(out, FileChange{Path: "/" + to, Kind: "added"})
+		case to == "":
+			out = append(out, FileChange{Path: "/" + from, Kind: "deleted"})
+		case from != to:
+			out = append(out, FileChange{Path: "/" + to, PreviousPath: "/" + from, Kind: "renamed"})
+		default:
+			out = append(out, FileChange{Path: "/" + to, Kind: "modified"})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	return out, nil
+}
+
+func (g *gitRepo) File(sha, p string) ([]byte, bool, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.repo == nil {
+		return nil, false, plumbing.ErrObjectNotFound
+	}
+	c, err := g.repo.CommitObject(plumbing.NewHash(sha))
+	if err != nil {
+		return nil, false, err
+	}
+	t, err := c.Tree()
+	if err != nil {
+		return nil, false, err
+	}
+	f, err := t.File(strings.TrimPrefix(p, "/"))
+	if errors.Is(err, object.ErrFileNotFound) || errors.Is(err, object.ErrDirectoryNotFound) || errors.Is(err, object.ErrEntryNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if f.Size > maxBlobSize {
+		return nil, false, errTooLarge
+	}
+	r, err := f.Reader()
+	if err != nil {
+		return nil, false, err
+	}
+	defer r.Close()
+	content, err := io.ReadAll(r)
+	return content, err == nil, err
 }

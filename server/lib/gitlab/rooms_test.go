@@ -216,6 +216,8 @@ func signedIn(r *http.Request, _ string) (collab.User, error) {
 func (e *env) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/rooms/{room}/files/{path...}", e.x.ServeFile)
+	mux.HandleFunc("GET /api/rooms/{room}/history", e.x.ServeHistory)
+	mux.HandleFunc("GET /api/rooms/{room}/compare", e.x.ServeCompare)
 	mux.HandleFunc("POST /api/public/gitlab/webhook", e.x.ServeWebhook)
 	return mux
 }

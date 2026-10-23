@@ -8,6 +8,7 @@ import type { ProjectPath } from '../../core/paths/paths';
  * Used by:
  * - extensions that can commit: they register a `SourceControl` (collaboration, for GitLab)
  * - extensions that show source controls: they list the registered ones and hear when that changes (source-control)
+ * - extensions that show what changed: the originals and the history of the registered ones (changes)
  */
 export interface Scm {
   /**
@@ -40,6 +41,8 @@ export interface SourceControl {
   readonly statusBarItems?: readonly SourceControlStatusBarItem[];
   /** The files' texts at the last commit, for showing what changed since (VS Code: its `quickDiffProvider`). */
   readonly quickDiffProvider?: QuickDiffProvider;
+  /** Its commits, what each changed, and files as they were (VS Code's proposed `historyProvider`). */
+  readonly historyProvider?: SourceControlHistoryProvider;
   /** `busy`, `resourceStates`, `statusBarItems` or what `quickDiffProvider` provides changed. */
   readonly onDidChange: Event<void>;
   /**
@@ -53,6 +56,63 @@ export interface SourceControl {
 export interface QuickDiffProvider {
   /** The text of `path` at the last commit: '' for a file added since; undefined: the file is not this source control's. */
   provideOriginalText(path: ProjectPath): string | undefined;
+}
+
+/**
+ * The commits of a source control (VS Code's proposed SourceControlHistoryProvider): those before the current one
+ * (the commit its `quickDiffProvider`'s originals are of), what each changed, and files as they were.
+ */
+export interface SourceControlHistoryProvider {
+  /**
+   * The commits that changed `options.scope` (default: everything it holds), newest first, at most `options.limit` (it
+   * may list fewer), from `options.cursor` on (an earlier answer's `cursor`; default: the current commit). Rejects
+   * when they cannot be read.
+   */
+  provideHistoryItems(options: SourceControlHistoryOptions): Promise<SourceControlHistoryItems>;
+  /** The files commit `historyItemId` changed against its first parent (a first commit: every file, added). */
+  provideHistoryItemChanges(historyItemId: string): Promise<readonly SourceControlHistoryItemChange[]>;
+  /** The content of `path` at commit `historyItemId`; undefined: no such file there. */
+  provideFileContent(historyItemId: string, path: ProjectPath): Promise<Uint8Array | undefined>;
+  /** The current commit moved (a commit was made, or others' commits came in). */
+  readonly onDidChangeCurrentHistoryItem: Event<void>;
+}
+
+export interface SourceControlHistoryOptions {
+  /** Only commits that changed this file, or a file in this folder. */
+  readonly scope?: { readonly kind: 'file' | 'folder'; readonly path: ProjectPath };
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+
+/** A page of commits, and where the list goes on (undefined: no more). */
+export interface SourceControlHistoryItems {
+  readonly items: readonly SourceControlHistoryItem[];
+  readonly cursor?: string;
+}
+
+/** One commit (VS Code's SourceControlHistoryItem). */
+export interface SourceControlHistoryItem {
+  readonly id: string;
+  readonly parentIds: readonly string[];
+  /** Its message's first line. */
+  readonly subject: string;
+  readonly message: string;
+  /** The short id shown ("3f2a91c"). */
+  readonly displayId?: string;
+  /** Who made it, by name. */
+  readonly author?: string;
+  /** Who else made it (Co-authored-by), by name. */
+  readonly coAuthors?: readonly string[];
+  /** When, in milliseconds since the epoch. */
+  readonly timestamp?: number;
+}
+
+/** A file a commit changed (VS Code's SourceControlHistoryItemChange, by path). */
+export interface SourceControlHistoryItemChange {
+  readonly path: ProjectPath;
+  /** Where a renamed file was. */
+  readonly originalPath?: ProjectPath;
+  readonly kind: 'added' | 'modified' | 'deleted' | 'renamed';
 }
 
 /** A file with changes not committed (VS Code's SourceControlResourceState). */

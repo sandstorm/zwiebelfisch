@@ -74,7 +74,7 @@ func (g *GitLab) serveGit(w http.ResponseWriter, r *http.Request) {
 		}
 		if race := g.race; race != nil {
 			g.race = nil
-			g.push(branch, race.files, race.message)
+			g.push(upstream, branch, race.files, race.message)
 		}
 		if f := g.failure; f != nil {
 			g.failure = nil

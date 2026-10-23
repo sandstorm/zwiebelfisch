@@ -3,7 +3,8 @@
 //
 // Rooms opens the rooms named `gitlab:<project id or path>@<branch>`, or `…@<branch>:/<folder>` for a room
 // of one folder of the branch, and serves, next to the WebSocket:
-//   - a room's files (images, data): GET /rooms/<room>/files/<path>
+//   - a room's files (images, data): GET /rooms/<room>/files/<path>, also at a commit (?ref=)
+//   - the history of a room's branch: GET /rooms/<room>/history, GET /rooms/<room>/compare (history.go)
 //   - GitLab's push webhook: POST /gitlab/webhook
 //
 // Everything is done in a signed-in user's name, with their OAuth token (Options.Token; the server holds no
@@ -356,8 +357,9 @@ func (x *Rooms) person(user collab.User, name, email string) *person {
 	return &person{User: user, Name: name, Email: email}
 }
 
-// ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in,
-// from the clone. CORS is the app's.
+// ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in:
+// as the room has it, or with ?ref=<sha> as it is at that commit (a file the room holds or pulled in only;
+// cached for good). CORS is the app's.
 //
 // Every answer is passive content: nosniff and a sandboxing CSP (no script runs, also in an SVG opened as
 // a page); images, PDF, fonts and text files are served inline under their type (text as text/plain),
@@ -365,23 +367,19 @@ func (x *Rooms) person(user collab.User, name, email string) *person {
 func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox")
-	name, file := r.PathValue("room"), "/"+r.PathValue("path")
-	if x.opts.Authenticate == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	x.mu.Lock()
-	open := x.open[name]
-	x.mu.Unlock()
+	open := x.openFor(w, r)
 	if open == nil {
-		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	content, ok, err := open.asset(file)
+	file, ref := "/"+r.PathValue("path"), r.URL.Query().Get("ref")
+	var content []byte
+	var ok bool
+	var err error
+	if ref == "" {
+		content, ok, err = open.asset(file)
+	} else {
+		content, ok, err = open.fileAt(ref, file)
+	}
 	if err != nil {
 		http.Error(w, failureMessage(err), http.StatusBadGateway)
 		return
@@ -396,8 +394,39 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", "attachment")
 	}
-	w.Header().Set("Cache-Control", "private, no-cache")
+	cache(w, ref != "")
 	_, _ = w.Write(content)
+}
+
+// openFor is the open room the request's {room} names, if Authenticate lets its user in; else nil, the
+// refusal answered (401, or 404 for a room not open).
+func (x *Rooms) openFor(w http.ResponseWriter, r *http.Request) *room {
+	name := r.PathValue("room")
+	if x.opts.Authenticate == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return nil
+	}
+	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return nil
+	}
+	x.mu.Lock()
+	open := x.open[name]
+	x.mu.Unlock()
+	if open == nil {
+		http.Error(w, "Not found", http.StatusNotFound)
+	}
+	return open
+}
+
+// cache sets an answer's Cache-Control: kept for good (immutable: it names a commit), else asked again each
+// time.
+func cache(w http.ResponseWriter, immutable bool) {
+	if immutable {
+		w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "private, no-cache")
+	}
 }
 
 // passiveTypes are the files ServeFile answers inline, by extension: what a Typst document reads (images,

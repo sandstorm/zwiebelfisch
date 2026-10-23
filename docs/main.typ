@@ -30,6 +30,7 @@
   #include "20_features/12_collaborative-editing.typ"
   #include "20_features/13_gitlab.typ"
   #include "20_features/14_html-preview.typ"
+  #include "20_features/15_history.typ"
 ]
 
 = Configuration

@@ -19,7 +19,7 @@ const (
 const (
 	metaChanges    = "changes"       // *roomChanges: what the room has that the branch has not
 	metaConflict   = "conflict"      // *roomConflict: upstream changes that conflict with the room's
-	metaFailure    = "commitFailure" // *commitFailure: the last commit failed
+	metaFailure    = "commitFailure" // *commitFailure: the last commit failed, or what it left out
 	metaAutoCommit = "autoCommit"    // minutes without edits before the server commits by itself; null: never
 	metaPulledIn   = "pulledIn"      // []string: the files from outside the room's folder it holds (pullIn), sorted
 )
@@ -92,6 +92,34 @@ type fileConflict struct {
 type conflictRange struct {
 	From int `json:"from"`
 	To   int `json:"to"`
+}
+
+// historyPage is an answer of the history endpoint (ServeHistory): commits newest first, and where the list
+// goes on (?cursor=; "": no more).
+type historyPage struct {
+	Commits []historyCommit `json:"commits"`
+	Cursor  string          `json:"cursor,omitempty"`
+}
+
+type historyCommit struct {
+	Sha     string   `json:"sha"`
+	Parents []string `json:"parents"`
+	Message string   `json:"message"` // trailers included
+	At      int64    `json:"at"`      // when it was committed: milliseconds since the epoch
+	// People are who made it, by name: the author, then the Co-authored-by trailers; never the committer
+	// Zwiebelfisch
+	People []string `json:"people"`
+}
+
+// compareAnswer is the answer of the compare endpoint (ServeCompare): the files a commit changed.
+type compareAnswer struct {
+	Files []historyFile `json:"files"`
+}
+
+type historyFile struct {
+	Path         string `json:"path"`
+	PreviousPath string `json:"previousPath,omitempty"` // renamed: where it was
+	Kind         string `json:"kind"`                   // added, modified, deleted, renamed
 }
 
 func (m message) json() string {

@@ -153,6 +153,25 @@ func withCoAuthors(message string, e editors, author person) string {
 	return b.String()
 }
 
+// parseCoAuthors are the people of message's Co-authored-by trailers (in its last paragraph, as
+// withCoAuthors writes them), in their order.
+func parseCoAuthors(message string) []Signature {
+	paragraphs := strings.Split(strings.TrimRight(strings.ReplaceAll(message, "\r\n", "\n"), "\n"), "\n\n")
+	var out []Signature
+	for _, line := range strings.Split(paragraphs[len(paragraphs)-1], "\n") {
+		key, value, ok := strings.Cut(line, ":")
+		if !ok || !strings.EqualFold(strings.TrimSpace(key), "Co-authored-by") {
+			continue
+		}
+		name, email, ok := strings.Cut(strings.TrimSuffix(strings.TrimSpace(value), ">"), "<")
+		if !ok || strings.TrimSpace(name) == "" {
+			continue
+		}
+		out = append(out, Signature{Name: strings.TrimSpace(name), Email: strings.TrimSpace(email)})
+	}
+	return out
+}
+
 // automaticMessage is the message of a commit the server makes by itself, by author: "Edits by Ann, Bob:
 // chapters/intro.typ, results.typ" (at most namedPaths paths), the other editors as co-authors.
 func automaticMessage(e editors, paths []string, author person) string {

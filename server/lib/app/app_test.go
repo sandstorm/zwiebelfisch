@@ -238,6 +238,7 @@ func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 	s := newServer(t, fake, Options{GitLab: gl, PlainRooms: true})
 	require.ElementsMatch(t, []string{
 		"GET /api/collaboration", "GET /api/me", "POST /api/auth/logout", "GET /api/rooms/{room}/files/{path...}",
+		"GET /api/rooms/{room}/history", "GET /api/rooms/{room}/compare",
 	}, s.signedIn.patterns)
 	for _, pattern := range append(s.signedIn.patterns, "GET /", "GET /unknown", "GET /api/unknown") {
 		req := requestFor(pattern)

@@ -1,10 +1,11 @@
 // Tests for room-folder.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { Project } from '../../../core/project/project';
+import { Project, type ProjectFiles } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { FILES_MAP, META_MAP } from '../room-protocol';
+import { ASSETS_MAP, FILES_MAP, META_MAP } from '../room-protocol';
 import { RoomFolder } from './room-folder';
+import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
 const path = ProjectPath.of;
@@ -20,11 +21,12 @@ function room(texts: Record<string, string>, baseSha = 'a1') {
   return ydoc;
 }
 
-/** A client joining `ydoc` as the widget does for a GitLab room (no files of its own: an empty main file). */
-function join(ydoc: Y.Doc, options: { mainLocked?: boolean; main?: string } = {}) {
-  const project = new Project(path(options.main ?? '/main.typ'), {}, { mainLocked: options.mainLocked });
+/** A client joining `ydoc` as the widget does for a GitLab room (by default no files of its own: an empty main file). */
+function join(ydoc: Y.Doc, options: { mainLocked?: boolean; main?: string; files?: ProjectFiles } = {}) {
+  const project = new Project(path(options.main ?? '/main.typ'), options.files ?? {}, { mainLocked: options.mainLocked });
   const sent: unknown[] = [];
   const folder = new RoomFolder(FOLDER, project, ydoc, { send: (payload) => sent.push(JSON.parse(payload)) });
+  new SharedAssets(project, ydoc, async () => new Uint8Array());
   new SharedProject(project, ydoc);
   return { project, folder, sent };
 }
@@ -38,6 +40,16 @@ describe('RoomFolder', () => {
     expect(project.paths()).toEqual(['/reports/q1/main.typ', '/reports/q1/a.typ']);
     // nothing seeded outside the folder
     expect([...ydoc.getMap(FILES_MAP).keys()].sort()).toEqual(['/reports/q1/a.typ', '/reports/q1/main.typ']);
+  });
+
+  it("drops the host's files outside the folder that the room does not hold, so none is shared", () => {
+    const ydoc = room({ '/reports/q1/main.typ': '= Q1', '/shared.typ': 'S' });
+    const files = { '/main.typ': 'local', '/logo.png': new Uint8Array([1]), '/shared.typ': 'mine', '/reports/q1/extra.typ': 'E' };
+    const { project } = join(ydoc, { files });
+    expect(project.paths()).toEqual(['/reports/q1/main.typ', '/reports/q1/extra.typ', '/shared.typ']);
+    expect(project.document(path('/shared.typ'))!.text).toBe('S');
+    expect([...ydoc.getMap(FILES_MAP).keys()].sort()).toEqual(['/reports/q1/extra.typ', '/reports/q1/main.typ', '/shared.typ']);
+    expect([...ydoc.getMap(ASSETS_MAP).keys()]).toEqual([]);
   });
 
   it('else its first .typ file, else a new main.typ in it', () => {

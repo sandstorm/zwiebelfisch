@@ -2,6 +2,7 @@
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
+import type { GitLabHistory } from './gitlab-history';
 import { ProjectPath } from '../../../core/paths/paths';
 import {
   DEFAULT_COMMIT_MESSAGE,
@@ -22,6 +23,7 @@ import {
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
  *   warning entry until the next commit or merge
  * - the files' texts at the last commit (`meta.base`) are its quick diff's originals
+ * - the branch's commits before are its `historyProvider`'s (given; disposed with it)
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -40,6 +42,7 @@ export class GitLabSourceControl {
     ydoc: Y.Doc,
     private readonly channel: StatelessChannel,
     private readonly tell: Tell,
+    readonly historyProvider?: GitLabHistory,
   ) {
     this.#meta = ydoc.getMap(META_MAP);
     this.#meta.observe(this.#metaChanged);
@@ -112,6 +115,7 @@ export class GitLabSourceControl {
     clearInterval(this.#ticker);
     this.#subscription.dispose();
     this.#changed.dispose();
+    this.historyProvider?.dispose();
   }
 
   readonly #metaChanged = (): void => {

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-git/go-git/v6/plumbing"
+
 	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
@@ -230,6 +232,95 @@ func (r *fakeRepo) Commit(_ context.Context, token string, req CommitRequest) (s
 	c := r.record(head.sha, changes, req.Message, req.Author)
 	r.branches[req.Branch] = c.sha
 	return c.sha, nil
+}
+
+func (r *fakeRepo) Log(q LogQuery) ([]CommitInfo, string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	from, skip := q.Sha, 0
+	if q.Cursor != "" {
+		var ok bool
+		if from, skip, ok = parseLogCursor(q.Cursor); !ok {
+			return nil, "", errBadCursor
+		}
+	}
+	if r.commits[from] == nil {
+		return nil, "", plumbing.ErrObjectNotFound
+	}
+	var out []CommitInfo
+	walked := 0
+	for c := r.commits[from]; c != nil; c = r.commits[c.parent] {
+		if walked++; walked <= skip || !r.changes(c, q.Path) {
+			continue
+		}
+		info := CommitInfo{Sha: c.sha, Message: c.message, Author: c.author, At: time.UnixMilli(int64(walked))}
+		if c.parent != "" {
+			info.Parents = []string{c.parent}
+		}
+		if out = append(out, info); len(out) >= q.Limit {
+			return out, logCursor(from, walked), nil
+		}
+	}
+	return out, "", nil
+}
+
+// changes is whether c changed a file at p ("" any, "/dir/" in a folder, "/a.typ" that file). Called with mu
+// held.
+func (r *fakeRepo) changes(c *fakeCommit, p string) bool {
+	var before map[string][]byte
+	if parent := r.commits[c.parent]; parent != nil {
+		before = parent.files
+	}
+	in := func(path string) bool {
+		return p == "" || path == p || (strings.HasSuffix(p, "/") && strings.HasPrefix(path, p))
+	}
+	for _, files := range []map[string][]byte{c.files, before} {
+		for path := range files {
+			if in(path) && string(c.files[path]) != string(before[path]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *fakeRepo) Compare(sha string) ([]FileChange, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c := r.commits[sha]
+	if c == nil {
+		return nil, plumbing.ErrObjectNotFound
+	}
+	var before map[string][]byte
+	if parent := r.commits[c.parent]; parent != nil {
+		before = parent.files
+	}
+	var out []FileChange
+	for path, content := range c.files {
+		if old, ok := before[path]; !ok {
+			out = append(out, FileChange{Path: path, Kind: "added"})
+		} else if string(old) != string(content) {
+			out = append(out, FileChange{Path: path, Kind: "modified"})
+		}
+	}
+	for path := range before {
+		if _, ok := c.files[path]; !ok {
+			out = append(out, FileChange{Path: path, Kind: "deleted"})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	return out, nil
+}
+
+func (r *fakeRepo) File(sha, path string) ([]byte, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c := r.commits[sha]
+	if c == nil {
+		return nil, false, plumbing.ErrObjectNotFound
+	}
+	content, ok := c.files[path]
+	return content, ok, nil
 }
 
 // Access is the access hook: what user may do (setAccess), asked with token.

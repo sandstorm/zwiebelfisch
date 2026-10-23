@@ -86,7 +86,7 @@ activate({ workspace, subscriptions }) {
   [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerStatusBarItem`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
   [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `registerFileSystemProvider`],
   [`languages`], [`hosts/languages`], [`registerDocumentLinkProvider`, `registerDocumentDropEditProvider`, `registerDocumentPasteEditProvider`, `registerHelpSheet`, `registerImportSource`; languages via `contributes.languages`],
-  [`scm`], [`hosts/scm`], [`registerSourceControl`],
+  [`scm`], [`hosts/scm`], [`registerSourceControl` (with an optional `quickDiffProvider` and `historyProvider`)],
   [`visualEditor`], [`hosts/visual-editor`], [`registerNode`, `registerMark`, `registerTiptapExtension`, `registerSubmenu`, `registerFloatingBar`, `registerCompletionItemProvider`, `registerHighlightProvider`, `registerRawBoxRenderer`, `registerRawBoxBehavior`],
   [`sourceEditor`], [`hosts/source-editor`], [`registerCodeMirrorExtension`],
   [`preview`], [`hosts/preview`], [`registerViewOption`, `registerPdfExportOption`, `registerRenderer`, `registerPaneOverlay`, `createPageOverlay`],
@@ -325,7 +325,7 @@ activate({ window, subscriptions }) {
 }
 ```
 
-- *`priority`* when several editors match: a number (higher first), `default` (100), `option` (only when chosen), `fallback` (only files no other editor matches).
+- *`priority`* when several editors match: a number (higher first), `default` (100), `option` (only when chosen, each time: never remembered for later opens), `fallback` (only files no other editor matches).
 - *Several editors for one file* get a tab each; the one picked is remembered.
 - *`panel`* has `element`, `visible`, `onDidChangeViewState`, `onDidRequestReveal`, `onDidDispose`. `retainContextWhenHidden` keeps the panel alive while another file or tab shows.
 
@@ -493,6 +493,8 @@ activate({ scm, project, subscriptions }) {
   mermaid(read("../diagrams/quick-diff.mmd"), width: 90%),
   caption: [Changes since the last commit],
 ) <fig:quick-diff>
+
+*`historyProvider`* (optional, VS Code's proposed API): `provideHistoryItems({ scope, cursor, limit })` pages the commits (of a file or folder), `provideHistoryItemChanges(id)` the files one changed, `provideFileContent(id, path)` a file at a commit; fire `onDidChangeCurrentHistoryItem` when the current commit moves. The `changes` extension's History panel and "Changes" tab read it, and it takes a chosen commit's texts as the Visual editor's baseline instead of `quickDiffProvider`'s.
 
 == Visual editor nodes <architecture-extensions-visual-editor>
 
@@ -736,7 +738,7 @@ Each kind has an explicit tie-breaker, so the result never depends on the list's
   [`mermaid`], [Mermaid diagrams (`.mmd`, drawn by `@preview/merman`)], [toolbar, links, help, import source, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to …" and status bar entries for the registered source controls], [menu, status bar, file decorations],
-  [`changes`], ["Show changes since last commit": the Visual editor marks what changed against the source control's `quickDiffProvider`], [toolbar, Tiptap extension, style sheet],
+  [`changes`], ["Show changes since last commit" (or since a commit chosen in History) in the Visual editor; the History panel; the read-only "Changes" tab (`@codemirror/merge`)], [toolbar, Tiptap extension, side panel, `files/row`, editor, style sheet],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, commands, menus, floating bar],
   [`math`], [math boxes; "Inline math", "Display math"], [Tiptap extension, toolbar],
   [`headings`], [headings; Heading 1–3 in the text style menu], [node, commands, menu, search],

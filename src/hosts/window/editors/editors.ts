@@ -13,7 +13,7 @@ import { FilenamePattern } from './filename-pattern';
  * asked for (`viewType`), else the one the user chose last among those offered for the file, else the one that matches
  * its name with the highest priority (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`),
  * then the one registered first; `'fallback'` editors only open files no other editor matches, `'option'` editors only
- * when asked for. That editor gets a fresh panel for the file; showing anything else disposes it, or only hides it for
+ * when asked for, each time (never the choice for later opens). That editor gets a fresh panel for the file; showing anything else disposes it, or only hides it for
  * an editor with `retainContextWhenHidden` (shown again when that file opens in it again, disposed when the file is
  * deleted).
  */
@@ -56,7 +56,7 @@ export class Editors {
    */
   show(file: { path: ProjectPath; content: FileContent }, viewType?: string, selection?: SourceRange): string | undefined {
     const registration = this.#choose(file.path, viewType);
-    if (registration && viewType === registration.viewType) this.#choice(viewType);
+    if (registration && viewType === registration.viewType) this.#choice(registration);
     const retained = registration && this.#retained.find((p) => p.registration === registration && p.path === file.path);
     if (this.#shown && this.#shown !== retained) this.#hide(this.#shown);
     if (!registration) return undefined;
@@ -130,7 +130,9 @@ export class Editors {
     return this.#registrations.filter((r) => r.pattern.matches(path)).sort((a, b) => ranksAbove(b, a) - ranksAbove(a, b));
   }
 
-  #choice(viewType: string): void {
+  /** `registration` is the user's choice for later opens, unless an option editor. */
+  #choice({ viewType, role }: Registration): void {
+    if (role === 'option') return;
     const index = this.#chosen.indexOf(viewType);
     if (index >= 0) this.#chosen.splice(index, 1);
     this.#chosen.unshift(viewType);

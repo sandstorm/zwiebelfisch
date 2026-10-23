@@ -3,10 +3,11 @@ package gitlab
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 // Repository is a project's repository as a room needs it: fetch a branch, read a commit's files, commit
-// the room's changes. Every call that talks to GitLab takes the OAuth token of the user it acts for; reads
+// the room's changes, read the history. Every call that talks to GitLab takes the OAuth token of the user it acts for; reads
 // of what was fetched talk to nobody. GitLab's is the git clone of git.go.
 type Repository interface {
 	// Head fetches branch (its commits, trees and files) and returns the commit it points at; Tree and Blobs
@@ -21,7 +22,35 @@ type Repository interface {
 	// at ExpectedHead (ErrConflict: nothing was committed) or an action's path is not one git takes
 	// (errBadPath). It returns the commit's sha.
 	Commit(ctx context.Context, token string, c CommitRequest) (string, error)
+	// Log lists the commits reachable from q.Sha (fetched before) that change q.Path against their first
+	// parent, newest first (by commit time), at most q.Limit (fewer, even none, once it checked logWork
+	// commits); next continues the list as q.Cursor ("": no more). An unknown cursor: errBadCursor.
+	Log(q LogQuery) (commits []CommitInfo, next string, err error)
+	// Compare lists the files commit sha changed against its first parent (a commit without one: every file
+	// added); a file moved unchanged is renamed.
+	Compare(sha string) ([]FileChange, error)
+	// File is path's content at commit sha; false: no such file there. Larger than maxBlobSize: errTooLarge.
+	File(sha, path string) ([]byte, bool, error)
 }
+
+// LogQuery is what Log lists. Path: "" every commit, "/chapters/" a folder's, "/a.typ" a file's. Cursor
+// (from an earlier Log, "": from Sha on) takes the place of Sha.
+type LogQuery struct {
+	Sha, Path, Cursor string
+	Limit             int
+}
+
+// CommitInfo is a commit as history shows it.
+type CommitInfo struct {
+	Sha     string
+	Parents []string
+	Message string // trailers included
+	Author  Signature
+	At      time.Time // when it was committed
+}
+
+// FileChange is a file a commit changed: Kind added, modified, deleted or renamed (from PreviousPath).
+type FileChange struct{ Path, PreviousPath, Kind string }
 
 // TreeEntry is a file of a commit: its path in the repository ("/chapter.typ") and blob sha.
 type TreeEntry struct{ Path, Sha string }
@@ -63,6 +92,9 @@ const maxBlobSize = 32 << 20
 // errBadPath: a commit names a file git does not take (an empty, ".", ".." or ".git" part, or a file where
 // a folder is); nothing was committed.
 var errBadPath = errors.New("is not a file name git takes")
+
+// errBadCursor: a Log cursor that no Log made.
+var errBadCursor = errors.New("not a cursor of this history")
 
 // errTooLarge: a file is larger than maxBlobSize.
 var errTooLarge = errors.New("a file is larger than 32 MiB, more than Zwiebelfisch reads")

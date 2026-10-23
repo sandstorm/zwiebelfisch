@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -25,12 +26,14 @@ import (
 // The room holds the files of its folder (dir; the whole repository without one) and the files from outside
 // it that a client asked for (pullIn, kept in meta.pulledIn): nothing else of the repository reaches the
 // document, and upstream changes to other files leave it alone. A commit never creates, renames or deletes
-// a file outside the folder.
+// a file outside the folder, but for creating a pulled-in file again: it leaves such changes out, commits
+// the rest, and they stay changes of the room.
 //
 // Everyone in the room sees in the document:
 //   - what is not committed yet and by whom (changes)
 //   - a conflict with upstream (conflict, until a merge succeeds)
-//   - a failed commit (commitFailure, until the next commit or merge)
+//   - a failed commit, or what a commit left out (commitFailure, until the next commit or merge, or until
+//     the room has nothing left to commit)
 //
 // A room stored and loaded again continues where it was; only the count of edits per editor starts over.
 // Save, pull and commit run one at a time, and clients keep editing while they talk to the repository.
@@ -254,20 +257,61 @@ func (r *room) inFolder(path string) bool {
 	return r.dir == "" || strings.HasPrefix(path, r.dir+"/")
 }
 
-// outsideFolder is why actions may not be committed ("": they may): one creates, renames or deletes a file
-// outside the room's folder.
-func (r *room) outsideFolder(actions []Action) string {
-	for _, a := range actions {
-		if a.Kind == ActionUpdate {
-			continue
-		}
-		for _, p := range []string{a.Path, a.PreviousPath} {
-			if p != "" && !r.inFolder(p) {
-				return fmt.Sprintf("Not saved: %s is outside the project folder %s, where files are only edited, never created, renamed or deleted.", p, r.dir)
+// committable is what of files a commit takes from the room at b, its actions, and what it leaves out ("":
+// nothing): files with every creation, rename and deletion outside the room's folder undone (as at b), but
+// for the creation of a pulled-in file.
+func (r *room) committable(b *base, files roomFiles, pulled []string) (kept roomFiles, actions []Action, notSaved string) {
+	kept = roomFiles{texts: map[string]string{}, assets: map[string]any{}}
+	maps.Copy(kept.texts, files.texts)
+	maps.Copy(kept.assets, files.assets)
+	var left []string
+	for {
+		actions = commitActions(b, kept)
+		undone := false
+		for _, a := range actions {
+			if !r.outside(a, pulled) {
+				continue
+			}
+			for _, p := range []string{a.Path, a.PreviousPath} {
+				if p == "" {
+					continue
+				}
+				if !r.inFolder(p) && !slices.Contains(left, p) {
+					left = append(left, p)
+				}
+				undo(kept, b, p)
+				undone = true
 			}
 		}
+		if !undone {
+			break
+		}
 	}
-	return ""
+	if len(left) > 0 {
+		notSaved = fmt.Sprintf("Not saved: %s (outside the project folder %s, where files are only edited, never created, renamed or deleted)", strings.Join(slices.Sorted(slices.Values(left)), ", "), r.dir)
+	}
+	return kept, actions, notSaved
+}
+
+// outside is whether a creates, renames or deletes a file outside the room's folder, other than creating a
+// pulled-in file.
+func (r *room) outside(a Action, pulled []string) bool {
+	if a.Kind == ActionUpdate || (a.Kind == ActionCreate && slices.Contains(pulled, a.Path)) {
+		return false
+	}
+	return !r.inFolder(a.Path) || (a.PreviousPath != "" && !r.inFolder(a.PreviousPath))
+}
+
+// undo makes path in files as it is at b.
+func undo(files roomFiles, b *base, path string) {
+	delete(files.texts, path)
+	delete(files.assets, path)
+	if text, ok := b.Texts[path]; ok {
+		files.texts[path] = text
+	}
+	if sha, ok := b.Assets[path]; ok {
+		files.assets[path] = sha
+	}
 }
 
 // Left: the last user (last) left. meta.changes is told now (the room is stored as it is when Left
@@ -504,7 +548,8 @@ func (r *room) autoCommitChanged(doc *ydoc.Doc) {
 	r.logErr(r.writeAutoCommit(doc), "cannot write the auto-commit setting")
 }
 
-// tellChanges writes what the room has that the branch has not into meta.changes (if that changed).
+// tellChanges writes what the room has that the branch has not into meta.changes (if that changed); with
+// nothing left to commit, a failed commit is over.
 func (r *room) tellChanges(doc *ydoc.Doc) {
 	if r.changesTimer != nil {
 		r.changesTimer()
@@ -528,10 +573,16 @@ func (r *room) tellChanges(doc *ydoc.Doc) {
 	if s := new(roomChanges); readValue(doc, metaChanges, s) {
 		stored = s
 	}
-	if reflect.DeepEqual(changes, stored) {
+	over := changes == nil && doc.Values(metaMap)[metaFailure] != nil
+	if reflect.DeepEqual(changes, stored) && !over {
 		return
 	}
-	r.logErr(r.write(doc, func(w *ydoc.Writer) { w.Set(metaMap, metaChanges, plain(changes)) }), "cannot write the changes")
+	r.logErr(r.write(doc, func(w *ydoc.Writer) {
+		w.Set(metaMap, metaChanges, plain(changes))
+		if over {
+			w.Set(metaMap, metaFailure, nil)
+		}
+	}), "cannot write the changes")
 }
 
 // commitNow commits as commitAttempts does. A failure (the repository unreachable or refusing the commit)
@@ -577,27 +628,25 @@ func (r *room) commitAttempts(ctx context.Context, compose compose) (message, er
 func (r *room) commit(ctx context.Context, compose compose) (result message, done bool, err error) {
 	var b *base
 	var files roomFiles
-	var actions []Action
+	var pulled []string
 	var edits editors
+	changed := false
 	gone := !r.host.Do(func(doc *ydoc.Doc) {
 		if b = readMeta(doc); b == nil {
 			return
 		}
-		files = readFiles(doc)
-		if actions = commitActions(b, files); len(actions) > 0 {
+		files, pulled = readFiles(doc), readPulledIn(doc)
+		if changed = len(commitActions(b, files)) > 0; changed {
 			edits = r.editors.take() // the edits in files; edits made while the commit runs stay for the next one
 		}
 	})
 	if gone {
 		return message{}, true, errGone
 	}
-	if len(actions) == 0 {
+	if !changed {
 		return message{Type: msgUnchanged}, true, nil
 	}
-	if refused := r.outsideFolder(actions); refused != "" {
-		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
-		return message{Type: msgError, Message: refused}, true, nil
-	}
+	files, actions, notSaved := r.committable(b, files, pulled)
 	var paths []string
 	for _, f := range changedFiles(actions) {
 		paths = append(paths, f.Path)
@@ -607,24 +656,31 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
 		return message{Type: msgError, Message: refused}, true, nil
 	}
-	sha, err := r.repo.Commit(ctx, by.token, CommitRequest{
-		Branch: r.branch, ExpectedHead: b.Sha, Message: by.text, Actions: actions,
-		Author: Signature{Name: by.author.Name, Email: by.author.Email},
-	})
-	if err != nil {
-		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
+	if len(actions) > 0 {
+		sha, err := r.repo.Commit(ctx, by.token, CommitRequest{
+			Branch: r.branch, ExpectedHead: b.Sha, Message: by.text, Actions: actions,
+			Author: Signature{Name: by.author.Name, Email: by.author.Email},
+		})
+		if err == nil {
+			r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, sha, notSaved) })
+			return message{Type: msgSaved, Sha: sha, Author: by.author.Name}, true, nil
+		}
 		if !errors.Is(err, ErrConflict) {
+			r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
 			return message{}, true, err
 		}
-		head, err := r.repo.Head(ctx, by.token, r.branch)
-		if err != nil {
-			return message{}, true, err
-		}
-		merged, err := r.merge(head)
-		return merged, err != nil || merged.Type == msgConflict, err
 	}
-	r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, sha) })
-	return message{Type: msgSaved, Sha: sha, Author: by.author.Name}, true, nil
+	r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
+	// a conflict, or nothing to commit but what is left out: upstream may have moved
+	head, err := r.repo.Head(ctx, by.token, r.branch)
+	if err != nil {
+		return message{}, true, err
+	}
+	if len(actions) == 0 && head == b.Sha {
+		return message{Type: msgError, Message: notSaved}, true, nil
+	}
+	merged, err := r.merge(head)
+	return merged, err != nil || merged.Type == msgConflict, err
 }
 
 // merge merges the branch at head (fetched before) into the room (see applyMerge).
@@ -710,8 +766,9 @@ func mergeAssets(w *ydoc.Writer, base map[string]string, current map[string]any,
 	}
 }
 
-// committed: files were committed as sha. They are the new base; uploads become repository files.
-func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha string) {
+// committed: files were committed as sha. They are the new base; uploads become repository files; what
+// the commit left out (notSaved, "": nothing) is the room's commitFailure.
+func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha, notSaved string) {
 	known := map[string]bool{}
 	for _, s := range b.Assets {
 		known[s] = true
@@ -733,6 +790,9 @@ func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha string) {
 			}
 		}
 		writeBase(w, doc, base{Sha: sha, Texts: files.texts, Assets: assets})
+		if notSaved != "" {
+			w.Set(metaMap, metaFailure, plain(commitFailure{Message: notSaved, At: r.x.clock.Now().UnixMilli()}))
+		}
 	}), "cannot write the commit")
 }
 

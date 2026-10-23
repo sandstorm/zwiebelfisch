@@ -35,6 +35,9 @@ func folderFiles() map[string]any {
 	}
 }
 
+// outsideWhy ends the notice of what a save left out.
+const outsideWhy = " (outside the project folder /reports/q1, where files are only edited, never created, renamed or deleted)"
+
 func setupFolder(t *testing.T) *env {
 	return setup(t, setupOptions{files: folderFiles(), room: folderRoom})
 }
@@ -180,7 +183,8 @@ func TestFolderRooms(t *testing.T) {
 				e.editAs(ann, change)
 				got := e.save("")
 				require.Equal(t, msgError, got.Type)
-				require.Contains(t, got.Message, "is outside the project folder /reports/q1, where files are only edited, never created, renamed or deleted.")
+				require.True(t, strings.HasPrefix(got.Message, "Not saved: /"), got.Message)
+				require.True(t, strings.HasSuffix(got.Message, outsideWhy), got.Message)
 				require.Equal(t, before, e.repo.head("main").sha)
 				require.Zero(t, e.repo.count("commit main"))
 				require.Equal(t, got.Message, e.commitFailure().Message, "shown to everyone")
@@ -200,6 +204,56 @@ func TestFolderRooms(t *testing.T) {
 		require.Equal(t, "= One\n", files["/reports/q1/chapters/one.typ"])
 		require.NotContains(t, files, q1Main)
 		require.Equal(t, "#let report(body) = [#body]\n\n#let note = [Note]\n", files["/template.typ"])
+	})
+
+	t.Run("commits the rest of a save and tells what it left out; deleting the left-out file in the room undoes it", func(t *testing.T) {
+		e := setupFolder(t)
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) {
+			w.SetText(filesMap, "/new.typ", "x")
+			replace(t, w, doc, q1Main, "= Q1", "= First quarter")
+		})
+		got := e.save("")
+		require.Equal(t, msgSaved, got.Type)
+		files := e.repo.texts()
+		require.Equal(t, `#import "/template.typ": report`+"\n= First quarter\n", files[q1Main])
+		require.NotContains(t, files, "/new.typ")
+		require.Equal(t, "Not saved: /new.typ"+outsideWhy, e.commitFailure().Message, "shown to everyone")
+		e.clock.Advance(changesDelay)
+		require.Equal(t, []changedFile{{"/new.typ", "added"}}, e.changes().Files, "the left-out file stays a change of the room")
+
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/new.typ") })
+		e.clock.Advance(changesDelay)
+		require.Nil(t, e.changes())
+		require.Nil(t, e.commitFailure(), "nothing is left out any more")
+		require.Equal(t, msgUnchanged, e.save("").Type)
+	})
+
+	t.Run("re-creates a pulled-in file the room changed and upstream deleted", func(t *testing.T) {
+		e := setupFolder(t)
+		require.Nil(t, e.room.pullIn("/logo.png"))
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Set(assetsMap, "/logo.png", []byte{8}) })
+		e.repo.push("main", map[string]any{"/logo.png": nil})
+		require.Equal(t, msgSaved, e.save("").Type, "merged, then the room's version created again")
+		require.Equal(t, []byte{8}, e.repo.head("main").files["/logo.png"])
+		require.Nil(t, e.commitFailure())
+	})
+
+	t.Run("a pulled-in .typ file the room changed and upstream deleted: deleted here it merges, created again it is committed", func(t *testing.T) {
+		e := setupFolder(t)
+		require.Nil(t, e.room.pullIn("/template.typ"))
+		e.edit("/template.typ", "[Note]", "[Mine]")
+		mine := e.text("/template.typ")
+		e.repo.push("main", map[string]any{"/template.typ": nil})
+		require.Equal(t, msgConflict, e.save("").Type)
+
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/template.typ") })
+		require.Equal(t, msgUnchanged, e.save("").Type, "the deletion is upstream's: merged")
+		require.Nil(t, e.conflict())
+		require.Equal(t, e.repo.head("main").sha, e.base().Sha)
+
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.SetText(filesMap, "/template.typ", mine) })
+		require.Equal(t, msgSaved, e.save("").Type)
+		require.Equal(t, mine, e.repo.texts()["/template.typ"])
 	})
 
 	t.Run("reads a request for a file", func(t *testing.T) {

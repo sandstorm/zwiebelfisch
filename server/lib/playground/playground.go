@@ -1,7 +1,8 @@
 // Package playground is the demo playground's server side: GitLab rooms without a real GitLab. Used only by
 // server/cmd/fake-gitlab, never in a real deployment.
 //
-// A fakegitlab.GitLab holds the project and signs people in, and dev-only HTTP endpoints let
+// A fakegitlab.GitLab (NewGitLab: the project after a short history) holds the project and signs people in,
+// and dev-only HTTP endpoints let
 //   - the demo's playground bar simulate a colleague's push or a GitLab outage
 //   - the tests switch a room's auto-commit
 //
@@ -13,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -46,6 +48,36 @@ This letter lives in letters/welcome and takes the report's look from /template.
 `
 
 const roomPrefix = "gitlab:"
+
+// NewGitLab is the playground's fake GitLab: Project with files on main, after a short history for the
+// History panel (commits by people with Co-authored-by trailers, each bringing one of files in: the results
+// chapter, the method chapter, FolderMain). Files missing from files are not committed.
+func NewGitLab(files fakegitlab.Files) *fakegitlab.GitLab {
+	steps := []struct {
+		path, message string
+		author        fakegitlab.Author
+	}{
+		{"/chapters/method.typ", "Describe the method\n\nCo-authored-by: Grace Example <grace@example.com>", ada},
+		{"/chapters/results.typ", "Add the results chapter", grace},
+		{FolderMain, "Add the welcome letter\n\nCo-authored-by: Ada Example <ada@example.com>\nCo-authored-by: Linus Example <linus@example.com>", grace},
+	}
+	earlier := maps.Clone(files)
+	for _, step := range steps {
+		delete(earlier, step.path)
+	}
+	fake := fakegitlab.New(Project, earlier)
+	for _, step := range steps {
+		if content, ok := files[step.path]; ok {
+			fake.PushAs(step.author, "main", fakegitlab.Files{step.path: content}, step.message)
+		}
+	}
+	return fake
+}
+
+var (
+	ada   = fakegitlab.Author{Name: "Ada Example", Email: "ada@example.com"}
+	grace = fakegitlab.Author{Name: "Grace Example", Email: "grace@example.com"}
+)
 
 // Options configure Handler.
 type Options struct {

@@ -45,7 +45,7 @@ export function gitlabRoomFolder(room: string): ProjectPath | null {
  * | `baseAssets`  | `Record<path, blobSha>`: the other files at `baseSha` |
  * | `changes`     | `RoomChanges \| null`: what the room has that the branch has not (kept up to date while people edit) |
  * | `conflict`    | `RoomConflict \| null`: upstream changes that conflict with the room's; nothing is committed until resolved |
- * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it); cleared by the next commit or merge, or a conflict |
+ * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it), or what it left out (in a room of one folder); cleared by the next commit or merge, a conflict, or when nothing is left to commit |
  * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
  * | `pulledIn`    | `string[]`: the files from outside the room's folder it holds (`gitlab:pull`) |
  */
@@ -139,7 +139,48 @@ export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 /** The path of the collaboration WebSocket (relative to the server's URL): one connection carries the rooms joined; signed in only, like every path outside `/api/public/`. */
 export const COLLABORATION_PATH = '/api/collaboration';
 
-/** The HTTP path of a file of a room (relative to the server's URL). */
-export function roomFilePath(room: string, path: string): string {
-  return `/api/rooms/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}`;
+/** The HTTP path of a file of a room (relative to the server's URL); with `ref`, of the file at that commit (a GitLab room's). */
+export function roomFilePath(room: string, path: string, ref?: string): string {
+  const query = ref === undefined ? '' : `?ref=${encodeURIComponent(ref)}`;
+  return `/api/rooms/${encodeURIComponent(room)}/files${path.split('/').map(encodeURIComponent).join('/')}${query}`;
+}
+
+/**
+ * The HTTP path of a GitLab room's history (relative to the server's URL): `GET` answers a `HistoryPage` of the commits
+ * that changed `path` (`''`: the room's folder, else the whole branch; `/dir/`: a folder; `/a.typ`: a file), newest
+ * first, from the room's base commit or from `cursor` on, at most `limit` (the server's most: 50).
+ */
+export function roomHistoryPath(room: string, query: { path?: string; cursor?: string; limit?: number }): string {
+  const params = new URLSearchParams();
+  if (query.path) params.set('path', query.path);
+  if (query.cursor) params.set('cursor', query.cursor);
+  if (query.limit) params.set('limit', String(query.limit));
+  return `/api/rooms/${encodeURIComponent(room)}/history?${params}`;
+}
+
+/** The HTTP path of the files commit `sha` of a GitLab room's branch changed (relative to the server's URL): `GET` answers a `CompareAnswer`. */
+export function roomComparePath(room: string, sha: string): string {
+  return `/api/rooms/${encodeURIComponent(room)}/compare?sha=${encodeURIComponent(sha)}`;
+}
+
+/** A page of a GitLab room's history (`roomHistoryPath`), and where it goes on (missing: no more). */
+export interface HistoryPage {
+  commits: HistoryCommit[];
+  cursor?: string;
+}
+
+export interface HistoryCommit {
+  sha: string;
+  parents: string[];
+  /** Trailers included. */
+  message: string;
+  /** When it was committed: milliseconds since the epoch. */
+  at: number;
+  /** Who made it, by name: the author, then the co-authors (Co-authored-by); never the committer Zwiebelfisch. */
+  people: string[];
+}
+
+/** The files a commit changed against its first parent (`roomComparePath`): in a room of one folder, only those it holds or pulled in. */
+export interface CompareAnswer {
+  files: { path: string; previousPath?: string; kind: 'added' | 'modified' | 'deleted' | 'renamed' }[];
 }

@@ -176,6 +176,92 @@ func TestGitRepository(t *testing.T) {
 	})
 }
 
+func TestGitHistory(t *testing.T) {
+	ctx := context.Background()
+	fake := newFake()
+	initial := fake.Head("main").SHA
+	renamed := fake.Push("main", fakegitlab.Files{"/chapters/one.typ": nil, "/chapters/first.typ": []byte("= One\n")}, "Rename")
+	edited := fake.Push("main", fakegitlab.Files{"/main.typ": []byte("= Report v2\n"), "/img/logo.png": nil}, "Edit\n\nCo-authored-by: Bob <bob@example.com>")
+	g := fakeRepoOf(fake, "group/report", "")
+	head, err := g.Head(ctx, fake.TokenOf("Ann"), "main")
+	require.NoError(t, err)
+	require.Equal(t, edited, head)
+	log := func(q LogQuery) ([]string, string) {
+		t.Helper()
+		commits, next, err := g.Log(q)
+		require.NoError(t, err)
+		var shas []string
+		for _, c := range commits {
+			shas = append(shas, c.Sha)
+		}
+		return shas, next
+	}
+
+	t.Run("logs the commits that change a path, newest first, page by page", func(t *testing.T) {
+		all, next := log(LogQuery{Sha: head, Limit: 50})
+		require.Equal(t, []string{edited, renamed, initial}, all)
+		require.Empty(t, next)
+		folder, _ := log(LogQuery{Sha: head, Path: "/chapters/", Limit: 50})
+		require.Equal(t, []string{renamed, initial}, folder)
+		file, _ := log(LogQuery{Sha: head, Path: "/main.typ", Limit: 50})
+		require.Equal(t, []string{edited, initial}, file)
+		none, _ := log(LogQuery{Sha: head, Path: "/main.typ/", Limit: 50})
+		require.Empty(t, none, "a file is no folder")
+
+		first, next := log(LogQuery{Sha: head, Limit: 2})
+		require.Equal(t, []string{edited, renamed}, first)
+		rest, next := log(LogQuery{Cursor: next, Limit: 2})
+		require.Equal(t, []string{initial}, rest)
+		require.Empty(t, next)
+		_, _, err := g.Log(LogQuery{Cursor: "x.1", Limit: 2})
+		require.ErrorIs(t, err, errBadCursor)
+
+		commits, _, err := g.Log(LogQuery{Sha: head, Limit: 1})
+		require.NoError(t, err)
+		require.Equal(t, CommitInfo{Sha: edited, Parents: []string{renamed}, Message: "Edit\n\nCo-authored-by: Bob <bob@example.com>", Author: Signature{"Upstream", "upstream@test"}, At: commits[0].At}, commits[0])
+	})
+
+	t.Run("checks at most logWork commits against the path per call, then hands on a cursor", func(t *testing.T) {
+		was := logWork
+		logWork = 2
+		t.Cleanup(func() { logWork = was })
+		first, next := log(LogQuery{Sha: head, Path: "/main.typ", Limit: 50})
+		require.Equal(t, []string{edited}, first, "renamed was checked too")
+		require.NotEmpty(t, next)
+		rest, next := log(LogQuery{Cursor: next, Path: "/main.typ", Limit: 50})
+		require.Equal(t, []string{initial}, rest)
+		require.Empty(t, next)
+	})
+
+	t.Run("compares a commit with its first parent; a root commit adds everything", func(t *testing.T) {
+		changes, err := g.Compare(renamed)
+		require.NoError(t, err)
+		require.Equal(t, []FileChange{{Path: "/chapters/first.typ", PreviousPath: "/chapters/one.typ", Kind: "renamed"}}, changes)
+		changes, err = g.Compare(edited)
+		require.NoError(t, err)
+		require.Equal(t, []FileChange{{Path: "/img/logo.png", Kind: "deleted"}, {Path: "/main.typ", Kind: "modified"}}, changes)
+		changes, err = g.Compare(initial)
+		require.NoError(t, err)
+		require.Len(t, changes, 3)
+		require.Equal(t, "added", changes[0].Kind)
+	})
+
+	t.Run("reads a file at a commit", func(t *testing.T) {
+		content, ok, err := g.File(initial, "/main.typ")
+		require.NoError(t, err)
+		require.True(t, ok)
+		require.Equal(t, mainText, string(content))
+		_, ok, err = g.File(head, "/img/logo.png")
+		require.NoError(t, err)
+		require.False(t, ok, "deleted")
+		_, ok, err = g.File(head, "/chapters")
+		require.NoError(t, err)
+		require.False(t, ok, "a folder")
+		_, _, err = g.File(strings.Repeat("0", 40), "/main.typ")
+		require.Error(t, err)
+	})
+}
+
 // No token is ever written: not into the clone (its config, its remote, its objects), the room, the log,
 // also when GitLab refuses or cannot be reached.
 func TestTokensStayInMemory(t *testing.T) {

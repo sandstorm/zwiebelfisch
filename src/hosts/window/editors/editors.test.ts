@@ -93,7 +93,7 @@ describe('Editors', () => {
     expect(() => editors.register('a.first', provider().provider, { displayName: 'Editor', filenamePattern: '*' })).toThrow(/registered already/);
   });
 
-  it('opens a file in a fallback editor only when no other editor matches; a low number is no fallback', () => {
+  it('opens a file in a fallback editor only when no other editor matches, an option editor only when asked for each time; a low number is no fallback', () => {
     const editors = new Editors(document.createElement('div'));
     editors.register('a.fallback', provider().provider, { displayName: 'File', filenamePattern: '*.txt', priority: 'fallback' });
     editors.register('a.low', provider().provider, { displayName: 'Low', filenamePattern: '*.csv', priority: -5 });
@@ -108,6 +108,8 @@ describe('Editors', () => {
     editors.register('a.markdown', provider().provider, { displayName: 'Markdown', filenamePattern: '*.md', priority: 'option' });
     expect(show(editors, '/readme.md')).toBe('a.any');
     expect(show(editors, '/readme.md', 'a.markdown')).toBe('a.markdown');
+    // nor is it the choice for later opens
+    expect(show(editors, '/readme.md')).toBe('a.any');
   });
 
   it("gives a file the icon of the editor that opens it by default, not an option editor's", () => {

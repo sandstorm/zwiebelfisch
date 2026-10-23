@@ -94,7 +94,7 @@ export interface WindowApi {
    * e.g. for `showDocument(path, { viewType })`. When several match a file, the editing area's tabs switch between them
    * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
    * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
-   * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen.
+   * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen, each time.
    */
   registerEditorProvider(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable;
 
@@ -189,7 +189,8 @@ export interface DocumentShowOptions {
   selection?: SourceRange;
   /**
    * The editor to open the file in, if it matches the file (its view type, e.g. `sourceEditor`); it is
-   * then the user's choice for later opens, too. Default: the one chosen last, else the one its name picks.
+   * then the user's choice for later opens, too (but for an `'option'` editor). Default: the one chosen last, else
+   * the one its name picks.
    */
   viewType?: string;
 }

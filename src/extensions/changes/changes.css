@@ -1,6 +1,6 @@
 /* The changes extension's styles: in the Visual editor, new text green (tinted, underlined), new blocks and boxes
-   with a green bar, deleted text red and struck through; light and dark through the theme's success and danger
-   tokens. See changes.ts, which registers it. */
+   with a green bar, deleted text red and struck through; the History panel; the Changes editor. Light and dark
+   through the theme's tokens. See changes.ts, which registers it. */
 .zwf-changes__inserted {
   background: var(--zwf-success-soft);
   text-decoration: underline var(--zwf-success);
@@ -27,3 +27,173 @@
   display: block;
   min-height: 1em;
 }
+
+/* the History panel */
+.zwf-history {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  color: var(--zwf-text-2);
+  font-size: 13px;
+}
+.zwf-history__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 8px 4px;
+}
+.zwf-history__scope {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--zwf-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zwf-history__icon,
+.zwf-history__since,
+.zwf-history__link,
+.zwf-history__more {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--zwf-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.zwf-history__icon { min-width: 22px; padding: 0 4px; }
+.zwf-history__icon:hover,
+.zwf-history__since:hover,
+.zwf-history__link:hover,
+.zwf-history__more:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-history__baseline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 8px 4px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: var(--zwf-success-soft);
+  color: var(--zwf-text);
+}
+.zwf-history__link { color: var(--zwf-accent); padding: 0 4px; }
+.zwf-history__list,
+.zwf-history__files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.zwf-history__day {
+  padding: 8px 10px 2px;
+  color: var(--zwf-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.zwf-history__entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+.zwf-history__entry > :not(.zwf-history__row, .zwf-history__since) { grid-column: 1 / -1; }
+.zwf-history__entry--baseline { box-shadow: inset 3px 0 0 var(--zwf-success); }
+.zwf-history__row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 6px;
+  min-width: 0;
+  border: 0;
+  padding: 4px 4px 4px 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.zwf-history__row:hover,
+.zwf-history__row[aria-expanded='true'] { background: var(--zwf-hover); }
+.zwf-history__people {
+  display: flex;
+  grid-row: span 2;
+  align-self: center;
+}
+.zwf-history__avatar {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  margin-left: -4px;
+  border: 1px solid var(--zwf-surface);
+  border-radius: 50%;
+  place-items: center;
+  background: var(--zwf-chip);
+  color: var(--zwf-text);
+  font-size: 9px;
+  font-weight: 600;
+}
+.zwf-history__avatar:first-child { margin-left: 0; }
+.zwf-history__subject {
+  overflow: hidden;
+  color: var(--zwf-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zwf-history__entry--uncommitted .zwf-history__subject { font-style: italic; }
+.zwf-history__meta {
+  grid-column: 2;
+  color: var(--zwf-muted);
+  font-size: 11px;
+}
+.zwf-history__since {
+  margin: 4px 6px 0 0;
+  padding: 2px 4px;
+  opacity: 0;
+}
+.zwf-history__entry:hover .zwf-history__since,
+.zwf-history__since:focus-visible,
+.zwf-history__since[aria-pressed='true'] { opacity: 1; }
+.zwf-history__since[aria-pressed='true'] { color: var(--zwf-success); }
+.zwf-history__file-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  padding: 2px 8px 2px 34px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.zwf-history__file-row:hover:not(:disabled) { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-history__file-row:disabled { color: var(--zwf-faint); cursor: default; }
+.zwf-history__badge {
+  width: 1.2em;
+  color: var(--zwf-muted);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.zwf-history__path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-history__note { margin: 6px 10px; color: var(--zwf-muted); }
+.zwf-history__note--error { color: var(--zwf-danger); }
+.zwf-history__more { align-self: center; margin: 6px; padding: 2px 10px; border-color: var(--zwf-border); }
+
+/* the Changes editor: @codemirror/merge's unified view, in the theme's success and danger colors */
+.zwf-changes-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--zwf-bg);
+}
+.zwf-changes-editor__title { margin: 12px 16px 0; color: var(--zwf-text); font-size: 15px; }
+.zwf-changes-editor__detail { margin: 2px 16px 8px; color: var(--zwf-muted); font-size: 12px; }
+.zwf-changes-editor .cm-changedLine { background: var(--zwf-success-soft); }
+.zwf-changes-editor .cm-changedText { background: none; text-decoration: underline 2px var(--zwf-success); }
+.zwf-changes-editor .cm-deletedChunk { background: var(--zwf-danger-soft); }
+.zwf-changes-editor .cm-deletedChunk .cm-deletedText { background: none; color: var(--zwf-danger); text-decoration: line-through; }
+.zwf-changes-editor .cm-changeGutter { width: 3px; }
+.zwf-changes-editor .cm-changedLineGutter { background: var(--zwf-success); }
+.zwf-changes-editor .cm-deletedLineGutter { background: var(--zwf-danger); }
