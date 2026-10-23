@@ -65,6 +65,11 @@ export class CollaborationLink {
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
 
+  /** Asks for the files from outside the room's folder that the compiler misses (see `Collaboration.pull`); before joining, nothing. */
+  pull(paths: readonly ProjectPath[]): void {
+    if (paths.length > 0) this.collaboration?.pull(paths);
+  }
+
   /** Whether leaving now would leave changes behind that nobody commits (see `Collaboration.leavesChangesUncommitted`). */
   leavesChangesUncommitted(): boolean {
     return this.collaboration?.leavesChangesUncommitted ?? false;

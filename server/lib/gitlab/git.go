@@ -20,17 +20,15 @@ import (
 	gitclient "github.com/go-git/go-git/v6/plumbing/client"
 	"github.com/go-git/go-git/v6/plumbing/filemode"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"github.com/go-git/go-git/v6/plumbing/protocol/packp"
 	"github.com/go-git/go-git/v6/plumbing/storer"
 	"github.com/go-git/go-git/v6/plumbing/transport"
 	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
 )
 
-// gitRepo is a project's Repository: a bare git clone (go-git) of the branches its rooms need, shared by
-// them, in a folder of its own or in memory. Fetches on disk are partial (blob:none): a room fetches the
-// blobs it reads (Blobs). Commits are built from the actions (no worktree) and pushed with
-// compare-and-swap on the branch.
+// gitRepo is a project's Repository: a bare, full git clone (go-git) of the branches its rooms need, shared
+// by them, in a folder of its own or in memory; files are read from it. Commits are built from the actions (no
+// worktree) and pushed with compare-and-swap on the branch.
 //
 // The token of a call goes into that call's basic auth (oauth2:<token>) only: never into the clone's files
 // (config, remote URL) or an error. Safe for concurrent use: one call at a time.
@@ -42,9 +40,7 @@ type gitRepo struct {
 	committer Signature
 
 	mu     sync.Mutex
-	repo   *git.Repository // nil until the first call
-	url    string          // the remote: <instance>/<path>.git
-	filter packp.Filter    // blob:none; "" in memory, or once the server said it cannot filter
+	repo   *git.Repository // nil until the first call; its remote: <instance>/<path>.git
 	writes int             // since the last upkeep
 }
 
@@ -88,25 +84,11 @@ func (g *gitRepo) Tree(sha string) ([]TreeEntry, error) {
 	return out, nil
 }
 
-func (g *gitRepo) Blobs(ctx context.Context, token string, shas []string) ([][]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, gitTimeout)
-	defer cancel()
+func (g *gitRepo) Blobs(shas []string) ([][]byte, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	if err := g.open(ctx, token); err != nil {
-		return nil, err
-	}
-	var missing []plumbing.Hash
-	for _, sha := range shas {
-		h := plumbing.NewHash(sha)
-		if g.repo.Storer.HasEncodedObject(h) != nil && !containsHash(missing, h) {
-			missing = append(missing, h)
-		}
-	}
-	if len(missing) > 0 {
-		if err := g.fetchObjects(ctx, token, missing); err != nil {
-			return nil, err
-		}
+	if g.repo == nil {
+		return nil, plumbing.ErrObjectNotFound
 	}
 	out := make([][]byte, len(shas))
 	for i, sha := range shas {
@@ -128,15 +110,6 @@ func (g *gitRepo) Blobs(ctx context.Context, token string, shas []string) ([][]b
 		}
 	}
 	return out, nil
-}
-
-func containsHash(hs []plumbing.Hash, h plumbing.Hash) bool {
-	for _, x := range hs {
-		if x == h {
-			return true
-		}
-	}
-	return false
 }
 
 func (g *gitRepo) Commit(ctx context.Context, token string, c CommitRequest) (string, error) {
@@ -224,10 +197,7 @@ func (g *gitRepo) open(ctx context.Context, token string) error {
 	if _, err := repo.CreateRemote(&config.RemoteConfig{Name: remoteName, URLs: []string{remote}}); err != nil {
 		return fmt.Errorf("the clone of %s: %w", g.project, err)
 	}
-	g.repo, g.url = repo, remote
-	if g.dir != "" {
-		g.filter = "blob:none"
-	}
+	g.repo = repo
 	return nil
 }
 
@@ -246,22 +216,17 @@ func (g *gitRepo) remoteURL(ctx context.Context, token string) (string, error) {
 	return strings.TrimSuffix(g.api.instance, "/") + "/" + p + ".git", nil
 }
 
-// fetch fetches branch (blobs only without a filter) and returns its head. Called with mu held.
+// fetch fetches branch (everything it holds) and returns its head. Called with mu held.
 func (g *gitRepo) fetch(ctx context.Context, token, branch string) (string, error) {
 	if err := g.open(ctx, token); err != nil {
 		return "", err
 	}
 	ref := plumbing.NewBranchReferenceName(branch)
 	opts := &git.FetchOptions{
-		RemoteName: remoteName, Tags: plumbing.NoTags, Force: true, Filter: g.filter, ClientOptions: g.auth(token),
+		RemoteName: remoteName, Tags: plumbing.NoTags, Force: true, ClientOptions: g.auth(token),
 		RefSpecs: []config.RefSpec{config.RefSpec("+" + ref.String() + ":" + tracking(branch).String())},
 	}
-	err := g.repo.FetchContext(ctx, opts)
-	if errors.Is(err, transport.ErrFilterNotSupported) { // a server without partial clone: everything
-		g.filter, opts.Filter = "", ""
-		err = g.repo.FetchContext(ctx, opts)
-	}
-	switch {
+	switch err := g.repo.FetchContext(ctx, opts); {
 	case errors.Is(err, git.ErrRemoteRefNotFound) || errors.Is(err, transport.ErrEmptyRemoteRepository):
 		return "", &APIError{Status: http.StatusNotFound, Message: fmt.Sprintf("GitLab has no branch %s in %s", branch, g.project)}
 	case err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate):
@@ -273,28 +238,6 @@ func (g *gitRepo) fetch(ctx context.Context, token, branch string) (string, erro
 	}
 	g.upkeep()
 	return head.Hash().String(), nil
-}
-
-// fetchObjects fetches exactly wants (blob ids) in one upload-pack request. Called with mu held.
-func (g *gitRepo) fetchObjects(ctx context.Context, token string, wants []plumbing.Hash) error {
-	u, err := transport.ParseURL(g.url)
-	if err != nil {
-		return err
-	}
-	cfg, err := g.repo.Config()
-	if err != nil {
-		return err
-	}
-	session, err := gitclient.New(g.auth(token)...).Handshake(ctx,
-		&transport.Request{URL: u, Command: transport.UploadPackService, Protocol: cfg.Protocol.Version})
-	if err != nil {
-		return remoteError(err)
-	}
-	defer session.Close()
-	if err := session.Fetch(ctx, g.repo.Storer, &transport.FetchRequest{Wants: wants}); err != nil {
-		return remoteError(err)
-	}
-	return nil
 }
 
 // remoteHead asks GitLab where branch is now (no fetch). Called with mu held.
@@ -487,8 +430,7 @@ func (g *gitRepo) write(o interface {
 	return g.repo.Storer.SetEncodedObject(encoded)
 }
 
-// writeTree writes the trees of entries (unchanged subtrees come out with their old ids, so their blobs
-// need not be here) and returns the root's id; errBadPath when a file is where a folder is.
+// writeTree writes the trees of entries and returns the root's id; errBadPath when a file is where a folder is.
 func (g *gitRepo) writeTree(entries map[string]object.TreeEntry) (plumbing.Hash, error) {
 	type dir struct {
 		files map[string]object.TreeEntry

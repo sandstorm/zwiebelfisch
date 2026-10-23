@@ -2,6 +2,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { MenuContext } from '../../hosts/commands/commands';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
+import { FilePermission } from '../../hosts/extension-host/workspace/workspace';
 import css from './files.css?inline';
 import { fileInfoEditor } from './window/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './window/file-panel';
@@ -15,9 +16,11 @@ import { FILES_ICON } from './window/icons/icons';
  *
  * Other extensions use it through:
  * - the menus `files/new` ("New" in the panel's header) and `files/row` (a row's context menu; context
- *   `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row)
+ *   `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`, `resourceIsFixed` (no rename, move or delete),
+ *   `folderIsReadonly` (no new files there); the command gets the row)
  * - the commands `files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, `files.setMainFile`
  * - FileDecorationProviders, whose decorations show as badges on the rows
+ * - FileSystemProviders (`workspace.registerFileSystemProvider`): read-only folders keep their files and folders
  *
  * The setting `files.panel` says when the panel is open; Alt+1 (⌃1 on the Mac) shows and focuses it.
  */
@@ -46,6 +49,7 @@ export function files(): Extension {
         state: context.workspaceState,
         decorations: (path) => window.getFileDecorations(path),
         icon: (path) => window.getFileIcon(path),
+        readonly: (folder) => workspace.fs.stat(folder).permissions === FilePermission.Readonly,
       }, state());
       // shown on every open, which also follows every create / rename / delete
       // listening only while there is a panel: the widget shows its drop hint while anyone listens
@@ -116,13 +120,16 @@ function registerOperations({ commands, project, window }: ExtensionContext, pan
       if (problem) void window.showErrorMessage(problem);
     }),
     ...NEW_ENTRIES.flatMap((entry) => [
-      window.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
-      window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
+      window.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation', when: writable }),
+      window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation', when: writable }),
     ]),
     window.registerMenuItem(CONTEXT_MENU, { command: 'files.setMainFile', group: 'main', when: mainCandidate }),
-    ...CHANGE_ENTRIES.map((entry) => window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
+    ...CHANGE_ENTRIES.map((entry) => window.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsFixed })),
   );
 }
+
+/** Whether new files may go into the row's folder. */
+const writable = (context: MenuContext) => !context.folderIsReadonly;
 
 /** The panel's own entries: in "New" (`files/new`) and in a row's context menu (`files/row`). */
 const NEW_ENTRIES = [

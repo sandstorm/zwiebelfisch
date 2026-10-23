@@ -1,0 +1,4 @@
+flowchart LR
+  F["/reports/q1/…<br/>(the room's folder)"] -- "on load" --> R["room (Y.Doc)"]
+  T["/template.typ"] -- "gitlab:pull, when a compile misses it" --> R
+  O["/reports/q2/…, /README.md"] -- "never" --> X["stays in the repository"]

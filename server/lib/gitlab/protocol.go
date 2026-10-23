@@ -21,6 +21,7 @@ const (
 	metaConflict   = "conflict"      // *roomConflict: upstream changes that conflict with the room's
 	metaFailure    = "commitFailure" // *commitFailure: the last commit failed
 	metaAutoCommit = "autoCommit"    // minutes without edits before the server commits by itself; null: never
+	metaPulledIn   = "pulledIn"      // []string: the files from outside the room's folder it holds (pullIn), sorted
 )
 
 // base is the commit the room is based on, as kept in the meta map (one key per field).
@@ -53,15 +54,19 @@ type commitFailure struct {
 	At      int64  `json:"at"`
 }
 
-// clientMessage is the stateless message a client sends to save.
+// clientMessage is a stateless message of a client: a save, or the request for a file from outside the
+// room's folder.
 type clientMessage struct {
-	Type    string `json:"type"` // gitlab:save
-	Message string `json:"message"`
+	Type    string `json:"type"`    // gitlab:save, gitlab:pull
+	Message string `json:"message"` // gitlab:save: the commit message
+	Path    string `json:"path"`    // gitlab:pull: the file ("/template.typ")
 }
 
-// message is a stateless message to clients: the outcome of a save, a commit by the server or a merge.
+// message is a stateless message to clients: the outcome of a save, a commit by the server, a merge, or
+// a file the room cannot pull in.
 type message struct {
 	Type      string         `json:"type"` // one of the msg* constants
+	Path      string         `json:"path,omitempty"`
 	Sha       string         `json:"sha,omitempty"`
 	Author    string         `json:"author,omitempty"`
 	Automatic bool           `json:"automatic,omitempty"`
@@ -75,6 +80,7 @@ const (
 	msgMerged    = "gitlab:merged"    // upstream merged into the room (to everyone)
 	msgConflict  = "gitlab:conflict"  // upstream could not be merged (to everyone)
 	msgError     = "gitlab:error"     // the save failed (to the saving client)
+	msgMissing   = "gitlab:missing"   // a file asked for (gitlab:pull) is not pulled in, and why (to the asking client)
 )
 
 type fileConflict struct {
@@ -104,6 +110,13 @@ func readMeta(doc *ydoc.Doc) *base {
 		return nil
 	}
 	return &b
+}
+
+// readPulledIn is the room's meta.pulledIn.
+func readPulledIn(doc *ydoc.Doc) []string {
+	var paths []string
+	readValue(doc, metaPulledIn, &paths)
+	return paths
 }
 
 // readValue decodes the meta value under key into v; false if it is missing or null.

@@ -4,9 +4,10 @@
 //   - `test:e2e-gitlab`
 //   - the Docker image
 //
-// The fake project demo/report holds demo/examples/advanced, so run it from the repository root. Anyone signs
-// in under any name, without a password, as a Developer; what the server does in GitLab it does with their
-// token. Nothing is stored (the git clones are in memory too). Any branch works:
+// The fake project demo/report holds demo/examples/advanced, so run it from the repository root, and a
+// project in the folder /letters/welcome (room playground.FolderRoom) that imports /template.typ. Anyone
+// signs in under any name, without a password, as a Developer; what the server does in GitLab it does with
+// their token. Nothing is stored (the git clones are in memory too). Any branch works:
 // gitlab:demo/report@<branch> starts at main.
 //
 // Environment: as package config, except that the database, sign-in and GitLab settings are ignored, and
@@ -57,6 +58,7 @@ func run() error {
 	if err != nil || len(files) == 0 {
 		return fmt.Errorf("the fake repository's files: run from the repository root (%s): %v", projectDir, err)
 	}
+	files[playground.FolderMain] = []byte(playground.FolderMainText)
 	fake := fakegitlab.New(playground.Project, files)
 	fake.SetAutoBranches(true)
 
@@ -85,7 +87,7 @@ func run() error {
 		Rooms: server.GitLab(),
 	}, server)
 
-	log.Info().Str("room", playground.Room).Bool("plainRooms", cfg.Rooms.Plain).Msg("playground server with the fake GitLab")
+	log.Info().Str("room", playground.Room).Str("folderRoom", playground.FolderRoom).Bool("plainRooms", cfg.Rooms.Plain).Msg("playground server with the fake GitLab")
 	sites := []app.Site{{Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler}}
 	if dist := os.Getenv("ZWF_DEMO_DIST"); dist != "" {
 		port, err := strconv.Atoi(envOr("DEMO_PORT", "5199"))

@@ -44,7 +44,7 @@ export function diagrams(): Extension {
         window.registerStyleSheet(css),
         window.registerEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
-        window.registerMenuItem('files/new', { command: NEW_DIAGRAM, group: 'navigation', order: 16 }),
+        window.registerMenuItem('files/new', { command: NEW_DIAGRAM, group: 'navigation', order: 16, when: (menu) => !menu.folderIsReadonly }),
         registerInsertDiagram(context),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
         languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),

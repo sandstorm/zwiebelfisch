@@ -156,6 +156,7 @@ const (
 // testConn is a HocuspocusProvider stand-in on an in-memory transport.
 type testConn struct {
 	t      *testing.T
+	room   string
 	in     chan []byte // to the server
 	out    chan []byte // to the client
 	closed chan struct{}
@@ -173,9 +174,14 @@ type fromServerOrigin struct{ _ byte }
 
 var serverOrigin = &fromServerOrigin{}
 
-// join opens the room as the user with id user (the session cookie the app would read).
+// join opens the room roomName as the user with id user (the session cookie the app would read).
 func join(t *testing.T, s *collab.Server, user string) *testConn {
-	c := &testConn{t: t, in: make(chan []byte, 64), out: make(chan []byte, 1024), closed: make(chan struct{}), done: make(chan struct{}), doc: ydoc.New()}
+	return joinRoom(t, s, user, roomName)
+}
+
+// joinRoom opens the room name as the user with id user.
+func joinRoom(t *testing.T, s *collab.Server, user, name string) *testConn {
+	c := &testConn{t: t, room: name, in: make(chan []byte, 64), out: make(chan []byte, 1024), closed: make(chan struct{}), done: make(chan struct{}), doc: ydoc.New()}
 	upgrade := httptest.NewRequest(http.MethodGet, "/", nil)
 	upgrade.AddCookie(&http.Cookie{Name: "session", Value: user})
 	served := make(chan struct{})
@@ -218,7 +224,7 @@ func (c *testConn) Close(int, string) { c.close() }
 func (c *testConn) close() { c.once.Do(func() { close(c.closed) }) }
 
 func (c *testConn) send(typ byte, payload []byte) {
-	msg := append(append(varString(roomName), typ), payload...)
+	msg := append(append(varString(c.room), typ), payload...)
 	select {
 	case c.in <- msg:
 	case <-c.closed:

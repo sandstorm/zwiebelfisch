@@ -27,7 +27,23 @@ const (
 	Project = "demo/report"
 	// Room is the room the demo's GitLab mode opens.
 	Room = roomPrefix + Project + "@main"
+	// FolderRoom is a room of one folder of the repository, FolderMain's: a project that uses the report's
+	// /template.typ from outside its folder.
+	FolderRoom = Room + ":/letters/welcome"
+	// FolderMain is the main file of FolderRoom's project.
+	FolderMain = "/letters/welcome/main.typ"
 )
+
+// FolderMainText is FolderMain's text.
+const FolderMainText = `// A project in a folder of the repository: its room is gitlab:demo/report@<branch>:/letters/welcome.
+#import "/template.typ": template
+
+#show: template.with(title: "Welcome", authors: ("Ada Example",))
+
+= Welcome
+
+This letter lives in letters/welcome and takes the report's look from /template.typ, outside its folder.
+`
 
 const roomPrefix = "gitlab:"
 
@@ -162,10 +178,12 @@ func (e *endpoints) upstream(w http.ResponseWriter, r *http.Request) {
 	reply(w, map[string]string{"sha": sha, "path": path, "message": message})
 }
 
-// branch is the fake GitLab's branch the request names (room=gitlab:<project>@<branch>); else it answers why not.
+// branch is the fake GitLab's branch the request names (room=gitlab:<project>@<branch>[:/<folder>]); else it
+// answers why not.
 func (e *endpoints) branch(w http.ResponseWriter, r *http.Request) (string, bool) {
 	rest, ok := strings.CutPrefix(r.URL.Query().Get("room"), roomPrefix)
-	project, branch, _ := strings.Cut(rest, "@")
+	project, rest, _ := strings.Cut(rest, "@")
+	branch, _, _ := strings.Cut(rest, ":")
 	if !ok || project == "" || branch == "" {
 		text(w, http.StatusBadRequest, "room must be a GitLab room: gitlab:<project>@<branch>")
 		return "", false

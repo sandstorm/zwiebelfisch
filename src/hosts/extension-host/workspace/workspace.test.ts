@@ -1,8 +1,8 @@
-// Tests for workspace.ts (WorkspaceHost): changes through the host's veto; declared settings, the host's values, changes.
+// Tests for workspace.ts (WorkspaceHost): changes through the host's veto and the folders' permissions; declared settings, the host's values, changes.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project } from '../../../core/project/project';
-import { type ConfigurationChangeEvent, WorkspaceHost } from './workspace';
+import { type ConfigurationChangeEvent, FilePermission, WorkspaceHost } from './workspace';
 
 const PROPERTIES = {
   'pdfExport.download': { type: 'boolean', default: true, description: 'Download button.' },
@@ -41,6 +41,41 @@ describe('WorkspaceHost.applyEdit', () => {
       allowFileChange: async () => (project.apply({ kind: 'create', path: path('/b.typ'), content: '' }), true),
     });
     expect(await workspace.applyEdit({ kind: 'create', path: path('/b.typ'), content: 'B' })).toMatch(/already exists/);
+  });
+});
+
+describe('WorkspaceHost.fs', () => {
+  const readonly = (folders: (string | null)[]) => ({
+    stat: (folder: ProjectPath | null) => (folders.includes(folder) ? { permissions: FilePermission.Readonly } : {}),
+  });
+
+  it('says a folder is Readonly while a registered provider says so', () => {
+    const workspace = new WorkspaceHost(new Project(path('/main.typ'), {}));
+    expect(workspace.fs.stat(null)).toEqual({});
+    const registration = workspace.registerFileSystemProvider(readonly([null, '/shared']));
+    workspace.registerFileSystemProvider(readonly([]));
+    expect(workspace.fs.stat(null)).toEqual({ permissions: FilePermission.Readonly });
+    expect(workspace.fs.stat(path('/shared'))).toEqual({ permissions: FilePermission.Readonly });
+    expect(workspace.fs.stat(path('/project'))).toEqual({});
+    registration.dispose();
+    expect(workspace.fs.stat(null)).toEqual({});
+  });
+
+  it('refuses to create, delete or rename a file in a Readonly folder; its content stays editable', async () => {
+    const project = new Project(path('/project/main.typ'), { '/project/main.typ': '', '/shared/lib.typ': 'lib', '/project/a.typ': 'a' });
+    const allowFileChange = vi.fn(() => true);
+    const workspace = new WorkspaceHost(project, { allowFileChange });
+    workspace.registerFileSystemProvider(readonly([null, '/shared']));
+    const refused = 'Files in shared cannot be created, renamed or deleted here.';
+    expect(await workspace.applyEdit({ kind: 'create', path: path('/shared/new.typ'), content: '' })).toBe(refused);
+    expect(await workspace.applyEdit({ kind: 'create', path: path('/top.typ'), content: '' })).toBe('Files in the top folder cannot be created, renamed or deleted here.');
+    expect(await workspace.applyEdit({ kind: 'delete', path: path('/shared/lib.typ') })).toBe(refused);
+    expect(await workspace.applyEdit({ kind: 'rename', from: path('/shared/lib.typ'), path: path('/project/lib.typ') })).toBe(refused);
+    expect(await workspace.applyEdit({ kind: 'rename', from: path('/project/a.typ'), path: path('/shared/a.typ') })).toBe(refused);
+    expect(allowFileChange).not.toHaveBeenCalled();
+    expect(await workspace.applyEdit({ kind: 'update', path: path('/shared/lib.typ'), content: 'edited' })).toBeNull();
+    expect(await workspace.applyEdit({ kind: 'rename', from: path('/project/a.typ'), path: path('/project/sub/b.typ') })).toBeNull();
+    expect(project.files()).toEqual({ '/project/main.typ': '', '/project/sub/b.typ': 'a', '/shared/lib.typ': 'edited' });
   });
 });
 

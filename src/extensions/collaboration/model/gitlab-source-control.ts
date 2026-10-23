@@ -160,6 +160,7 @@ export class GitLabSourceControl {
   }
 
   #receive(message: ServerMessage): void {
+    if (message.type === 'gitlab:missing') return;
     const { text, severity } = said(message);
     this.tell(text, severity);
     // upstream changes are news, not the answer to a commit under way
@@ -263,7 +264,7 @@ const DECORATIONS: Record<ChangedFile['kind'] | 'conflict', ResourceState['decor
 };
 
 /** What to tell for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
-function said(message: ServerMessage): { text: string; severity: Parameters<Tell>[1] } {
+function said(message: Exclude<ServerMessage, { type: 'gitlab:missing' }>): { text: string; severity: Parameters<Tell>[1] } {
   switch (message.type) {
     case 'gitlab:saved':
       return { text: `Saved version ${message.sha.slice(0, 8)}${message.automatic ? ' automatically' : ''} (${message.author})`, severity: 'info' };

@@ -13,7 +13,8 @@ import { FileTree } from './tree/tree';
  * The file panel: a "Files" header with "New" (the menu `files/new`), and the project as a `FileTree` whose rows
  * have a context menu (`files/row`: right click, Shift+F10, the context menu key). The operations behind the
  * entries (`newFile`, `newFolder`, `upload`, `rename`, `delete`) act on a row: a file, or a folder with everything in
- * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
+ * it; new files and uploads go into the row's folder, unless it is read-only. A row stays where it is (no rename,
+ * move or delete) when it holds the main file or a read-only folder keeps it: the folder it is in, or a folder row's own.
  * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
  */
@@ -95,7 +96,10 @@ export class FilePanel {
       prompt: 'Name of the new folder',
       ...this.startIn(this.folderOf(at)),
       placeHolder: 'e.g. chapters',
-      validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '')),
+      validateInput: (value) => {
+        const target = ProjectPath.fromName(value, '');
+        return target.kind === 'valid' && this.readonly(folderOf(target.path)) ? 'New folders go into the project folder.' : this.problemWith(target);
+      },
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, '');
     if (!target || target.kind === 'invalid') return;
@@ -115,9 +119,9 @@ export class FilePanel {
     return this.uploadInto(files, null);
   }
 
-  /** Asks for the new name of a file, or a folder with its files (not the main file or a folder holding it). */
+  /** Asks for the new name of a file, or a folder with its files (not a row that stays where it is). */
   async rename(from: ProjectPath = this.current()): Promise<void> {
-    if (this.holdsMain(from)) return;
+    if (this.fixed(from)) return;
     const folder = this.tree.isFolder(from);
     const extension = folder ? '' : ProjectPath.extension(from);
     const shown = ProjectPath.displayName(from);
@@ -135,9 +139,9 @@ export class FilePanel {
     if (error) void this.options.prompts.showErrorMessage(error);
   }
 
-  /** Deletes a file, or a folder with its files, once the user confirms (not the main file or a folder holding it). */
+  /** Deletes a file, or a folder with its files, once the user confirms (not a row that stays where it is). */
   async delete(path: ProjectPath = this.current()): Promise<void> {
-    if (this.holdsMain(path)) return;
+    if (this.fixed(path)) return;
     const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
     const shown = ProjectPath.displayName(path);
     const what = files.length === 1 && files[0] === path ? shown : `${shown} and the ${files.length} files in it`;
@@ -157,9 +161,19 @@ export class FilePanel {
     return this.tree.current ?? this.state.active;
   }
 
-  /** What a menu is shown for: the row `path` (`resource`), whether it is a folder, whether it holds the main file. */
+  /**
+   * What a menu is shown for: the row `path` (`resource`), whether it is a folder, whether it holds the main file,
+   * whether it stays where it is (`resourceIsFixed`), whether its folder (where new files go) is read-only.
+   */
   private context(path: ProjectPath): MenuContext {
-    return { view: 'files', resource: path, resourceKind: this.tree.isFolder(path) ? 'folder' : 'file', resourceIsMain: this.holdsMain(path) };
+    return {
+      view: 'files',
+      resource: path,
+      resourceKind: this.tree.isFolder(path) ? 'folder' : 'file',
+      resourceIsMain: this.holdsMain(path),
+      resourceIsFixed: this.fixed(path),
+      folderIsReadonly: this.readonly(this.folderOf(path)),
+    };
   }
 
   /** The menu `menuId` for the row `path` at `anchor` (the window's); its entries' commands get the row. */
@@ -170,6 +184,15 @@ export class FilePanel {
 
   private holdsMain(path: ProjectPath): boolean {
     return path === this.state.main || this.state.main.startsWith(`${path}/`);
+  }
+
+  /** Whether the row `path` stays where it is: it holds the main file, or the folder it is in (a folder row: itself) is read-only. */
+  private fixed(path: ProjectPath): boolean {
+    return this.holdsMain(path) || this.readonly(folderOf(path)) || (this.tree.isFolder(path) && this.readonly(path));
+  }
+
+  private readonly(folder: Folder): boolean {
+    return this.options.readonly?.(folder) ?? false;
   }
 
   /** The folder a row stands for: itself, or the folder of a file. */
@@ -201,6 +224,7 @@ export class FilePanel {
   /** Moves a file, or a folder with its files, to `target`; opens the moved file. */
   private async relocate(source: ProjectPath, target: ProjectPath): Promise<string | null> {
     if (this.holdsMain(source)) return 'The main file stays where it is.';
+    if (this.fixed(source)) return `${ProjectPath.displayName(source)} stays where it is.`;
     const renames = relocate(this.state.paths, source, target);
     if (this.emptyFolders.delete(source)) this.emptyFolders.add(target);
     const open = renames.find((r) => r.from === this.state.active)?.path ?? (renames.length === 1 ? renames[0].path : this.state.active);
@@ -253,6 +277,8 @@ export interface FilePanelOptions {
   decorations?(path: ProjectPath): readonly FileDecoration[];
   /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
   icon?(path: ProjectPath): string | undefined;
+  /** Whether no file may be created, renamed or deleted in `folder` (null: the top level), at each `render` (default: none is). */
+  readonly?(folder: Folder): boolean;
 }
 
 export interface FilePanelState {

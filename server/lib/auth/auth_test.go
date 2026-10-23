@@ -338,6 +338,20 @@ func TestTokenOfASignedInUser(t *testing.T) {
 		require.NotContains(t, tokens, second)
 	})
 
+	t.Run("a refresh for a request that ended still finishes and keeps the rotated refresh token", func(t *testing.T) {
+		b := newBrowser(t, Options{})
+		b.fake.IdentityProvider().SetTokenLifetime(time.Second)
+		b.signIn("Ann", "/")
+		b.auth.opts.Client = &http.Client{Transport: endsWithRequest{b.fake.Client().Transport}}
+		ended, cancel := context.WithCancel(ctx)
+		cancel()
+		first, err := b.auth.Token(ended, "2")
+		require.NoError(t, err)
+		second, err := b.auth.Token(ctx, "2") // works only with the refresh token the first refresh got
+		require.NoError(t, err)
+		require.NotEqual(t, first, second)
+	})
+
 	t.Run("from any live session; none after signing out of all", func(t *testing.T) {
 		b := newBrowser(t, Options{})
 		b.signIn("Ann", "/")
@@ -359,4 +373,14 @@ func TestTokenOfASignedInUser(t *testing.T) {
 		_, err := b.auth.Token(ctx, "2")
 		require.ErrorIs(t, err, ErrNoToken)
 	})
+}
+
+// endsWithRequest fails a request whose context ended, as a real connection does.
+type endsWithRequest struct{ next http.RoundTripper }
+
+func (t endsWithRequest) RoundTrip(r *http.Request) (*http.Response, error) {
+	if err := r.Context().Err(); err != nil {
+		return nil, err
+	}
+	return t.next.RoundTrip(r)
 }

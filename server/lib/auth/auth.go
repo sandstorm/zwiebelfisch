@@ -340,13 +340,16 @@ func (a *Auth) Token(ctx context.Context, subject string) (string, error) {
 	return "", ErrNoToken
 }
 
-// fresh is s's access token, refreshed if it expired.
+// fresh is s's access token, refreshed if it expired. A refresh runs to its end (up to refreshTimeout) even
+// when ctx ends first, so a rotated refresh token always lands in s.
 func (a *Auth) fresh(ctx context.Context, s *session) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.token.Valid() {
 		return s.token.AccessToken, nil
 	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), refreshTimeout)
+	defer cancel()
 	provider, _, err := a.discover(ctx)
 	if err != nil {
 		return "", err
@@ -358,6 +361,9 @@ func (a *Auth) fresh(ctx context.Context, s *session) (string, error) {
 	s.token = token
 	return token.AccessToken, nil
 }
+
+// refreshTimeout bounds one refresh of an access token.
+const refreshTimeout = 30 * time.Second
 
 // refreshFailure is why a refresh failed, without anything the provider sent back.
 func refreshFailure(err error) string {

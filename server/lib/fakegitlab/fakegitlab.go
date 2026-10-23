@@ -2,7 +2,7 @@
 // repository (its branches and commits), its members and protected branches, and a sign-in.
 //
 // GitLab answers, as an http.Handler, what a GitLab client asks for one project:
-//   - git over smart HTTP at URL/<project>.git (go-git's server; no partial clone)
+//   - git over smart HTTP at URL/<project>.git (go-git's server)
 //   - the REST endpoints (API v4) of api.go
 //   - the sign-in of signin.go
 //

@@ -6,16 +6,17 @@ import (
 )
 
 // Repository is a project's repository as a room needs it: fetch a branch, read a commit's files, commit
-// the room's changes. Every call that talks to GitLab takes the OAuth token of the user it acts for.
-// GitLab's is the git clone of git.go.
+// the room's changes. Every call that talks to GitLab takes the OAuth token of the user it acts for; reads
+// of what was fetched talk to nobody. GitLab's is the git clone of git.go.
 type Repository interface {
-	// Head fetches branch (its commits and trees) and returns the commit it points at; Tree then knows it.
+	// Head fetches branch (its commits, trees and files) and returns the commit it points at; Tree and Blobs
+	// then know it.
 	Head(ctx context.Context, token, branch string) (string, error)
 	// Tree lists every file (blob) of the commit sha, fetched before.
 	Tree(sha string) ([]TreeEntry, error)
-	// Blobs returns the bytes of the blobs shas, in their order, fetching the ones not here yet in one
-	// request. A blob larger than maxBlobSize is not read: errTooLarge.
-	Blobs(ctx context.Context, token string, shas []string) ([][]byte, error)
+	// Blobs returns the bytes of the blobs shas (of commits fetched before), in their order. A blob larger
+	// than maxBlobSize is not read: errTooLarge.
+	Blobs(shas []string) ([][]byte, error)
 	// Commit makes one commit of actions on top of ExpectedHead and pushes it, unless the branch is no longer
 	// at ExpectedHead (ErrConflict: nothing was committed) or an action's path is not one git takes
 	// (errBadPath). It returns the commit's sha.

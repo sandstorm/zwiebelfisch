@@ -15,7 +15,12 @@ const nested = {
   active: path('/main.typ'),
 };
 
-function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state, decorations: Record<string, FileDecoration[]> = {}, hasNewEntries = true) {
+function setup(
+  onChange: (change: FileChange) => Promise<string | null> = async () => null,
+  initial = state,
+  decorations: Record<string, FileDecoration[]> = {},
+  { hasNewEntries = true, readonlyFolders = [] }: { hasNewEntries?: boolean; readonlyFolders?: (string | null)[] } = {},
+) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const onOpen = vi.fn();
@@ -49,6 +54,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
       state: memory,
       decorations: (file) => decorations[file] ?? [],
       icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
+      readonly: (folder) => readonlyFolders.includes(folder),
     },
     initial,
   );
@@ -132,7 +138,14 @@ describe('FilePanel', () => {
   });
 
   describe('menus', () => {
-    const row = (resource: string, resourceKind = 'file', resourceIsMain = false) => ({ view: 'files', resource, resourceKind, resourceIsMain });
+    const row = (resource: string, resourceKind = 'file', resourceIsMain = false) => ({
+      view: 'files',
+      resource,
+      resourceKind,
+      resourceIsMain,
+      resourceIsFixed: resourceIsMain,
+      folderIsReadonly: false,
+    });
 
     it('"New" shows the window\'s files/new menu below it, for the focused row (its commands get the row)', () => {
       const { parent, item, menus } = setup(undefined, nested);
@@ -144,7 +157,7 @@ describe('FilePanel', () => {
     });
 
     it('"New" is hidden while its menu has no entries', () => {
-      const { parent } = setup(undefined, state, {}, false);
+      const { parent } = setup(undefined, state, {}, { hasNewEntries: false });
       expect(parent.querySelector<HTMLButtonElement>('button[aria-label=New]')!.hidden).toBe(true);
     });
 
@@ -289,6 +302,68 @@ describe('FilePanel', () => {
       press(item('main.typ'), 'F2');
       press(item('main.typ'), 'Delete');
       expect([asked, warned]).toEqual([[], []]);
+    });
+  });
+
+  describe('read-only folders', () => {
+    // a project in /reports/q1 that uses /template.typ: the top level and /reports are read-only
+    const project = {
+      paths: [path('/reports/q1/main.typ'), path('/reports/q1/a.typ'), path('/reports/q1/img/x.png'), path('/template.typ')],
+      main: path('/reports/q1/main.typ'),
+      active: path('/reports/q1/a.typ'),
+    };
+    const readonlySetup = () => setup(undefined, project, {}, { readonlyFolders: [null, '/reports'] });
+
+    it('keep their files and folders where they are; the menus say so', () => {
+      const { item, menus } = readonlySetup();
+      for (const name of ['template.typ', 'reports', 'reports/q1']) {
+        item(name).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      }
+      item('reports/q1/img').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      item('reports/q1/a.typ').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      expect(menus.map(({ context }) => [context!.resource, context!.resourceIsFixed, context!.folderIsReadonly])).toEqual([
+        ['/template.typ', true, true],
+        ['/reports', true, true],
+        ['/reports/q1', true, false],
+        ['/reports/q1/img', false, false],
+        ['/reports/q1/a.typ', false, false],
+      ]);
+    });
+
+    it('rename, delete and drag do nothing to a row they keep; new folders go only into writable ones', async () => {
+      const { panel, item, change, asked, warned, errors, answers } = readonlySetup();
+      await panel.rename(path('/template.typ'));
+      await panel.delete(path('/template.typ'));
+      await panel.rename(path('/reports/q1'));
+      await panel.delete(path('/reports'));
+      expect([asked, warned]).toEqual([[], []]);
+
+      const store: Record<string, string> = {};
+      const transfer = {
+        files: [],
+        get types() {
+          return Object.keys(store);
+        },
+        setData: (type: string, value: string) => (store[type] = value),
+        getData: (type: string) => store[type] ?? '',
+        effectAllowed: 'all',
+      };
+      const drag = (type: string, target: HTMLElement) => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'dataTransfer', { value: transfer });
+        target.dispatchEvent(event);
+      };
+      drag('dragstart', item('template.typ'));
+      drag('drop', item('reports/q1'));
+      await vi.waitFor(() => expect(errors).toEqual(['template.typ stays where it is.']));
+      expect(change).not.toHaveBeenCalled();
+
+      answers.push(undefined);
+      await panel.newFolder(path('/reports/q1/a.typ'));
+      const validate = asked[0].validateInput!;
+      expect(validate('reports/q2')).toBe('New folders go into the project folder.');
+      expect(validate('drafts')).toBe('New folders go into the project folder.');
+      expect(validate('reports/q1/drafts')).toBeNull();
     });
   });
 

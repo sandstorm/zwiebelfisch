@@ -16,8 +16,6 @@ import (
 
 	git "github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
-	"github.com/go-git/go-git/v6/plumbing"
-	"github.com/go-git/go-git/v6/plumbing/protocol/packp"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
@@ -27,7 +25,7 @@ import (
 )
 
 // The git clone (git.go) against go-git's server in the fake GitLab, and against `git http-backend` (as
-// GitLab serves git, partial clone included) where a git binary is installed.
+// GitLab serves git) where a git binary is installed.
 
 func newFake() *fakegitlab.GitLab {
 	return fakegitlab.New("group/report", fakegitlab.Files{
@@ -57,7 +55,7 @@ func TestGitRepository(t *testing.T) {
 			tree, err := g.Tree(head)
 			require.NoError(t, err)
 			require.Equal(t, []TreeEntry{{"/chapters/one.typ", blobSha([]byte("= One\n"))}, {"/img/logo.png", blobSha(logo)}, {"/main.typ", blobSha([]byte(mainText))}}, tree)
-			blobs, err := g.Blobs(ctx, ann, []string{blobSha(logo), blobSha([]byte(mainText))})
+			blobs, err := g.Blobs([]string{blobSha(logo), blobSha([]byte(mainText))})
 			require.NoError(t, err)
 			require.Equal(t, [][]byte{logo, []byte(mainText)}, blobs)
 
@@ -127,7 +125,9 @@ func TestGitRepository(t *testing.T) {
 		head, err := g.Head(ctx, fake.TokenOf("Ann"), "main")
 		require.NoError(t, err)
 		require.Equal(t, fake.Head("main").SHA, head)
-		require.Equal(t, fakegitlab.URL+"/group/report.git", g.url)
+		remote, err := g.repo.Remote(remoteName)
+		require.NoError(t, err)
+		require.Equal(t, []string{fakegitlab.URL + "/group/report.git"}, remote.Config().URLs)
 	})
 
 	t.Run("a clone on disk follows the project's path as GitLab names it now", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestGitRepository(t *testing.T) {
 		ann := fake.TokenOf("Ann")
 		_, err := g.Head(ctx, ann, "main")
 		require.NoError(t, err)
-		_, err = g.Blobs(ctx, ann, []string{blobSha(big)})
+		_, err = g.Blobs([]string{blobSha(big)})
 		require.ErrorIs(t, err, errTooLarge)
 		require.Equal(t, "a file is larger than 32 MiB, more than Zwiebelfisch reads", failureMessage(err))
 	})
@@ -204,7 +204,7 @@ func TestTokensStayInMemory(t *testing.T) {
 	require.Equal(t, msgSaved, r.save(context.Background(), person{User: annUser, Name: "Ann", Email: "ann@example.com"}, "Edit").Type)
 	fake.Push("main", fakegitlab.Files{"/chapters/one.typ": []byte("pushed")}, "a colleague")
 	x.pushed(context.Background(), []string{"group/report"}, "main")
-	_, _, err = r.asset(context.Background(), annUser, "/img/logo.png")
+	_, _, err = r.asset("/img/logo.png")
 	require.NoError(t, err)
 	// failures, whose errors are logged
 	users["2"] = "forged-" + ann
@@ -239,9 +239,9 @@ func TestTokensStayInMemory(t *testing.T) {
 	require.NotContains(t, log.String(), ann)
 }
 
-// A partial clone against `git http-backend`, as GitLab serves git: commits and trees only, then the blobs a
-// room reads; pushed commits and an upkeep that git itself accepts.
-func TestPartialCloneAgainstGit(t *testing.T) {
+// A clone against `git http-backend`, as GitLab serves git: every file read locally, pushed commits and an
+// upkeep that git itself accepts, GitLab's refusal of a push in its words.
+func TestCloneAgainstGit(t *testing.T) {
 	gitPath, err := exec.LookPath("git")
 	if err != nil {
 		t.Skip("no git binary")
@@ -261,9 +261,7 @@ func TestPartialCloneAgainstGit(t *testing.T) {
 	}
 	require.NoError(t, os.MkdirAll(bare, 0o755))
 	run(bare, "init", "-q", "--bare", "-b", "main")
-	for _, c := range []string{"uploadpack.allowFilter", "uploadpack.allowAnySHA1InWant", "http.receivepack"} {
-		run(bare, "config", c, "true")
-	}
+	run(bare, "config", "http.receivepack", "true")
 	work := filepath.Join(root, "work")
 	run(root, "init", "-q", "-b", "main", work)
 	big := make([]byte, 1<<20)
@@ -279,14 +277,12 @@ func TestPartialCloneAgainstGit(t *testing.T) {
 	const token = "user-token-0123456789"
 	backend := &cgi.Handler{Path: gitPath, Args: []string{"http-backend"}, Root: "/",
 		Env: []string{"GIT_PROJECT_ROOT=" + root, "GIT_HTTP_EXPORT_ALL=1", "REMOTE_USER=oauth2", "GIT_CONFIG_NOSYSTEM=1", "HOME=" + root}}
-	var requests []string
 	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if user, pass, ok := r.BasicAuth(); !ok || user != "oauth2" || pass != token {
 			w.Header().Set("WWW-Authenticate", `Basic realm="GitLab"`)
 			http.Error(w, "HTTP Basic: Access denied", http.StatusUnauthorized)
 			return
 		}
-		requests = append(requests, r.Method+" "+r.URL.Path)
 		backend.ServeHTTP(w, r)
 	})
 	dir := filepath.Join(t.TempDir(), "clone")
@@ -295,20 +291,15 @@ func TestPartialCloneAgainstGit(t *testing.T) {
 	head, err := g.Head(ctx, token, "main")
 	require.NoError(t, err)
 	require.Equal(t, run(bare, "rev-parse", "main"), head)
-	require.Equal(t, packp.Filter("blob:none"), g.filter)
 	tree, err := g.Tree(head)
 	require.NoError(t, err)
-	shas := map[string]string{}
+	shas := []string{}
 	for _, e := range tree {
-		shas[e.Path] = e.Sha
-		require.Error(t, g.repo.Storer.HasEncodedObject(plumbing.NewHash(e.Sha)), "%s: no blob fetched yet", e.Path)
+		shas = append(shas, e.Sha)
 	}
-	requests = nil
-	blobs, err := g.Blobs(ctx, token, []string{shas["/main.typ"], shas["/chapters/one.typ"]})
+	blobs, err := g.Blobs(shas)
 	require.NoError(t, err)
-	require.Equal(t, [][]byte{[]byte(mainText), []byte("= One\n")}, blobs)
-	require.Equal(t, []string{"GET /group/report.git/info/refs", "POST /group/report.git/git-upload-pack"}, requests, "both in one request")
-	require.Error(t, g.repo.Storer.HasEncodedObject(plumbing.NewHash(shas["/media/video.bin"])), "the large file stays at GitLab")
+	require.Equal(t, [][]byte{[]byte("= One\n"), []byte(mainText), big}, blobs, "every file is here")
 
 	sha, err := g.Commit(ctx, token, CommitRequest{Branch: "main", ExpectedHead: head, Message: "Edit", Author: Signature{"Ann", "ann@example.com"},
 		Actions: []Action{{Kind: ActionUpdate, Path: "/main.typ", Content: []byte("v2\n")}, {Kind: ActionMove, Path: "/video.bin", PreviousPath: "/media/video.bin"}}})
@@ -334,7 +325,7 @@ func TestPartialCloneAgainstGit(t *testing.T) {
 	require.True(t, strings.HasPrefix(run(dir, "count-objects"), "0 objects"), "no loose objects after the upkeep")
 	head, err = g.Head(ctx, token, "main")
 	require.NoError(t, err)
-	blobs, err = g.Blobs(ctx, token, []string{blobSha([]byte("theirs\n"))})
+	blobs, err = g.Blobs([]string{blobSha([]byte("theirs\n"))})
 	require.NoError(t, err, "after the repack")
 	require.Equal(t, "theirs\n", string(blobs[0]))
 	_, err = g.Commit(ctx, token, CommitRequest{Branch: "main", ExpectedHead: head, Message: "after upkeep", Author: Signature{"Ann", "a@x"},

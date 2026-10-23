@@ -1,7 +1,8 @@
 // Package gitlab makes rooms backed by a GitLab branch: people edit the branch together in the browser, and
 // the server commits it back (on a save, or by itself) and merges what others push.
 //
-// Rooms opens the rooms named `gitlab:<project id or path>@<branch>` and serves, next to the WebSocket:
+// Rooms opens the rooms named `gitlab:<project id or path>@<branch>`, or `…@<branch>:/<folder>` for a room
+// of one folder of the branch, and serves, next to the WebSocket:
 //   - a room's files (images, data): GET /rooms/<room>/files/<path>
 //   - GitLab's push webhook: POST /gitlab/webhook
 //
@@ -41,8 +42,9 @@ const DefaultID = "gitlab"
 
 // Options configure Rooms. URL and Token are required.
 type Options struct {
-	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>`), and the provider of the
-	// users it lets in (their collab.User.ID is a user id of this instance). Default DefaultID.
+	// ID is the provider id: the prefix of room names (`<ID>:<project>@<branch>[:/<folder>]`), and the
+	// provider of the users it lets in (their collab.User.ID is a user id of this instance). Default
+	// DefaultID.
 	ID string
 	// URL is the GitLab instance, e.g. https://gitlab.com.
 	URL string
@@ -157,8 +159,9 @@ func ParseAutoCommit(value string) (time.Duration, error) {
 	return time.Duration(minutes * float64(time.Minute)), nil
 }
 
-// Open makes a room named `<ID>:<project>@<branch>` a GitLab room: a new one loads the branch, a stored
-// one merges what was pushed meanwhile, with the token of by (who opens it). Other rooms are left alone.
+// Open makes a room named `<ID>:<project>@<branch>[:/<folder>]` a GitLab room: a new one loads the branch
+// (the folder's files), a stored one merges what was pushed meanwhile, with the token of by (who opens it).
+// Other rooms are left alone.
 func (x *Rooms) Open(r *collab.Room, doc *ydoc.Doc, by collab.User) (collab.Handler, error) {
 	g, err := x.openRoom(r.Name(), r, doc, by)
 	if g == nil {
@@ -169,11 +172,11 @@ func (x *Rooms) Open(r *collab.Room, doc *ydoc.Doc, by collab.User) (collab.Hand
 
 // openRoom opens the room name in h as by (nil: not a GitLab room).
 func (x *Rooms) openRoom(name string, h host, doc *ydoc.Doc, by collab.User) (*room, error) {
-	project, branch, ok := x.parseRoomName(name)
+	project, branch, dir, ok := x.parseRoomName(name)
 	if !ok {
 		return nil, nil
 	}
-	g := &room{x: x, host: h, repo: x.repository(project), name: name, project: project, branch: branch}
+	g := &room{x: x, host: h, repo: x.repository(project), name: name, project: project, branch: branch, dir: dir}
 	if err := g.open(x.ctx, doc, by); err != nil {
 		return nil, fmt.Errorf("gitlab: open %s@%s: %w", project, branch, err)
 	}
@@ -241,23 +244,25 @@ func (x *Rooms) autoCommitOf(name string) time.Duration {
 	return x.autoCommit
 }
 
-// Handles reports whether room is one of these rooms' names (`<ID>:<project>@<branch>`).
+// Handles reports whether room is one of these rooms' names (`<ID>:<project>@<branch>[:/<folder>]`).
 func (x *Rooms) Handles(room string) bool {
-	_, _, ok := x.parseRoomName(room)
+	_, _, _, ok := x.parseRoomName(room)
 	return ok
 }
 
-// parseRoomName splits `<ID>:<project id or path>@<branch>`.
-func (x *Rooms) parseRoomName(name string) (project, branch string, ok bool) {
+// parseRoomName splits `<ID>:<project id or path>@<branch>[:/<folder>]` (git takes no ':' in a branch's
+// name); dir is the folder ("/report/2026": absolute, no empty, ".", ".." or ".git" part), "" without one.
+func (x *Rooms) parseRoomName(name string) (project, branch, dir string, ok bool) {
 	rest, ok := strings.CutPrefix(name, x.prefix)
 	if !ok {
-		return "", "", false
+		return "", "", "", false
 	}
-	at := strings.IndexByte(rest, '@')
-	if at <= 0 || at == len(rest)-1 {
-		return "", "", false
+	project, rest, _ = strings.Cut(rest, "@")
+	branch, dir, pinned := strings.Cut(rest, ":")
+	if project == "" || branch == "" || (pinned && (!strings.HasPrefix(dir, "/") || !gitPath(dir[1:]))) {
+		return "", "", "", false
 	}
-	return rest[:at], rest[at+1:], true
+	return project, branch, dir, true
 }
 
 // Close ends the rooms' repository calls and waits for their work (call it after the collab server's Close,
@@ -352,7 +357,7 @@ func (x *Rooms) person(user collab.User, name, email string) *person {
 }
 
 // ServeFile answers a file of an open room (the pattern's {room} and {path...}) to whom Authenticate lets in,
-// fetched with their token if the clone does not have it yet. CORS is the app's.
+// from the clone. CORS is the app's.
 //
 // Every answer is passive content: nosniff and a sandboxing CSP (no script runs, also in an SVG opened as
 // a page); images, PDF, fonts and text files are served inline under their type (text as text/plain),
@@ -365,8 +370,7 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	user, err := x.opts.Authenticate(r, name)
-	if err != nil { // first: whether a room is open is no one else's business
+	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -377,7 +381,7 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	content, ok, err := open.asset(r.Context(), user, file)
+	content, ok, err := open.asset(file)
 	if err != nil {
 		http.Error(w, failureMessage(err), http.StatusBadGateway)
 		return

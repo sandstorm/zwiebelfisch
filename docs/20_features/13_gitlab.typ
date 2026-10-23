@@ -23,6 +23,10 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *Changes on GitLab* (pushes, merges) are merged into the open project.
 
+*A project can be a folder of the repository:* the file panel shows the repository's paths. The folders around the project's folder are read-only: new files and folders go into the project's folder, and files outside it are not renamed, moved or deleted.
+
+*Shared files:* a file from outside the project's folder that the project uses (`#import "/template.typ"`, an image) is loaded once a compile asks for it. It is marked S (used from outside this project's folder): you edit it as any file, and the change is saved to GitLab for everyone who uses it.
+
 *Conflicts must be resolved by hand:* where the project and GitLab changed the same lines, nothing is merged or saved. The status bar warns "Conflict with GitLab: main.typ". Make the lines match, here or on GitLab, then save again.
 
-To try it, use the demo's "GitLab (fake)" mode.
+To try it, use the demo's "GitLab (fake)" mode; `?room=gitlab:demo/report@main:/letters/welcome` opens a project in a folder that uses the report's template.

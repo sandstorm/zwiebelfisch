@@ -22,6 +22,11 @@ import (
 // changes (on a save, or by itself when nobody edited for a while or the last user left) and merges
 // upstream pushes into it.
 //
+// The room holds the files of its folder (dir; the whole repository without one) and the files from outside
+// it that a client asked for (pullIn, kept in meta.pulledIn): nothing else of the repository reaches the
+// document, and upstream changes to other files leave it alone. A commit never creates, renames or deletes
+// a file outside the folder.
+//
 // Everyone in the room sees in the document:
 //   - what is not committed yet and by whom (changes)
 //   - a conflict with upstream (conflict, until a merge succeeds)
@@ -37,6 +42,7 @@ type room struct {
 	name    string
 	project string
 	branch  string
+	dir     string // the room's folder ("/report/2026"); "": the whole repository
 
 	ops      sync.Mutex // one operation at a time
 	disposed atomic.Bool
@@ -87,7 +93,7 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 		} else if head, err := r.repo.Head(ctx, token, r.branch); err != nil {
 			r.stale.Store(true)
 		} else if head != b.Sha {
-			if upstream, err := r.snapshot(ctx, token, head); err == nil {
+			if upstream, err := r.snapshot(head, readPulledIn(doc)); err == nil {
 				r.applyMerge(doc, upstream)
 			}
 		}
@@ -99,7 +105,7 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 		if err != nil {
 			return err
 		}
-		snapshot, err := r.snapshot(ctx, token, head)
+		snapshot, err := r.snapshot(head, nil)
 		if err != nil {
 			return err
 		}
@@ -121,9 +127,19 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 	return nil
 }
 
-// Stateless handles a client's save (gitlab:save), if the client's user may push to the branch: the
-// outcome goes to everyone, or (nothing to commit, an error, a refusal) to the saving client only.
+// Stateless handles a client's message:
+//   - a save (gitlab:save), if the client's user may push to the branch: the outcome goes to everyone, or
+//     (nothing to commit, an error, a refusal) to the saving client only
+//   - a request for a file from outside the room's folder (gitlab:pull): pullIn; a refusal goes to the client
 func (r *room) Stateless(p *collab.Peer, payload string) {
+	if path, ok := parsePull(payload); ok {
+		r.x.goTask(func() {
+			if refused := r.pullIn(path); refused != nil {
+				p.SendStateless(refused.json())
+			}
+		})
+		return
+	}
 	text, ok := parseSave(payload)
 	if !ok {
 		return
@@ -157,6 +173,101 @@ func parseSave(payload string) (text string, ok bool) {
 		text = defaultCommitMessage
 	}
 	return text, true
+}
+
+// parsePull reads a request for a file (gitlab:pull): its path.
+func parsePull(payload string) (path string, ok bool) {
+	var m clientMessage
+	if json.Unmarshal([]byte(payload), &m) != nil || m.Type != "gitlab:pull" {
+		return "", false
+	}
+	return m.Path, true
+}
+
+// pullIn adds the file path from outside the room's folder to the room as it is at the room's base (a .typ
+// file as text, any other by blob sha) and to meta.pulledIn; merges and commits then treat it as any file of
+// the room. A file the room holds stays as it is (nil). The refusal (msgMissing) says why not: no file of the
+// base, a path in the folder, more than maxPulledIn files, larger than maxBlobSize.
+func (r *room) pullIn(path string) *message {
+	var refused *message
+	r.run(func() message {
+		var b *base
+		var pulled []string
+		if !r.host.Do(func(doc *ydoc.Doc) {
+			if b = readMeta(doc); b != nil {
+				pulled = readPulledIn(doc)
+			}
+		}) || b == nil || slices.Contains(pulled, path) {
+			return message{}
+		}
+		missing := func(why string) message {
+			refused = &message{Type: msgMissing, Path: path, Message: why}
+			return message{}
+		}
+		switch {
+		case !strings.HasPrefix(path, "/") || !gitPath(path[1:]):
+			return missing(fmt.Sprintf("%q is not a file name git takes.", path))
+		case r.inFolder(path):
+			return missing(fmt.Sprintf("%s is in the project folder %s, not outside it.", path, r.dir))
+		case len(pulled) >= maxPulledIn:
+			return missing(fmt.Sprintf("%s is not loaded: a room holds at most %d files from outside its folder %s.", path, maxPulledIn, r.dir))
+		}
+		entries, err := r.repo.Tree(b.Sha)
+		if err != nil {
+			return missing(failureMessage(err))
+		}
+		i := slices.IndexFunc(entries, func(e TreeEntry) bool { return e.Path == path })
+		if i < 0 {
+			return missing(fmt.Sprintf("%s is not a file in the repository.", path))
+		}
+		sha := entries[i].Sha
+		var text *string
+		if strings.HasSuffix(path, ".typ") {
+			contents, err := r.repo.Blobs([]string{sha})
+			if err != nil {
+				return missing(failureMessage(err))
+			}
+			t := decodeText(contents[0])
+			text = &t
+		}
+		r.host.Do(func(doc *ydoc.Doc) {
+			r.logErr(r.write(doc, func(w *ydoc.Writer) {
+				if text != nil {
+					b.Texts[path] = *text
+					w.SetText(filesMap, path, *text)
+					w.Set(metaMap, "base", plain(b.Texts))
+				} else {
+					b.Assets[path] = sha
+					w.Set(assetsMap, path, sha)
+					w.Set(metaMap, "baseAssets", plain(b.Assets))
+				}
+				w.Set(metaMap, metaPulledIn, plain(slices.Sorted(slices.Values(append(pulled, path)))))
+			}), "cannot pull in a file")
+		})
+		return message{}
+	})
+	return refused
+}
+
+// inFolder is whether path ("/report/2026/main.typ") is in the room's folder.
+func (r *room) inFolder(path string) bool {
+	return r.dir == "" || strings.HasPrefix(path, r.dir+"/")
+}
+
+// outsideFolder is why actions may not be committed ("": they may): one creates, renames or deletes a file
+// outside the room's folder.
+func (r *room) outsideFolder(actions []Action) string {
+	for _, a := range actions {
+		if a.Kind == ActionUpdate {
+			continue
+		}
+		for _, p := range []string{a.Path, a.PreviousPath} {
+			if p != "" && !r.inFolder(p) {
+				return fmt.Sprintf("Not saved: %s is outside the project folder %s, where files are only edited, never created, renamed or deleted.", p, r.dir)
+			}
+		}
+	}
+	return ""
 }
 
 // Left: the last user (last) left. meta.changes is told now (the room is stored as it is when Left
@@ -307,7 +418,7 @@ func (r *room) pull(ctx context.Context, token string) (*message, error) {
 			return message{}
 		}
 		var m message
-		if m, err = r.merge(ctx, token, head); err == nil {
+		if m, err = r.merge(head); err == nil {
 			result = &m
 		}
 		return m
@@ -315,9 +426,8 @@ func (r *room) pull(ctx context.Context, token string) (*message, error) {
 	return result, err
 }
 
-// asset returns the bytes of one of the room's other files (false: no such file), fetched with user's token
-// if need be.
-func (r *room) asset(ctx context.Context, user collab.User, path string) ([]byte, bool, error) {
+// asset returns the bytes of one of the room's other files (false: no such file).
+func (r *room) asset(path string) ([]byte, bool, error) {
 	var value any
 	if !r.host.Do(func(doc *ydoc.Doc) { value = doc.Values(assetsMap)[path] }) {
 		return nil, false, nil
@@ -326,11 +436,7 @@ func (r *room) asset(ctx context.Context, user collab.User, path string) ([]byte
 	case []byte:
 		return v, true, nil
 	case string:
-		token, err := r.x.token(ctx, user)
-		if err != nil {
-			return nil, false, err
-		}
-		blobs, err := r.repo.Blobs(ctx, token, []string{v})
+		blobs, err := r.repo.Blobs([]string{v})
 		if err != nil {
 			return nil, false, err
 		}
@@ -488,6 +594,10 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 	if len(actions) == 0 {
 		return message{Type: msgUnchanged}, true, nil
 	}
+	if refused := r.outsideFolder(actions); refused != "" {
+		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
+		return message{Type: msgError, Message: refused}, true, nil
+	}
 	var paths []string
 	for _, f := range changedFiles(actions) {
 		paths = append(paths, f.Path)
@@ -510,16 +620,20 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 		if err != nil {
 			return message{}, true, err
 		}
-		merged, err := r.merge(ctx, by.token, head)
+		merged, err := r.merge(head)
 		return merged, err != nil || merged.Type == msgConflict, err
 	}
 	r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, sha) })
 	return message{Type: msgSaved, Sha: sha, Author: by.author.Name}, true, nil
 }
 
-// merge merges the branch at head into the room (see applyMerge).
-func (r *room) merge(ctx context.Context, token, head string) (message, error) {
-	upstream, err := r.snapshot(ctx, token, head)
+// merge merges the branch at head (fetched before) into the room (see applyMerge).
+func (r *room) merge(head string) (message, error) {
+	var pulled []string
+	if !r.host.Do(func(doc *ydoc.Doc) { pulled = readPulledIn(doc) }) {
+		return message{}, errGone
+	}
+	upstream, err := r.snapshot(head, pulled)
 	if err != nil {
 		return message{}, err
 	}
@@ -622,9 +736,9 @@ func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha string) {
 	}), "cannot write the commit")
 }
 
-// snapshot reads the repository at sha (fetched before): .typ files as text (their blobs fetched at once,
-// with token), the other files by blob sha.
-func (r *room) snapshot(ctx context.Context, token, sha string) (base, error) {
+// snapshot reads the room's files of the repository at sha (fetched before): those in its folder and the
+// pulled-in ones, .typ files as text, the others by blob sha.
+func (r *room) snapshot(sha string, pulled []string) (base, error) {
 	entries, err := r.repo.Tree(sha)
 	if err != nil {
 		return base{}, err
@@ -632,13 +746,15 @@ func (r *room) snapshot(ctx context.Context, token, sha string) (base, error) {
 	snapshot := base{Sha: sha, Texts: map[string]string{}, Assets: map[string]string{}}
 	var typst, shas []string
 	for _, e := range entries {
-		if strings.HasSuffix(e.Path, ".typ") {
+		switch {
+		case !r.inFolder(e.Path) && !slices.Contains(pulled, e.Path):
+		case strings.HasSuffix(e.Path, ".typ"):
 			typst, shas = append(typst, e.Path), append(shas, e.Sha)
-		} else {
+		default:
 			snapshot.Assets[e.Path] = e.Sha
 		}
 	}
-	contents, err := r.repo.Blobs(ctx, token, shas)
+	contents, err := r.repo.Blobs(shas)
 	if err != nil {
 		return base{}, err
 	}
@@ -703,4 +819,6 @@ const (
 	changesDelay = 500 * time.Millisecond
 	// saveAttempts is how often a save merges upstream and tries again when the branch keeps moving
 	saveAttempts = 3
+	// maxPulledIn is how many files from outside its folder a room holds at most
+	maxPulledIn = 200
 )

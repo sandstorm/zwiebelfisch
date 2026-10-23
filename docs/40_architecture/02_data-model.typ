@@ -129,7 +129,7 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [awareness], [`user`, `cursor` (relative positions): other users' carets], [all],
   [`project`], [`main`, the main file's path], [plain],
   [`assets`], [the other files: blob sha, or uploaded bytes not committed yet], [GitLab],
-  [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`], [GitLab],
+  [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`], [GitLab],
 )
 
 === GitLab rooms <architecture-data-model-gitlab>
@@ -143,4 +143,5 @@ The server holds no GitLab token of its own: everything a GitLab room does, it d
 
 - *Loading, merging:* the token of who opens the room; a webhook's push, of someone in it (nobody: at the next join).
 - *Saving:* the saver's, who is the commit's author; an auto-save, an editor's (who left last, else who edited most). The other editors are `Co-authored-by:` trailers, the committer is Zwiebelfisch.
-- *The repository* is one bare git clone per project next to the SQLite file (`repositories/`), partial (no blobs until a room reads them: the `.typ` files at once, other files on request), with commits built in memory and pushed only if the branch did not move. No token is ever written to it.
+- *The repository* is one bare, full git clone per project next to the SQLite file (`repositories/`): rooms read files from it only. Commits are built in memory and pushed only if the branch did not move. No token is ever written to it.
+- *A room of one folder* (`…@<branch>:/<folder>`) holds the folder's files and the pulled-in ones (`meta.pulledIn`), at their repository paths: its base, merges and commits cover exactly these. The widget makes every other folder Readonly (`workspace.registerFileSystemProvider`), marks pulled-in files (a file decoration) and asks for what a compile misses (`gitlab:pull`); the server refuses commits that create, rename or delete outside the folder.

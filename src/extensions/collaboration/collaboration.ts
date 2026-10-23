@@ -11,6 +11,8 @@ import { registerVisualPresence } from './visual-editor/visual-editor';
 import { boxPresence } from './visual-editor/box-carets';
 import { AccountStatus } from './window/account';
 import { leaveWarning, presenceDecorations } from './window/window';
+import { folderPermissions, missingFiles, sharedDecorations } from './window/room-folder';
+import { gitlabRoomFolder } from './room-protocol';
 
 /**
  * Real-time editing of the project with others, over Yjs. Not a built-in: the host adds it with its connection
@@ -23,7 +25,9 @@ import { leaveWarning, presenceDecorations } from './window/window';
  * Until the room's text is in the project, the editing area takes no input. Other users' edits never enter the local
  * undo history. With a server, only signed-in users connect: the status bar shows the account and offers signing in,
  * also when the session ends. A room backed by a GitLab branch is a source control, and the browser warns before
- * leaving changes nobody commits.
+ * leaving changes nobody commits. In a room of one folder of the branch (`gitlab:<project>@<branch>:/<folder>`):
+ * - files are created, renamed and deleted only in that folder (every other folder is Readonly)
+ * - a file from outside it that a compile misses is asked for; it comes in, marked "S" (shared)
  */
 export function collaboration(options: CollaborationOptions): Extension {
   const server = 'url' in options;
@@ -38,7 +42,7 @@ export function collaboration(options: CollaborationOptions): Extension {
         }
       : undefined,
     activate(context) {
-      const { project, window, scm, sourceEditor, visualEditor, subscriptions } = context;
+      const { project, window, workspace, preview, scm, sourceEditor, visualEditor, subscriptions } = context;
       subscriptions.push(window.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
       const user = window.user;
@@ -70,6 +74,14 @@ export function collaboration(options: CollaborationOptions): Extension {
         // fired from the editors' own updates, after their state has the new selection
         window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
+      const folder = 'room' in options ? gitlabRoomFolder(options.room) : null;
+      if (folder) {
+        subscriptions.push(
+          workspace.registerFileSystemProvider(folderPermissions(folder)),
+          window.registerFileDecorationProvider(sharedDecorations(folder)),
+          preview.onDidChangeDiagnostics((diagnostics) => link.pull(missingFiles(diagnostics, folder))),
+        );
+      }
       // what is typed before the room's text is there would be replaced by it
       void window.withProgress({ location: ProgressLocation.EditingArea, title: 'Connecting to the room…' }, () => link.ready);
       const view = window.ownerDocument.defaultView;

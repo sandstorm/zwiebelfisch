@@ -1,7 +1,23 @@
 // See Workspace in workspace.ts.
+import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
-import { type Workspace, type Settings, type ConfigurationType, type ConfigurationProperty, type WorkspaceConfiguration, type ConfigurationInspect, type ConfigurationChangeEvent, type WorkspaceOptions, mergeSettings } from './workspace';
+import {
+  type Workspace,
+  type Settings,
+  type ConfigurationType,
+  type ConfigurationProperty,
+  type WorkspaceConfiguration,
+  type ConfigurationInspect,
+  type ConfigurationChangeEvent,
+  type WorkspaceOptions,
+  type FileStat,
+  type FileSystem,
+  type FileSystemProvider,
+  FilePermission,
+  mergeSettings,
+} from './workspace';
 
 /**
  * The `Workspace` of one widget. A setting's value counts only if the setting is declared and the value has the
@@ -12,6 +28,11 @@ export class WorkspaceHost implements Workspace {
   #values: Settings;
   readonly #changed = new EventEmitter<ConfigurationChangeEvent>();
   readonly onDidChangeConfiguration = this.#changed.event;
+  readonly #fileSystems: FileSystemProvider[] = [];
+  readonly fs: FileSystem = {
+    stat: (folder): FileStat =>
+      this.#fileSystems.some((provider) => provider.stat(folder).permissions === FilePermission.Readonly) ? { permissions: FilePermission.Readonly } : {},
+  };
 
   constructor(
     private readonly project: Project,
@@ -21,7 +42,7 @@ export class WorkspaceHost implements Workspace {
   }
 
   async applyEdit(change: FileChange): Promise<string | null> {
-    const problem = this.project.check(change);
+    const problem = this.project.check(change) ?? this.#readonlyFolder(change);
     if (problem) return problem;
     const allowed = (await this.options.allowFileChange?.(change)) ?? true;
     if (!allowed) return 'This change is not allowed here.';
@@ -29,6 +50,27 @@ export class WorkspaceHost implements Workspace {
     const late = this.project.check(change);
     if (late) return late;
     this.project.apply(change);
+    return null;
+  }
+
+  registerFileSystemProvider(provider: FileSystemProvider): Disposable {
+    this.#fileSystems.push(provider);
+    return new Disposable(() => {
+      const index = this.#fileSystems.indexOf(provider);
+      if (index >= 0) this.#fileSystems.splice(index, 1);
+    });
+  }
+
+  /** Why `change` may not happen in the folders it creates, deletes or renames a file in (Readonly), or null. */
+  #readonlyFolder(change: FileChange): string | null {
+    if (change.kind === 'update') return null;
+    const paths = change.kind === 'rename' ? [change.from, change.path] : [change.path];
+    for (const path of paths) {
+      const folder = folderOf(path);
+      if (this.fs.stat(folder).permissions !== FilePermission.Readonly) continue;
+      const where = folder === null ? 'the top folder' : ProjectPath.displayName(folder);
+      return `Files in ${where} cannot be created, renamed or deleted here.`;
+    }
     return null;
   }
 
@@ -111,6 +153,11 @@ export class WorkspaceHost implements Workspace {
     if (!property) console.warn(`Unknown setting ${id} (no extension declares it): ignored`);
     else console.warn(`Setting ${id}: ${JSON.stringify(value)} is not a valid value; using the default ${JSON.stringify(property.default)}`);
   }
+}
+
+/** The folder `path` is in; null: the top level. */
+function folderOf(path: ProjectPath): ProjectPath | null {
+  return ProjectPath.parse(path.slice(0, path.lastIndexOf('/')));
 }
 
 /** Equal values (settings are JSON-like: objects and arrays by content). */

@@ -56,6 +56,7 @@ type setupOptions struct {
 	autoCommit time.Duration
 	repo       *fakeRepo // instead of a new one
 	state      []byte    // a stored room
+	room       string    // default roomName
 }
 
 // setup opens a GitLab room (no auto-commit unless asked for) at 10:00.
@@ -82,7 +83,10 @@ func setup(t *testing.T, o setupOptions) *env {
 	}
 	e.host = &fakeHost{doc: doc, users: []collab.User{ann.User()}}
 	var err error
-	e.host.Do(func(doc *ydoc.Doc) { e.room, err = e.x.openRoom(roomName, e.host, doc, ann.User()) })
+	if o.room == "" {
+		o.room = roomName
+	}
+	e.host.Do(func(doc *ydoc.Doc) { e.room, err = e.x.openRoom(o.room, e.host, doc, ann.User()) })
 	require.NoError(t, err)
 	t.Cleanup(e.unload)
 	return e
@@ -222,7 +226,7 @@ func (e *env) get(path, session string) *httptest.ResponseRecorder {
 	for _, s := range strings.Split(path, "/") {
 		segments = append(segments, url.PathEscape(s))
 	}
-	req := httptest.NewRequest(http.MethodGet, "/api/rooms/"+url.PathEscape(roomName)+"/files"+strings.Join(segments, "/"), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/rooms/"+url.PathEscape(e.room.name)+"/files"+strings.Join(segments, "/"), nil)
 	if session != "" {
 		req.AddCookie(&http.Cookie{Name: "session", Value: session})
 	}
@@ -255,7 +259,7 @@ func TestLoading(t *testing.T) {
 		require.Equal(t, map[string]string{"/img/logo.png": blobSha(logo)}, b.Assets)
 		require.Nil(t, e.changes())
 		require.Equal(t, 1, e.repo.count("blobs "+blobSha([]byte("= One\n\nText of one.\n"))+" "+blobSha([]byte(mainText))+" "+blobSha([]byte("old\n"))), "the .typ files at once")
-		require.Equal(t, []string{"token-1", "token-1"}, e.repo.usedTokens(), "with the token of who opened it")
+		require.Equal(t, []string{"token-1"}, e.repo.usedTokens(), "fetched with the token of who opened it")
 	})
 
 	t.Run("loads a large tree", func(t *testing.T) {
@@ -267,18 +271,16 @@ func TestLoading(t *testing.T) {
 		require.Len(t, e.assets(), 150)
 	})
 
-	t.Run("serves the other files over HTTP to whom Authenticate lets in, read with their token", func(t *testing.T) {
+	t.Run("serves the other files over HTTP to whom Authenticate lets in, read from the clone", func(t *testing.T) {
 		e := setup(t, setupOptions{})
 		e.repo.usedTokens()
 		res := e.get("/img/logo.png", "bob")
 		require.Equal(t, http.StatusOK, res.Code)
 		require.Equal(t, "image/png", res.Header().Get("Content-Type"))
 		require.Equal(t, logo, res.Body.Bytes())
-		require.Equal(t, []string{"token-2"}, e.repo.usedTokens())
+		require.Empty(t, e.repo.usedTokens(), "GitLab is not asked")
 		require.Equal(t, http.StatusUnauthorized, e.get("/img/logo.png", "").Code)
 		require.Equal(t, http.StatusNotFound, e.get("/missing.png", "ann").Code)
-		e.tokens.signOut("2")
-		require.Equal(t, http.StatusBadGateway, e.get("/img/logo.png", "bob").Code, "no token to read it with")
 	})
 
 	t.Run("refuses to read a file larger than the limit", func(t *testing.T) {
@@ -376,16 +378,20 @@ func TestLoading(t *testing.T) {
 	t.Run("leaves other rooms alone", func(t *testing.T) {
 		x := New(Options{Log: zerolog.Nop()})
 		defer x.Close()
-		for _, name := range []string{"plain", "gitlab:", "gitlab:@main", "gitlab:p@", "github:p@main"} {
+		for _, name := range []string{"plain", "gitlab:", "gitlab:@main", "gitlab:p@", "github:p@main", "gitlab:p@main:", "gitlab:p@main:/",
+			"gitlab:p@main:foo", "gitlab:p@main:/foo/", "gitlab:p@main://foo", "gitlab:p@main:/foo/../bar", "gitlab:p@main:/./foo", "gitlab:p@main:/.git", "gitlab:p@main:/a/.GIT/b", "gitlab:p@:/foo"} {
 			r, err := x.openRoom(name, &fakeHost{}, ydoc.New(), ann.User())
 			require.NoError(t, err)
 			require.Nil(t, r, name)
 			require.False(t, x.Handles(name), name)
 		}
 		require.True(t, x.Handles("gitlab:demo/report@main"))
-		p, b, ok := x.parseRoomName("gitlab:7@feature/x@y")
+		p, b, dir, ok := x.parseRoomName("gitlab:7@feature/x@y")
 		require.True(t, ok)
-		require.Equal(t, []string{"7", "feature/x@y"}, []string{p, b})
+		require.Equal(t, []string{"7", "feature/x@y", ""}, []string{p, b, dir})
+		p, b, dir, ok = x.parseRoomName("gitlab:group/report@feature/x@y:/reports/2026 q1")
+		require.True(t, ok)
+		require.Equal(t, []string{"group/report", "feature/x@y", "/reports/2026 q1"}, []string{p, b, dir})
 	})
 }
 
@@ -558,7 +564,7 @@ func TestUpstreamChanges(t *testing.T) {
 		sha := e.repo.push("main", map[string]any{"/ch1.typ": "pushed"})
 		e.webhook("hook-secret")
 		require.Equal(t, sha, e.base().Sha)
-		require.Equal(t, []string{"token-2", "token-2"}, e.repo.usedTokens())
+		require.Equal(t, []string{"token-2"}, e.repo.usedTokens())
 
 		e.host.setUsers()
 		sha = e.repo.push("main", map[string]any{"/ch1.typ": "pushed again"})

@@ -8,11 +8,12 @@ import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { roomFilePath } from '../room-protocol';
+import { gitlabRoomFolder, roomFilePath } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
+import { RoomFolder } from './room-folder';
 import { SharedAssets } from './shared-assets';
 import { SharedMainFile } from './shared-main-file';
 import { SharedProject } from './shared-project';
@@ -23,7 +24,9 @@ import { SharedProject } from './shared-project';
  * - each Typst file's text (SharedProject)
  * - the main file (SharedMainFile), except in a GitLab-backed room, where it stays each user's own
  * - the users' places (RemoteCursors)
- * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch (GitLabSourceControl)
+ * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch (GitLabSourceControl);
+ *   in a room of one folder of the branch, also its main file and the files from outside it the compiler misses
+ *   (RoomFolder)
  *
  * Used through CollaborationLink in ../collaboration-link.ts.
  */
@@ -32,6 +35,7 @@ export class Collaboration {
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
   private readonly mainFile: SharedMainFile | null = null;
+  private readonly folder: RoomFolder | null = null;
   private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
   /** Every other user's place, in any file, whenever one changes. */
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
@@ -49,6 +53,7 @@ export class Collaboration {
       files: (path: ProjectPath) => Promise<Uint8Array>;
       tell: Tell;
       signedOut: Promise<void>;
+      folder: ProjectPath | null;
     } | null,
   ) {
     const { project, user } = shared;
@@ -56,6 +61,7 @@ export class Collaboration {
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
       this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell);
       this.assets = new SharedAssets(project, ydoc, server.files);
+      if (server.folder) this.folder = new RoomFolder(server.folder, project, ydoc, statelessChannel(server.provider));
     }
     this.sharedProject = new SharedProject(project, ydoc);
     // after the files, so the room's main file is there to take
@@ -96,7 +102,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell, signedOut });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell, signedOut, folder: gitlabRoomFolder(options.room) });
   }
 
   /**
@@ -105,6 +111,11 @@ export class Collaboration {
    */
   get leavesChangesUncommitted(): boolean {
     return !!this.sourceControl?.changesStayUncommitted && !this.cursors?.hasOthers;
+  }
+
+  /** Asks for the files from outside the room's folder that the compiler misses (in a room of one folder; else nothing). */
+  pull(paths: readonly ProjectPath[]): void {
+    for (const path of paths) this.folder?.pull(path);
   }
 
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */

@@ -348,7 +348,7 @@ ${element}`;
     expect(diagnostics).toEqual([]);
     expect(pages[0].svg).toContain('<image');
     engine.remove('/img/logo.svg');
-    expect(engine.compile('/main.typ').diagnostics[0].message).toMatch(/not found/);
+    expect(engine.compile('/main.typ').diagnostics[0]).toMatchObject({ message: 'file not found (searched at img/logo.svg)', path: '/main.typ' });
   });
 
   it('lists imported packages it has no files of', () => {

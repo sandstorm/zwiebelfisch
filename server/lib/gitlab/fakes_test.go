@@ -28,7 +28,7 @@ type fakeRepo struct {
 	commits  map[string]*fakeCommit
 	branches map[string]string
 	n        int
-	calls    []string // "head main", "blobs <sha>…", "commit main", "access <user> main"
+	calls    []string // "head main", "blobs <sha>…" (read locally), "commit main", "access <user> main"
 	tokens   []string // the token of each call that talks to GitLab
 	// failNext happens to the next commit: a push lands first, then err is the answer (nil: the commit
 	// goes on, and is refused as the branch moved)
@@ -162,13 +162,13 @@ func (r *fakeRepo) Tree(sha string) ([]TreeEntry, error) {
 	return entries, nil
 }
 
-func (r *fakeRepo) Blobs(_ context.Context, token string, shas []string) ([][]byte, error) {
+func (r *fakeRepo) Blobs(shas []string) ([][]byte, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if len(shas) == 0 {
 		return nil, nil
 	}
-	r.called("blobs "+strings.Join(shas, " "), token)
+	r.calls = append(r.calls, "blobs "+strings.Join(shas, " ")) // no GitLab call: no token
 	out := make([][]byte, len(shas))
 	for i, sha := range shas {
 		found := false

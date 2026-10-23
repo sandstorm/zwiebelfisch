@@ -3,6 +3,7 @@
 // server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there. Outside the
 // lazily loaded model/ (which uses most of it), so the eager account.ts can build the WebSocket's URL. See
 // collaboration in collaboration.ts.
+import { ProjectPath } from '../../core/paths/paths';
 
 /**
  * The Y.Doc map of the shared Typst files: path → Y.Text (written by the collaboration extension's SharedProject; the
@@ -16,8 +17,23 @@ export const FILES_MAP = 'files';
  */
 export const PROJECT_MAP = 'project';
 
-/** Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`. */
+/**
+ * Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`, or `gitlab:<project>@<branch>:/<folder>`
+ * for a room of one folder of the branch (see `gitlabRoomFolder`).
+ */
 export const GITLAB_ROOM_PREFIX = 'gitlab:';
+
+/**
+ * The folder a GitLab room holds (`/reports/q1` of `gitlab:group/report@main:/reports/q1`): its files, and the files
+ * from outside it that it pulled in (`gitlab:pull`), at their paths in the repository. Null: the whole branch, or
+ * not a GitLab room.
+ */
+export function gitlabRoomFolder(room: string): ProjectPath | null {
+  if (!room.startsWith(GITLAB_ROOM_PREFIX)) return null;
+  const branch = room.slice(room.indexOf('@') + 1);
+  const colon = branch.indexOf(':');
+  return colon < 0 ? null : ProjectPath.parse(branch.slice(colon + 1));
+}
 
 /**
  * The Y.Doc map the server keeps the repository state in (clients only read it):
@@ -31,6 +47,7 @@ export const GITLAB_ROOM_PREFIX = 'gitlab:';
  * | `conflict`    | `RoomConflict \| null`: upstream changes that conflict with the room's; nothing is committed until resolved |
  * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it); cleared by the next commit or merge, or a conflict |
  * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
+ * | `pulledIn`    | `string[]`: the files from outside the room's folder it holds (`gitlab:pull`) |
  */
 export const META_MAP = 'meta';
 
@@ -81,11 +98,14 @@ export interface CommitFailure {
 }
 
 /** Client → server stateless messages. */
-export type ClientMessage = {
-  type: 'gitlab:save';
-  /** Commit message (default 'Edit via Zwiebelfisch'). The commit is by the signed-in user who saves. */
-  message?: string;
-};
+export type ClientMessage =
+  | {
+      type: 'gitlab:save';
+      /** Commit message (default 'Edit via Zwiebelfisch'). The commit is by the signed-in user who saves. */
+      message?: string;
+    }
+  /** Asks for a file from outside the room's folder, as it is at the room's base: it comes into the room, else `gitlab:missing` says why not. */
+  | { type: 'gitlab:pull'; path: ProjectPath };
 
 /** A range of a file's current text that could not be merged with upstream (UTF-16 offsets). */
 export interface ConflictRange {
@@ -110,7 +130,9 @@ export type ServerMessage =
   /** Upstream changes could not be merged; the room's text is kept as it is (sent to everyone). */
   | { type: 'gitlab:conflict'; sha: string; files: FileConflict[] }
   /** The save failed for another reason. */
-  | { type: 'gitlab:error'; message: string };
+  | { type: 'gitlab:error'; message: string }
+  /** A file this client asked for (`gitlab:pull`) does not come: not in the repository, or too many or too large. */
+  | { type: 'gitlab:missing'; path: string; message: string };
 
 export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 

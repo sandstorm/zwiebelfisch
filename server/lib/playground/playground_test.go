@@ -129,6 +129,13 @@ func TestUpstreamOnAFreshBranchStartsAtMain(t *testing.T) {
 	require.Equal(t, "refs/heads/fresh", s.bodies[0]["ref"])
 }
 
+func TestUpstreamOfAFolderRoomCommitsToItsBranch(t *testing.T) {
+	s := newSetup(t)
+	rec, _ := s.request(t, "POST", "/playground/upstream?room="+url.QueryEscape("gitlab:demo/report@fresh:/letters/welcome"))
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	require.Equal(t, "refs/heads/fresh", s.bodies[0]["ref"])
+}
+
 func TestUpstreamReportsAFailingWebhook(t *testing.T) {
 	gitlab := fakegitlab.New(playground.Project, files())
 	webhook := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "wrong token", 403) })

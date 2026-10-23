@@ -48,7 +48,7 @@ type cachedAccess struct {
 // saying why not. An open room that missed a push (pushed found nobody to fetch it for) fetches it now, as
 // user.
 func (x *Rooms) Authorize(ctx context.Context, user collab.User, name string) error {
-	project, branch, ok := x.parseRoomName(name)
+	project, branch, _, ok := x.parseRoomName(name)
 	if !ok {
 		return collab.Refusal{Reason: fmt.Sprintf("%q is not a GitLab room.", name)}
 	}

@@ -84,7 +84,7 @@ activate({ workspace, subscriptions }) {
   table.header[`context.`][Host][What it offers],
   [`commands`], [`hosts/commands`], [`registerCommand`; keys via `contributes.keybindings`],
   [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerStatusBarItem`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
-  [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`],
+  [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `registerFileSystemProvider`],
   [`languages`], [`hosts/languages`], [`registerDocumentLinkProvider`, `registerDocumentDropEditProvider`, `registerDocumentPasteEditProvider`, `registerHelpSheet`, `registerImportSource`; languages via `contributes.languages`],
   [`scm`], [`hosts/scm`], [`registerSourceControl`],
   [`visualEditor`], [`hosts/visual-editor`], [`registerNode`, `registerMark`, `registerTiptapExtension`, `registerSubmenu`, `registerFloatingBar`, `registerCompletionItemProvider`, `registerHighlightProvider`, `registerRawBoxRenderer`, `registerRawBoxBehavior`],
@@ -152,7 +152,7 @@ activate({ commands, window, subscriptions }) {
   [`visualEditor/insert`], [the "Insert" dropdown: table, image, figure, diagram, math, outline, page break, label, …], [as above], [the context],
   [`visualEditor/selection`], [the bar floating above a text selection: bold, italic, link, comment, label, Styles], [as above], [the context],
   [`visualEditor/align` \ `visualEditor/inlineStyles` \ `visualEditor/table` \ `visualEditor/image` \ `visualEditor/link`], [submenus and floating bars of extensions (@architecture-extensions-submenus)], [as above], [the context],
-  [`files/new`], [the "New" dropdown in the file panel (drawn by `files`): file, folder, upload, diagram, spreadsheet], [`resource`, `resourceKind`, `resourceIsMain`], [the folder's path],
+  [`files/new`], [the "New" dropdown in the file panel (drawn by `files`): file, folder, upload, diagram, spreadsheet], [`resource`, `resourceKind`, `resourceIsMain`, `resourceIsFixed`, `folderIsReadonly`], [the folder's path],
   [`files/row`], [a file row's right-click menu (drawn by `files`): new, rename, delete, set as main file, find in folder], [as `files/new`], [the row's path],
   [`help/row`], [a help row's right-click menu (drawn by `help`): insert at cursor], [—], [the row's text],
   [`collaboration/account`], [the account menu in the status bar (drawn by `collaboration`): sign out], [—], [—],
@@ -395,6 +395,8 @@ activate({ commands, workspace, window, subscriptions }) {
 ```
 
 Text edits of an open `.typ` file go to its `TypstDocument` (`change`, with the extension's own origin).
+
+`workspace.registerFileSystemProvider({ stat })`: folders an extension makes read-only. While a provider's `stat(folder)` (null: the top level) says `{ permissions: FilePermission.Readonly }`, `applyEdit` refuses to create, rename or delete a file in it, and the file panel keeps its rows where they are; `workspace.fs.stat(folder)` reads it. The files' content stays editable. The `collaboration` extension makes every folder but a GitLab room's own read-only.
 
 == Document links <architecture-extensions-links>
 
