@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant M as member
+  participant S as guest (server)
+  participant D as SQLite (shares)
+  participant P as guest's page
+  participant A as auth (memory)
+  participant R as room
+  M->>S: POST /api/rooms/<room>/shares {label, days}
+  S->>D: id, room, SHA-256(secret), expiry
+  S-->>M: <page>#zwf-guest=<secret> (shown once)
+  M->>P: the link (by mail, chat)
+  P->>S: POST /api/public/guest/join {secret, name}
+  S->>A: session "<name> (guest)", until the expiry
+  P->>R: WebSocket Auth (the session cookie)
+  R->>S: Authorize: the share's room only
+  S->>R: expiry, revocation: Disconnect (the reason)

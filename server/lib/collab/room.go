@@ -112,7 +112,21 @@ func (r *room) add(p *Peer) error {
 	if update := r.awareness.Encode(); update != nil {
 		p.send(msgAwareness, new(encoder).bytes(update).buf)
 	}
+	r.peerChanged(p, true)
 	return nil
+}
+
+// drop refuses p (Server.Disconnect): PermissionDenied with reason, then it leaves.
+func (r *room) drop(p *Peer, reason string) {
+	p.dropped.Store(true)
+	p.send(msgAuth, new(encoder).uint(authPermissionDenied).string(reason).buf)
+	r.leave(p)
+}
+
+func (r *room) peerChanged(p *Peer, joined bool) {
+	if changed := r.s.opts.PeerChanged; changed != nil {
+		changed(r.name, p.user, joined)
+	}
 }
 
 // leave removes p; the last one to leave unloads the room.
@@ -121,6 +135,7 @@ func (r *room) leave(p *Peer) {
 		return
 	}
 	delete(r.peers, p)
+	r.peerChanged(p, false)
 	if update := r.awareness.Remove(p); update != nil {
 		r.broadcast(msgAwareness, new(encoder).bytes(update).buf)
 	}
@@ -155,8 +170,11 @@ func (r *room) unload() {
 	r.log.Debug().Msg("room unloaded")
 }
 
-// receive handles a message from p (sent to the room by p's connection).
+// receive handles a message from p (sent to the room by p's connection); nothing once p left (dropped).
 func (r *room) receive(p *Peer, typ uint64, d *decoder) {
+	if _, ok := r.peers[p]; !ok {
+		return
+	}
 	switch typ {
 	case msgSync, msgSyncReply:
 		reply, isStep1, err := r.doc.HandleSync(d.rest(), p)

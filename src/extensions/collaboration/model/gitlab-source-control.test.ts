@@ -8,7 +8,7 @@ import { GitLabSourceControl } from './gitlab-source-control';
 
 afterEach(() => void vi.useRealTimers());
 
-function setup() {
+function setup(saves = true) {
   const ydoc = new Y.Doc();
   const meta = ydoc.getMap(META_MAP);
   const sent: string[] = [];
@@ -16,13 +16,27 @@ function setup() {
   const channel = { send: (payload: string) => void sent.push(payload), onDidReceiveMessage: messages.event };
   const receive = (payload: string) => messages.fire(payload);
   const told: { message: string; severity: string }[] = [];
-  const sourceControl = new GitLabSourceControl(ydoc, channel, (message, severity) => told.push({ message, severity }));
+  const sourceControl = new GitLabSourceControl(ydoc, channel, (message, severity) => told.push({ message, severity }), { saves });
   let changes = 0;
   sourceControl.onDidChange(() => changes++);
   return { meta, sent, receive, sourceControl, told, changes: () => changes };
 }
 
 describe('GitLabSourceControl', () => {
+  it("for a guest: no commit, and the entries say that members save; guest edits held back are named", () => {
+    const { meta, sourceControl } = setup(false);
+    expect(sourceControl.commit).toBeUndefined();
+    meta.set('baseSha', '0123456789abcdef');
+    expect(sourceControl.statusBarItems).toEqual([{ title: 'Saved · 01234567', tooltip: 'Everything is in GitLab (commit 01234567).' }]);
+    meta.set('changes', { files: [{ path: '/a.typ', kind: 'modified' }], since: Date.now(), editors: ['Jane (guest)'] });
+    meta.set('autoCommit', 10);
+    meta.set('commitFailure', { message: 'Guest edits: a member must save.', at: Date.now() });
+    const [failure, changes] = sourceControl.statusBarItems;
+    expect(failure).toMatchObject({ title: 'Guest edits: a member must save', backgroundColor: 'warning' });
+    expect(failure.tooltip).toContain('a member saves them');
+    expect(changes.tooltip).toMatch(/A member saves them\.$/);
+  });
+
   it('knows a GitLab-backed room by its last commit', () => {
     const ydoc = new Y.Doc();
     expect(GitLabSourceControl.isGitLabRoom(ydoc)).toBe(false);
@@ -33,7 +47,7 @@ describe('GitLabSourceControl', () => {
   it('commits, busy until the server answers; tells the answer and the news', () => {
     const { sent, receive, sourceControl, told, changes } = setup();
     expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Zwiebelfisch' });
-    sourceControl.commit('Fix typo');
+    sourceControl.commit!('Fix typo');
     expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo' });
     expect(sourceControl.busy).toBe(true);
     receive('{"type":"gitlab:merged","sha":"s"}');

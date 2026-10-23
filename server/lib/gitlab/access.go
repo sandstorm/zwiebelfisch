@@ -1,8 +1,8 @@
 package gitlab
 
 // Who may edit and save a GitLab room, as GitLab tells the user (asked with their own token):
-//   - join (and edit): the Developer role or more on the project (members/all/<user>)
-//   - save: also the right to push to the branch (branches/<branch>: can_push)
+//   - join (and edit), and share it with guests: the Developer role or more on the project (members/all/<user>)
+//   - save: also the right to push to the branch (branches/<branch>: can_push); a guest never saves
 //
 // A join or a file request may rely on an answer up to a minute old; a save and an auto-save always ask
 // again.
@@ -68,8 +68,29 @@ func (x *Rooms) Authorize(ctx context.Context, user collab.User, name string) er
 	return nil
 }
 
+// MayEdit is whether user may edit the room name (one of these rooms): true or false as GitLab says (an
+// answer up to a minute old will do), an error when that cannot be told now (they are signed out, GitLab
+// cannot be reached).
+func (x *Rooms) MayEdit(ctx context.Context, user collab.User, name string) (bool, error) {
+	project, branch, _, ok := x.parseRoomName(name)
+	if !ok || user.Provider != x.opts.ID {
+		return false, nil
+	}
+	a, err := x.access(ctx, user, project, branch, true)
+	if err != nil {
+		return false, err
+	}
+	return a.Edit, nil
+}
+
+// errGuestSaves refuses a guest's save.
+var errGuestSaves = collab.Refusal{Reason: "Guests cannot save; a member saves your edits."}
+
 // mayPush is why user may not save the room's branch now (nil: they may), asking afresh.
 func (x *Rooms) mayPush(ctx context.Context, user collab.User, project, branch string) error {
+	if user.IsGuest() {
+		return errGuestSaves
+	}
 	a, err := x.access(ctx, user, project, branch, false)
 	switch {
 	case err != nil:

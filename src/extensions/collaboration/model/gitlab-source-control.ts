@@ -6,6 +6,7 @@ import type { GitLabHistory } from './gitlab-history';
 import { ProjectPath } from '../../../core/paths/paths';
 import {
   DEFAULT_COMMIT_MESSAGE,
+  GUEST_EDITS,
   META_MAP,
   type ChangedFile,
   type ClientMessage,
@@ -17,11 +18,12 @@ import {
 
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them, shaped as the scm host's `SourceControl`:
- * - `commit` asks the server to commit the room's changes in the signed-in user's name (`busy` until it answers)
+ * - `commit` asks the server to commit the room's changes in the signed-in user's name (`busy` until it answers);
+ *   a guest has none (members save their edits)
  * - the server's answers (saved, nothing to save, a conflict, a failure) and news (upstream merged) go to `tell`
  * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
- *   warning entry until the next commit or merge
+ *   warning entry until the next commit or merge ("Guest edits: a member must save" when guest edits held it back)
  * - the files' texts at the last commit (`meta.base`) are its quick diff's originals
  * - the branch's commits before are its `historyProvider`'s (given; disposed with it)
  */
@@ -38,12 +40,23 @@ export class GitLabSourceControl {
   /** Fires `onDidChange` every minute while there are changes, for their age. */
   #ticker: ReturnType<typeof setInterval> | undefined;
 
+  /** Asks the server to commit; undefined for a guest, who never commits. */
+  readonly commit?: (message: string) => void;
+  /** What a click on the status bar entries does, as their tooltips end. */
+  readonly #click: { save: string; retry: string };
+
+  readonly historyProvider?: GitLabHistory;
+
+  /** `options.saves`: the local user may commit (default; false: a guest). */
   constructor(
     ydoc: Y.Doc,
     private readonly channel: StatelessChannel,
     private readonly tell: Tell,
-    readonly historyProvider?: GitLabHistory,
+    { historyProvider, saves = true }: { historyProvider?: GitLabHistory; saves?: boolean } = {},
   ) {
+    this.historyProvider = historyProvider;
+    if (saves) this.commit = (message) => this.#commit(message);
+    this.#click = saves ? { save: 'Click to save.', retry: 'The changes stay here. Click to try again.' } : { save: 'A member saves them.', retry: 'The changes stay here; a member saves them.' };
     this.#meta = ydoc.getMap(META_MAP);
     this.#meta.observe(this.#metaChanged);
     this.#follow();
@@ -86,13 +99,14 @@ export class GitLabSourceControl {
     const failure = this.#commitFailure();
     const warning: StatusBarItem[] = [
       ...(conflict ? [{ title: conflictTitle(conflict), tooltip: conflictTooltip(conflict), backgroundColor: 'warning' as const }] : []),
-      ...(failure ? [{ title: 'Saving to GitLab failed', tooltip: failureTooltip(failure, Date.now()), backgroundColor: 'warning' as const }] : []),
+      ...(failure ? [{ title: failureTitle(failure), tooltip: failureTooltip(failure, Date.now(), this.#click.retry), backgroundColor: 'warning' as const }] : []),
     ];
     const changes = this.#changes();
-    if (changes) return [...warning, { title: notInGitLab(changes, Date.now()), tooltip: changesTooltip(changes, this.#meta.get('autoCommit')) }];
+    if (changes) return [...warning, { title: notInGitLab(changes, Date.now()), tooltip: changesTooltip(changes, this.#meta.get('autoCommit'), this.#click.save) }];
     const sha = this.#meta.get('baseSha');
     if (typeof sha !== 'string') return warning;
-    return [...warning, { title: `Saved · ${sha.slice(0, 8)}`, tooltip: `Everything is in GitLab (commit ${sha.slice(0, 8)}). Click to save.` }];
+    const saved = `Everything is in GitLab (commit ${sha.slice(0, 8)}).`;
+    return [...warning, { title: `Saved · ${sha.slice(0, 8)}`, tooltip: this.commit ? `${saved} ${this.#click.save}` : saved }];
   }
 
   /** The text of a file at the last commit (`meta.base`); '' for a file added since. */
@@ -104,7 +118,7 @@ export class GitLabSourceControl {
     },
   };
 
-  commit(message: string): void {
+  #commit(message: string): void {
     const request: ClientMessage = { type: 'gitlab:save', message };
     this.#setBusy(true);
     this.channel.send(JSON.stringify(request));
@@ -223,12 +237,13 @@ function conflictTooltip(conflict: RoomConflict): string {
   ].join('\n');
 }
 
-function failureTooltip(failure: CommitFailure, now: number): string {
-  return [
-    `The last save to GitLab (${age(now - failure.at)} ago) failed:`,
-    failure.message,
-    'The changes stay here. Click to try again.',
-  ].join('\n');
+/** "Saving to GitLab failed", or "Guest edits: a member must save" when guest edits held an auto-save back. */
+function failureTitle(failure: CommitFailure): string {
+  return failure.message === GUEST_EDITS ? GUEST_EDITS.replace(/\.$/, '') : 'Saving to GitLab failed';
+}
+
+function failureTooltip(failure: CommitFailure, now: number, click: string): string {
+  return [`The last save to GitLab (${age(now - failure.at)} ago) failed:`, failure.message, click].join('\n');
 }
 
 /** "< 1 min", "14 min", "2 h", "2 h 5 min". */
@@ -250,13 +265,13 @@ function notInGitLab(changes: RoomChanges, now: number): string {
 }
 
 /** The changed files, one per line with its badge, when they are saved by themselves (`autoCommit` minutes), and what a click does. */
-function changesTooltip(changes: RoomChanges, autoCommit: unknown): string {
+function changesTooltip(changes: RoomChanges, autoCommit: unknown, click: string): string {
   const lines = changes.files.map((file) => `${DECORATIONS[file.kind].badge} ${file.path.slice(1)}`);
   const automatic =
     typeof autoCommit === 'number'
       ? `Saved by itself after ${autoCommit} min without edits, and when the last person leaves.`
       : 'Not saved by itself: save before you leave.';
-  return ['Not in GitLab yet:', ...lines, automatic, 'Click to save.'].join('\n');
+  return ['Not in GitLab yet:', ...lines, automatic, click].join('\n');
 }
 
 /** The badges of changed and conflicting files, as VS Code's explorer shows them. */

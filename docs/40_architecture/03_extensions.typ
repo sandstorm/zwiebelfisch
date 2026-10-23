@@ -83,7 +83,7 @@ activate({ workspace, subscriptions }) {
   columns: (auto, auto, 1fr),
   table.header[`context.`][Host][What it offers],
   [`commands`], [`hosts/commands`], [`registerCommand`; keys via `contributes.keybindings`],
-  [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerStatusBarItem`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
+  [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerStatusBarItem`, `registerBanner`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
   [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `registerFileSystemProvider`],
   [`languages`], [`hosts/languages`], [`registerDocumentLinkProvider`, `registerDocumentDropEditProvider`, `registerDocumentPasteEditProvider`, `registerHelpSheet`, `registerImportSource`; languages via `contributes.languages`],
   [`scm`], [`hosts/scm`], [`registerSourceControl` (with an optional `quickDiffProvider` and `historyProvider`)],
@@ -309,6 +309,18 @@ activate({ window, subscriptions }) {
 
 `alignment` is the side; a higher `priority` sits further left.
 
+== Banners <architecture-extensions-banners>
+
+`window.registerBanner(element)`: an element of your own in the band above the editing area's tab bar, after the banners there are, until disposed (VS Code's workbench banner for Restricted Mode). For a state the user must not miss while working; the window offers no close button: the owner removes it. Collaboration's guest mode shows "Guest access · shared by Ann · ends in 2 days" this way (@features-guest-access).
+
+```ts
+activate({ window, subscriptions }) {
+  const banner = window.ownerDocument.createElement('div');
+  banner.textContent = 'Read-only copy: changes are not kept';
+  subscriptions.push(window.registerBanner(banner));
+}
+```
+
 == Editors <architecture-extensions-editors>
 
 `window.registerEditorProvider(viewType, provider, options)`: how files matching a pattern open in the editing area. Every editor is registered this way, the Visual and Source editor too.
@@ -475,7 +487,7 @@ activate({ languages, subscriptions }) {
 
 == Source controls <architecture-extensions-scm>
 
-`scm.registerSourceControl(sourceControl)`: somewhere the project can be committed. The `sourceControl` extension shows it: status bar, "Save to …", file badges.
+`scm.registerSourceControl(sourceControl)`: somewhere the project can be committed. The `sourceControl` extension shows it: status bar, "Save to …", file badges. Without `commit`, the user may not commit there (a guest's GitLab room): no "Save to …", the status bar only shows.
 
 ```ts
 activate({ scm, project, subscriptions }) {

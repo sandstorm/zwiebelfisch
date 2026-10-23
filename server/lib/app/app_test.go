@@ -226,8 +226,11 @@ func TestInfo(t *testing.T) {
 		res := get(t, newServer(t, fake, Options{PlainRooms: plain, GitLab: gl}), request("GET", "/api/public/info", nil))
 		require.Equal(t, 200, res.StatusCode)
 		require.Equal(t, "*", res.Header.Get("Access-Control-Allow-Origin"), "the demo asks from another port")
-		require.Equal(t, map[bool]string{false: `{"plainRooms":false}`, true: `{"plainRooms":true}`}[plain], text(t, res))
+		require.Equal(t, map[bool]string{false: `{"plainRooms":false,"guests":false}`, true: `{"plainRooms":true,"guests":false}`}[plain], text(t, res))
 	}
+	fake, gl := fakeGitLab()
+	res := get(t, newServer(t, fake, Options{GitLab: gl, Guests: true}), request("GET", "/api/public/info", nil))
+	require.Equal(t, `{"plainRooms":false,"guests":true}`, text(t, res))
 }
 
 // The rule: every route outside /api/public/ answers 401 to a client without a session (a WebSocket before
@@ -235,10 +238,11 @@ func TestInfo(t *testing.T) {
 // without one.
 func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 	fake, gl := fakeGitLab()
-	s := newServer(t, fake, Options{GitLab: gl, PlainRooms: true})
+	s := newServer(t, fake, Options{GitLab: gl, PlainRooms: true, Guests: true})
 	require.ElementsMatch(t, []string{
 		"GET /api/collaboration", "GET /api/me", "POST /api/auth/logout", "GET /api/rooms/{room}/files/{path...}",
 		"GET /api/rooms/{room}/history", "GET /api/rooms/{room}/compare",
+		"POST /api/rooms/{room}/shares", "GET /api/rooms/{room}/shares", "DELETE /api/rooms/{room}/shares/{id}",
 	}, s.signedIn.patterns)
 	for _, pattern := range append(s.signedIn.patterns, "GET /", "GET /unknown", "GET /api/unknown") {
 		req := requestFor(pattern)
@@ -263,6 +267,7 @@ func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 		"GET " + auth.CallbackPath:        {http.StatusBadRequest, "no sign-in began: its own answer"},
 		"GET /api/public/info":            {http.StatusOK, "what the server offers"},
 		"POST /api/public/gitlab/webhook": {http.StatusAccepted, "GitLab, with its token"},
+		"POST /api/public/guest/join":     {http.StatusNotFound, "a guest link's page: this one's link is unknown"},
 	}
 	require.ElementsMatch(t, slices.Collect(maps.Keys(public)), s.public.patterns)
 	for pattern, want := range public {
@@ -299,7 +304,7 @@ func TestPublicRoutesLiveUnderTheirPrefix(t *testing.T) {
 // requestFor is a request matching pattern ("METHOD /path", wildcards filled in), with a JSON body.
 func requestFor(pattern string) *http.Request {
 	method, path, _ := strings.Cut(pattern, " ")
-	path = strings.NewReplacer("{room}", url.PathEscape("gitlab:demo/report@main"), "{path...}", "logo.png").Replace(path)
+	path = strings.NewReplacer("{room}", url.PathEscape("gitlab:demo/report@main"), "{path...}", "logo.png", "{id}", "x").Replace(path)
 	return httptest.NewRequest(method, host+path, strings.NewReader("{}"))
 }
 

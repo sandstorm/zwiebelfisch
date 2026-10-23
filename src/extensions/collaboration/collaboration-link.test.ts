@@ -146,7 +146,7 @@ describe('CollaborationLink', () => {
     it('the session ends later: asks to sign in', async () => {
       let signOut = () => {};
       const signedOut = new Promise<void>((resolve) => (signOut = resolve));
-      vi.spyOn(Collaboration, 'start').mockResolvedValueOnce({ signedOut, onDidChangePresence: () => ({ dispose() {} }), sourceControl: null, dispose() {} } as unknown as Collaboration);
+      vi.spyOn(Collaboration, 'start').mockResolvedValueOnce({ signedOut, refused: new Promise(() => {}), onDidReceiveMessage: () => ({ dispose() {} }), onDidChangePresence: () => ({ dispose() {} }), sourceControl: null, dispose() {} } as unknown as Collaboration);
       const { link, widget } = join(account({ provider: 'gitlab', id: '2', name: 'Ann' }));
       await link.ready;
       expect(widget.signInRequired).not.toHaveBeenCalled();

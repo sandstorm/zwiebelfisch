@@ -69,7 +69,7 @@ func run() error {
 	defer st.Close()
 	webhookSecret := rand.Text()
 	server, err := app.New(app.Options{
-		Store: st, PlainRooms: cfg.Rooms.Plain, Log: log,
+		Store: st, PlainRooms: cfg.Rooms.Plain, Guests: cfg.Rooms.Guests, Log: log,
 		Auth: auth.New(auth.Options{
 			Provider: gitlab.DefaultID, Issuer: fakegitlab.URL, ClientID: fakegitlab.ClientID,
 			ClientSecret: fakegitlab.ClientSecret, Client: fake.Client(), Log: log.With().Str("module", "auth").Logger(),
@@ -87,7 +87,7 @@ func run() error {
 		Rooms: server.GitLab(),
 	}, server)
 
-	log.Info().Str("room", playground.Room).Str("folderRoom", playground.FolderRoom).Bool("plainRooms", cfg.Rooms.Plain).Msg("playground server with the fake GitLab")
+	log.Info().Str("room", playground.Room).Str("folderRoom", playground.FolderRoom).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).Msg("playground server with the fake GitLab")
 	sites := []app.Site{{Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler}}
 	if dist := os.Getenv("ZWF_DEMO_DIST"); dist != "" {
 		port, err := strconv.Atoi(envOr("DEMO_PORT", "5199"))

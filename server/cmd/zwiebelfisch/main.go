@@ -56,13 +56,13 @@ func run() error {
 	}
 	defer st.Close()
 	server, err := app.New(app.Options{
-		Store: st, Auth: signIn, PlainRooms: cfg.Rooms.Plain,
+		Store: st, Auth: signIn, PlainRooms: cfg.Rooms.Plain, Guests: cfg.Rooms.Guests,
 		GitLab: gitlabRooms, Log: log,
 	})
 	if err != nil {
 		return err
 	}
-	log.Info().Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).
+	log.Info().Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).
 		Str("gitlab", cfg.GitLab.URL).Msg("collaboration server")
 	return app.Run(log, server.Close, app.Site{
 		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: server,

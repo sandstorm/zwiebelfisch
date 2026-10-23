@@ -91,6 +91,9 @@
 .zwf-editor__status-bar-right { display: flex; }
 /* The window's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .zwf-editor { position: relative; }
+/* The banners above the tab bar (window.registerBanner; banners/banners.ts): each extension styles its own. */
+.zwf-editor__banners { display: flex; flex-direction: column; }
+.zwf-editor__banners[hidden] { display: none; }
 /* The editing area: the tab bar (the shown file's editors), the Visual / Source editors' panels, a dragged file over the widget. */
 .zwf-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
 .zwf-editor__editor-area .cm-scroller { overflow: auto; }

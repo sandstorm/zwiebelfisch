@@ -133,9 +133,14 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 // Stateless handles a client's message:
 //   - a save (gitlab:save), if the client's user may push to the branch: the outcome goes to everyone, or
 //     (nothing to commit, an error, a refusal) to the saving client only
-//   - a request for a file from outside the room's folder (gitlab:pull): pullIn; a refusal goes to the client
+//   - a request for a file from outside the room's folder (gitlab:pull): pullIn (never for a guest); a
+//     refusal goes to the client
 func (r *room) Stateless(p *collab.Peer, payload string) {
 	if path, ok := parsePull(payload); ok {
+		if p.User().IsGuest() { // a guest gets what the room holds, nothing more of the repository
+			p.SendStateless(message{Type: msgMissing, Path: path, Message: "A guest cannot load files from outside the project folder; a member who opens the project can."}.json())
+			return
+		}
 		r.x.goTask(func() {
 			if refused := r.pullIn(path); refused != nil {
 				p.SendStateless(refused.json())
@@ -395,6 +400,9 @@ func (r *room) autoCommitter(e editors, prefer collab.User) (commitBy, string) {
 		return commitBy{}, fmt.Sprintf("Auto-save skipped: who edited is not known; someone who may push to %s must save.", r.branch)
 	}
 	for _, p := range people {
+		if p.User.IsGuest() {
+			return commitBy{}, guestEdits
+		}
 		a, err := r.x.access(r.x.ctx, p.User, r.project, r.branch, false)
 		var refusal collab.Refusal
 		switch {
@@ -416,6 +424,9 @@ func (r *room) autoCommitter(e editors, prefer collab.User) (commitBy, string) {
 	}
 	return commitBy{author: *author, token: token}, ""
 }
+
+// guestEdits is why edits with a guest's among them are not saved by themselves.
+const guestEdits = "Guest edits: a member must save."
 
 // hasEditsBy is whether user made edits the branch does not have yet.
 func (r *room) hasEditsBy(user collab.User) bool {

@@ -630,3 +630,93 @@ func TestSilentClientIsDropped(t *testing.T) {
 	answering.edit(func(w *ydoc.Writer) { w.SetText("files", "/x", "still here") })
 	answering.eventually("its edit applied", func() bool { return answering.acks >= 2 })
 }
+
+func TestDisconnectRefusesTheMatchedClientsWithTheReason(t *testing.T) {
+	var admitted atomic.Bool
+	admitted.Store(true)
+	var changes []string
+	var changesMu sync.Mutex
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) {
+			if session(r) == "guest" && !admitted.Load() {
+				return collab.User{}, collab.Refusal{Reason: "gone"}
+			}
+			return collab.User{ID: session(r), Name: session(r)}, nil
+		}
+		o.PeerChanged = func(room string, user collab.User, joined bool) {
+			changesMu.Lock()
+			defer changesMu.Unlock()
+			changes = append(changes, fmt.Sprintf("%s %s %v", room, user.ID, joined))
+		}
+	})
+	ann := dial(t, s, "report", "ann")
+	guest := dial(t, s, "report", "guest")
+	ann.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "Hello") })
+	guest.eventually("synced", func() bool { return guest.doc.Texts("files")["/main.typ"] == "Hello" })
+
+	admitted.Store(false)
+	s.Disconnect(func(p *collab.Peer) bool {
+		require.NotNil(t, p.Request())
+		return p.User().ID == "guest"
+	}, "Guest access to this project has ended.")
+	guest.eventually("refused with the reason", func() bool {
+		return len(guest.reasons) == 1 && guest.reasons[0] == "Guest access to this project has ended."
+	})
+
+	// what the dropped client still sends reaches nobody; what others write no longer reaches it
+	guest.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "Hello from outside") })
+	ann.edit(func(w *ydoc.Writer) { w.SetText("files", "/other.typ", "later") })
+	ann.eventually("ann's own edit is there", func() bool { return ann.doc.Texts("files")["/other.typ"] == "later" })
+	time.Sleep(50 * time.Millisecond)
+	require.Equal(t, "Hello", ann.texts()["/main.typ"])
+	require.NotContains(t, guest.texts(), "/other.typ")
+
+	// opening the room again asks Authenticate again
+	guest.authenticate()
+	guest.eventually("refused again", func() bool { return len(guest.reasons) == 2 && guest.reasons[1] == "gone" })
+	require.Equal(t, []string{"authenticated"}, ann.auth, "ann stays")
+
+	changesMu.Lock()
+	defer changesMu.Unlock()
+	require.ElementsMatch(t, []string{"report ann true", "report guest true", "report guest false"}, changes)
+	require.Equal(t, "report guest false", changes[2])
+}
+
+func TestBroadcastStatelessReachesALoadedRoomOnly(t *testing.T) {
+	s := newServer(t, memStore(t))
+	a := dial(t, s, "report", "ann")
+	a.eventually("in", func() bool { return len(a.auth) == 1 })
+	s.BroadcastStateless("report", `{"type":"guests:changed"}`)
+	s.BroadcastStateless("elsewhere", "nobody")
+	a.eventually("told", func() bool { return len(a.stateless) == 1 && a.stateless[0] == `{"type":"guests:changed"}` })
+}
+
+func TestDisconnectWhileAClientIsLetInRefusesItToo(t *testing.T) {
+	var admitted atomic.Bool
+	admitted.Store(true)
+	var s *collab.Server
+	s = newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) {
+			if session(r) != "guest" {
+				return collab.User{ID: session(r), Name: session(r)}, nil
+			}
+			if !admitted.Load() {
+				return collab.User{}, collab.Refusal{Reason: "gone"}
+			}
+			// let in, but revoked before the client is in the room: Disconnect finds nobody to refuse yet
+			admitted.Store(false)
+			s.Disconnect(func(p *collab.Peer) bool { return p.User().ID == "guest" }, "gone")
+			return collab.User{ID: "guest", Name: "guest"}, nil
+		}
+	})
+	ann := dial(t, s, "report", "ann")
+	ann.eventually("in", func() bool { return len(ann.auth) == 1 })
+	guest := dial(t, s, "report", "guest")
+	guest.eventually("refused after all", func() bool {
+		return len(guest.reasons) == 1 && guest.reasons[0] == "gone"
+	})
+	ann.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "after") })
+	ann.eventually("ann's edit is there", func() bool { return ann.doc.Texts("files")["/main.typ"] == "after" })
+	time.Sleep(50 * time.Millisecond)
+	require.NotContains(t, guest.texts(), "/main.typ")
+}

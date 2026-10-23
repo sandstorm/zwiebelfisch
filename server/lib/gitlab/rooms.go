@@ -367,7 +367,7 @@ func (x *Rooms) person(user collab.User, name, email string) *person {
 func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox")
-	open := x.openFor(w, r)
+	open, _ := x.openFor(w, r)
 	if open == nil {
 		return
 	}
@@ -398,17 +398,18 @@ func (x *Rooms) ServeFile(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(content)
 }
 
-// openFor is the open room the request's {room} names, if Authenticate lets its user in; else nil, the
+// openFor is the open room the request's {room} names and the user Authenticate lets in; else nil, the
 // refusal answered (401, or 404 for a room not open).
-func (x *Rooms) openFor(w http.ResponseWriter, r *http.Request) *room {
+func (x *Rooms) openFor(w http.ResponseWriter, r *http.Request) (*room, collab.User) {
 	name := r.PathValue("room")
 	if x.opts.Authenticate == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil
+		return nil, collab.User{}
 	}
-	if _, err := x.opts.Authenticate(r, name); err != nil { // first: whether a room is open is no one else's business
+	user, err := x.opts.Authenticate(r, name)
+	if err != nil { // first: whether a room is open is no one else's business
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return nil
+		return nil, collab.User{}
 	}
 	x.mu.Lock()
 	open := x.open[name]
@@ -416,7 +417,7 @@ func (x *Rooms) openFor(w http.ResponseWriter, r *http.Request) *room {
 	if open == nil {
 		http.Error(w, "Not found", http.StatusNotFound)
 	}
-	return open
+	return open, user
 }
 
 // cache sets an answer's Cache-Control: kept for good (immutable: it names a commit), else asked again each

@@ -1,0 +1,61 @@
+/* Guest mode (guests.ts): the guest's banner, badge and frame in the warning color (red in the last hour and once
+   ended), the member's thin banner and badge in the accent color, and guests' carets and boxes dashed. Light and dark
+   through the --zwf-* tokens. */
+.zwf-guests__banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--zwf-border);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.zwf-guests__banner--guest {
+  background: color-mix(in srgb, var(--zwf-warning) 18%, var(--zwf-bg));
+  color: var(--zwf-text);
+  border-bottom-color: var(--zwf-warning);
+  font-weight: 600;
+}
+.zwf-guests__banner--shared {
+  padding: 3px 12px;
+  background: var(--zwf-accent-faint);
+  color: var(--zwf-text-2);
+  border-bottom-color: var(--zwf-accent-line);
+  font-size: 12px;
+}
+.zwf-guests__manage {
+  margin-left: auto;
+  border: 1px solid var(--zwf-accent-line);
+  border-radius: 4px;
+  padding: 1px 8px;
+  background: var(--zwf-surface);
+  color: var(--zwf-accent);
+  font: inherit;
+  cursor: pointer;
+}
+.zwf-guests__manage:hover { background: var(--zwf-hover); }
+.zwf-guests__badge {
+  margin: 3px 0 3px 6px;
+  padding: 1px 8px;
+  border: 0;
+  border-radius: 3px;
+  font: 600 11px/1.6 system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.zwf-guests__badge--guest { background: var(--zwf-warning); color: var(--zwf-bg); }
+.zwf-guests__badge--shared { background: var(--zwf-selected); color: var(--zwf-accent); cursor: pointer; }
+.zwf-guests__badge--shared:hover { background: var(--zwf-selected-strong); }
+.zwf-guests__banner--guest.zwf-guests--urgent {
+  background: var(--zwf-danger-soft);
+  color: var(--zwf-danger);
+  border-bottom-color: var(--zwf-danger);
+}
+.zwf-guests__badge--guest.zwf-guests--urgent { background: var(--zwf-danger); }
+/* the whole widget framed while its user is a guest */
+.zwf-editor:has(.zwf-guests__banner--guest) { border: 3px solid var(--zwf-warning); }
+.zwf-editor:has(.zwf-guests__banner--guest.zwf-guests--urgent) { border-color: var(--zwf-danger); }
+/* guests' carets, selections and boxes (their names, set by the server, end in "(guest)") */
+.zwf-collaboration__caret[data-user$='(guest)'] { border-left-style: dashed; border-right-style: dashed; }
+.zwf-collaboration__box[data-user$='(guest)'] { outline-style: dashed; }
+.zwf-collaboration__caret[data-user$='(guest)']::after { outline: 1px dashed var(--zwf-remote-text, #fff); outline-offset: -2px; }

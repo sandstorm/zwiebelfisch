@@ -384,3 +384,36 @@ func (t endsWithRequest) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	return t.next.RoundTrip(r)
 }
+
+func TestStartSessionWithoutTokenUntilItsEnd(t *testing.T) {
+	now := time.Now()
+	b := newBrowser(t, Options{now: func() time.Time { return now }})
+	guest := Identity{Provider: "guest", Subject: "share/1", Name: "Jane (guest)"}
+	res := httptest.NewRecorder()
+	b.auth.StartSession(res, httptest.NewRequest(http.MethodPost, server+"/api/public/guest/join", nil), guest, now.Add(time.Hour))
+	cookie := res.Result().Cookies()[0]
+	require.Equal(t, sessionCookie, cookie.Name)
+	require.Equal(t, 3600, cookie.MaxAge)
+	b.cookies[sessionCookie] = cookie
+	identity, status := b.me()
+	require.Equal(t, http.StatusOK, status)
+	require.Equal(t, guest, identity)
+	_, err := b.auth.Token(context.Background(), "share/1")
+	require.ErrorIs(t, err, ErrNoToken, "a session without a token")
+
+	now = now.Add(time.Hour + time.Second)
+	_, status = b.me()
+	require.Equal(t, http.StatusUnauthorized, status, "ends at its end")
+}
+
+func TestEndSessionsEndsTheMatchedOnly(t *testing.T) {
+	b := newBrowser(t, Options{})
+	b.signIn("Ann", "/")
+	other := &browser{t: t, auth: b.auth, server: b.server, fake: b.fake, cookies: map[string]*http.Cookie{}}
+	other.signIn("Bob", "/")
+	b.auth.EndSessions(func(identity Identity) bool { return identity.Name == "Bob" })
+	_, status := other.me()
+	require.Equal(t, http.StatusUnauthorized, status)
+	_, status = b.me()
+	require.Equal(t, http.StatusOK, status)
+}

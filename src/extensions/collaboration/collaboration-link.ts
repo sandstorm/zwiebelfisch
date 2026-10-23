@@ -9,8 +9,9 @@ import type { PlacedPresence } from './presence/presence';
 
 /**
  * The widget's side of a Collaboration, which it loads on demand: publishes the local selection on `selectionChanged`
- * and tells the widget where everyone else is. With a server, it connects only as the account's signed-in user;
- * signed out (before connecting or when the session ends), it asks the widget to offer signing in.
+ * and tells the widget where everyone else is. With a server, it connects only as the account's signed-in user (a
+ * guest link signs a guest in first: `beforeConnect`); signed out (before connecting or when the session ends), it
+ * asks the widget to offer signing in. When the server refuses the user while in the room, the widget is told why.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
@@ -45,10 +46,11 @@ export class CollaborationLink {
 
   private async start(options: CollaborationOptions, shared: SharedRoom): Promise<void> {
     if (this.account) {
-      const identity = await this.account.refresh();
+      await this.widget.beforeConnect?.();
+      const identity = this.account.identity ?? (await this.account.refresh());
       if (!identity) throw new SignInRequired();
       // others see the name the server knows (in GitLab rooms, the GitLab account's)
-      shared = { ...shared, user: { ...shared.user, name: identity.name } };
+      shared = { ...shared, user: { ...shared.user, name: identity.name }, guest: this.account.isGuest };
     }
     if (this.disposed) return;
     const { Collaboration } = await import('./model/model');
@@ -61,6 +63,8 @@ export class CollaborationLink {
     }
     this.collaboration = collaboration;
     void collaboration.signedOut.then(() => this.disposed || this.widget.signInRequired?.());
+    void collaboration.refused.then((reason) => this.disposed || (this.widget.tell?.(reason, 'error'), this.widget.onRefused?.(reason)));
+    collaboration.onDidReceiveMessage((payload) => this.widget.onMessage?.(payload));
     collaboration.onDidChangePresence((presences) => this.widget.onPresence?.(presences));
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
@@ -112,4 +116,10 @@ export interface LinkedWidget {
   signInRequired?(): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
+  /** Runs before the account is asked who is signed in (a guest link signs its guest in here); a rejection is told. */
+  beforeConnect?(): Promise<void>;
+  /** A stateless message from the server (e.g. that the room's guests changed). */
+  onMessage?(payload: string): void;
+  /** The server refused the user while in the room, for `reason` (after it was told): they are out of it now. */
+  onRefused?(reason: string): void;
 }

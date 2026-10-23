@@ -132,6 +132,25 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`], [GitLab],
 )
 
+=== Guest links <architecture-data-model-guests>
+
+A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configuration-collaboration-server-guests). The shares are the server's only state besides the rooms; guests' sessions live in `auth`'s memory like members', without a token.
+
+#table(
+  columns: (auto, 1fr),
+  table.header[`shares` column][Content],
+  [`id`], [public, random: lists and revokes, grants nothing],
+  [`token_hash`], [SHA-256 of the link's secret (unique); the secret itself is never stored],
+  [`room`], [the one room it opens],
+  [`label`, `creator_*`], [whom it is for; who made it (provider, user id, name: asked again whether they may still share)],
+  [`created_at`, `expires_at`], [milliseconds; an expired share is deleted],
+)
+
+#figure(
+  mermaid(read("../diagrams/guest-join.mmd"), width: 90%),
+  caption: [Link → join → session → authenticate → room.],
+)
+
 === GitLab rooms <architecture-data-model-gitlab>
 
 The server holds no GitLab token of its own: everything a GitLab room does, it does with the token of a signed-in user (package `auth` keeps the tokens in memory and refreshes them; package `gitlab` asks it for one by user id).

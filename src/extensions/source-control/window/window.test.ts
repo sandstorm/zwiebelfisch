@@ -185,3 +185,21 @@ describe('sourceControl extension', () => {
     expect(decorations).toEqual([]);
   });
 });
+
+describe('a source control the user may not commit to (a guest\'s)', () => {
+  it('has no "Save to…" entry, and its status bar entries commit nothing', async () => {
+    const { sourceControl, show } = control();
+    const viewOnly: SourceControl = { ...sourceControl, commit: undefined, onDidChange: sourceControl.onDidChange };
+    Object.defineProperty(viewOnly, 'statusBarItems', { get: () => sourceControl.statusBarItems });
+    const { menu, statusBar, commands, dispose } = activate([viewOnly], { input: 'x' });
+    show({ resourceStates: [], statusBarItems: [{ title: 'Not in GitLab: 1 file · 3 min (Jane (guest))' }] });
+    expect(menu).toEqual([]);
+    expect(statusBar).toHaveLength(1);
+    statusBar[0].querySelector('button')!.click();
+    await commands.get('sourceControl.commit')!();
+    const asked = ui([viewOnly], { input: 'x' });
+    await commit(asked.fake, viewOnly);
+    expect(asked.asked).toEqual([]);
+    dispose();
+  });
+});

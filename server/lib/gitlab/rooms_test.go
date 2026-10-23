@@ -113,7 +113,7 @@ func (e *env) saveAs(c *testClient, text string) message {
 func quote(s string) string { return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"` }
 
 // editAs changes the document as client c would (nil: someone unknown).
-func (e *env) editAs(c *testClient, fn func(w *ydoc.Writer, doc *ydoc.Doc)) {
+func (e *env) editAs(c client, fn func(w *ydoc.Writer, doc *ydoc.Doc)) {
 	var origin any
 	if c != nil {
 		origin = c

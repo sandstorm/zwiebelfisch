@@ -31,6 +31,7 @@
   #include "20_features/13_gitlab.typ"
   #include "20_features/14_html-preview.typ"
   #include "20_features/15_history.typ"
+  #include "20_features/16_guest-access.typ"
 ]
 
 = Configuration

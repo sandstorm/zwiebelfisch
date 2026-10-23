@@ -43,11 +43,12 @@ mise run server:dev    # ws://127.0.0.1:1234
   [`ZWF_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
   [`ZWF_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
   [`ZWF_PLAIN_ROOMS`], [`1`: also open plain rooms, to anyone signed in. Default off: a client asking for one is refused, and the widget says why.],
+  [`ZWF_GUESTS`], [`1`: members may share a room with guests by a link (@configuration-collaboration-server-guests). Default off.],
   [`ZWF_AUTH_…`], [The sign-in, required (@configuration-collaboration-server-sign-in).],
   [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.
+A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false, "guests": true|false}`, for clients to offer only what works. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.
 
 === Sign-in <configuration-collaboration-server-sign-in>
 
@@ -65,6 +66,24 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 - The server keeps who signed in in memory, with the user's tokens (refreshed when they expire): nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise. A sign-in on its way keeps nothing on the server: its state is in a cookie sealed with a key made at start.
 - The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
 - Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
+- A sign-out ends that session's open connections: its rooms refuse them ("You signed out."), as they refuse any room opened again on a connection whose session ended; the user's other browsers stay in.
+
+=== Guest access <configuration-collaboration-server-guests>
+
+With `ZWF_GUESTS=1`, a member shares a room with people who have no account (@features-guest-access). Who may share: in a GitLab room who may edit it (@configuration-gitlab-integration), in a plain room anyone signed in; never a guest.
+
+- *Lifetimes:* 1, 7 (default) or 30 days; no longer, no extension (make a new link). At most 10 active links per room.
+- *A guest opens one room:* the link's, and its files and history; any other room refuses them ("This guest link is for another project."). A guest is a user of the provider `guest`, named "<name> (guest)"; their session ends with the link.
+- *Expiry and revocation* end the link's guest sessions and refuse their clients at once ("Guest access to this project has ended."). Every 10 minutes and at each join, the server asks again whether the link's creator may still share: one who may not any more loses their links; one who is signed out keeps them until they can be asked.
+- *Restarts:* links are in the database (`shares`), so they survive a restart; guest sessions are in memory, so guests open the link again (their name is offered).
+- Endpoints: `POST /api/public/guest/join {token, name}`; signed in, `GET` and `POST /api/rooms/<room>/shares` (`{label, days}`), `DELETE /api/rooms/<room>/shares/<id>`. A change of a room's links or guests reaches its clients as the stateless message `{"type": "guests:changed"}`.
+
+Security:
+- The link is `<page URL>#zwf-guest=<secret>` (130 random bits). The secret is in the fragment, which browsers send to no server and put in no `Referer`; the page takes it out of the address bar at once.
+- The server keeps only the secret's SHA-256 hash; it never stores or logs the secret. The secret is shown once, when the link is made.
+- A join must come from a page of this host as JSON. Every link that does not let in (unknown, expired, revoked) gets the same 404. Joins are limited to 10 a minute per IP address and 100 a minute in all; behind a reverse proxy all count as the proxy's address.
+- A guest cannot share, list others' links or revoke, and never saves; in a room of one folder, they cannot load files from outside it either.
+- A guest's name has no `<`, `>`, control or bidirectional characters, so it cannot hide "(guest)" or name another email in a `Co-authored-by` trailer. The history a guest gets has no emails in its commit messages.
 
 == Trying it locally <configuration-collaboration-server-demo>
 
@@ -73,6 +92,7 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
 - *Sign in* with the status bar's "Sign in": the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
 - *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
+- *Guests:* the playground server has guest links on; "Share with guests…" makes one, a private window opens it.
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
 - `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes pushes to that branch fail as if the fake GitLab were unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

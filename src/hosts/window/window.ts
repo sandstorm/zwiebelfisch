@@ -12,8 +12,8 @@ import type { CommandsHost, MenuContext, MenuItem } from '../commands/commands';
  *
  * Extensions use it to:
  * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
- * - fill places: side panels, the status bar, the editing area (editors), the editor header and footer, menus, file
- *   decorations, search providers, style sheets
+ * - fill places: side panels, the status bar, banners, the editing area (editors), the editor header and footer, menus,
+ *   file decorations, search providers, style sheets
  * - open files, and follow which file and which Typst editor the user works in
  */
 export interface WindowApi {
@@ -87,6 +87,12 @@ export interface WindowApi {
    * higher `placement.priority` further left within it (VS Code's StatusBarItem).
    */
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
+  /**
+   * Puts `element` into the band above the editing area's tab bar, after the banners there are, until disposed (as
+   * VS Code's workbench banner for Restricted Mode): for a state the user must not miss while they work, e.g. guest
+   * access. Not dismissable by the window: its owner decides when it goes.
+   */
+  registerBanner(element: HTMLElement): Disposable;
   /**
    * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
    * area, until disposed (VS Code's editors; the Typst files' Visual and Source editors are two of them,

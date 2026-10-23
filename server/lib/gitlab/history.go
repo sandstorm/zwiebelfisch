@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/go-git/go-git/v6/plumbing"
 
+	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/ydoc"
 )
 
@@ -20,9 +22,9 @@ const historyLimit = 50
 // first, at most historyLimit or ?limit=): from the room's base commit on, or from ?cursor= (an earlier
 // answer's) on. The path: "" the room's folder (the whole repository without one), "/dir/" a folder, "/a.typ"
 // a file; in a room of one folder, a folder in it or a file it holds or pulled in, else 403. Access as
-// ServeFile; an answer from a cursor is cached for good.
+// ServeFile; an answer from a cursor is cached for good. A guest gets the messages without emails.
 func (x *Rooms) ServeHistory(w http.ResponseWriter, r *http.Request) {
-	open := x.openFor(w, r)
+	open, user := x.openFor(w, r)
 	if open == nil {
 		return
 	}
@@ -44,7 +46,7 @@ func (x *Rooms) ServeHistory(w http.ResponseWriter, r *http.Request) {
 	page := historyPage{Commits: []historyCommit{}, Cursor: next}
 	for _, c := range commits {
 		page.Commits = append(page.Commits, historyCommit{
-			Sha: c.Sha, Parents: append([]string{}, c.Parents...), Message: c.Message, At: c.At.UnixMilli(), People: people(c),
+			Sha: c.Sha, Parents: append([]string{}, c.Parents...), Message: messageFor(user, c.Message), At: c.At.UnixMilli(), People: people(c),
 		})
 	}
 	cache(w, q.Get("cursor") != "")
@@ -55,7 +57,7 @@ func (x *Rooms) ServeHistory(w http.ResponseWriter, r *http.Request) {
 // one folder only those it holds or pulled in (a rename from or to elsewhere as added or deleted). Access as
 // ServeFile; cached for good in a room of the whole repository.
 func (x *Rooms) ServeCompare(w http.ResponseWriter, r *http.Request) {
-	open := x.openFor(w, r)
+	open, _ := x.openFor(w, r)
 	if open == nil {
 		return
 	}
@@ -103,6 +105,16 @@ func reply(w http.ResponseWriter, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(body)
 }
+
+// messageFor is a commit's message as user is shown it: a guest's without the emails in it (" <a@b>").
+func messageFor(user collab.User, message string) string {
+	if !user.IsGuest() {
+		return message
+	}
+	return emails.ReplaceAllString(message, "")
+}
+
+var emails = regexp.MustCompile(`[ \t]*<[^<>\s]*@[^<>\s]*>`)
 
 // people are who made c, by name: its author (unless Zwiebelfisch), then its co-authors, each once.
 func people(c CommitInfo) []string {

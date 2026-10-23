@@ -5,6 +5,7 @@
 //	ZWF_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing) the rooms; the GitLab
 //	                    projects' git clones go in the folder repositories/ next to it
 //	ZWF_PLAIN_ROOMS   (default off) 1/true: also serve plain rooms (any other name), backed by nothing but the DB
+//	ZWF_GUESTS        (default off) 1/true: members may share a room with guests by a link (package guest)
 //	ZWF_LOG_LEVEL     (default info) debug, info, warn, error
 //	ZWF_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
 //
@@ -50,7 +51,8 @@ type Config struct {
 		RedirectURL  string `koanf:"redirect_url"`
 	} `koanf:"auth"`
 	Rooms struct {
-		Plain bool `koanf:"plain"`
+		Plain  bool `koanf:"plain"`
+		Guests bool `koanf:"guests"`
 	} `koanf:"rooms"`
 	GitLab struct {
 		URL           string `koanf:"url"`
@@ -78,6 +80,7 @@ var envKeys = map[string]string{
 	"ZWF_ADDRESS":     "address",
 	"ZWF_COLLAB_DB":   "collab.db",
 	"ZWF_PLAIN_ROOMS": "rooms.plain",
+	"ZWF_GUESTS":      "rooms.guests",
 	"ZWF_LOG_LEVEL":   "log.level",
 	"ZWF_LOG_FORMAT":  "log.format",
 

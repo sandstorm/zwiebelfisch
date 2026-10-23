@@ -1,6 +1,6 @@
 # The demo playground as one image: `mise run docker:build`, then `mise run docker:run` (or the docker commands in
 # mise-tasks/docker/). It serves the built demo on :5199 and runs the collaboration server with the in-memory fake
-# GitLab on :1234 (server/cmd/fake-gitlab, plain rooms on), as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT)
+# GitLab on :1234 (server/cmd/fake-gitlab, plain rooms and guest links on), as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT)
 # or SIGTERM stops both. GitHub builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io
 # (.github/workflows/docker.yml).
 #
@@ -70,7 +70,7 @@ RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
 
-ENV ZWF_ADDRESS=0.0.0.0 ZWF_PLAIN_ROOMS=1 ZWF_DEMO_DIST=/app/dist/demo
+ENV ZWF_ADDRESS=0.0.0.0 ZWF_PLAIN_ROOMS=1 ZWF_GUESTS=1 ZWF_DEMO_DIST=/app/dist/demo
 WORKDIR /app
 COPY --from=server /out/fake-gitlab /app/fake-gitlab
 COPY --from=build /app/dist/demo dist/demo

@@ -103,11 +103,15 @@ func (e *editors) names() []string {
 	return names
 }
 
-// userIDs are the editors' user ids, in the order of their first edit ("": none known).
+// userIDs are the editors' user ids, in the order of their first edit ("": none known, or a guest's).
 func (e *editors) userIDs() []string {
 	ids := make([]string, 0, len(e.order))
 	for _, p := range e.people() {
-		ids = append(ids, p.User.ID)
+		if p.User.IsGuest() {
+			ids = append(ids, "")
+		} else {
+			ids = append(ids, p.User.ID)
+		}
 	}
 	return ids
 }

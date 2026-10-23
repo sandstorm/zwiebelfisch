@@ -47,9 +47,10 @@ export interface SourceControl {
   readonly onDidChange: Event<void>;
   /**
    * Commits the project's current state with `message` (VS Code: its accept-input command). `busy` meanwhile;
-   * the source control tells the outcome itself (`window.show…Message`), as it tells its news.
+   * the source control tells the outcome itself (`window.show…Message`), as it tells its news. Undefined: the user
+   * may not commit here (it only shows its state; VS Code: no `acceptInputCommand`).
    */
-  commit(message: string): void;
+  readonly commit?: (message: string) => void;
 }
 
 /** The original of a file: its text at the last commit (VS Code's QuickDiffProvider, giving the text itself). */

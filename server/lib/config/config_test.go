@@ -19,19 +19,21 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, "info", c.Log.Level)
 	require.Equal(t, "console", c.Log.Format)
 	require.False(t, c.Rooms.Plain, "plain rooms only when enabled")
+	require.False(t, c.Rooms.Guests, "guest links only when enabled")
 	require.Empty(t, c.GitLab.URL)
 }
 
 func TestEnvironment(t *testing.T) {
 	c, err := config.Load([]string{
 		"PORT=4321", "ZWF_ADDRESS=0.0.0.0", "ZWF_COLLAB_DB=:memory:",
-		"ZWF_LOG_LEVEL=debug", "ZWF_LOG_FORMAT=json", "ZWF_PLAIN_ROOMS=1",
+		"ZWF_LOG_LEVEL=debug", "ZWF_LOG_FORMAT=json", "ZWF_PLAIN_ROOMS=1", "ZWF_GUESTS=true",
 		"ZWF_GITLAB_URL=https://gitlab.example", "ZWF_GITLAB_WEBHOOK_SECRET=hook",
 		"ZWF_GITLAB_AUTHOR_EMAIL=a@example.org", "ZWF_GITLAB_AUTO_COMMIT=off",
 		"ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=s=1", "ZWF_AUTH_REDIRECT_URL=https://editor.example/api/public/auth/callback",
 	})
 	require.NoError(t, err)
 	require.Equal(t, 4321, c.Port)
+	require.True(t, c.Rooms.Guests)
 	require.Equal(t, "0.0.0.0", c.Address)
 	require.Equal(t, ":memory:", c.Collab.DB)
 	require.Equal(t, "https://gitlab.example", c.Auth.Issuer, "the GitLab instance by default")

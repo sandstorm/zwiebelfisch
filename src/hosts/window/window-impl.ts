@@ -5,6 +5,7 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange } from '../../core/project/project';
 import type { User } from '../../core/user/user';
 import type { CommandContribution, MenuItem } from '../commands/commands';
+import { Banners } from './banners/banners';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Editors } from './editors/editors';
 import { FileDecorations } from './file-decorations/file-decorations';
@@ -25,7 +26,7 @@ import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem,
 
 /**
  * The `WindowApi` of one widget on `options.host`: its regions (the sides with their panels, the editing area with its
- * tabs and editors, the status bar), menus, messages and input, the style sheets and the color scheme.
+ * banners, tabs and editors, the status bar), menus, messages and input, the style sheets and the color scheme.
  * It shows the main file once `open` is first called and keeps the editing area on an existing file as files change.
  */
 export class WindowHost implements WindowApi {
@@ -45,6 +46,7 @@ export class WindowHost implements WindowApi {
   readonly #quickInput: QuickInput;
   readonly #contextMenu: ContextMenu;
   readonly #statusBar: StatusBar;
+  readonly #banners: Banners;
   readonly #progress: ProgressIndicators;
   readonly #editors: Editors;
   readonly #fileDecorations = new FileDecorations();
@@ -78,6 +80,7 @@ export class WindowHost implements WindowApi {
     this.#quickInput = new QuickInput(host);
     this.#contextMenu = new ContextMenu(host, this.#menus, commands);
     this.#statusBar = new StatusBar(this.#layout.statusBar);
+    this.#banners = new Banners(this.#layout.editor);
     this.#progress = new ProgressIndicators(this.#layout.editor);
     this.#editors = new Editors(this.#layout.editor);
     this.#subscriptions = Disposable.from(
@@ -167,6 +170,10 @@ export class WindowHost implements WindowApi {
     return this.#statusBar.add(element, placement);
   }
 
+  registerBanner(element: HTMLElement): Disposable {
+    return this.#banners.add(element);
+  }
+
   registerEditorProvider(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable {
     return this.#editors.register(viewType, provider, options);
   }
@@ -236,7 +243,7 @@ export class WindowHost implements WindowApi {
 
   dispose(): void {
     this.#searchProviders.clear();
-    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#editors, this.#fileDecorations, this.#tabs, this.#menus, this.#drops).dispose();
+    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#editors, this.#fileDecorations, this.#tabs, this.#banners, this.#menus, this.#drops).dispose();
     this.#shown.dispose();
     const { host } = this.options;
     host.classList.remove('zwf-editor');

@@ -7,6 +7,9 @@
 //	Logout    POST /api/auth/logout           ends it (signed in only)
 //	Me        GET  /api/me                    the Identity (signed in only)
 //
+// StartSession and EndSessions let the rest of the server sign in people the provider does not know (package
+// guest's guests: sessions without a token, up to a given end).
+//
 // Token hands the rest of the server a signed-in user's OAuth access token (for calls in their name),
 // refreshed when it expired.
 //
@@ -345,6 +348,9 @@ func (a *Auth) Token(ctx context.Context, subject string) (string, error) {
 func (a *Auth) fresh(ctx context.Context, s *session) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.token == nil { // StartSession's
+		return "", ErrNoToken
+	}
 	if s.token.Valid() {
 		return s.token.AccessToken, nil
 	}
@@ -372,6 +378,32 @@ func refreshFailure(err error) string {
 		return "the provider refused (" + first(refused.ErrorCode, "no reason given") + ")"
 	}
 	return "the provider cannot be reached"
+}
+
+// StartSession signs the browser of r in as identity until expires (at most SessionLifetime from now), without
+// a token (Token has none for it): a new session, its cookie set on w.
+func (a *Auth) StartSession(w http.ResponseWriter, r *http.Request, identity Identity, expires time.Time) {
+	now := a.opts.now()
+	if longest := now.Add(SessionLifetime); expires.After(longest) {
+		expires = longest
+	}
+	id := rand.Text()
+	a.mu.Lock()
+	a.prune()
+	a.sessions[id] = &session{identity: identity, expires: expires}
+	a.mu.Unlock()
+	http.SetCookie(w, cookie(r, sessionCookie, id, "/", expires.Sub(now)))
+}
+
+// EndSessions ends every session whose identity match picks: their requests are no longer identified.
+func (a *Auth) EndSessions(match func(Identity) bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for id, s := range a.sessions {
+		if match(s.identity) {
+			delete(a.sessions, id)
+		}
+	}
 }
 
 // Logout ends the session (POST /api/auth/logout).

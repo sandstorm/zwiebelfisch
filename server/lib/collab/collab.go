@@ -13,6 +13,7 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -33,7 +34,10 @@ type Options struct {
 	PingInterval time.Duration
 	// Extension, if set, adds behaviour to rooms (see Extension).
 	Extension Extension
-	Log       zerolog.Logger
+	// PeerChanged, if set, is told each time a client joined a room (joined) or left it, with its user. It runs
+	// on the room's goroutine: it must not wait for the server (it may start goroutines that do).
+	PeerChanged func(room string, user User, joined bool)
+	Log         zerolog.Logger
 }
 
 // Store keeps room states (Yjs updates): store.Store.
@@ -49,6 +53,8 @@ type Server struct {
 	ctx    context.Context // ends every connection when cancelled (Close)
 	cancel context.CancelFunc
 	wg     sync.WaitGroup // connections and rooms
+	// disconnects counts the Disconnect calls: a client let in while one ran is asked about again
+	disconnects atomic.Uint64
 
 	mu     sync.Mutex
 	rooms  map[string]*room
@@ -146,6 +152,39 @@ func (w webSocket) Write(ctx context.Context, msg []byte) error {
 }
 
 func (w webSocket) Close(code int, reason string) { _ = w.c.Close(websocket.StatusCode(code), reason) }
+
+// BroadcastStateless sends a stateless message to every client in room; nothing when it is not loaded.
+func (s *Server) BroadcastStateless(room, payload string) {
+	s.mu.Lock()
+	r := s.rooms[room]
+	s.mu.Unlock()
+	if r != nil {
+		(&Room{r}).BroadcastStateless(payload)
+	}
+}
+
+// Disconnect refuses every client in any room that match picks (called on that room's goroutine), as a
+// refused Auth: the client gets PermissionDenied with reason, leaves the room at once and gets nothing more
+// of it. Its connection stays open for its other rooms; opening the room again asks Authenticate again. A
+// client being let in meanwhile is asked about again (Authenticate) once in the room, and refused as well.
+func (s *Server) Disconnect(match func(*Peer) bool, reason string) {
+	s.disconnects.Add(1)
+	s.mu.Lock()
+	rooms := make([]*room, 0, len(s.rooms))
+	for _, r := range s.rooms {
+		rooms = append(rooms, r)
+	}
+	s.mu.Unlock()
+	for _, r := range rooms {
+		r.call(func() {
+			for p := range r.peers {
+				if match(p) {
+					r.drop(p, reason)
+				}
+			}
+		})
+	}
+}
 
 // join adds p to its room (loading the room first if nobody is in it) and returns the room.
 func (s *Server) join(p *Peer) (*room, error) {

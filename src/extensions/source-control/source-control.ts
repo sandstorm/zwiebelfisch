@@ -3,13 +3,13 @@ import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { Extension } from '../../hosts/extension-host/extension-host';
 import type { SourceControl } from '../../hosts/scm/scm';
 import css from './source-control.css?inline';
-import { commit, commitTitle, resourceDecorations, SourceControlStatus } from './window/window';
+import { commit, commitTitle, committable, resourceDecorations, SourceControlStatus } from './window/window';
 
 /**
  * The UI over the registered source controls (`scm`), shown while there is at least one:
- * - "Save to <label>…" in the tab bar (menu `window/editorTitle`, "Saving to <label>…" while busy): the command
- *   `sourceControl.commit` asks for a commit message and commits
- * - their `statusBarItems` at the start of the status bar (a click commits, too)
+ * - "Save to <label>…" in the tab bar (menu `window/editorTitle`, "Saving to <label>…" while busy), while one lets the
+ *   user commit (has `commit`): the command `sourceControl.commit` asks for a commit message and commits
+ * - their `statusBarItems` at the start of the status bar (a click commits, too, where the user may)
  * - their `resourceStates` as file decorations
  */
 export function sourceControl(): Extension {
@@ -24,8 +24,9 @@ export function sourceControl(): Extension {
       let statusItem: Disposable | null = null;
       const show = () => {
         const controls = scm.sourceControls;
+        const savable = committable(controls);
         entry?.dispose();
-        entry = controls.length === 0 ? null : window.registerMenuItem('window/editorTitle', { command: 'sourceControl.commit', title: commitTitle(controls), group: 'sourceControl' });
+        entry = savable.length === 0 ? null : window.registerMenuItem('window/editorTitle', { command: 'sourceControl.commit', title: commitTitle(savable), group: 'sourceControl' });
         status.show(controls);
         const hasStatus = controls.some((control) => control.statusBarItems?.length);
         if (hasStatus && !statusItem) statusItem = window.registerStatusBarItem(status.element, { alignment: 'left', priority: 200 });

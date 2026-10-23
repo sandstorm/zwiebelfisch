@@ -5,14 +5,13 @@ import type { FileDecoration, FileDecorationProvider, WindowApi } from '../../..
 
 /**
  * Commits the project with the message the user enters (its default offered): to `control`, else to the one
- * registered source control or the one picked. While a commit is under way it only says so.
+ * source control the user may commit to or the one picked. While a commit is under way it only says so; a source
+ * control the user may not commit to (no `commit`) is never asked.
  */
 export async function commit({ scm, window }: SourceControlUi, control?: SourceControl): Promise<void> {
-  const controls = scm.sourceControls;
-  control ??=
-    controls.length > 1
-      ? (await window.showQuickPick(controls.map((each) => ({ label: `Save to ${each.label}…`, control: each })), { title: 'Save', placeHolder: 'Where to save' }))?.control
-      : controls[0];
+  if (control && !control.commit) return;
+  const controls = committable(scm.sourceControls);
+  control ??= controls.length > 1 ? await pickControl(controls, window) : controls[0];
   if (!control) return;
   if (control.busy) {
     void window.showInformationMessage(`Saving to ${control.label} is under way.`);
@@ -25,7 +24,17 @@ export async function commit({ scm, window }: SourceControlUi, control?: SourceC
     placeHolder: control.defaultCommitMessage,
     validateInput: (value) => (value.trim() === '' ? 'Enter a commit message.' : null),
   });
-  if (message !== undefined) control.commit(message.trim());
+  if (message !== undefined) control.commit?.(message.trim());
+}
+
+/** The one of several `controls` the user picks (undefined: cancelled). */
+async function pickControl(controls: readonly SourceControl[], window: SourceControlUi['window']): Promise<SourceControl | undefined> {
+  return (await window.showQuickPick(controls.map((each) => ({ label: `Save to ${each.label}…`, control: each })), { title: 'Save', placeHolder: 'Where to save' }))?.control;
+}
+
+/** The source controls the user may commit to (those with `commit`). */
+export function committable(controls: readonly SourceControl[]): readonly SourceControl[] {
+  return controls.filter((control) => control.commit);
 }
 
 /** What committing needs of the extension API: the source controls, and the window to ask (and say it is busy). */

@@ -1,16 +1,19 @@
 // Package app puts the collaboration server together on one port, for both commands (zwiebelfisch, and
-// fake-gitlab for the demo): the rooms (package collab), GitLab rooms (package gitlab) and the sign-in
-// (package auth).
+// fake-gitlab for the demo): the rooms (package collab), GitLab rooms (package gitlab), the sign-in (package
+// auth) and, when enabled, guest links (package guest).
 //
 // Routes follow one rule: /api/public/ is the only part anyone may call; everything else requires a
-// signed-in user (requireSignIn: 401 otherwise, for a WebSocket before its upgrade). New lists every route.
+// signed-in user (requireSignIn: 401 otherwise, for a WebSocket before its upgrade). New lists every route. A
+// CORS preflight is answered for any path (preflight).
 //
 // Who opens which room:
 //   - a GitLab room (when configured): anyone signed in with GitLab whose role lets them edit
 //   - any other room without a colon in its name (a plain room, only when enabled): anyone signed in
+//   - a guest: the room of their share only
 //
-// A refused client is told why, in words the widget shows. GET /api/public/info tells clients beforehand
-// whether plain rooms exist.
+// Who may share a room with guests: who opens it, but a guest. A sign-out ends that session's open
+// connections. A refused client is told why, in words the widget shows. GET /api/public/info tells clients
+// beforehand whether plain rooms and guest links exist.
 package app
 
 import (
@@ -31,15 +34,19 @@ import (
 	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
 	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/guest"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 // Options configure a Server. Store and Auth are required.
 type Options struct {
-	Store collab.Store
+	Store *store.Store
 	// Auth is the sign-in: who sent a request.
 	Auth *auth.Auth
 	// PlainRooms enables rooms that are not GitLab rooms.
 	PlainRooms bool
+	// Guests enables guest links (package guest).
+	Guests bool
 	// GitLab enables GitLab rooms (nil: none). Its Authenticate, Token (Auth's) and Log are set here.
 	GitLab *gitlab.Options
 	Log    zerolog.Logger
@@ -48,8 +55,10 @@ type Options struct {
 // Server is the collaboration server as an http.Handler: the routes New lists. Close it after the HTTP
 // server is shut down.
 type Server struct {
+	auth     *auth.Auth
 	rooms    *collab.Server
 	gitlab   *gitlab.Rooms // nil: no GitLab rooms
+	guests   *guest.Guests // nil: no guest links
 	plain    bool
 	public   *routes // for anyone
 	signedIn *routes // for signed-in users only
@@ -68,7 +77,7 @@ func New(o Options) (*Server, error) {
 	if o.Auth == nil {
 		return nil, errors.New("no sign-in: configure it (ZWF_AUTH_CLIENT_ID, ZWF_AUTH_CLIENT_SECRET)")
 	}
-	s := &Server{plain: o.PlainRooms}
+	s := &Server{auth: o.Auth, plain: o.PlainRooms}
 	var extension collab.Extension
 	if o.GitLab != nil {
 		g := *o.GitLab
@@ -76,10 +85,32 @@ func New(o Options) (*Server, error) {
 		s.gitlab = gitlab.New(g)
 		extension = s.gitlab
 	}
-	s.rooms = collab.New(collab.Options{
+	collabOptions := collab.Options{
 		Store: o.Store, Authenticate: s.authenticate, Extension: extension,
 		Log: o.Log.With().Str("module", "collab").Logger(),
-	})
+	}
+	if o.Guests {
+		collabOptions.PeerChanged = func(room string, user collab.User, joined bool) {
+			if user.IsGuest() {
+				s.guests.PeerChanged(room, user, joined)
+			}
+		}
+	}
+	s.rooms = collab.New(collabOptions)
+	if o.Guests {
+		guests, err := guest.New(guest.Options{
+			Store: o.Store, Sessions: o.Auth, Rooms: s.rooms, MayShare: s.mayShare,
+			Log: o.Log.With().Str("module", "guest").Logger(),
+		})
+		if err != nil {
+			_ = s.rooms.Close(context.Background())
+			if s.gitlab != nil {
+				s.gitlab.Close()
+			}
+			return nil, err
+		}
+		s.guests = guests
+	}
 
 	public := newRoutes(PublicPrefix)
 	public.HandleFunc("GET /api/public/auth/login", o.Auth.Login)       // signing in begins signed out
@@ -87,6 +118,9 @@ func New(o Options) (*Server, error) {
 	public.HandleFunc("GET /api/public/info", s.info)                   // what this server offers, read before signing in
 	if s.gitlab != nil && o.GitLab.WebhookSecret != "" {
 		public.HandleFunc("POST /api/public/gitlab/webhook", s.gitlab.ServeWebhook) // GitLab calls it, with X-Gitlab-Token
+	}
+	if s.guests != nil {
+		public.HandleFunc("POST /api/public/guest/join", s.guests.Join) // a guest link's page signs its guest in
 	}
 
 	signedIn := newRoutes("/api/")
@@ -98,6 +132,11 @@ func New(o Options) (*Server, error) {
 		signedIn.HandleFunc("GET /api/rooms/{room}/history", s.gitlab.ServeHistory)
 		signedIn.HandleFunc("GET /api/rooms/{room}/compare", s.gitlab.ServeCompare)
 	}
+	if s.guests != nil {
+		signedIn.HandleFunc("POST /api/rooms/{room}/shares", s.guests.Create)
+		signedIn.HandleFunc("GET /api/rooms/{room}/shares", s.guests.List)
+		signedIn.HandleFunc("DELETE /api/rooms/{room}/shares/{id}", s.guests.Revoke)
+	}
 
 	s.public, s.signedIn, s.mux = public, signedIn, http.NewServeMux()
 	s.mux.Handle(PublicPrefix, public)
@@ -105,7 +144,25 @@ func New(o Options) (*Server, error) {
 	return s, nil
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+		preflight(w, r)
+		return
+	}
+	s.mux.ServeHTTP(w, r)
+}
+
+// preflight answers a browser's CORS preflight for any path: a page of this host on another port (the widget's)
+// may send JSON bodies and DELETEs with the cookie; another site's page is permitted nothing.
+func preflight(w http.ResponseWriter, r *http.Request) {
+	auth.AllowCredentials(w, r)
+	if w.Header().Get("Access-Control-Allow-Origin") != "" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "600")
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // requireSignIn lets only signed-in clients through to next, their identity in the request (auth.SignedIn);
 // others get 401. The answers carry CORS with credentials: the widget, on another port of this host, sends
@@ -145,13 +202,24 @@ func (rs *routes) HandleFunc(pattern string, h func(http.ResponseWriter, *http.R
 }
 
 // logout signs out (auth's Logout), after the GitLab rooms committed what the user has not committed yet
-// (while their token still works).
+// (while their token still works); then the user's clients whose connection that session opened are refused.
 func (s *Server) logout(a *auth.Auth) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if identity, ok := auth.SignedIn(r); ok && s.gitlab != nil {
+		identity, ok := auth.SignedIn(r)
+		if ok && s.gitlab != nil && !userOf(identity).IsGuest() { // a guest's edits wait for a member's save
 			s.gitlab.SignedOut(userOf(identity))
 		}
 		a.Logout(w, r)
+		if !ok {
+			return
+		}
+		s.rooms.Disconnect(func(p *collab.Peer) bool {
+			if u := p.User(); u.Provider != identity.Provider || u.ID != identity.Subject {
+				return false
+			}
+			_, still := a.Identify(p.Request())
+			return !still
+		}, signedOut)
 	}
 }
 
@@ -165,21 +233,35 @@ func (s *Server) GitLab() *gitlab.Rooms { return s.gitlab }
 // Info is what GET /api/public/info answers: what this server offers, for clients to choose from.
 type Info struct {
 	PlainRooms bool `json:"plainRooms"`
+	Guests     bool `json:"guests"`
 }
 
 func (s *Server) info(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(Info{PlainRooms: s.plain})
+	_ = json.NewEncoder(w).Encode(Info{PlainRooms: s.plain, Guests: s.guests != nil})
 }
 
-// authenticate decides who opens room, for a request requireSignIn let through: the room must exist here,
-// and for a GitLab room the user have a role that edits. A plain room's name has no colon: `<id>:` names
-// belong to room providers (gitlab:), so a plain room never shares a stored state with theirs.
+// signedOut refuses a client whose session ended (signed out, expired) in the rooms it has open or opens.
+const signedOut = "You signed out."
+
+// authenticate decides who opens room, for a request requireSignIn let through, while its session lasts
+// (signedOut after): the room must exist here, and for a GitLab room the user have a role that edits; a
+// guest opens their share's room only. A plain room's name has no colon: `<id>:` names belong to room
+// providers (gitlab:), so a plain room never shares a stored state with theirs.
 func (s *Server) authenticate(r *http.Request, room string) (collab.User, error) {
-	identity, ok := auth.SignedIn(r)
-	if !ok {
+	if _, ok := auth.SignedIn(r); !ok {
 		return collab.User{}, errors.New("not signed in") // not behind requireSignIn: a bug
+	}
+	identity, ok := s.auth.Identify(r) // afresh: a connection opens rooms long after its upgrade
+	if !ok {
+		return collab.User{}, collab.Refusal{Reason: signedOut}
+	}
+	if user := userOf(identity); user.IsGuest() {
+		if s.guests == nil {
+			return collab.User{}, collab.Refusal{Reason: guest.ReasonEnded}
+		}
+		return user, s.guests.Authorize(user, room)
 	}
 	isGitLab := s.gitlab != nil && s.gitlab.Handles(room)
 	switch {
@@ -200,8 +282,24 @@ func (s *Server) authenticate(r *http.Request, room string) (collab.User, error)
 	return user, nil
 }
 
-// Close stores the open rooms and ends the GitLab rooms' work (or gives up when ctx ends).
+// mayShare is whether user may share room with guests (guest.Options.MayShare): a GitLab room if GitLab says
+// they may edit it, a plain room if they are signed in; never a guest.
+func (s *Server) mayShare(ctx context.Context, user collab.User, room string) (bool, error) {
+	switch {
+	case user.IsGuest() || user.ID == "":
+		return false, nil
+	case s.gitlab != nil && s.gitlab.Handles(room):
+		return s.gitlab.MayEdit(ctx, user, room)
+	}
+	return s.plain && !strings.Contains(room, ":"), nil
+}
+
+// Close ends the guest links' work, stores the open rooms and ends the GitLab rooms' work (or gives up when
+// ctx ends).
 func (s *Server) Close(ctx context.Context) error {
+	if s.guests != nil {
+		s.guests.Close()
+	}
 	err := s.rooms.Close(ctx)
 	if s.gitlab != nil {
 		s.gitlab.Close()

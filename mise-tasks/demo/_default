@@ -4,8 +4,8 @@
 # Everything local: no real GitLab, no secrets, nothing stored. Arguments go to Vite.
 set -euo pipefail
 
-# plain rooms on: the Collaborate mode
-ZWF_PLAIN_ROOMS=1 .cache/bin/fake-gitlab &
+# plain rooms on: the Collaborate mode; guest links on: "Share with guests…"
+ZWF_PLAIN_ROOMS=1 ZWF_GUESTS=1 .cache/bin/fake-gitlab &
 server=$!
 # stop the server however this script ends (Ctrl-C, Vite exiting, an error)
 trap 'kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT

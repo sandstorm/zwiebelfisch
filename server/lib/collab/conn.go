@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -78,7 +79,12 @@ func (c *conn) run() {
 			c.close(closeResetConnection, "Reset Connection")
 			return
 		}
-		if p := c.peers[address]; p != nil {
+		p := c.peers[address]
+		if p != nil && p.dropped.Load() { // Disconnect: the room is closed to it until a new Auth
+			delete(c.peers, address)
+			p = nil
+		}
+		if p != nil {
 			if typ == msgClose {
 				p.leave()
 				delete(c.peers, address)
@@ -103,7 +109,8 @@ func (c *conn) run() {
 
 // authenticate handles the Auth message that opens the room at address: on success the client is told so,
 // joins the room and the messages it sent before are handled; otherwise it gets PermissionDenied (and may
-// try again). A connection opens at most maxRooms rooms, with names of at most maxRoomName bytes.
+// try again), also once in the room when a Disconnect ran meanwhile and Authenticate now refuses it. A
+// connection opens at most maxRooms rooms, with names of at most maxRoomName bytes.
 func (c *conn) authenticate(address string, d *decoder) {
 	queued := c.pending[address]
 	delete(c.pending, address)
@@ -118,15 +125,11 @@ func (c *conn) authenticate(address string, d *decoder) {
 		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
 		return
 	}
+	disconnects := c.s.disconnects.Load()
 	user, err := c.admit(room)
 	if err != nil {
-		reason := "permission-denied"
-		var refusal Refusal
-		if errors.As(err, &refusal) {
-			reason = refusal.Reason
-		}
 		c.log.Info().Str("room", room).Err(err).Msg("permission denied")
-		c.send(frame(address, msgAuth).uint(authPermissionDenied).string(reason).buf)
+		c.send(frame(address, msgAuth).uint(authPermissionDenied).string(refusalReason(err)).buf)
 		return
 	}
 	c.send(frame(address, msgAuth).uint(authAuthenticated).string("read-write").buf)
@@ -137,9 +140,28 @@ func (c *conn) authenticate(address string, d *decoder) {
 		return
 	}
 	c.peers[address] = p
+	if c.s.disconnects.Load() != disconnects { // one ran while p was let in, maybe before p was in the room
+		if _, err := c.s.opts.Authenticate(c.req, room); err != nil {
+			p.r.call(func() {
+				if !p.dropped.Load() {
+					p.r.drop(p, refusalReason(err))
+				}
+			})
+			return
+		}
+	}
 	for _, msg := range queued {
 		p.receive(msg)
 	}
+}
+
+// refusalReason is what a client refused with err is told: a Refusal's reason, else "permission-denied".
+func refusalReason(err error) string {
+	var refusal Refusal
+	if errors.As(err, &refusal) {
+		return refusal.Reason
+	}
+	return "permission-denied"
 }
 
 // admit returns who opens room on this connection: refused beyond maxRooms or maxRoomName, else as
@@ -205,11 +227,16 @@ type Peer struct {
 	room    string
 	user    User
 	r       *room
-	named   string // the name the client publishes in the awareness (owned by the room's goroutine)
+	named   string      // the name the client publishes in the awareness (owned by the room's goroutine)
+	dropped atomic.Bool // Server.Disconnect refused it
 }
 
 // User is who the client authenticated as.
 func (p *Peer) User() User { return p.user }
+
+// Request is the request that opened the client's connection (the WebSocket's upgrade: who it is, as
+// Authenticate read it).
+func (p *Peer) Request() *http.Request { return p.conn.req }
 
 // Name is who the client is, by name: the user it authenticated as, else the name it publishes in the
 // room's awareness (`user.name`, as the widget's collaboration extension does), else "". Read it on the

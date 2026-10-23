@@ -1,6 +1,7 @@
 // What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the messages of GitLab-backed
-// rooms, and the paths of the collaboration WebSocket and a room's file. The server's side is
-// server/lib/gitlab/protocol.go (the paths: server/lib/app/app.go); a change here is a change there. Outside the
+// rooms, guest links, and the paths of the collaboration WebSocket and a room's file. The server's side is
+// server/lib/gitlab/protocol.go and server/lib/guest/guest.go (the paths: server/lib/app/app.go); a change here is a
+// change there. Outside the
 // lazily loaded model/ (which uses most of it), so the eager account.ts can build the WebSocket's URL. See
 // collaboration in collaboration.ts.
 import { ProjectPath } from '../../core/paths/paths';
@@ -135,6 +136,44 @@ export type ServerMessage =
   | { type: 'gitlab:missing'; path: string; message: string };
 
 export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
+
+/** The `commitFailure` message of an auto-save that guest edits held back: guests never save, a member must. */
+export const GUEST_EDITS = 'Guest edits: a member must save.';
+
+/** The identity provider of a guest (`Identity.provider`): someone a member shared one room with, by a link. */
+export const GUEST_PROVIDER = 'guest';
+
+/** Server → client stateless message: the room's guest links or its guests changed (refetch `roomSharesPath`). */
+export const GUESTS_CHANGED = JSON.stringify({ type: 'guests:changed' });
+
+/** Where a guest link's page signs its guest in (relative to the server's URL): `POST {token, name}` (JSON). */
+export const GUEST_JOIN_PATH = '/api/public/guest/join';
+
+/**
+ * The HTTP path of a room's guest links (relative to the server's URL): `GET` answers `{ shares: Share[] }`, `POST
+ * {label, days}` makes one (answering it with its `token`, once), `DELETE <path>/<id>` revokes one.
+ */
+export function roomSharesPath(room: string): string {
+  return `/api/rooms/${encodeURIComponent(room)}/shares`;
+}
+
+/** A guest link of a room: to a member, with its id and the names of its guests in the room; to a guest, their own. */
+export interface Share {
+  id?: string;
+  label: string;
+  /** The member who made it, by name. */
+  sharedBy: string;
+  /** Milliseconds since the epoch, the server's clock. */
+  createdAt: number;
+  expiresAt: number;
+  online?: string[];
+  /** Only in the answer that made it: the link's secret. */
+  token?: string;
+}
+
+/** The lifetimes a guest link may have, in days; `DEFAULT_GUEST_DAYS` preselected. */
+export const GUEST_LIFETIMES = [1, 7, 30] as const;
+export const DEFAULT_GUEST_DAYS = 7;
 
 /** The path of the collaboration WebSocket (relative to the server's URL): one connection carries the rooms joined; signed in only, like every path outside `/api/public/`. */
 export const COLLABORATION_PATH = '/api/collaboration';

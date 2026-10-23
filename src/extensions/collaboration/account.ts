@@ -1,6 +1,6 @@
 // Who is signed in to the collaboration server. See collaboration in collaboration.ts.
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import { COLLABORATION_PATH } from './room-protocol';
+import { COLLABORATION_PATH, GUEST_JOIN_PATH, GUEST_PROVIDER } from './room-protocol';
 
 /** Who signed in to the collaboration server (`GET /api/me`): (provider, id) identifies them. */
 export interface Identity {
@@ -15,8 +15,9 @@ export interface Identity {
  * The local user's account on a collaboration server: whether and as whom they are signed in, and the ways to sign in
  * and out. The server keeps the session in an httpOnly cookie, so the widget never holds a token: it asks the server
  * (`/api/me`) and sends the cookie along (`credentials: 'include'`, for a page on another port of the same host).
- * Signing in leaves the page: the server sends the browser to the provider and back to `returnTo`. Everything but the
- * sign-in (`/api/public/`) answers only the signed-in user, so the widget asks before it connects.
+ * Signing in leaves the page: the server sends the browser to the provider and back to `returnTo`; a guest signs in
+ * with a guest link's secret instead (`joinAsGuest`). Everything but the sign-in (`/api/public/`) answers only the
+ * signed-in user, so the widget asks before it connects.
  */
 export class Account {
   readonly #changed = new EventEmitter<void>();
@@ -36,6 +37,27 @@ export class Account {
   /** Who is signed in: null nobody, undefined not known yet (`refresh`). */
   get identity(): Identity | null | undefined {
     return this.#identity;
+  }
+
+  /** Whether the one signed in is a guest (of a guest link: they edit one room, members save it). */
+  get isGuest(): boolean {
+    return this.#identity?.provider === GUEST_PROVIDER;
+  }
+
+  /**
+   * Signs in as a guest named `name` with a guest link's secret `token`, then asks who is signed in (the guest:
+   * "<name> (guest)"). Rejects with the server's reason when it refuses (an invalid or expired link), or when it cannot
+   * be asked.
+   */
+  async joinAsGuest(token: string, name: string): Promise<Identity | null> {
+    const response = await this.send(`${this.#base}${GUEST_JOIN_PATH}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, name }),
+    });
+    if (!response.ok) throw new Error((await response.text()).trim() || `HTTP ${response.status}`);
+    return this.refresh();
   }
 
   /** Asks the server who is signed in. Rejects when the server cannot be asked. */

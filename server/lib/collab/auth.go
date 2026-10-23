@@ -17,6 +17,13 @@ type User struct {
 	Name, Email  string
 }
 
+// GuestProvider is the Provider of a guest (package guest): someone without an account whom a member shared
+// one room with. A guest edits that room and never saves it.
+const GuestProvider = "guest"
+
+// IsGuest is whether u is a guest (GuestProvider).
+func (u User) IsGuest() bool { return u.Provider == GuestProvider }
+
 // Refusal refuses a client with a reason meant for its user (the PermissionDenied reason, which the widget
 // shows). Other errors are reported as Hocuspocus' "permission-denied".
 type Refusal struct{ Reason string }

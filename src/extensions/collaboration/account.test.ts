@@ -27,6 +27,26 @@ describe('Account', () => {
     expect(send).toHaveBeenCalledWith('https://editor.example.org/collab/api/me', { credentials: 'include' });
   });
 
+  it('joins as a guest with a link\'s secret, and tells a refused link', async () => {
+    const jane = { provider: 'guest', id: 'share/1', name: 'Jane (guest)' };
+    const send = vi.fn<typeof fetch>(async (input) =>
+      String(input).endsWith('/api/public/guest/join') ? new Response(null, { status: 204 }) : new Response(JSON.stringify(jane)),
+    );
+    const account = new Account('ws://127.0.0.1:1234', send);
+    await expect(account.joinAsGuest('SECRET', 'Jane')).resolves.toEqual(jane);
+    expect(account.isGuest).toBe(true);
+    expect(send).toHaveBeenCalledWith('http://127.0.0.1:1234/api/public/guest/join', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"token":"SECRET","name":"Jane"}',
+    });
+
+    const refused = new Account('ws://127.0.0.1:1234', async () => new Response('This link is invalid or has expired.\n', { status: 404 }));
+    await expect(refused.joinAsGuest('OLD', 'Jane')).rejects.toThrow('This link is invalid or has expired.');
+    expect(refused.isGuest).toBe(false);
+  });
+
   it('is signed out when the server says 401', async () => {
     const account = new Account('ws://127.0.0.1:1234', server(null));
     await expect(account.refresh()).resolves.toBeNull();
