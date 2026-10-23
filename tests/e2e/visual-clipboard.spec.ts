@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): copy and paste in the Visual editor, in Typst.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { caretAtEnd, compiled, selectText, sourceText, visual } from './visual-helpers';
+import { caretAtEnd, clipboardEvent, compiled, selectText, sourceText, visual } from './visual-helpers';
 
 const FIGURE = '#figure(\n  rect(width: 2cm),\n  caption: [A box],\n)';
 
@@ -12,20 +12,12 @@ test.beforeEach(async ({ page }) => {
 
 /** Pastes `items` (type → text) into the Visual editor, as the browser would (a paste event with that data). */
 async function paste(page: Page, items: Record<string, string>): Promise<void> {
-  await visual(page).evaluate((element, items) => {
-    const data = new DataTransfer();
-    for (const [type, text] of Object.entries(items)) data.setData(type, text);
-    element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
-  }, items);
+  await clipboardEvent(visual(page), 'paste', items);
 }
 
 /** Copies the selection of the Visual editor: what a copy event puts on the clipboard, by type. */
 async function copy(page: Page): Promise<Record<string, string>> {
-  return visual(page).evaluate((element) => {
-    const data = new DataTransfer();
-    element.dispatchEvent(new ClipboardEvent('copy', { clipboardData: data, bubbles: true, cancelable: true }));
-    return Object.fromEntries(data.types.map((type) => [type, data.getData(type)]));
-  });
+  return clipboardEvent(visual(page), 'copy');
 }
 
 test('pasted Typst text is read as Typst: a figure stays a figure, in one undo step', async ({ page }) => {
@@ -86,10 +78,6 @@ test('the Source editor adds the imports of a paste too', async ({ page }) => {
   const content = page.getByTestId('zwf-source').locator('.cm-content');
   await content.click();
   await page.keyboard.press('ControlOrMeta+End');
-  await content.evaluate((element, text) => {
-    const data = new DataTransfer();
-    data.setData('text/plain', text);
-    element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
-  }, `\n${MERMAID}\n`);
+  await clipboardEvent(content, 'paste', { 'text/plain': `\n${MERMAID}\n` });
   await expect.poll(sourceText(page)).toMatch(/^#import "@preview\/merman:0\.4\.0": mermaid\n[^]*#figure\(mermaid/);
 });

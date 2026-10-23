@@ -40,7 +40,7 @@ describe('HtmlView', () => {
 
   it('shows the first page in a sandbox where scripts do not run', async () => {
     await setup();
-    expect(frame.getAttribute('sandbox')).toBe('allow-same-origin');
+    expect(frame.getAttribute('sandbox')).toBe('allow-same-origin allow-popups allow-popups-to-escape-sandbox');
     view.update({ files: bundle({ 'style.css': 'p {}', 'index.html': html('<p>Home</p>'), 'two.html': html('<p>Two</p>') }) });
     expect(doc().body.textContent).toBe('Home');
   });
@@ -94,7 +94,6 @@ describe('HtmlView', () => {
 
   it('switches pages on links within the bundle, scrolled to their target, and opens URLs in a new tab', async () => {
     await setup();
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     view.update({
       files: bundle({
         'index.html': html('<a href="chapters/two.html#intro">Two</a> <a href="https://typst.app">Typst</a>'),
@@ -107,14 +106,44 @@ describe('HtmlView', () => {
       link.dispatchEvent(event);
       return event.defaultPrevented;
     };
-    expect(click('Typst')).toBe(true);
-    expect(open).toHaveBeenCalledWith('https://typst.app', '_blank', 'noopener,noreferrer');
+    // the browser opens it
+    expect(click('Typst')).toBe(false);
+    expect(doc().querySelector('a[href="https://typst.app"]')!.getAttribute('target')).toBe('_blank');
+    expect(doc().querySelector('a[href="https://typst.app"]')!.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(doc().querySelector('a[href^="chapters"]')!.hasAttribute('target')).toBe(false);
     expect(click('Two')).toBe(true);
     expect(doc().body.textContent).toBe('BackIntro');
     expect(scrolls()).toHaveLength(1);
     click('Back');
     expect(doc().body.textContent).toBe('Two Typst');
     expect(scrolls().at(-1)).toBe(0);
+  });
+
+  it('shows the page a link leads to when the frame followed it itself (WebKit runs no listener there)', async () => {
+    await setup();
+    view.update({
+      files: bundle({
+        'index.html': html('<a href="chapters/two.html#intro">Two</a>'),
+        'chapters/two.html': html('<a href="../index.html">Back</a><h2 id="intro">Intro</h2>'),
+      }),
+    });
+    const shown = doc();
+    const reloaded = vi.spyOn(frame, 'srcdoc', 'set');
+    /** The frame loads `loaded` (null: a page of another origin), then the empty page again. */
+    const navigate = (loaded: Partial<Document> | null) => {
+      Object.defineProperty(frame, 'contentDocument', { configurable: true, get: () => loaded });
+      frame.dispatchEvent(new Event('load'));
+      delete (frame as Partial<Record<'contentDocument', unknown>>).contentDocument;
+      frame.dispatchEvent(new Event('load'));
+    };
+    navigate({ URL: new URL('chapters/two.html#intro', document.baseURI).href });
+    expect(reloaded).toHaveBeenCalledTimes(1);
+    expect(shown.body.textContent).toBe('BackIntro');
+    expect(scrolls()).toHaveLength(1);
+    // another origin: the page stays
+    navigate(null);
+    expect(reloaded).toHaveBeenCalledTimes(2);
+    expect(shown.body.textContent).toBe('BackIntro');
   });
 
   it('serves the images and style sheets a page loads from memory, made once while they stay the same', async () => {

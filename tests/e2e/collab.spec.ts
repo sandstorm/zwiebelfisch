@@ -100,7 +100,9 @@ test('the other user’s caret shows with their name in both editors, where they
   const line = bob.getByTestId('zwf-source').locator('.cm-line', { hasText: 'Typst in five minutes' });
   const sourceCaret = line.locator('.zwf-collaboration__caret[data-user="Ann"]');
   await expect(sourceCaret).toHaveCount(1);
-  await sourceCaret.hover({ force: true });
+  // the pointer onto the caret by its box: WebKit's hover() never finishes on the caret
+  const box = (await sourceCaret.boundingBox())!;
+  await bob.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect.poll(flag(sourceCaret)).toEqual({ name: '"Ann"', opacity: '1' });
 });
 

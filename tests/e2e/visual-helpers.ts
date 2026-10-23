@@ -137,3 +137,23 @@ export async function clickFirstGlyph(page: Page): Promise<void> {
   });
   await page.mouse.click(point.x, point.y);
 }
+
+/**
+ * Dispatches a clipboard event `type` ("copy", "cut", "paste") on `target`, as the browser would on Mod+C/X/V, with
+ * `items` (type → text) on its clipboard data, and returns that data by type afterwards (what a copy put there).
+ *
+ * The items go into the event's own `clipboardData`: Firefox ignores the `clipboardData` of the event's init and
+ * gives each constructed event a fresh one.
+ */
+export async function clipboardEvent(target: Locator, type: 'copy' | 'cut' | 'paste', items: Record<string, string> = {}): Promise<Record<string, string>> {
+  return target.evaluate(
+    (element, { type, items }) => {
+      const event = new ClipboardEvent(type, { clipboardData: new DataTransfer(), bubbles: true, cancelable: true });
+      const data = event.clipboardData!;
+      for (const [format, text] of Object.entries(items)) data.setData(format, text);
+      element.dispatchEvent(event);
+      return Object.fromEntries(data.types.map((format) => [format, data.getData(format)]));
+    },
+    { type, items },
+  );
+}

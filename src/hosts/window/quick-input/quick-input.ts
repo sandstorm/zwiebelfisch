@@ -527,13 +527,34 @@ function selectionRect(root: Document | ShadowRoot): { top: number; bottom: numb
  */
 function caretIn(root: Document | ShadowRoot, element: Element | null): { restore(): void } | null {
   const selection = selectionIn(root);
-  if (!element || !selection || selection.rangeCount === 0 || !element.contains(selection.anchorNode)) return null;
-  const { anchorNode, anchorOffset, focusNode, focusOffset } = selection;
+  const ends = selection && selectionEnds(selection, root);
+  if (!element || !selection || !ends || !element.contains(ends.anchorNode)) return null;
+  const { anchorNode, anchorOffset, focusNode, focusOffset } = ends;
   return {
     restore: () => {
       if (anchorNode!.isConnected && focusNode!.isConnected) selection.setBaseAndExtent(anchorNode!, within(anchorNode!, anchorOffset), focusNode!, within(focusNode!, focusOffset));
     },
   };
+}
+
+/**
+ * The ends of `selection` (none: null) in `root`'s own nodes. WebKit has no selection of a shadow root's own, and the
+ * document's names the host for a selection inside it; its composed range names the nodes (direction lost).
+ */
+function selectionEnds(selection: Selection, root: Document | ShadowRoot): Pick<Selection, 'anchorNode' | 'anchorOffset' | 'focusNode' | 'focusOffset'> | null {
+  if (selection.rangeCount === 0) return null;
+  if (!(root instanceof ShadowRoot) || root.contains(selection.anchorNode) || !selection.getComposedRanges) return selection;
+  // WebKit took the shadow roots as arguments before the dictionary (and reads a shadow root as an empty one)
+  const composed = (...options: unknown[]): StaticRange | undefined => {
+    try {
+      const range = (selection.getComposedRanges as (...options: unknown[]) => StaticRange[]).apply(selection, options)[0];
+      return range && root.contains(range.startContainer) ? range : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const range = composed(root) ?? composed({ shadowRoots: [root] });
+  return range ? { anchorNode: range.startContainer, anchorOffset: range.startOffset, focusNode: range.endContainer, focusOffset: range.endOffset } : null;
 }
 
 /** `offset` in `node`, at most its end (the node may have shrunk meanwhile). */

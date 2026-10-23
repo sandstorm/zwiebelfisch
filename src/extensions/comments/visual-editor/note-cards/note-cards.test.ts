@@ -167,9 +167,13 @@ describe('the floating card', () => {
     expect(document.activeElement).toBe(button('Resolve note'));
     expect(key(button('Resolve note'), 'Tab', { shiftKey: true }).defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(send);
-    // in between, the browser moves on
+    // in between too (Safari's own Tab would skip the buttons): the reply box is followed by Send
     field().focus();
-    expect(key(field(), 'Tab').defaultPrevented).toBe(false);
+    expect(key(field(), 'Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(send);
+    button('Resolve note').focus();
+    expect(key(button('Resolve note'), 'Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(button('Close'));
     expect(card()).not.toBeNull();
   });
 

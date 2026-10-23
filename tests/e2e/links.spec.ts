@@ -56,7 +56,7 @@ test.describe('references to sections in the documentation', () => {
     await openFile(page, '40_architecture/05_development.typ');
     const chip = visual(page).locator('.zwf-labels__ref[data-target="architecture-development-writing-docs"]').first();
     await chip.hover();
-    await expect(hint(page)).toHaveText(/^Go to Section · Writing the docs in the demo in 40_architecture\/11_development\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await expect(hint(page)).toHaveText(/^Go to Section · Writing the docs in the demo in 40_architecture\/05_development\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
     await expect(heading(page, 'h2', 'Writing the docs in the demo')).not.toBeInViewport();
     await chip.click({ modifiers: ['ControlOrMeta'] });
     await expect(heading(page, 'h2', 'Writing the docs in the demo')).toBeInViewport();

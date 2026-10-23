@@ -6,10 +6,10 @@ import { BundleAssets } from './assets';
 import { morphDocument } from './morph';
 
 /**
- * One page of the bundle in an `<iframe sandbox="allow-same-origin">`: its own styles apply, its scripts do not run.
- * A new compile changes the shown page in place (`morphDocument`), so it keeps its scroll position. A click on a link
- * to another page of the bundle shows that page here; one to a URL opens a new tab. The cursor (`reveal`) shows the
- * page holding the element its text produced and scrolls that element into view.
+ * One page of the bundle in a sandboxed `<iframe>`: its own styles apply, its scripts do not run. A new compile changes
+ * the shown page in place (`morphDocument`), so it keeps its scroll position. A click on a link to another page of the
+ * bundle shows that page here, in every browser; one to a URL opens a new tab. The cursor (`reveal`) shows the page
+ * holding the element its text produced and scrolls that element into view.
  */
 export class HtmlView implements PreviewRendererView {
   private readonly frame: HTMLIFrameElement;
@@ -38,9 +38,9 @@ export class HtmlView implements PreviewRendererView {
     this.frame.className = 'zwf-preview-html__frame';
     this.frame.dataset.testid = 'zwf-preview-html';
     this.frame.title = 'HTML preview';
-    // its DOM is ours to change (same origin); its scripts and forms stay off
-    this.frame.setAttribute('sandbox', 'allow-same-origin');
-    this.frame.srcdoc = '<!DOCTYPE html><html><head></head><body></body></html>';
+    // its DOM is ours to change (same origin); its scripts and forms stay off; links to URLs open a tab of their own
+    this.frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+    this.frame.srcdoc = EMPTY_PAGE;
     // the empty page is ready: show what came meanwhile
     this.frame.addEventListener('load', () => this.frameLoaded());
     container.append(this.frame);
@@ -85,6 +85,7 @@ export class HtmlView implements PreviewRendererView {
     if (state !== this.rendered) {
       const parsed = new DOMParser().parseFromString(new TextDecoder().decode(file.data), 'text/html');
       this.assets.rewritePage(parsed, file.path);
+      this.openUrlsOutside(parsed);
       morphDocument(doc, parsed);
       this.rendered = state;
     }
@@ -100,11 +101,13 @@ export class HtmlView implements PreviewRendererView {
 
   /**
    * The frame loaded a document: the empty page of `srcdoc`, or before it the frame's first `about:blank` (some
-   * browsers tell that one, too): what is shown goes into it, and again into the next.
+   * browsers tell that one, too): what is shown goes into it, and again into the next. Any other document means the
+   * frame followed a link itself.
    */
   private frameLoaded(): void {
     const doc = this.frame.contentDocument;
-    if (!doc || doc === this.loaded) return;
+    if (doc === this.loaded) return;
+    if (!doc?.URL.startsWith('about:')) return this.leftPage(doc);
     this.loaded = doc;
     doc.addEventListener('click', (event) => this.clicked(event));
     this.rendered = null;
@@ -114,20 +117,62 @@ export class HtmlView implements PreviewRendererView {
   private clicked(event: MouseEvent): void {
     const link = (event.target as Element | null)?.closest?.('a[href]');
     if (!link || this.page === null) return;
-    // nothing navigates the frame: the page stays ours
+    const target = this.linkTarget(link.getAttribute('href')!);
+    // a URL opens its own tab (`openUrlsOutside`); nothing else navigates the frame: the page stays ours
+    if (target.kind === 'external') return;
     event.preventDefault();
-    const documents = new Map([...this.files.values()].map((file) => [file.path, file.document]));
-    this.follow(linkTarget(this.page, link.getAttribute('href')!, documents));
+    this.follow(target);
   }
 
-  /** A page of the bundle here; a URL or another file of the bundle in a new tab. */
+  /**
+   * The frame left the page by itself, for a link: WebKit runs no listener (`clicked`) in a frame sandboxed without
+   * scripts. Loads the empty page again, with the page the link leads to if it is one of the bundle's.
+   */
+  private leftPage(doc: Document | null): void {
+    // null: a page of another origin, which no link of the bundle leads to here
+    const href = doc && this.hrefTo(doc.URL);
+    this.loaded = null;
+    this.frame.srcdoc = EMPTY_PAGE;
+    if (href) this.follow(this.linkTarget(href));
+  }
+
+  /** The `href` of the link on the page shown that leads to `url` (as the frame resolved it); null: none does. */
+  private hrefTo(url: string): string | null {
+    const file = this.page === null ? undefined : this.files.get(this.page);
+    if (!file) return null;
+    const base = this.frame.ownerDocument.baseURI;
+    const page = new DOMParser().parseFromString(new TextDecoder().decode(file.data), 'text/html');
+    const hrefs = [...page.querySelectorAll('a[href]')].map((link) => link.getAttribute('href')!);
+    return hrefs.find((href) => URL.canParse(href, base) && new URL(href, base).href === url) ?? null;
+  }
+
+  /** Where link `href` on the page shown leads. */
+  private linkTarget(href: string): LinkTarget {
+    const documents = new Map([...this.files.values()].map((file) => [file.path, file.document]));
+    return linkTarget(this.page!, href, documents);
+  }
+
+  /** Links to URLs on the page shown (parsed as `doc`) open a new tab, as the browser opens them. */
+  private openUrlsOutside(doc: Document): void {
+    for (const link of doc.querySelectorAll('a[href]')) {
+      if (this.linkTarget(link.getAttribute('href')!).kind !== 'external') continue;
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    }
+  }
+
+  /** A page of the bundle here; another file of the bundle in a new tab. */
   private follow(target: LinkTarget): void {
-    const open = (url: string) => this.frame.ownerDocument.defaultView?.open(url, '_blank', 'noopener,noreferrer');
     if (target.kind === 'page') this.show(target.path, target.fragment === null ? null : { kind: 'id', id: target.fragment });
-    else if (target.kind === 'external') open(target.url);
-    else if (target.kind === 'file') open(URL.createObjectURL(new Blob([this.files.get(target.path)!.data as BlobPart])));
+    else if (target.kind === 'file') {
+      const url = URL.createObjectURL(new Blob([this.files.get(target.path)!.data as BlobPart]));
+      this.frame.ownerDocument.defaultView?.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 }
+
+/** What the frame loads (`srcdoc`), for the pages to go into. */
+const EMPTY_PAGE = '<!DOCTYPE html><html><head></head><body></body></html>';
 
 /**
  * Where a page is scrolled to: its top, the element with an id (a link's `#…`) at the top, or the element marked as

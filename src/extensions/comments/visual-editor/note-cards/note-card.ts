@@ -130,18 +130,22 @@ export class NoteCard {
     if (button) this.buttonActions[button.dataset.action!]?.(index);
   }
 
-  /** Escape closes the card; Tab and Shift+Tab go round its fields and buttons. */
+  /**
+   * Escape closes the card; Tab and Shift+Tab go round its fields and buttons, in every browser (Safari's own Tab
+   * skips buttons by default).
+   */
   private handleKey(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
       this.actions.close(this.key);
     } else if (event.key === 'Tab') {
       const stops = [...this.dom.querySelectorAll<HTMLElement>('button, textarea')].filter((element) => !element.closest('[hidden]'));
-      const active = (this.dom.getRootNode() as Document | ShadowRoot).activeElement;
-      const next = event.shiftKey ? (active === stops[0] ? stops.at(-1) : null) : (active === stops.at(-1) ? stops[0] : null);
-      if (!next) return;
+      if (stops.length === 0) return;
+      const at = stops.indexOf((this.dom.getRootNode() as Document | ShadowRoot).activeElement as HTMLElement);
+      const step = event.shiftKey ? -1 : 1;
+      const next = at < 0 ? (event.shiftKey ? stops.at(-1) : stops[0]) : stops[(at + step + stops.length) % stops.length];
       event.preventDefault();
-      next.focus();
+      next!.focus();
     }
   }
 

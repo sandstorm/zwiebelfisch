@@ -95,8 +95,9 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   const { room, ann, bob } = await users(browser, baseURL!, info.project.name);
   const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}`);
   expect(response.ok()).toBe(true);
+  // the message hides after 8 s: both see it before either opens a file
+  await Promise.all([ann, bob].map((page) => expect(messages(page).getByRole('status').filter({ hasText: 'Merged new changes from GitLab' })).toBeVisible()));
   for (const page of [ann, bob]) {
-    await expect(messages(page).getByRole('status').filter({ hasText: 'Merged new changes from GitLab' })).toBeVisible();
     await openFile(page, 'chapters/introduction.typ');
     await expect(visualText(page, 'a colleague added this paragraph on GitLab')).toBeVisible();
   }
@@ -169,7 +170,14 @@ test('leaving as the last user with unsaved changes asks first, when the server 
   await annClosed;
   await expect(annInTree).toHaveCount(0);
 
-  // Bob is the last one: the browser asks
+  // Bob is the last one: the page asks to ask (once Bob's client knows Ann is gone), then the browser asks
+  const asks = () =>
+    bob.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+  await expect.poll(asks).toBe(true);
   await bob.getByTestId('zwf-source').or(bob.getByTestId('zwf-visual')).first().click();
   const dialog = bob.waitForEvent('dialog');
   await bob.close({ runBeforeUnload: true });

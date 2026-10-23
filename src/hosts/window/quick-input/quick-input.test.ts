@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for quick-input.ts: showInputBox, showQuickPick and createQuickPick.
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QuickPickItemKind } from '../window';
 import { QuickInput } from './quick-input';
 
@@ -87,6 +87,38 @@ describe('showInputBox', () => {
     await answer;
     expect(document.activeElement).toBe(editable);
     expect([document.getSelection()!.anchorNode, document.getSelection()!.anchorOffset]).toEqual([text, 9]);
+  });
+
+  it("gives an editor in a shadow root its caret back in WebKit, whose document selection names only the host there", async () => {
+    const outer = document.body.appendChild(document.createElement('div'));
+    const shadow = outer.attachShadow({ mode: 'open' });
+    const host = shadow.appendChild(document.createElement('div'));
+    const quickInput = new QuickInput(host);
+    const editable = host.appendChild(document.createElement('div'));
+    editable.contentEditable = 'true';
+    editable.tabIndex = 0;
+    editable.innerHTML = '<p>Results</p><p>The runs:</p>';
+    const text = editable.lastChild!.firstChild!;
+    editable.focus();
+    // as WebKit reports a caret after "The runs:" (shadow roots as arguments, the older form)
+    const restored: unknown[][] = [];
+    const selection = {
+      rangeCount: 1,
+      anchorNode: document.body,
+      anchorOffset: 0,
+      focusNode: document.body,
+      focusOffset: 0,
+      getComposedRanges: (...roots: unknown[]) => (roots[0] === shadow ? [{ startContainer: text, startOffset: 9, endContainer: text, endOffset: 9 }] : []),
+      setBaseAndExtent: (...ends: unknown[]) => restored.push(ends),
+      getRangeAt: () => document.createRange(),
+    };
+    const getSelection = vi.spyOn(document, 'getSelection').mockReturnValue(selection as unknown as Selection);
+    const answer = quickInput.showInputBox();
+    (host.querySelector('.zwf-quick-input') as HTMLFormElement).requestSubmit();
+    await answer;
+    getSelection.mockRestore();
+    expect(shadow.activeElement).toBe(editable);
+    expect(restored).toEqual([[text, 9, text, 9]]);
   });
 
   it('cancels the open box when another one opens', async () => {
