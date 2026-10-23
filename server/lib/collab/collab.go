@@ -28,6 +28,9 @@ type Options struct {
 	// Debounce is the quiet time after a change before the room is stored (default 2 s); MaxDebounce bounds
 	// how long changes stay unstored while edits keep coming (default 10 s). As in Hocuspocus.
 	Debounce, MaxDebounce time.Duration
+	// PingInterval is how often a connection is pinged (default 15 s, inside the provider's 30 s
+	// messageReconnectTimeout); a client that sends nothing for three of them is dropped.
+	PingInterval time.Duration
 	// Extension, if set, adds behaviour to rooms (see Extension).
 	Extension Extension
 	Log       zerolog.Logger
@@ -59,6 +62,9 @@ func New(opts Options) *Server {
 	}
 	if opts.MaxDebounce == 0 {
 		opts.MaxDebounce = 10 * time.Second
+	}
+	if opts.PingInterval == 0 {
+		opts.PingInterval = 15 * time.Second
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{opts: opts, ctx: ctx, cancel: cancel, rooms: map[string]*room{}}

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -21,7 +22,7 @@ import (
 // server/testdata/hocuspocus-clients.ts, its WebSockets bridged over the script's stdin/stdout.
 func TestRealHocuspocusProvider(t *testing.T) {
 	st := memStore(t)
-	s := newServer(t, st)
+	s := newServer(t, st, func(o *collab.Options) { o.PingInterval = 100 * time.Millisecond }) // the provider answers pings
 	result := runClients(t, s, "edit", "session=secret")
 	want := map[string]any{"/main.typ": "» Hello 😀 and B 𝄞"}
 	require.Equal(t, want, result["texts"])

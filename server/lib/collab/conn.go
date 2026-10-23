@@ -3,9 +3,11 @@ package collab
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -34,6 +36,9 @@ const (
 	maxPendingBytes    = 16 << 20
 	// outgoing messages a client may fall behind by before it is dropped
 	maxQueued = 1024
+	// rooms one connection may have open at once, and the longest room name (in bytes)
+	maxRooms    = 16
+	maxRoomName = 1024
 )
 
 func newConn(s *Server, t Transport, req *http.Request, ctx context.Context, cancel context.CancelFunc) *conn {
@@ -54,10 +59,13 @@ func (c *conn) run() {
 		c.closing.Wait()
 		<-writerDone
 	}()
+	idle := 3 * c.s.opts.PingInterval
 	for {
-		msg, err := c.t.Read(c.ctx)
+		ctx, cancel := context.WithTimeout(c.ctx, idle)
+		msg, err := c.t.Read(ctx)
+		cancel()
 		if err != nil {
-			return
+			return // closed, or silent for too long
 		}
 		if len(msg) == 1 && msg[0] == msgPong { // the only message without an address
 			continue
@@ -95,7 +103,7 @@ func (c *conn) run() {
 
 // authenticate handles the Auth message that opens the room at address: on success the client is told so,
 // joins the room and the messages it sent before are handled; otherwise it gets PermissionDenied (and may
-// try again).
+// try again). A connection opens at most maxRooms rooms, with names of at most maxRoomName bytes.
 func (c *conn) authenticate(address string, d *decoder) {
 	queued := c.pending[address]
 	delete(c.pending, address)
@@ -110,7 +118,7 @@ func (c *conn) authenticate(address string, d *decoder) {
 		c.send(frame(address, msgAuth).uint(authPermissionDenied).string("permission-denied").buf)
 		return
 	}
-	user, err := c.s.opts.Authenticate(c.req, room)
+	user, err := c.admit(room)
 	if err != nil {
 		reason := "permission-denied"
 		var refusal Refusal
@@ -134,6 +142,18 @@ func (c *conn) authenticate(address string, d *decoder) {
 	}
 }
 
+// admit returns who opens room on this connection: refused beyond maxRooms or maxRoomName, else as
+// Authenticate decides.
+func (c *conn) admit(room string) (User, error) {
+	switch {
+	case len(room) > maxRoomName:
+		return User{}, Refusal{Reason: fmt.Sprintf("A room name has at most %d bytes.", maxRoomName)}
+	case len(c.peers) >= maxRooms:
+		return User{}, Refusal{Reason: fmt.Sprintf("This connection has %d rooms open, the most it may; close one first.", maxRooms)}
+	}
+	return c.s.opts.Authenticate(c.req, room)
+}
+
 // send queues msg for the client; a client too far behind is disconnected.
 func (c *conn) send(msg []byte) {
 	select {
@@ -145,15 +165,20 @@ func (c *conn) send(msg []byte) {
 	}
 }
 
+// write sends the queued messages, and a ping every PingInterval.
 func (c *conn) write() {
+	ping := time.NewTicker(c.s.opts.PingInterval)
+	defer ping.Stop()
 	for {
+		msg := []byte{msgPing}
 		select {
-		case msg := <-c.out:
-			if err := c.t.Write(c.ctx, msg); err != nil {
-				c.cancel()
-				return
-			}
+		case msg = <-c.out:
+		case <-ping.C:
 		case <-c.ctx.Done():
+			return
+		}
+		if err := c.t.Write(c.ctx, msg); err != nil {
+			c.cancel()
 			return
 		}
 	}

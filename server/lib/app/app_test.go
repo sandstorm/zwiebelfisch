@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -154,8 +155,21 @@ func TestWhoOpensWhichRoom(t *testing.T) {
 	bob := signIn(t, plainFake, plain, "Bob")
 	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/collaboration", bob)), "playground-simple")
 	require.NoError(t, err, "plain rooms: anyone signed in")
-	_, err = plain.authenticate(plain.identified(request("GET", host+"/api/collaboration", bob)), room)
-	require.NoError(t, err, "without GitLab rooms, a GitLab-like name is a plain room")
+	for _, name := range []string{room, "gitlab:", "other:room"} {
+		_, err = plain.authenticate(plain.identified(request("GET", host+"/api/collaboration", bob)), name)
+		require.Equal(t, fmt.Sprintf("Room names with a colon are not plain rooms, and this server opens no %q.", name), reason(err),
+			"a colon names a room provider: never a plain room, so the store keeps them apart")
+	}
+	_, err = s.authenticate(s.identified(request("GET", host+"/api/collaboration", ann)), "gitlab:no-branch")
+	require.Contains(t, reason(err), "only GitLab rooms", "not a GitLab room name, and no plain rooms here")
+}
+
+func TestHTTPServerBoundsSlowAndIdleClients(t *testing.T) {
+	s := newHTTPServer(http.NotFoundHandler())
+	require.Positive(t, s.ReadHeaderTimeout)
+	require.Positive(t, s.ReadTimeout, "a WebSocket is hijacked: its read deadline is cleared")
+	require.Positive(t, s.IdleTimeout)
+	require.Positive(t, s.MaxHeaderBytes)
 }
 
 func TestRoomFilesNeedASession(t *testing.T) {

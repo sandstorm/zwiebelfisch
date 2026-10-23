@@ -18,6 +18,7 @@ const (
 	msgStateless      = 5 // payload: VarString
 	msgClose          = 7 // the provider detached from the room
 	msgSyncStatus     = 8 // server → client: VarUint(1) "your update was applied"
+	msgPing           = 9 // server → client, without an address: the provider answers msgPong
 	msgPong           = 10
 
 	authToken            = 0 // client → server: VarString(token) [+ VarString(provider version)]

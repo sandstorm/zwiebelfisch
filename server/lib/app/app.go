@@ -7,7 +7,7 @@
 //
 // Who opens which room:
 //   - a GitLab room (when configured): anyone signed in whose GitLab role lets them edit
-//   - any other room (a plain room, only when enabled): anyone signed in
+//   - any other room without a colon in its name (a plain room, only when enabled): anyone signed in
 //
 // A refused client is told why, in words the widget shows. GET /api/public/info tells clients beforehand
 // whether plain rooms exist.
@@ -157,16 +157,22 @@ func (s *Server) info(w http.ResponseWriter, _ *http.Request) {
 }
 
 // authenticate decides who opens room, for a request requireSignIn let through: the room must exist here,
-// and for a GitLab room the user have a role that edits.
+// and for a GitLab room the user have a role that edits. A plain room's name has no colon: `<id>:` names
+// belong to room providers (gitlab:), so a plain room never shares a stored state with theirs.
 func (s *Server) authenticate(r *http.Request, room string) (collab.User, error) {
 	identity, ok := auth.SignedIn(r)
 	if !ok {
 		return collab.User{}, errors.New("not signed in") // not behind requireSignIn: a bug
 	}
 	isGitLab := s.gitlab != nil && s.gitlab.Handles(room)
-	if !s.plain && !isGitLab {
+	switch {
+	case isGitLab:
+	case !s.plain:
 		return collab.User{}, collab.Refusal{Reason: fmt.Sprintf(
 			"This server opens only GitLab rooms (gitlab:<project>@<branch>), not %q.", room)}
+	case strings.Contains(room, ":"):
+		return collab.User{}, collab.Refusal{Reason: fmt.Sprintf(
+			"Room names with a colon are not plain rooms, and this server opens no %q.", room)}
 	}
 	user := collab.User{Provider: identity.Provider, ID: identity.Subject, Name: identity.Name, Email: identity.Email}
 	if isGitLab {
@@ -205,7 +211,7 @@ func Run(log zerolog.Logger, done func(context.Context) error, sites ...Site) er
 		if err != nil {
 			return errors.Join(err, shutdown(servers), done(context.Background()))
 		}
-		server := &http.Server{Handler: site.Handler, ReadHeaderTimeout: 10 * time.Second}
+		server := newHTTPServer(site.Handler)
 		servers = append(servers, server)
 		go func() { served <- server.Serve(listener) }()
 		log.Info().Msgf("%s on %s", site.Name, listener.Addr())
@@ -221,6 +227,16 @@ func Run(log zerolog.Logger, done func(context.Context) error, sites ...Site) er
 	defer end()
 	// Shutdown stops accepting; the WebSockets (hijacked, so not waited for) end in done.
 	return errors.Join(failed, shutdown(servers), done(ctx))
+}
+
+// newHTTPServer serves h, for Run: a client gets 10 s for its headers (at most 64 KiB) and 30 s for its
+// whole request, and an idle keep-alive connection closes after 2 min. A WebSocket, once upgraded, is not
+// bound by these (collab pings it instead).
+func newHTTPServer(h http.Handler) *http.Server {
+	return &http.Server{
+		Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second,
+		IdleTimeout: 2 * time.Minute, MaxHeaderBytes: 64 << 10,
+	}
 }
 
 func shutdown(servers []*http.Server) error {

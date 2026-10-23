@@ -30,7 +30,7 @@ The collaboration code loads on demand. `onDidChangeFiles` and `change` also fir
 
 == The server <configuration-collaboration-server-running>
 
-`server/` is a Go server that stores rooms in SQLite (@architecture-data-model-collaboration). Its rooms are GitLab folders (@configuration-gitlab-integration); rooms of any other name (*plain rooms*) only when enabled. Run it with:
+`server/` is a Go server that stores rooms in SQLite (@architecture-data-model-collaboration). Its rooms are GitLab folders (@configuration-gitlab-integration); rooms of any other name without a colon (*plain rooms*) only when enabled; a name with a colon (`gitlab:…`) is never a plain room. Run it with:
 
 ```sh
 mise run server:dev    # ws://127.0.0.1:1234
@@ -47,7 +47,7 @@ mise run server:dev    # ws://127.0.0.1:1234
   [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work.
+A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false}`, for clients to offer only rooms that work. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.
 
 === Sign-in <configuration-collaboration-server-sign-in>
 

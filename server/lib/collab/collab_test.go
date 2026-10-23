@@ -1,10 +1,13 @@
 package collab_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -34,6 +37,8 @@ const (
 	msgStateless      = 5
 	msgClose          = 7
 	msgSyncStatus     = 8
+	msgPing           = 9
+	msgPong           = 10
 )
 
 func newServer(t *testing.T, st collab.Store, opts ...func(*collab.Options)) *collab.Server {
@@ -158,7 +163,17 @@ func (c *client) authenticate() {
 	c.send(msgSync, c.doc.SyncStep1())
 }
 
-func lib0String(s string) []byte { return append([]byte{byte(len(s))}, s...) }
+func lib0String(s string) []byte {
+	var n []byte
+	for l := len(s); ; l >>= 7 {
+		if l < 0x80 {
+			n = append(n, byte(l))
+			break
+		}
+		n = append(n, byte(l)|0x80)
+	}
+	return append(n, s...)
+}
 
 func (c *client) send(typ byte, payload []byte) {
 	msg := append(append(lib0String(c.address), typ), payload...)
@@ -183,8 +198,24 @@ func (c *client) read() {
 }
 
 func (c *client) handle(msg []byte) {
-	n := int(msg[0])
-	address, typ, payload := string(msg[1:1+n]), msg[1+n], msg[2+n:]
+	if len(msg) == 1 && msg[0] == msgPing { // the provider answers at once
+		go func() {
+			select {
+			case c.p.toServer <- []byte{msgPong}:
+			case <-c.p.closed:
+			}
+		}()
+		return
+	}
+	n, at := 0, 0
+	for shift := 0; ; shift += 7 {
+		n |= int(msg[at]&0x7f) << shift
+		at++
+		if msg[at-1] < 0x80 {
+			break
+		}
+	}
+	address, typ, payload := string(msg[at:at+n]), msg[at+n], msg[at+n+1:]
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if address != c.address { // another room on the same connection
@@ -521,4 +552,56 @@ func TestBadMessageClosesTheConnection(t *testing.T) {
 	a.send(msgSync, []byte{9, 9, 9})
 	<-a.done
 	require.Equal(t, 4205, a.p.code)
+}
+
+func TestOneConnectionOpensAtMost16Rooms(t *testing.T) {
+	s := newServer(t, memStore(t))
+	c := connect(t, s, "seventeenth", "secret")
+	for i := range 16 {
+		other := &client{t: t, address: fmt.Sprintf("room-%d", i), p: c.p, done: make(chan struct{}), doc: ydoc.New()}
+		other.authenticate()
+	}
+	c.eventually("16 rooms open", func() bool { return bytes.Count(c.foreign, []byte{msgAuth}) == 16 })
+	c.authenticate()
+	c.eventually("refused", func() bool { return len(c.reasons) == 1 })
+	require.Equal(t, "This connection has 16 rooms open, the most it may; close one first.", c.reasons[0])
+
+	(&client{address: "room-0", p: c.p}).send(msgClose, nil)
+	c.authenticate()
+	c.eventually("room-0 closed: in now", func() bool { return len(c.auth) == 2 && c.auth[1] == "authenticated" })
+}
+
+func TestLongRoomNameIsRefused(t *testing.T) {
+	var asked atomic.Bool
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(*http.Request, string) (collab.User, error) { asked.Store(true); return collab.User{}, nil }
+	})
+	c := dial(t, s, strings.Repeat("x", 1025), "secret")
+	c.eventually("refused", func() bool { return len(c.reasons) == 1 })
+	require.Equal(t, "A room name has at most 1024 bytes.", c.reasons[0])
+	require.False(t, asked.Load(), "not even asked")
+}
+
+func TestSilentClientIsDropped(t *testing.T) {
+	s := newServer(t, memStore(t), func(o *collab.Options) { o.PingInterval = 10 * time.Millisecond })
+	answering := dial(t, s, "r", "secret") // answers every ping, as the provider does
+	silent := newPipe()                    // sends nothing, answers nothing
+	served := make(chan struct{})
+	go func() {
+		defer close(served)
+		s.Serve(context.Background(), silent, httptest.NewRequest(http.MethodGet, "/", nil))
+	}()
+	select {
+	case <-served:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the silent client is still connected")
+	}
+	require.Equal(t, []byte{msgPing}, <-silent.toClient, "it was pinged")
+	select {
+	case <-answering.done:
+		t.Fatal("the answering client was dropped")
+	default:
+	}
+	answering.edit(func(w *ydoc.Writer) { w.SetText("files", "/x", "still here") })
+	answering.eventually("its edit applied", func() bool { return answering.acks >= 2 })
 }
