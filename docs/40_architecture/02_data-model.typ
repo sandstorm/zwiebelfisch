@@ -132,6 +132,17 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`], [GitLab],
 )
 
+*Allowed pages* (`auth.AllowedOrigin`): one rule, nothing configured, for the session (`Identify`), CORS with credentials, the sign-in's return URL, the guest join and the WebSocket upgrade (`collab`).
+
+#table(
+  columns: (1fr, auto),
+  table.header[`Origin` of the request][Allowed],
+  [none (a navigation, not a browser)], [yes],
+  [host and port = the request's `Host` (scheme ignored; 80/443 = no port)], [yes],
+  [loopback, and the `Host` loopback too (any ports: demo :5199, server :1234)], [yes],
+  [anything else, the same host on another port included], [no],
+)
+
 === Guest links <architecture-data-model-guests>
 
 A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configuration-collaboration-server-guests). The shares are the server's only state besides the rooms; guests' sessions live in `auth`'s memory like members', without a token.

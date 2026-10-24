@@ -23,7 +23,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's own host and port (a proxy in front that terminates TLS is fine), or both on loopback (`localhost`, `127.0.0.1`, `::1`; any ports, as in the demo). There is nothing to configure: the server tells from each request's `Origin` and `Host`, and only such a page's requests carry the session to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
@@ -64,8 +64,8 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 )
 
 - The server keeps who signed in in memory, with the user's tokens (refreshed when they expire): nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise. A sign-in on its way keeps nothing on the server: its state is in a cookie sealed with a key made at start.
-- The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
-- Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
+- The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from any other page (another host, or another port of the server's host) are nobody's: no session, no readable answer, no WebSocket, no guest join.
+- Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a page as above), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
 - A sign-out ends that session's open connections: its rooms refuse them ("You signed out."), as they refuse any room opened again on a connection whose session ended; the user's other browsers stay in.
 
 === Guest access <configuration-collaboration-server-guests>

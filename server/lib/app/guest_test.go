@@ -205,7 +205,7 @@ func TestSignOutAndRevocationEndOpenConnections(t *testing.T) {
 	bobConn.eventually(t, "plain", "authenticated")
 }
 
-// The widget's page on another port sends JSON and DELETEs with the cookie: the browser asks first.
+// The widget's page on another loopback port sends JSON and DELETEs with the cookie: the browser asks first.
 func TestPreflightPermitsThisHostsPagesOnly(t *testing.T) {
 	fake, gl := fakeGitLab()
 	s := newServer(t, fake, Options{GitLab: gl, Guests: true})

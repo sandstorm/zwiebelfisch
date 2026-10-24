@@ -208,7 +208,7 @@ func TestRoomFilesNeedASession(t *testing.T) {
 	req := request("GET", files, ann)
 	req.Header.Set("Origin", "http://127.0.0.1:5199")
 	res = get(t, s, req)
-	require.Equal(t, "http://127.0.0.1:5199", res.Header.Get("Access-Control-Allow-Origin"), "the demo, on another port, sends the cookie")
+	require.Equal(t, "http://127.0.0.1:5199", res.Header.Get("Access-Control-Allow-Origin"), "the demo, on another loopback port, sends the cookie")
 	require.Equal(t, "true", res.Header.Get("Access-Control-Allow-Credentials"))
 }
 

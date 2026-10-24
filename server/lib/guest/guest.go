@@ -211,7 +211,7 @@ func (g *Guests) PeerChanged(room string, user collab.User, joined bool) {
 func (g *Guests) Join(w http.ResponseWriter, r *http.Request) {
 	auth.AllowCredentials(w, r)
 	w.Header().Set("Cache-Control", "no-store")
-	if !auth.SameSite(r) || !isJSON(r) {
+	if !auth.AllowedOrigin(r) || !isJSON(r) {
 		http.Error(w, notFound, http.StatusNotFound)
 		return
 	}

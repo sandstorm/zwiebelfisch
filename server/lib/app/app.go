@@ -152,8 +152,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// preflight answers a browser's CORS preflight for any path: a page of this host on another port (the widget's)
-// may send JSON bodies and DELETEs with the cookie; another site's page is permitted nothing.
+// preflight answers a browser's CORS preflight for any path: an allowed page of another origin (auth.AllowedOrigin:
+// the widget's demo on another loopback port) may send JSON bodies and DELETEs with the cookie; another site's page is permitted nothing.
 func preflight(w http.ResponseWriter, r *http.Request) {
 	auth.AllowCredentials(w, r)
 	if w.Header().Get("Access-Control-Allow-Origin") != "" {
@@ -165,7 +165,7 @@ func preflight(w http.ResponseWriter, r *http.Request) {
 }
 
 // requireSignIn lets only signed-in clients through to next, their identity in the request (auth.SignedIn);
-// others get 401. The answers carry CORS with credentials: the widget, on another port of this host, sends
+// others get 401. The answers carry CORS with credentials: the widget, on an allowed page of another origin, sends
 // the cookie and reads them (a 401 too: signed out).
 func requireSignIn(a *auth.Auth, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

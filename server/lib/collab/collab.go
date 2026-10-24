@@ -18,6 +18,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/rs/zerolog"
+
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
 )
 
 // Options configure a Server. Store and Authenticate are required.
@@ -98,8 +100,11 @@ func (s *Server) Close(ctx context.Context) error {
 // ServeHTTP accepts a WebSocket (the room is named in each message, not in the URL) and serves it until it
 // closes.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Any origin here: Authenticate decides per room, from r (the session cookie, which other sites' pages
-	// do not get to send).
+	if !auth.AllowedOrigin(r) {
+		http.Error(w, "Forbidden: this page may not connect", http.StatusForbidden)
+		return
+	}
+	// The origin is checked above, by the rule the session cookie is checked by.
 	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
 		return // Accept has answered

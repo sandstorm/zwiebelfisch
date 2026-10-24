@@ -77,8 +77,8 @@ export async function clickGlyph(glyph: Locator, options: { clickCount?: number 
 export const SERVER = 'http://127.0.0.1:1234';
 
 /**
- * Where the specs against that server open the demo: another port of the server's host, so the session cookie goes
- * along to the server (same site). The server serves the build there (ZWF_DEMO_DIST), not interception (`serve`).
+ * Where the specs against that server open the demo: another loopback port, so the server lets the page use the
+ * session (both on loopback). The server serves the build there (ZWF_DEMO_DIST), not interception (`serve`).
  */
 export const SERVER_DEMO = 'http://127.0.0.1:5199';
 

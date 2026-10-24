@@ -720,3 +720,25 @@ func TestDisconnectWhileAClientIsLetInRefusesItToo(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	require.NotContains(t, guest.texts(), "/main.typ")
 }
+
+func TestWebSocketsOnlyFromAllowedPages(t *testing.T) {
+	s := newServer(t, memStore(t))
+	for origin, refused := range map[string]bool{
+		"http://editor.example.org:5199": true, // same host, another port
+		"https://evil.example":           true,
+		"https://editor.example.org":     false,
+		"":                               false,
+	} {
+		upgrade := httptest.NewRequest(http.MethodGet, "http://editor.example.org/", nil)
+		upgrade.Header.Set("Connection", "Upgrade")
+		upgrade.Header.Set("Upgrade", "websocket")
+		upgrade.Header.Set("Sec-WebSocket-Version", "13")
+		upgrade.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+		if origin != "" {
+			upgrade.Header.Set("Origin", origin)
+		}
+		res := httptest.NewRecorder()
+		s.ServeHTTP(res, upgrade)
+		require.Equal(t, refused, res.Code == http.StatusForbidden, origin)
+	}
+}
