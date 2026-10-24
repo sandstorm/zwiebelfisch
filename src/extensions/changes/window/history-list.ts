@@ -120,6 +120,11 @@ export function initials(name: string): string {
   return letters.map((word) => [...word][0].toUpperCase()).join('');
 }
 
+/** The short id of `item`: its `displayId`, else the first 7 characters of its id. */
+export function shortId(item: SourceControlHistoryItem): string {
+  return item.displayId ?? item.id.slice(0, 7);
+}
+
 /** Who made `item`: its author, then its co-authors. */
 export function people(item: SourceControlHistoryItem): readonly string[] {
   return [...(item.author ? [item.author] : []), ...(item.coAuthors ?? [])];

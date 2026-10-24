@@ -14,7 +14,9 @@
 
 The side panel *History* (the clock on the left rail) lists the commits of the project, newest first.
 
-- *On top: "Not in GitLab yet"*, the files changed since the last commit. Click it to list them; click a file to open it with the changes since the last commit shown.
-- *Each commit* shows the initials of its author and co-authors, its first line, how long ago and its short id, grouped by day. "Load more" shows older commits.
-- *Click a commit* to show the changes since it, in every editor (it turns the marks on). The commit is marked green and lists the files it changed (A added, M modified, D deleted, R renamed); click a file to open it.
-- *History of a file or folder:* right click it in the file panel → "Show history". ✕ in the panel goes back to the whole project. A project in a folder of the repository shows the folder's history.
+- *On top it says the mode:* "● Showing changes since 3f2a91c “Fix the letter”" (or "since last commit") with ✕ to stop showing them; while off, "Show changes since last commit" turns them on. It is the same switch as the menu entry and the status bar: whichever you use, all three agree at once.
+- *Then "Not in GitLab yet"*, the files changed since the last commit. Click it to list them; click a file to open it with the changes since the last commit shown.
+- *Each commit* shows one round badge with its author's initials ("+1" when there are co-authors), its first line (all of it in the tooltip), and below the names, how long ago and its short id, grouped by day. "Load more" shows older commits.
+- *Click a commit* to show the changes since it, in every editor (it turns the marks on). The commit is highlighted, labelled "Compared", and lists the files it changed: #text(green)[+] added, #text(red)[−] deleted, #text(orange)[\~] modified, → renamed; long folders are cut at the left so the file name stays visible. Click a file to open it.
+- *Click another commit* to compare with that one instead; *click the compared commit again* to stop showing changes.
+- *History of a file or folder:* right click it in the file panel → "Show history". ✕ in the panel's title goes back to the whole project. A project in a folder of the repository shows the folder's history.

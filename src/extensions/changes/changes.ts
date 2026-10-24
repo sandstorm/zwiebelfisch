@@ -7,7 +7,7 @@ import css from './changes.css?inline';
 import { Baseline } from './baseline';
 import { inlineChanges } from './source-editor/inline-changes';
 import { changeDecorations } from './visual-editor/change-decorations';
-import { relativeTime } from './window/history-list';
+import { relativeTime, shortId } from './window/history-list';
 import { HistoryPanel } from './window/history-panel';
 
 /**
@@ -20,7 +20,8 @@ import { HistoryPanel } from './window/history-panel';
  *   last commit. Off at first; the viewer's last choice is kept (`globalState`).
  * - The side panel "History" (`workbench.view.history`) lists the commits of the first source control with a
  *   `historyProvider`: of the project, or of a file or folder ("Show history" on the file panel's rows,
- *   `changes.showHistory`), with what is not committed yet on top. Choosing a commit shows the changes since it.
+ *   `changes.showHistory`), with what is not committed yet on top. On top of it the panel says whether changes are shown and since
+ *   what (✕ stops); choosing a commit shows the changes since it, choosing the compared one again stops them.
  */
 export function changes(): Extension {
   return {
@@ -119,7 +120,7 @@ function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOri
   let registered: Disposable | undefined;
   const update = () => {
     const commit = shown.baseline.commit;
-    const since = commit ? [commit.displayId ?? commit.id.slice(0, 7), commit.timestamp === undefined ? '' : `(${relativeTime(commit.timestamp, Date.now())})`].filter(Boolean).join(' ') : 'last commit';
+    const since = commit ? [shortId(commit), commit.timestamp === undefined ? '' : `(${relativeTime(commit.timestamp, Date.now())})`].filter(Boolean).join(' ') : 'last commit';
     element.textContent = `Changes since ${since} ✕`;
     element.title = `Shown in the editors: what changed since ${commit ? `“${commit.subject}”` : 'the last commit'}. Click to stop showing them.`;
     const visible = shown.value && hasOriginals();
@@ -135,15 +136,16 @@ function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOri
 
 /**
  * The side panel "History", its command (`changes.showHistory`, of a file or folder) and the file panel's "Show
- * history"; choosing a commit shows the changes since it.
+ * history"; it shows and stops the changes through the same state as the toggle.
  */
 function historyPanel({ commands, window, project, scm }: ExtensionContext, shown: Shown): Disposable & { panel: HistoryPanel } {
   const side = window.registerSidePanel('history', { label: 'History', icon: CLOCK, order: 14 });
   const panel = new HistoryPanel(side.body, {
     sourceControl: () => historyControl(scm),
     visible: () => side.visible,
-    baseline: () => (shown.value ? shown.baseline.commit : undefined),
+    changes: () => (shown.value ? { item: shown.baseline.commit } : undefined),
     showChangesSince: (control, item) => shown.show(control, item),
+    hideChanges: () => shown.hide(),
     openFile: (path) => window.showDocument(path),
     isOpenable: (path) => project.has(path),
   });

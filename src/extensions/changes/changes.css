@@ -29,7 +29,8 @@
   min-height: 1em;
 }
 
-/* the History panel */
+/* the History panel: a sticky top (scope, mode strip), then rows in one grid (avatar column 24px, so all subjects
+   and file rows start at one x); the compared commit in the accent */
 .zwf-history {
   display: flex;
   flex: 1;
@@ -39,11 +40,17 @@
   color: var(--zwf-text-2);
   font-size: 13px;
 }
+.zwf-history__top {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--zwf-subtle);
+}
 .zwf-history__header {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 8px 4px;
+  padding: 8px 8px 4px 10px;
 }
 .zwf-history__scope {
   flex: 1;
@@ -55,7 +62,8 @@
   white-space: nowrap;
 }
 .zwf-history__icon,
-.zwf-history__more {
+.zwf-history__more,
+.zwf-history__show {
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
@@ -63,9 +71,36 @@
   font: inherit;
   cursor: pointer;
 }
-.zwf-history__icon { min-width: 22px; padding: 0 4px; }
+.zwf-history__icon { flex: none; min-width: 22px; padding: 0 4px; }
 .zwf-history__icon:hover,
-.zwf-history__more:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-history__more:hover,
+.zwf-history__show:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+.zwf-history__mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin: 2px 8px 6px;
+  border-radius: 4px;
+  padding: 0 2px 0 8px;
+  font-size: 12px;
+}
+.zwf-history__mode--on { background: var(--zwf-selected); color: var(--zwf-text); }
+.zwf-history__show { margin-left: -8px; padding: 3px 8px; border-color: var(--zwf-border); }
+.zwf-history__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--zwf-accent);
+}
+.zwf-history__mode-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .zwf-history__list,
 .zwf-history__files {
   margin: 0;
@@ -73,40 +108,48 @@
   list-style: none;
 }
 .zwf-history__day {
-  padding: 8px 10px 2px;
+  padding: 10px 10px 2px;
   color: var(--zwf-muted);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
 }
-.zwf-history__entry--baseline { box-shadow: inset 3px 0 0 var(--zwf-success); }
+.zwf-history__entry--compared { position: relative; background: var(--zwf-selected); }
+.zwf-history__entry--compared::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--zwf-accent);
+  content: '';
+  pointer-events: none;
+}
 .zwf-history__row {
   display: grid;
   width: 100%;
-  grid-template-columns: auto 1fr;
-  column-gap: 6px;
-  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: baseline;
   border: 0;
-  padding: 4px 4px 4px 10px;
+  padding: 5px 8px 5px 10px;
   background: none;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.zwf-history__row:hover,
-.zwf-history__row[aria-expanded='true'] { background: var(--zwf-hover); }
+.zwf-history__row:hover { background: var(--zwf-hover); }
+.zwf-history__entry--compared .zwf-history__row:hover { background: var(--zwf-selected-strong); }
 .zwf-history__people {
-  display: flex;
+  position: relative;
   grid-row: span 2;
   align-self: center;
+  width: 24px;
+  height: 20px;
 }
 .zwf-history__avatar {
-  display: inline-grid;
+  display: grid;
   width: 20px;
   height: 20px;
-  margin-left: -4px;
-  border: 1px solid var(--zwf-surface);
   border-radius: 50%;
   place-items: center;
   background: var(--zwf-chip);
@@ -114,41 +157,86 @@
   font-size: 9px;
   font-weight: 600;
 }
-.zwf-history__avatar:first-child { margin-left: 0; }
+.zwf-history__others {
+  position: absolute;
+  right: -2px;
+  bottom: -3px;
+  border-radius: 6px;
+  padding: 0 2px;
+  background: var(--zwf-subtle);
+  color: var(--zwf-muted);
+  font-size: 9px;
+  line-height: 11px;
+}
 .zwf-history__subject {
+  grid-column: 2;
   overflow: hidden;
   color: var(--zwf-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.zwf-history__entry--compared .zwf-history__subject { font-weight: 600; }
 .zwf-history__entry--uncommitted .zwf-history__subject { font-style: italic; }
+.zwf-history__compared {
+  grid-column: 3;
+  color: var(--zwf-accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .zwf-history__meta {
-  grid-column: 2;
+  grid-column: 2 / span 2;
+  overflow: hidden;
   color: var(--zwf-muted);
   font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.zwf-history__files { padding-bottom: 4px; }
 .zwf-history__file-row {
   display: flex;
+  align-items: baseline;
   gap: 6px;
   width: 100%;
   border: 0;
-  padding: 2px 8px 2px 34px;
+  padding: 2px 8px 2px 42px;
   background: none;
   color: inherit;
   font: inherit;
+  font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
 .zwf-history__file-row:hover:not(:disabled) { background: var(--zwf-hover); color: var(--zwf-text); }
 .zwf-history__file-row:disabled { color: var(--zwf-faint); cursor: default; }
-.zwf-history__badge {
-  width: 1.2em;
-  color: var(--zwf-muted);
+.zwf-history__kind {
+  flex: none;
+  width: 1em;
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
 }
-.zwf-history__path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-history__kind--added { color: var(--zwf-success); }
+.zwf-history__kind--deleted { color: var(--zwf-danger); }
+.zwf-history__kind--modified { color: var(--zwf-warning); }
+.zwf-history__kind--renamed { color: var(--zwf-accent); }
+/* the folder shrinks first and is cut from the left (rtl box, ltr text); the name stays whole */
+.zwf-history__path { display: flex; min-width: 0; }
+.zwf-history__folder {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--zwf-muted);
+  direction: rtl;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zwf-history__folder > bdi { direction: ltr; unicode-bidi: isolate; }
+.zwf-history__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zwf-history__file-row:disabled .zwf-history__folder { color: inherit; }
 .zwf-history__note { margin: 6px 10px; color: var(--zwf-muted); }
+.zwf-history__note--files { margin-left: 42px; font-size: 12px; }
 .zwf-history__note--error { color: var(--zwf-danger); }
 .zwf-history__more { align-self: center; margin: 6px; padding: 2px 10px; border-color: var(--zwf-border); }
 
