@@ -24,6 +24,11 @@ const GuestProvider = "guest"
 // IsGuest is whether u is a guest (GuestProvider).
 func (u User) IsGuest() bool { return u.Provider == GuestProvider }
 
+// userKey is who a User is ((Provider, ID)): the author of their Yjs client ids and awareness entries.
+type userKey struct{ provider, id string }
+
+func (u User) key() userKey { return userKey{u.Provider, u.ID} }
+
 // Refusal refuses a client with a reason meant for its user (the PermissionDenied reason, which the widget
 // shows). Other errors are reported as Hocuspocus' "permission-denied".
 type Refusal struct{ Reason string }

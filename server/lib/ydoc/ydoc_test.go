@@ -171,7 +171,8 @@ func TestSyncHandshake(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestHandleSyncAtOnceRefusesWhatWaitsForChangesToCome(t *testing.T) {
+func TestHandleSyncFromRefusesWhatWaitsForChangesToComeOfARestrictedSender(t *testing.T) {
+	asGuest := ydoc.Sender{Origin: "guest", Author: "guest", Restricted: true}
 	server := ydoc.New()
 	require.NoError(t, server.Write("server", func(w *ydoc.Writer) { w.SetText("files", "/a", "server") }))
 	member, err := ydoc.Load(server.State())
@@ -191,20 +192,20 @@ func TestHandleSyncAtOnceRefusesWhatWaitsForChangesToCome(t *testing.T) {
 	require.NoError(t, guest.Apply(first, nil))
 
 	// a sync and an edit of what the server holds take effect
-	reply, isStep1, err := server.HandleSyncAtOnce(guest.SyncStep1(), "guest")
+	reply, isStep1, err := server.HandleSyncFrom(guest.SyncStep1(), asGuest)
 	require.NoError(t, err)
 	require.True(t, isStep1)
 	_, _, err = guest.HandleSync(reply, "server")
 	require.NoError(t, err)
 	edit := updateOf(guest, func(w *ydoc.Writer) { w.Edit("files", "/a", 0, 0, "the ") })
-	_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(edit), "guest")
+	_, _, err = server.HandleSyncFrom(ydoc.SyncUpdate(edit), asGuest)
 	require.NoError(t, err)
 	require.Equal(t, "the server", server.Texts("files")["/a"])
 
 	// deleting what the member has not sent yet, or adding the member's later change without the first: refused, unapplied
 	ahead := updateOf(guest, func(w *ydoc.Writer) { w.Edit("files", "/m", 0, 1, "") })
 	for name, update := range map[string][]byte{"delete ahead": ahead, "gap": second} {
-		_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(update), "guest")
+		_, _, err = server.HandleSyncFrom(ydoc.SyncUpdate(update), asGuest)
 		require.ErrorIs(t, err, ydoc.ErrNotAtOnce, name)
 	}
 	_, _, err = server.HandleSync(ydoc.SyncUpdate(first), "member")
@@ -218,7 +219,7 @@ func TestHandleSyncAtOnceRefusesWhatWaitsForChangesToCome(t *testing.T) {
 	require.NoError(t, guest2.Apply(second, nil))
 	require.NoError(t, guest2.Apply(later, nil))
 	waits := updateOf(guest2, func(w *ydoc.Writer) { w.Edit("files", "/m", 1, 1, "Y") })
-	_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(waits), "guest")
+	_, _, err = server.HandleSyncFrom(ydoc.SyncUpdate(waits), asGuest)
 	require.ErrorIs(t, err, ydoc.ErrNotAtOnce)
 }
 
@@ -236,9 +237,16 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	a := ydoc.NewAwareness()
 	require.Nil(t, a.Encode())
 	one, two := &origin{"one"}, &origin{"two"}
-	require.NoError(t, a.Apply(update(11, 1, `{"user":"a"}`, 12, 1, `{"user":"b"}`), one))
-	require.NoError(t, a.Apply(update(21, 1, `{"user":"c"}`), two))
-	require.Error(t, a.Apply([]byte{1, 2}, two))
+	apply := func(update []byte, o *origin) error {
+		relay, err := a.Apply(update, o, "alice")
+		if err == nil {
+			require.Equal(t, update, relay, "all of it is relayed")
+		}
+		return err
+	}
+	require.NoError(t, apply(update(11, 1, `{"user":"a"}`, 12, 1, `{"user":"b"}`), one))
+	require.NoError(t, apply(update(21, 1, `{"user":"c"}`), two))
+	require.Error(t, apply([]byte{1, 2}, two))
 
 	require.Equal(t, []map[string]any{{"user": "c"}}, a.States(two))
 	require.Len(t, a.States(one), 2)
@@ -249,13 +257,99 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	require.Nil(t, a.Remove(one), "nothing left of one")
 
 	other := ydoc.NewAwareness()
-	require.NoError(t, other.Apply(a.Encode(), nil))
+	_, err := other.Apply(a.Encode(), nil, nil)
+	require.NoError(t, err)
 	require.Equal(t, a.Encode(), other.Encode(), "only client 21 is present")
 	require.Len(t, a.Encode(), len(update(21, 1, `{"user":"c"}`)))
 
 	// the client comes back with its next clock after a reconnect
-	require.NoError(t, a.Apply(update(11, 2, `{"user":"a"}`), two))
+	require.NoError(t, apply(update(11, 2, `{"user":"a"}`), two))
 	require.Len(t, a.Encode(), 1+2*(3+len(`{"user":"a"}`)))
+}
+
+func TestAwarenessLeavesOutEntriesOfAnotherAuthor(t *testing.T) {
+	update := func(id, clock byte, state string) []byte {
+		return append([]byte{1, id, clock, byte(len(state))}, state...)
+	}
+	a := ydoc.NewAwareness()
+	alice, bob, aliceAgain := &origin{"alice"}, &origin{"bob"}, &origin{"alice again"}
+	_, err := a.Apply(update(7, 1, `{"user":"alice"}`), alice, "alice")
+	require.NoError(t, err)
+
+	// bob changes or removes alice's client: left out; his own client in the same update is kept
+	for _, state := range []string{`{"user":"mallory"}`, "null"} {
+		relay, err := a.Apply(update(7, 5, state), bob, "bob")
+		require.NoError(t, err)
+		require.Nil(t, relay, state)
+	}
+	both := append([]byte{2}, append(update(7, 6, `{"user":"mallory"}`)[1:], update(8, 1, `{"user":"bob"}`)[1:]...)...)
+	relay, err := a.Apply(both, bob, "bob")
+	require.NoError(t, err)
+	require.Equal(t, update(8, 1, `{"user":"bob"}`), relay)
+	require.Equal(t, []map[string]any{{"user": "alice"}}, a.States(alice))
+	require.Equal(t, []map[string]any{{"user": "bob"}}, a.States(bob))
+
+	// alice's other connection (a reconnect) takes her client over; her old connection leaving keeps it
+	relay, err = a.Apply(update(7, 2, `{"user":"alice"}`), aliceAgain, "alice")
+	require.NoError(t, err)
+	require.NotNil(t, relay)
+	require.Nil(t, a.Remove(alice))
+	require.Equal(t, []map[string]any{{"user": "alice"}}, a.States(aliceAgain))
+
+	// once she left, the client id is free again
+	require.NotNil(t, a.Remove(aliceAgain))
+	relay, err = a.Apply(update(7, 3, `{"user":"bob"}`), bob, "bob")
+	require.NoError(t, err)
+	require.NotNil(t, relay)
+}
+
+func TestHandleSyncFromKeepsClientIDsToTheirAuthor(t *testing.T) {
+	member := func(name string) ydoc.Sender { return ydoc.Sender{Origin: name, Author: name} }
+	guest := ydoc.Sender{Origin: "guest", Author: "guest", Restricted: true}
+	server := ydoc.New()
+	require.NoError(t, server.Write("server", func(w *ydoc.Writer) { w.SetText("files", "/a", "") }))
+	alice, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	// alice's next update, which the server does not hold yet
+	next := func(d *ydoc.Doc, insert string) []byte {
+		var update []byte
+		stop := d.OnUpdate(func(u []byte, _ any) { update = u })
+		defer stop()
+		require.NoError(t, d.Write(nil, func(w *ydoc.Writer) { w.Edit("files", "/a", 0, 0, insert) }))
+		return ydoc.SyncUpdate(update)
+	}
+	send := func(d *ydoc.Doc, msg []byte, from ydoc.Sender) error {
+		_, _, err := d.HandleSyncFrom(msg, from)
+		return err
+	}
+	first := next(alice, "1")
+	require.NoError(t, send(server, first, member("alice")))
+	require.NoError(t, send(server, first, member("bob")), "what the server holds already is no change")
+
+	// items under alice's client id from anybody else: refused, unapplied; alice's own go on
+	second := next(alice, "2")
+	require.ErrorIs(t, send(server, second, member("bob")), ydoc.ErrNotYours)
+	require.ErrorIs(t, send(server, second, guest), ydoc.ErrNotYours)
+	require.Equal(t, "1", server.Texts("files")["/a"])
+	require.NoError(t, send(server, second, member("alice")))
+	require.Equal(t, "21", server.Texts("files")["/a"])
+
+	// a loaded document knows no authors: a member takes an existing client id, a guest may not
+	reloaded, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	third := next(alice, "3")
+	require.ErrorIs(t, send(reloaded, third, guest), ydoc.ErrNotYours)
+	require.NoError(t, send(reloaded, third, member("alice")))
+	require.ErrorIs(t, send(reloaded, next(alice, "4"), member("bob")), ydoc.ErrNotYours)
+
+	// a guest's new client id is theirs
+	visitor, err := ydoc.Load(reloaded.State())
+	require.NoError(t, err)
+	require.NoError(t, send(reloaded, next(visitor, "g"), guest))
+	h := next(visitor, "h")
+	require.ErrorIs(t, send(reloaded, h, member("alice")), ydoc.ErrNotYours)
+	require.NoError(t, send(reloaded, h, guest))
+	require.Equal(t, "hg321", reloaded.Texts("files")["/a"])
 }
 
 // fixtures are written by server/testdata/gen-fixtures.ts with the real yjs.

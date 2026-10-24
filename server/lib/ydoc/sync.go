@@ -25,14 +25,34 @@ func (d *Doc) HandleSync(msg []byte, origin any) (reply []byte, isStep1 bool, er
 	return reply, typ == ygsync.MsgSyncStep1, nil
 }
 
-// ErrNotAtOnce: HandleSyncAtOnce refused an update that would wait for changes the document does not hold.
-var ErrNotAtOnce = errors.New("ydoc: the update waits for changes the document does not hold")
+var (
+	// ErrNotAtOnce: HandleSyncFrom refused an update that would wait for changes the document does not hold.
+	ErrNotAtOnce = errors.New("ydoc: the update waits for changes the document does not hold")
+	// ErrNotYours: HandleSyncFrom refused an update that adds items under a Yjs client id not the sender's.
+	ErrNotYours = errors.New("ydoc: the update adds items under a client id that is not the sender's")
+)
 
-// HandleSyncAtOnce is HandleSync for a peer whose every change must take effect as it arrives, with its own
-// origin (collab: a guest's): an update that adds or deletes past what the document holds is refused
-// with ErrNotAtOnce, unapplied, so no later change of another origin completes it. An update whose items
-// wait for others' changes still to come is applied, its waiting items kept, and refused with ErrNotAtOnce.
-func (d *Doc) HandleSyncAtOnce(msg []byte, origin any) (reply []byte, isStep1 bool, err error) {
+// Sender is who sends a sync message to HandleSyncFrom.
+type Sender struct {
+	// Origin is what update listeners see the changes with (collab: the client's connection).
+	Origin any
+	// Author is who the sender is (comparable; collab: the user).
+	Author any
+	// Restricted (collab: a guest): every change must take effect as it arrives, and only client ids new to
+	// the document can become the sender's.
+	Restricted bool
+}
+
+// HandleSyncFrom is HandleSync for a message from a sender who adds items only under Yjs client ids of
+// their own. A client id is the author's who first added items under it with HandleSyncFrom; the document's
+// own (Write's) is nobody's to take. An update that adds items (past what the document holds) under a
+// client id of another author, or, for a Restricted sender, under one the document holds items of that no
+// author took (e.g. loaded ones), is refused with ErrNotYours, unapplied. Deletions are not checked.
+//
+// For a Restricted sender, an update that adds or deletes past what the document holds is refused with
+// ErrNotAtOnce, unapplied, so no later change of another origin completes it; one whose items wait for
+// others' changes still to come is applied, its waiting items kept, and refused with ErrNotAtOnce.
+func (d *Doc) HandleSyncFrom(msg []byte, from Sender) (reply []byte, isStep1 bool, err error) {
 	typ, update, err := ygsync.ReadSyncMessage(msg)
 	if err != nil {
 		return nil, false, fmt.Errorf("ydoc: sync message: %w", err)
@@ -42,16 +62,47 @@ func (d *Doc) HandleSyncAtOnce(msg []byte, origin any) (reply []byte, isStep1 bo
 		if err != nil {
 			return nil, false, fmt.Errorf("ydoc: sync message: %w", err)
 		}
-		if !holds(d.d.StateVector(), ids) {
+		sv := d.d.StateVector()
+		if from.Restricted && !holds(sv, ids) {
 			return nil, false, ErrNotAtOnce
 		}
+		if err := d.claim(sv, ids.Inserts, from); err != nil {
+			return nil, false, err
+		}
+	}
+	if !from.Restricted {
+		return d.HandleSync(msg, from.Origin)
 	}
 	waiting := d.d.PendingStats().Items
-	reply, isStep1, err = d.HandleSync(msg, origin)
+	reply, isStep1, err = d.HandleSync(msg, from.Origin)
 	if err == nil && d.d.PendingStats().Items > waiting {
 		err = ErrNotAtOnce
 	}
 	return reply, isStep1, err
+}
+
+// claim makes from's author the owner of the client ids that inserts adds items under past sv, or returns
+// ErrNotYours, claiming none, if one of them is not theirs to have.
+func (d *Doc) claim(sv crdt.StateVector, inserts *crdt.IDSet, from Sender) error {
+	var claims []crdt.ClientID
+	for _, c := range inserts.Clients() {
+		adds := false
+		for _, r := range inserts.Ranges(c) {
+			adds = adds || r.Clock+r.Len > sv.Clock(c)
+		}
+		owner, owned := d.owners[c]
+		switch {
+		case !adds || owned && owner == from.Author:
+		case owned || from.Restricted && sv.Clock(c) > 0:
+			return fmt.Errorf("%w (client %d)", ErrNotYours, c)
+		default:
+			claims = append(claims, c)
+		}
+	}
+	for _, c := range claims {
+		d.owners[c] = from.Author
+	}
+	return nil
 }
 
 // holds is whether a document at sv holds everything ids adds after and deletes: per client, each range

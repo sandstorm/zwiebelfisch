@@ -18,10 +18,17 @@ import (
 
 // Doc is one room's document. Not safe for concurrent use: callers serialize access (collab runs each room
 // on one goroutine).
-type Doc struct{ d *crdt.Doc }
+type Doc struct {
+	d      *crdt.Doc
+	owners map[crdt.ClientID]any // Yjs client id → its author (HandleSyncFrom); the Doc itself for its own
+}
 
 // New returns an empty document.
-func New() *Doc { return &Doc{d: crdt.New()} }
+func New() *Doc {
+	d := &Doc{d: crdt.New(), owners: map[crdt.ClientID]any{}}
+	d.owners[d.d.ClientID()] = d
+	return d
+}
 
 // Load returns a document with the given state (from State, or any Yjs v1 update, e.g. `Y.encodeStateAsUpdate`).
 func Load(state []byte) (*Doc, error) {
