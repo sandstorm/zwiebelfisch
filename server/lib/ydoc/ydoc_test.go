@@ -238,7 +238,7 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	require.Nil(t, a.Encode())
 	one, two := &origin{"one"}, &origin{"two"}
 	apply := func(update []byte, o *origin) error {
-		relay, err := a.Apply(update, o, "alice")
+		relay, err := a.Apply(update, o, func(uint64) bool { return true })
 		if err == nil {
 			require.Equal(t, update, relay, "all of it is relayed")
 		}
@@ -257,7 +257,7 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	require.Nil(t, a.Remove(one), "nothing left of one")
 
 	other := ydoc.NewAwareness()
-	_, err := other.Apply(a.Encode(), nil, nil)
+	_, err := other.Apply(a.Encode(), one, func(uint64) bool { return true })
 	require.NoError(t, err)
 	require.Equal(t, a.Encode(), other.Encode(), "only client 21 is present")
 	require.Len(t, a.Encode(), len(update(21, 1, `{"user":"c"}`)))
@@ -267,40 +267,100 @@ func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	require.Len(t, a.Encode(), 1+2*(3+len(`{"user":"a"}`)))
 }
 
-func TestAwarenessLeavesOutEntriesOfAnotherAuthor(t *testing.T) {
+func TestAwarenessLeavesOutEntriesItMayNotChange(t *testing.T) {
 	update := func(id, clock byte, state string) []byte {
 		return append([]byte{1, id, clock, byte(len(state))}, state...)
 	}
 	a := ydoc.NewAwareness()
-	alice, bob, aliceAgain := &origin{"alice"}, &origin{"bob"}, &origin{"alice again"}
-	_, err := a.Apply(update(7, 1, `{"user":"alice"}`), alice, "alice")
+	alice, bob := &origin{"alice"}, &origin{"bob"}
+	_, err := a.Apply(update(7, 1, `{"user":"alice"}`), alice, func(uint64) bool { return true })
 	require.NoError(t, err)
 
-	// bob changes or removes alice's client: left out; his own client in the same update is kept
+	// bob may not change client 7: his entries for it are left out, his own client in the same update is kept
+	notSeven := func(client uint64) bool { return client != 7 }
 	for _, state := range []string{`{"user":"mallory"}`, "null"} {
-		relay, err := a.Apply(update(7, 5, state), bob, "bob")
+		relay, err := a.Apply(update(7, 5, state), bob, notSeven)
 		require.NoError(t, err)
 		require.Nil(t, relay, state)
 	}
 	both := append([]byte{2}, append(update(7, 6, `{"user":"mallory"}`)[1:], update(8, 1, `{"user":"bob"}`)[1:]...)...)
-	relay, err := a.Apply(both, bob, "bob")
+	relay, err := a.Apply(both, bob, notSeven)
 	require.NoError(t, err)
 	require.Equal(t, update(8, 1, `{"user":"bob"}`), relay)
 	require.Equal(t, []map[string]any{{"user": "alice"}}, a.States(alice))
 	require.Equal(t, []map[string]any{{"user": "bob"}}, a.States(bob))
 
-	// alice's other connection (a reconnect) takes her client over; her old connection leaving keeps it
-	relay, err = a.Apply(update(7, 2, `{"user":"alice"}`), aliceAgain, "alice")
+	// a malformed update: nothing is asked or applied
+	_, err = a.Apply(both[:len(both)-1], bob, func(uint64) bool { panic("asked") })
+	require.Error(t, err)
+}
+
+func TestAwarenessMovesAClientToTheOriginThatUpdatedItLast(t *testing.T) {
+	update := func(id, clock byte, state string) []byte {
+		return append([]byte{1, id, clock, byte(len(state))}, state...)
+	}
+	all := func(uint64) bool { return true }
+	a := ydoc.NewAwareness()
+	alice, aliceAgain := &origin{"alice"}, &origin{"alice again"}
+	_, err := a.Apply(update(7, 1, `{"user":"alice"}`), alice, all)
 	require.NoError(t, err)
-	require.NotNil(t, relay)
+
+	// alice's other connection (a reconnect) takes her client over; her old connection leaving keeps it
+	_, err = a.Apply(update(7, 2, `{"user":"alice"}`), aliceAgain, all)
+	require.NoError(t, err)
 	require.Nil(t, a.Remove(alice))
 	require.Equal(t, []map[string]any{{"user": "alice"}}, a.States(aliceAgain))
-
-	// once she left, the client id is free again
 	require.NotNil(t, a.Remove(aliceAgain))
-	relay, err = a.Apply(update(7, 3, `{"user":"bob"}`), bob, "bob")
+	require.Nil(t, a.Encode())
+}
+
+func TestClaimTakesAClientIDAsItsItemsWould(t *testing.T) {
+	member := func(name string) ydoc.Sender { return ydoc.Sender{Origin: name, Author: name} }
+	guest := ydoc.Sender{Origin: "guest", Author: "guest", Restricted: true}
+	server := ydoc.New()
+	require.True(t, server.Claim(7, member("alice")))
+	require.True(t, server.Claim(7, member("alice")), "hers already")
+	require.False(t, server.Claim(7, member("bob")))
+	require.False(t, server.Claim(7, guest))
+	require.True(t, server.Claim(8, guest), "new to the document")
+	var own []byte
+	stopOwn := server.OnUpdate(func(u []byte, _ any) { own = u })
+	require.NoError(t, server.Write("server", func(w *ydoc.Writer) { w.SetText("files", "/s", "") }))
+	stopOwn()
+	require.False(t, server.Claim(clientOf(own), member("alice")), "the document's own")
+
+	// claimed without items: items of anybody else under it are refused
+	alice := ydoc.New()
+	var update []byte
+	stop := alice.OnUpdate(func(u []byte, _ any) { update = u })
+	require.NoError(t, alice.Write(nil, func(w *ydoc.Writer) { w.SetText("files", "/a", "alice") }))
+	stop()
+	client := clientOf(update)
+	require.True(t, server.Claim(client, member("alice")))
+	_, _, err := server.HandleSyncFrom(ydoc.SyncUpdate(update), member("bob"))
+	require.ErrorIs(t, err, ydoc.ErrNotYours)
+	_, _, err = server.HandleSyncFrom(ydoc.SyncUpdate(update), member("alice"))
 	require.NoError(t, err)
-	require.NotNil(t, relay)
+
+	// a client id of the stored document that nobody took: a member's, never a guest's
+	reloaded, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	require.False(t, reloaded.Claim(client, guest))
+	require.True(t, reloaded.Claim(client, member("bob")))
+	require.False(t, reloaded.Claim(client, member("alice")))
+}
+
+// clientOf is the client id of the first struct group of a Yjs v1 update.
+func clientOf(update []byte) uint64 {
+	var client uint64
+	at := 2 // a client count, then the group's struct count (both < 128 here)
+	for shift := 0; ; shift += 7 {
+		client |= uint64(update[at]&0x7f) << shift
+		at++
+		if update[at-1] < 0x80 {
+			return client
+		}
+	}
 }
 
 func TestHandleSyncFromKeepsClientIDsToTheirAuthor(t *testing.T) {

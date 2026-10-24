@@ -184,9 +184,9 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 	if _, ok := r.peers[p]; !ok {
 		return
 	}
+	from := ydoc.Sender{Origin: p, Author: p.user.key(), Restricted: p.user.IsGuest()}
 	switch typ {
 	case msgSync, msgSyncReply:
-		from := ydoc.Sender{Origin: p, Author: p.user.key(), Restricted: p.user.IsGuest()}
 		reply, isStep1, err := r.doc.HandleSyncFrom(d.rest(), from)
 		switch {
 		case errors.Is(err, ydoc.ErrNotAtOnce):
@@ -219,7 +219,7 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 			r.log.Debug().Err(err).Msg("bad awareness message")
 			return
 		}
-		relay, err := r.awareness.Apply(update, p, p.user.key())
+		relay, err := r.awareness.Apply(update, p, func(client uint64) bool { return r.doc.Claim(client, from) })
 		if err != nil {
 			r.log.Debug().Err(err).Msg("bad awareness update")
 			return

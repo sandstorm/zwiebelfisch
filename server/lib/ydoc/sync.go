@@ -44,10 +44,11 @@ type Sender struct {
 }
 
 // HandleSyncFrom is HandleSync for a message from a sender who adds items only under Yjs client ids of
-// their own. A client id is the author's who first added items under it with HandleSyncFrom; the document's
-// own (Write's) is nobody's to take. An update that adds items (past what the document holds) under a
-// client id of another author, or, for a Restricted sender, under one the document holds items of that no
-// author took (e.g. loaded ones), is refused with ErrNotYours, unapplied. Deletions are not checked.
+// their own. A client id is the author's who first added items under it with HandleSyncFrom or took it
+// with Claim; the document's own (Write's) is nobody's to take. An update that adds items (past what the
+// document holds) under a client id of another author, or, for a Restricted sender, under one the document
+// holds items of that no author took (e.g. loaded ones), is refused with ErrNotYours, unapplied. Deletions
+// are not checked.
 //
 // For a Restricted sender, an update that adds or deletes past what the document holds is refused with
 // ErrNotAtOnce, unapplied, so no later change of another origin completes it; one whose items wait for
@@ -86,23 +87,40 @@ func (d *Doc) HandleSyncFrom(msg []byte, from Sender) (reply []byte, isStep1 boo
 func (d *Doc) claim(sv crdt.StateVector, inserts *crdt.IDSet, from Sender) error {
 	var claims []crdt.ClientID
 	for _, c := range inserts.Clients() {
-		adds := false
 		for _, r := range inserts.Ranges(c) {
-			adds = adds || r.Clock+r.Len > sv.Clock(c)
-		}
-		owner, owned := d.owners[c]
-		switch {
-		case !adds || owned && owner == from.Author:
-		case owned || from.Restricted && sv.Clock(c) > 0:
-			return fmt.Errorf("%w (client %d)", ErrNotYours, c)
-		default:
-			claims = append(claims, c)
+			if r.Clock+r.Len > sv.Clock(c) {
+				if !d.mayOwn(c, sv, from) {
+					return fmt.Errorf("%w (client %d)", ErrNotYours, c)
+				}
+				claims = append(claims, c)
+				break
+			}
 		}
 	}
 	for _, c := range claims {
 		d.owners[c] = from.Author
 	}
 	return nil
+}
+
+// Claim makes client from's author's, as HandleSyncFrom would for items under it, and reports whether it is
+// theirs now (collab: for the client id of a presence, which is the client's Yjs client id).
+func (d *Doc) Claim(client uint64, from Sender) bool {
+	c := crdt.ClientID(client)
+	if !d.mayOwn(c, d.d.StateVector(), from) {
+		return false
+	}
+	d.owners[c] = from.Author
+	return true
+}
+
+// mayOwn is whether client c of a document at sv may be from's author's: it is theirs already, or nobody's
+// and new to the document or from is not Restricted.
+func (d *Doc) mayOwn(c crdt.ClientID, sv crdt.StateVector, from Sender) bool {
+	if owner, owned := d.owners[c]; owned {
+		return owner == from.Author
+	}
+	return !from.Restricted || sv.Clock(c) == 0
 }
 
 // holds is whether a document at sv holds everything ids adds after and deletes: per client, each range

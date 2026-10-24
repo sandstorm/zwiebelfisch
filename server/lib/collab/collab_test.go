@@ -889,3 +889,37 @@ func TestAClientCannotChangeAnothersPresence(t *testing.T) {
 	require.Contains(t, string(carol.awareness[1]), `{"user":"alice"}`)
 	require.NotContains(t, string(carol.awareness[1]), "mallory")
 }
+
+// valueUnder is a Yjs update that sets key in root map "values" to the string v as the first item of client.
+func valueUnder(client byte, key, v string) []byte {
+	update := []byte{1, 1, client, 0, 0x20 | 8, 1} // a client, a struct, its clock 0; parentSub, ContentAny; parent by name
+	update = append(update, lib0String("values")...)
+	update = append(update, lib0String(key)...)
+	update = append(update, 1, 119) // one value, a string
+	update = append(update, lib0String(v)...)
+	return append(update, 0) // no deletions
+}
+
+func TestAClientIDInSomeonesPresenceIsTheirs(t *testing.T) {
+	var left atomic.Int32
+	s := newServer(t, memStore(t), users(&left))
+	alice := dial(t, s, "r", "alice")
+	presence := awarenessUpdate(7, 1, `{"user":"alice"}`)
+	alice.send(msgAwareness, append([]byte{byte(len(presence))}, presence...))
+	guest := dial(t, s, "r", "guest")
+	bob := dial(t, s, "r", "bob")
+	guest.eventually("alice's presence", func() bool { return len(guest.awareness) == 1 })
+
+	// alice has not edited yet: her client id, which the others learnt from her presence, is hers all the same
+	for _, c := range []*client{guest, bob} {
+		c.send(msgSync, ydoc.SyncUpdate(valueUnder(7, "k", "spoof")))
+	}
+	guest.eventually("guest refused", func() bool { return len(guest.reasons) == 1 })
+	bob.eventually("bob refused", func() bool { return len(bob.reasons) == 1 })
+	require.Equal(t, notYours, guest.reasons[0])
+	require.Equal(t, notYours, bob.reasons[0])
+
+	alice.send(msgSync, ydoc.SyncUpdate(valueUnder(7, "k", "alice")))
+	carol := dial(t, s, "r", "carol")
+	carol.eventually("alice's value", func() bool { return carol.doc.Values("values")["k"] == "alice" })
+}

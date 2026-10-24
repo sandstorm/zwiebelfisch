@@ -132,7 +132,7 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`, `guestEditable`], [GitLab],
 )
 
-Every Yjs item carries its client id and clock, and the room takes only the first item at a clock: items sent under someone else's client id at their next clock would make the room ignore that user's own edit there. So in a loaded room each client id belongs to a user (provider and id), and each awareness entry to a connection (`ydoc.HandleSyncFrom`, `ydoc.Awareness`; in memory, gone when the room unloads):
+Every Yjs item carries its client id and clock, and the room takes only the first item at a clock: items sent under someone else's client id at their next clock would make the room ignore that user's own edit there. So in a loaded room each client id belongs to a user (provider and id), who brought the first items or the first awareness entry under it (a client's awareness entry has its Yjs client id; `ydoc.HandleSyncFrom`, `ydoc.Doc.Claim`; in memory, gone when the room unloads):
 
 #table(
   columns: (auto, 1fr),
@@ -143,7 +143,7 @@ Every Yjs item carries its client id and clock, and the room takes only the firs
   [in the stored document, nobody's yet (after a reload)], [a member's: takes it, the id is now theirs; a guest's: refuses it],
 )
 
-Deletions name no client id of the sender's and are not checked. An awareness entry for a client of another user's connection is left out of the update (not applied, not relayed); the same user's new connection takes the entry over.
+Deletions name no client id of the sender's and are not checked. An awareness entry follows the same rules, except that one the room may not take is only left out of the update (not applied, not relayed).
 
 === Guest links <architecture-data-model-guests>
 

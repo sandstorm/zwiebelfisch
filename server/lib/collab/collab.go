@@ -10,10 +10,10 @@
 // would wait for changes the room does not hold is refused, and so is their client.
 //
 // Nobody's change takes the place of another user's: in a loaded room each Yjs client id belongs to the user
-// (Provider, ID) who first brought items under it, and the server's own writes have their own. An update
-// with items under a client id of another user's, or, from a guest, under one of the stored document that
-// nobody in the room has taken yet, is refused unapplied, and so is its client (a member takes such an id).
-// An awareness entry of another user's connection is neither applied nor relayed.
+// (Provider, ID) who first brought items or a presence under it, and the server's own writes have their own.
+// An update with items under a client id of another user's, or, from a guest, under one of the stored
+// document that nobody in the room has taken yet, is refused unapplied, and so is its client (a member takes
+// such an id). A presence under such a client id is neither applied nor relayed.
 package collab
 
 import (
