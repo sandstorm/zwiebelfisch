@@ -18,6 +18,9 @@ export interface Presence {
 /** Who another user is, as the editors show them: with the CSS color of their caret, selection and markers. */
 export type PresenceUser = Required<User>;
 
+/** Another user in the room, whether their caret is in a file or not (`id` as a Presence's). */
+export type Participant = Pick<Presence, 'id' | 'user'>;
+
 /** A presence in a file: its offsets are in the file's text. */
 export interface PlacedPresence extends Presence {
   path: ProjectPath;

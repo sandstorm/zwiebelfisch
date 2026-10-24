@@ -6,7 +6,8 @@
 //	List    GET    /api/rooms/{room}/shares                the room's active shares (members); the guest's own (guests)
 //	Revoke  DELETE /api/rooms/{room}/shares/{id}           ends a share (members)
 //
-// Who may share a room, and so list and revoke its shares, is MayShare's to say. Guests are collab.Users of
+// Who may share a room, and so list and revoke its shares, is MayShare's to say. A room's shares are the
+// room's: every member who may share it lists all of them and revokes any. Guests are collab.Users of
 // collab.GuestProvider, named "<name> (guest)"; app.authenticate asks Authorize for them.
 //
 // Guarantees:
@@ -16,8 +17,9 @@
 //     secret is never stored or logged. Guest sessions live in memory: a restart ends them.
 //   - Every failed join gets the same 404, whatever failed; joins are limited per IP and in all.
 //   - A share's creator is asked about again (MayShare) at each join and every SweepInterval: a creator who
-//     may no longer share loses their shares; one who cannot be asked for now keeps them. Each sweep also
-//     ends the shares that expired, should the expiry timer be late.
+//     may no longer share loses their shares, also while they are signed out (MayShare then asks with another
+//     member's sign-in); only when nobody can ask now are they kept. Each sweep also ends the shares that
+//     expired, should the expiry timer be late.
 //   - Members are told of every change (a share made, revoked or expired, a guest in or out of the room):
 //     MsgChanged, a stateless message to the room.
 package guest
@@ -54,7 +56,7 @@ type Options struct {
 	Sessions Sessions
 	Rooms    Rooms
 	// MayShare is whether user may share room now: true, false (GitLab says no), or an error when that
-	// cannot be told now (they are signed out, GitLab cannot be reached).
+	// cannot be told now (nobody signed in can ask GitLab, GitLab cannot be reached). user may be signed out.
 	MayShare func(ctx context.Context, user collab.User, room string) (bool, error)
 	Log      zerolog.Logger
 
@@ -443,7 +445,7 @@ func (g *Guests) activeIn(room string) int {
 }
 
 // creatorMayShare is whether sh's creator may still share its room; a creator GitLab says may not loses the
-// share (it ends). One who cannot be asked for now may.
+// share (it ends). One whom nobody can ask about now may.
 func (g *Guests) creatorMayShare(ctx context.Context, sh store.Share) bool {
 	may, err := g.opts.MayShare(ctx, creatorOf(sh), sh.Room)
 	if err != nil {

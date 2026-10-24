@@ -1,5 +1,5 @@
 // What the changes are shown against. See changes in changes.ts.
-import { EventEmitter } from '../../core/event-emitter/event-emitter';
+import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { Scm, SourceControl, SourceControlHistoryItem } from '../../hosts/scm/scm';
 
@@ -9,7 +9,7 @@ import type { Scm, SourceControl, SourceControlHistoryItem } from '../../hosts/s
  * `historyProvider.provideFileContent`; '' for a file not there yet). A commit's texts load on first use:
  * `original` is undefined meanwhile, and `onDidChange` fires once one has come (also when the commit is set or reset).
  *
- * Used by: the changes extension, for the Visual editor's changes and the Changes editor.
+ * Used by: the changes extension, for the changes its Visual and Source editors show.
  */
 export class Baseline {
   #commit: Chosen | undefined;
@@ -25,9 +25,10 @@ export class Baseline {
     return this.#commit?.item;
   }
 
-  /** Shows the changes since `item` of `control` (which has a `historyProvider`); undefined: since the last commit. */
-  setCommit(control: SourceControl, item: SourceControlHistoryItem | undefined): void {
-    this.#commit = item && control.historyProvider ? { control, item } : undefined;
+  /** Compares with `item` of `control` (which has a `historyProvider`); no `item`: with the last commit. */
+  setCommit(control?: SourceControl, item?: SourceControlHistoryItem): void {
+    if (this.#commit?.item.id === item?.id) return;
+    this.#commit = item && control?.historyProvider ? { control, item } : undefined;
     this.#texts = new Map();
     this.#changed.fire();
   }
@@ -71,4 +72,13 @@ export class Baseline {
 interface Chosen {
   readonly control: SourceControl;
   readonly item: SourceControlHistoryItem;
+}
+
+/**
+ * What one editor's changes are drawn against: the original text (undefined: draw none), and word when it, or whether
+ * it is shown, changed.
+ */
+export interface ChangesState {
+  original(): string | undefined;
+  readonly onDidChange: Event<void>;
 }

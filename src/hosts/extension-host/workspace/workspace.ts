@@ -7,9 +7,9 @@ import type { FileChange } from '../../../core/project/project';
  * Changes to the project's files and the widget's settings (VS Code's `workspace` namespace).
  *
  * Extensions use it to:
- * - change files (`applyEdit`): a change is applied only if the project's rules, the folders' permissions (`fs`)
- *   and then the host page (`allowFileChange`) allow it
- * - make folders read-only (`registerFileSystemProvider`)
+ * - change files (`applyEdit`): a change is applied only if the project's rules, the permissions of the files and
+ *   folders it touches (`fs`) and then the host page (`allowFileChange`) allow it
+ * - make files and folders read-only (`registerFileSystemProvider`)
  * - read the settings they declare (`contributes.configuration`), hear when the host page sets new values, and set
  *   them for the widget (a settings UI)
  *
@@ -17,16 +17,16 @@ import type { FileChange } from '../../../core/project/project';
  */
 export interface Workspace {
   /**
-   * Applies `change` if the project allows it, no folder it creates, deletes or renames a file in is Readonly
-   * (`fs.stat`), and then the host allows it (`allowFileChange`, may be async; the project is asked again
+   * Applies `change` if the project allows it, no folder it creates, deletes or renames a file in and no file it
+   * touches is Readonly (`fs.stat`), and then the host allows it (`allowFileChange`, may be async; the project is asked again
    * afterwards). Resolves to the reason it was refused, in words for people, or null once applied.
    */
   applyEdit(change: FileChange): Promise<string | null>;
-  /** The permissions of the project's folders (VS Code's `workspace.fs`; synchronous, the project is in memory). */
+  /** The permissions of the project's files and folders (VS Code's `workspace.fs`; synchronous, the project is in memory). */
   readonly fs: FileSystem;
   /**
-   * Registers a provider of folder permissions (VS Code's `workspace.registerFileSystemProvider`, for `stat` only): a
-   * folder is Readonly while any registered provider says so.
+   * Registers a provider of file and folder permissions (VS Code's `workspace.registerFileSystemProvider`, for `stat`
+   * only): a file or folder is Readonly while any registered provider says so.
    */
   registerFileSystemProvider(provider: FileSystemProvider): Disposable;
   /** The settings under `section` (`getConfiguration('pdfExport').get('download')`), or all by full id. */
@@ -40,26 +40,29 @@ export interface Workspace {
   readonly onDidChangeConfiguration: Event<ConfigurationChangeEvent>;
 }
 
-/** VS Code's FilePermission: `Readonly`, a folder in which no file is created, renamed or moved in or out, or deleted. */
+/**
+ * VS Code's FilePermission: `Readonly`, a folder in which no file is created, renamed or moved in or out, or deleted;
+ * a file that is not changed, renamed or deleted (nor created, when it is not there yet).
+ */
 export const FilePermission = { Readonly: 1 } as const;
 
 export type FilePermission = (typeof FilePermission)[keyof typeof FilePermission];
 
-/** What is known of a folder (VS Code's FileStat, its permissions only); a file's content is always editable. */
+/** What is known of a file or folder (VS Code's FileStat, its permissions only). */
 export interface FileStat {
   readonly permissions?: FilePermission;
 }
 
-/** The project's folders (VS Code's FileSystem, `stat` only). */
+/** The project's files and folders (VS Code's FileSystem, `stat` only). */
 export interface FileSystem {
-  /** The stat of `folder`; null is the top level. */
-  stat(folder: ProjectPath | null): FileStat;
+  /** The stat of the file or folder `path` (it need not be there yet); null is the top level. */
+  stat(path: ProjectPath | null): FileStat;
 }
 
-/** Says what may be done in folders (VS Code's FileSystemProvider, `stat` only). */
+/** Says what may be done with files and in folders (VS Code's FileSystemProvider, `stat` only). */
 export interface FileSystemProvider {
-  /** The stat of `folder`; null is the top level. */
-  stat(folder: ProjectPath | null): FileStat;
+  /** The stat of the file or folder `path` (it need not be there yet); null is the top level. */
+  stat(path: ProjectPath | null): FileStat;
 }
 
 /** The values of settings by full id (`{ 'pdfExport.download': false }`): JSON-like values. */

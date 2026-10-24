@@ -143,15 +143,41 @@ describe('CollaborationLink', () => {
       await expect(signedIn()).resolves.toBe(false);
     });
 
-    it('the session ends later: asks to sign in', async () => {
+    it("tells a guest's widget, not a member's, which files guests may change", async () => {
+      const joined = { signedOut: new Promise(() => {}), refused: new Promise(() => {}), onDidReceiveMessage: () => ({ dispose() {} }), onDidChangePresence: () => ({ dispose() {} }), onDidChangeParticipants: () => ({ dispose() {} }), sourceControl: null, guestEditable: ['.typ'], dispose() {} };
+      for (const [me, told] of [[{ provider: 'guest', id: 's1/x', name: 'Jane (guest)' }, [[['.typ']]]], [{ provider: 'gitlab', id: '2', name: 'Ann' }, []]] as const) {
+        vi.spyOn(Collaboration, 'start').mockResolvedValueOnce(joined as unknown as Collaboration);
+        const widget = { current: () => null, focused: () => false, onGuestEditable: vi.fn() };
+        const link = new CollaborationLink(SERVER, { project: new Project(MAIN, { [MAIN]: 'Hello' }) }, widget, account(me));
+        cleanup.push(() => link.dispose());
+        await link.ready;
+        expect(widget.onGuestEditable.mock.calls, me.provider).toEqual(told);
+      }
+    });
+
+    /** A joined room whose connection ends when `signedOut` or `refused` settle. */
+    const joined = (ends: { signedOut?: Promise<void>; refused?: Promise<string> }) => {
+      const never = new Promise<never>(() => {});
+      const none = () => ({ dispose() {} });
+      const collaboration = { signedOut: ends.signedOut ?? never, refused: ends.refused ?? never, onDidReceiveMessage: none, onDidChangePresence: none, onDidChangeParticipants: none, sourceControl: null, dispose() {} };
+      vi.spyOn(Collaboration, 'start').mockResolvedValueOnce(collaboration as unknown as Collaboration);
+      return join(account({ provider: 'gitlab', id: '2', name: 'Ann' }));
+    };
+
+    it('the session ends later: asks to sign in, saying it ended', async () => {
       let signOut = () => {};
-      const signedOut = new Promise<void>((resolve) => (signOut = resolve));
-      vi.spyOn(Collaboration, 'start').mockResolvedValueOnce({ signedOut, refused: new Promise(() => {}), onDidReceiveMessage: () => ({ dispose() {} }), onDidChangePresence: () => ({ dispose() {} }), sourceControl: null, dispose() {} } as unknown as Collaboration);
-      const { link, widget } = join(account({ provider: 'gitlab', id: '2', name: 'Ann' }));
+      const { link, widget } = joined({ signedOut: new Promise<void>((resolve) => (signOut = resolve)) });
       await link.ready;
       expect(widget.signInRequired).not.toHaveBeenCalled();
       signOut();
-      await vi.waitFor(() => expect(widget.signInRequired).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(widget.signInRequired).toHaveBeenCalledWith('Your session ended.'));
+    });
+
+    it('the server refuses the room with "You signed out.": asks to sign in with that reason, instead of telling it', async () => {
+      const { link, widget } = joined({ refused: Promise.resolve('You signed out.') });
+      await link.ready;
+      await vi.waitFor(() => expect(widget.signInRequired).toHaveBeenCalledWith('You signed out.'));
+      expect(widget.tell).not.toHaveBeenCalled();
     });
   });
 });

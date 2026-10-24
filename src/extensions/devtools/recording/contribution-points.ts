@@ -89,16 +89,8 @@ const POINTS: Readonly<Record<string, Describer>> = {
       rank: [String(menuId), place === 'navigation' ? 0 : 1, place, num(order, 0)],
     };
   },
-  'window.registerStatusBarItem': ([element, placement]) => {
-    const { alignment, priority } = record(placement);
-    const text = record(element).textContent;
-    return {
-      title: typeof text === 'string' && text.trim() ? text.trim() : `<${String(record(element).nodeName ?? 'element').toLowerCase()}>`,
-      details: [String(alignment), `priority ${num(priority, 0)}`],
-      // left items first; within a side the higher priority further left
-      rank: [alignment === 'left' ? 0 : 1, -num(priority, 0)],
-    };
-  },
+  'window.registerStatusBarItem': ([element, placement]) => barItem(element, placement),
+  'window.registerTitleBarItem': ([element, placement]) => barItem(element, placement),
   'window.registerEditorProvider': ([viewType, , options]) => {
     const { displayName, filenamePattern, priority = 'default' } = record(options);
     // who opens a file: the ranked editors by priority, then the fallback, then those only chosen ('option')
@@ -153,6 +145,19 @@ function typstSpec(spec: unknown): Description {
   ];
   return { title: String(name), details, rank: [-(priority ?? DEFAULT_PRIORITY)] };
 }
+
+/** A status bar or title bar item: its text, its side and priority; sides in the bar's order, the higher priority further left. */
+function barItem(element: unknown, placement: unknown): Description {
+  const { alignment, priority } = record(placement);
+  const text = record(element).textContent;
+  return {
+    title: typeof text === 'string' && text.trim() ? text.trim() : `<${String(record(element).nodeName ?? 'element').toLowerCase()}>`,
+    details: [String(alignment), `priority ${num(priority, 0)}`],
+    rank: [SIDES.indexOf(String(alignment)), -num(priority, 0)],
+  };
+}
+
+const SIDES = ['left', 'center', 'right'];
 
 function record(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};

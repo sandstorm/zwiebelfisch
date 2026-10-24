@@ -53,6 +53,9 @@ type Options struct {
 	// instance's user id user, from any live sign-in; an error when they have none (package auth's
 	// Auth.Token). It keeps tokens out of its errors.
 	Token func(ctx context.Context, user string) (string, error)
+	// SignedIn are the user ids of this instance's users signed in now (package auth's Auth.SignedInUsers):
+	// whom MayEdit asks for a user who is signed out. nil: nobody.
+	SignedIn func() []string
 	// Dir is the folder of the projects' git clones, one folder each; "": in memory (gone with the process).
 	Dir string
 	// Client makes the requests to GitLab (default: one with a 30 s timeout; git calls use its transport

@@ -21,7 +21,7 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
   return page;
 }
 
-/** The account's status bar entry ("Sign in", or the user's name). */
+/** The account's title bar entry ("Sign in", or the user's name). */
 const account = (page: Page) => page.locator('.zwf-collaboration__account');
 
 /** Text in the Visual editor of the file shown (each opened file keeps a hidden Visual editor of its own). */
@@ -35,7 +35,7 @@ async function users(browser: Browser, baseURL: string, project: string, room = 
 }
 
 async function saveToGitLab(page: Page, message: string): Promise<void> {
-  await page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Save to GitLab…' }).click();
+  await page.getByTestId('zwf-title-bar').getByRole('button', { name: 'Save to GitLab…' }).click();
   const form = page.getByRole('form', { name: 'Save to GitLab' });
   await form.getByRole('textbox', { name: 'Commit message' }).fill(message);
   await form.getByRole('button', { name: 'OK' }).click();
@@ -44,7 +44,10 @@ async function saveToGitLab(page: Page, message: string): Promise<void> {
 /** The messages shown to `page`'s user (outcomes and news of the source control). */
 const messages = (page: Page) => page.getByTestId('zwf-notifications');
 
-/** The source control's status bar entry ("Not in GitLab: …" / "Saved · …"). */
+/** The card over the whole widget that says the user is not signed in. */
+const signedOut = (page: Page) => page.getByTestId('zwf-modal').getByRole('alertdialog', { name: 'You are not signed in' });
+
+/** The source control's save status in the title bar ("Not in GitLab: …" / "Saved · …"). */
 const scmStatus = (page: Page) => page.locator('.zwf-source-control__entry');
 
 /** The M / A / D badge of `path` in the file panel (the panel may be closed). */
@@ -82,6 +85,22 @@ test('Save to GitLab commits, and everyone in the room is told', async ({ browse
     await expect(scmStatus(page)).toHaveText(/^Saved · [0-9a-f]{8}$/);
     await expect(changeBadge(page, '/main.typ')).toHaveCount(0);
   }
+});
+
+test('"Show changes since last commit" marks a new line in the Source editor and says so in the status bar; its ✕ turns it off', async ({ browser, baseURL }, info) => {
+  const { ann } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.press('Enter');
+  await ann.keyboard.type('Changed here.');
+  await ann.evaluate(() => (window as unknown as { editor: { executeCommand(id: string): Promise<unknown> } }).editor.executeCommand('changes.toggle'));
+  const status = ann.getByTestId('zwf-changes-status');
+  await expect(status).toHaveText('Changes since last commit ✕');
+  await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine', { hasText: 'Changed here.' })).toBeVisible();
+  await status.click();
+  await expect(status).toHaveCount(0);
+  await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine')).toHaveCount(0);
 });
 
 test('a click on the status bar entry opens the save dialog', async ({ browser, baseURL }, info) => {
@@ -210,12 +229,13 @@ test('saving without changes says so', async ({ browser, baseURL }, info) => {
   await expect(messages(ann).getByRole('status').filter({ hasText: 'No changes to save' })).toBeVisible();
 });
 
-test('signed out: the widget offers to sign in, the fake GitLab signs in, back in the room; Sign out', async ({ page }, info) => {
+test('signed out: a card over the widget offers to sign in, the fake GitLab signs in, back in the room; Sign out', async ({ page }, info) => {
   const room = newRoom(info.project.name);
   await page.goto(`/?room=${encodeURIComponent(room)}`);
-  await expect(messages(page)).toContainText('Sign in to join this room.');
+  await expect(signedOut(page)).toContainText('Sign in to join this room.');
+  await expect(signedOut(page).getByRole('button')).toHaveText(['Sign in']); // no way to close it
   await expect(account(page)).toHaveText('Sign in');
-  await messages(page).getByRole('button', { name: 'Sign in' }).click();
+  await signedOut(page).getByRole('button', { name: 'Sign in' }).click();
   // the fake GitLab's page (on the server), then back to the room
   await expect(page.getByRole('heading', { name: 'Sign in to the fake GitLab' })).toBeVisible();
   await page.getByRole('button', { name: 'Cleo' }).click();
@@ -223,11 +243,13 @@ test('signed out: the widget offers to sign in, the fake GitLab signs in, back i
   await expect(page).toHaveURL((url) => `${url.origin}${url.pathname}${url.search}` === `${SERVER_DEMO}/?room=${encodeURIComponent(room)}`);
   await expect(fileRow(page, 'chapters')).toBeVisible();
   await expect(account(page)).toHaveText('Cleo');
+  await expect(signedOut(page)).toHaveCount(0);
+  await expect(page.getByTestId('zwf-title-bar')).toContainText('demo/report');
 
   await account(page).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(account(page)).toHaveText('Sign in');
-  await expect(messages(page)).toContainText('Sign in to join this room.');
+  await expect(signedOut(page)).toContainText('Sign in to join this room.');
 });
 
 test('a plain room on this server (plain rooms off): the bar and the widget say it opens only GitLab rooms', async ({ page }) => {

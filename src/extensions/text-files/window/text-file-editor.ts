@@ -1,7 +1,7 @@
 // TextFileEditor: a text file in plain CodeMirror. See textFiles in ../text-files.ts.
 import { basicSetup } from 'codemirror';
 import { indentWithTab } from '@codemirror/commands';
-import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
+import { EditorState, Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 
@@ -10,7 +10,7 @@ import { ProjectPath } from '../../../core/paths/paths';
  * the text is saved `SAVE_DELAY` ms after the last edit, and at once by `dispose`. `reload` shows the file as changed
  * elsewhere (another user, the host): while an edit of this editor waits to be saved it is ignored, since that save
  * replaces the whole file anyway (the last save wins); otherwise the text changes in place, cursor and the user's undo
- * history kept.
+ * history kept. A `readOnly` file is shown, titled "(read-only)", and never changed or saved.
  */
 export class TextFileEditor {
   readonly #root: HTMLElement;
@@ -27,7 +27,7 @@ export class TextFileEditor {
     this.#root.dataset.testid = 'zwf-text-file';
     const title = doc.createElement('h2');
     title.className = 'zwf-text-files__title';
-    title.textContent = ProjectPath.displayName(options.path);
+    title.textContent = ProjectPath.displayName(options.path) + (options.readOnly ? ' (read-only)' : '');
     this.#root.append(title);
     parent.append(this.#root);
     this.#view = new EditorView({
@@ -38,6 +38,7 @@ export class TextFileEditor {
         // Tab and Shift+Tab indent and outdent the selected lines; Escape, then Tab moves the focus on (CodeMirror's)
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
+        EditorState.readOnly.of(!!options.readOnly),
         options.extensions ?? [],
         EditorView.contentAttributes.of({ 'aria-label': ProjectPath.displayName(options.path) }),
         EditorView.updateListener.of((update) => {
@@ -94,6 +95,8 @@ export interface TextFileEditorOptions {
   readonly path: ProjectPath;
   /** The file's text when opened. */
   readonly text: string;
+  /** Shown only: no edit (e.g. a file a guest may not change). */
+  readonly readOnly?: boolean;
   /** Stores the whole text (the file's new content). */
   save(text: string): void;
   /** More of CodeMirror (its contributions: document links, the look). */

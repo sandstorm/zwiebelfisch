@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant G as guest's client
+  participant R as GitLab room (server)
+  participant M as members' clients
+  M->>R: any change (also the room's own: merge, commit)
+  R->>R: keep what guests may not change
+  G->>R: update: main.typ edited, .gitlab-ci.yml changed
+  R->>M: relayed
+  R->>R: .gitlab-ci.yml differs from what was kept
+  R->>M: .gitlab-ci.yml written back (the room's own change)
+  R-->>G: refused: "Guests may change only Typst files, …"
+  Note over R,M: main.typ keeps the guest's edit, and a commit sees only the kept .gitlab-ci.yml

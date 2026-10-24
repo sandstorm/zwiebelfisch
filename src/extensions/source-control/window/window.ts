@@ -43,7 +43,7 @@ export interface SourceControlUi {
   readonly window: Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showInformationMessage'>;
 }
 
-/** The tab bar's entry for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */
+/** The title bar's button for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */
 export function commitTitle(controls: readonly SourceControl[]): string {
   if (controls.length !== 1) return 'Save…';
   const [control] = controls;
@@ -51,11 +51,11 @@ export function commitTitle(controls: readonly SourceControl[]): string {
 }
 
 /**
- * The source controls' status bar entries (`statusBarItems`), one button each, in registration order; a click
- * commits to the source control of the entry (`onCommit`).
+ * The source controls' save status (their `statusBarItems`), one button each, in registration order, for the title
+ * bar; a click commits to the source control of the entry (`onCommit`).
  */
 export class SourceControlStatus {
-  /** The entries, for the status bar. */
+  /** The entries, for the title bar. */
   readonly element: HTMLElement;
 
   constructor(

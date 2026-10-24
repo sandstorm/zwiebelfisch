@@ -25,14 +25,15 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
 
 #figure(
   mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),
-  caption: [The editor: left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
+  caption: [The editor: title bar, left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
 )
 
-- *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name (Local mode). In Collaborate and GitLab mode you sign in at the fake GitLab (the status bar's "Sign in", any name); a second user is a private window.
+- *Playground bar* (top): the example; the mode Local, Collaborate or GitLab (fake); your name (Local mode). In Collaborate and GitLab mode you sign in at the fake GitLab ("Sign in" on the card over the editor, any name); a second user is a private window.
+- *Title bar* (the editor's top): the View menu; in a room the project, the save status, who else is in, "Share", "Save to GitLab…" and your account.
 - *Left rail*: Files, Find in files (the magnifier), search everywhere (a field over a list), Help.
 - *Editing area*: a Typst file has the tabs Visual and Source (switching keeps the cursor); spreadsheets, diagrams and text files open in their own editor.
 - *Right side*: the preview, or the devtools.
-- *Status bar*: errors and warnings; in GitLab mode what is not saved yet.
+- *Status bar*: errors and warnings.
 
 *Examples:* start with *Simple*, which opens first: one page with the main features, each with what to try. *Advanced* is a report in several files (template, chapters, custom styles, a spreadsheet, diagrams, figures and references); GitLab mode always uses it. *Documentation* is this book; with `mise run demo` your edits are saved to `docs/`.
 
@@ -46,7 +47,7 @@ To work on the code, run `mise run demo` from a checkout instead (@architecture-
   [`?example=simple|advanced|docs`], [The example. `docs` saves to `docs/` only with `mise run demo` (@architecture-development-writing-docs).],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`?room=<name>`], [Collaborate mode: a plain room on the local server (the playground server has them; a real one only with `ZWF_PLAIN_ROOMS=1`).],
-  [`&user=<name>`], [Local mode: your name (signs comments). In a room you are whom you signed in as: the status bar's "Sign in" goes to the fake GitLab, which takes any name.],
+  [`&user=<name>`], [Local mode: your name (signs comments). In a room you are whom you signed in as: "Sign in" goes to the fake GitLab, which takes any name.],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line.],
 )
 

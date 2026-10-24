@@ -6,9 +6,9 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
-import type { PlacedPresence } from '../presence/presence';
+import type { Participant, PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { gitlabRoomFolder, roomFilePath } from '../room-protocol';
+import { gitlabRoom, guestMayChange, META_MAP, roomFilePath, SIGNED_OUT } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
@@ -26,7 +26,8 @@ import { SharedProject } from './shared-project';
  * - the main file (SharedMainFile), except in a GitLab-backed room, where it stays each user's own
  * - the users' places (RemoteCursors)
  * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch and its history
- *   (GitLabSourceControl, GitLabHistory);
+ *   (GitLabSourceControl, GitLabHistory); a guest's client shares no change of the files guests may not change
+ *   (`guestEditable`);
  *   in a room of one folder of the branch, also its main file and the files from outside it the compiler misses
  *   (RoomFolder)
  *
@@ -41,6 +42,9 @@ export class Collaboration {
   private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
   /** Every other user's place, in any file, whenever one changes. */
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
+  private readonly participantsChanged = new EventEmitter<readonly Participant[]>();
+  /** Every other user in the room, whenever someone comes or goes. */
+  readonly onDidChangeParticipants: Event<readonly Participant[]> = this.participantsChanged.event;
   /** Commits to the branch, in a room backed by a GitLab branch (else null). */
   readonly sourceControl: GitLabSourceControl | null = null;
   /** Settles when the server's connection ended because the session did (it no longer reconnects then). */
@@ -49,6 +53,8 @@ export class Collaboration {
   readonly refused: Promise<string>;
   /** Fires with every stateless message from the server (empty without one). */
   readonly onDidReceiveMessage: Event<string>;
+  /** In a room backed by a GitLab branch, the endings of the files a guest may change (`guestMayChange`); else null. */
+  readonly guestEditable: readonly string[] | null = null;
 
   private constructor(
     ydoc: Y.Doc,
@@ -73,14 +79,16 @@ export class Collaboration {
       this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, { historyProvider: server.history(ydoc), saves: !shared.guest });
       // before the files are shared, so the host's files outside the folder are not
       if (server.folder) this.folder = new RoomFolder(server.folder, project, ydoc, statelessChannel(server.provider));
-      this.assets = new SharedAssets(project, ydoc, server.files);
+      this.guestEditable = guestEditableOf(ydoc);
+      this.assets = new SharedAssets(project, ydoc, server.files, guestShares(this.guestEditable, shared.guest));
     }
     this.sharedProject = new SharedProject(project, ydoc);
     // after the files, so the room's main file is there to take
     if (!this.sourceControl && !project.mainLocked) this.mainFile = new SharedMainFile(project, ydoc);
     const text = (path: ProjectPath) => this.sharedProject.text(path);
     const onPresence = (presences: readonly PlacedPresence[]) => this.presenceChanged.fire(presences);
-    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
+    const onParticipants = (participants: readonly Participant[]) => this.participantsChanged.fire(participants);
+    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence, onParticipants }) : null;
   }
 
   /**
@@ -89,8 +97,9 @@ export class Collaboration {
    * and news with `tell` (default: not at all). The WebSocket carries the session cookie: the server knows who
    * connects, and refuses it without a session (401, which a browser does not tell; the connection just closes).
    * So `signedIn` is asked whenever it closes: false, and it stops reconnecting, `start` rejecting with
-   * SignInRequired, or later `signedOut` settling. Rejects with the server's reason when it refuses the room (no
-   * access to the GitLab project; a plain room on a server that opens only GitLab rooms).
+   * SignInRequired (as when the server refuses the room with SIGNED_OUT), or later `signedOut` settling. Rejects with
+   * the server's reason when it refuses the room otherwise (no access to the GitLab project; a plain room on a server
+   * that opens only GitLab rooms).
    */
   static async start(
     options: CollaborationOptions,
@@ -104,7 +113,7 @@ export class Collaboration {
     const { signedOut, refused } = whenEnded(provider, signedIn);
     try {
       await new Promise<void>((resolve, reject) => {
-        void refused.then((reason) => reject(new Error(reason)));
+        void refused.then((reason) => reject(reason === SIGNED_OUT ? new SignInRequired() : new Error(reason)));
         void signedOut.then(() => reject(new SignInRequired()));
         if (provider.isSynced) resolve();
         else provider.on('synced', () => resolve());
@@ -114,7 +123,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoomFolder(options.room) });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoom(options.room)?.folder ?? null });
   }
 
   /**
@@ -137,6 +146,7 @@ export class Collaboration {
 
   dispose(): void {
     this.presenceChanged.dispose();
+    this.participantsChanged.dispose();
     this.sourceControl?.dispose();
     this.cursors?.dispose();
     this.assets?.dispose();
@@ -153,6 +163,17 @@ export interface SharedRoom {
   user?: User;
   /** The local user is a guest: they edit, and never commit (members do). */
   guest?: boolean;
+}
+
+/** The room's `guestEditable` (see `META_MAP`): the endings of the files a guest may change. */
+function guestEditableOf(ydoc: Y.Doc): readonly string[] {
+  const endings = ydoc.getMap(META_MAP).get('guestEditable');
+  return Array.isArray(endings) ? endings.filter((ending) => typeof ending === 'string') : [];
+}
+
+/** Which local files a client shares: a guest's, those of the `endings`; everyone else's, all. */
+function guestShares(endings: readonly string[], guest = false): ((path: ProjectPath) => boolean) | undefined {
+  return guest ? (path) => guestMayChange(endings, path) : undefined;
 }
 
 /** How the server's connection ends and what it sends (without a server: never, nothing). */

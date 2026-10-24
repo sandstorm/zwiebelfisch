@@ -3,7 +3,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { ChangesState } from '../baseline';
 import { changesSince, type Deletion, type DocumentChanges } from './changes-since';
 
 /**
@@ -33,11 +33,6 @@ export function changeDecorations(changes: ChangesState): Extension {
   });
 }
 
-/** The text to compare with (undefined: show nothing), and word when it, or whether it is shown, changed. */
-export interface ChangesState {
-  original(): string | undefined;
-  readonly onDidChange: Event<void>;
-}
 
 const key = new PluginKey<DecorationSet>('changeDecorations');
 

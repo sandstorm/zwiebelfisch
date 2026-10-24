@@ -23,7 +23,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's own host and port (a proxy in front that terminates TLS is fine), or both on loopback (`localhost`, `127.0.0.1`, `::1`; any ports, as in the demo). There is nothing to configure: the server tells from each request's `Origin` and `Host`, and only such a page's requests carry the session to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page's origin must be one of the server's `ZWF_ALLOWED_ORIGINS` (@configuration-collaboration-server-running): only then do its requests carry the session to the WebSocket and the room's files. Signed out, the widget does not connect: a card over the whole widget says "You are not signed in" with "Sign in" (also when the session ends, with the reason), and it cannot be closed. The title bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
@@ -74,7 +74,8 @@ With `ZWF_GUESTS=1`, a member shares a room with people who have no account (@fe
 
 - *Lifetimes:* 1, 7 (default) or 30 days; no longer, no extension (make a new link). At most 10 active links per room.
 - *A guest opens one room:* the link's, and its files and history; any other room refuses them ("This guest link is for another project."). A guest is a user of the provider `guest`, named "<name> (guest)"; their session ends with the link.
-- *Expiry and revocation* end the link's guest sessions and refuse their clients at once ("Guest access to this project has ended."). Every 10 minutes and at each join, the server asks again whether the link's creator may still share: one who may not any more loses their links; one who is signed out keeps them until they can be asked.
+- *A room's links* are the room's: every member who may share it lists all of them and revokes any.
+- *Expiry and revocation* end the link's guest sessions and refuse their clients at once ("Guest access to this project has ended."). Every 10 minutes and at each join, the server asks again whether the link's creator may still share, with the creator's GitLab token, or while they are signed out with that of any signed-in member of the project: one who may not any more loses their links. Only when nobody signed in can ask are the links kept.
 - *Restarts:* links are in the database (`shares`), so they survive a restart; guest sessions are in memory, so guests open the link again (their name is offered).
 - Endpoints: `POST /api/public/guest/join {token, name}`; signed in, `GET` and `POST /api/rooms/<room>/shares` (`{label, days}`), `DELETE /api/rooms/<room>/shares/<id>`. A change of a room's links or guests reaches its clients as the stateless message `{"type": "guests:changed"}`.
 
@@ -83,6 +84,7 @@ Security:
 - The server keeps only the secret's SHA-256 hash; it never stores or logs the secret. The secret is shown once, when the link is made.
 - A join must come from a page of this host as JSON. Every link that does not let in (unknown, expired, revoked) gets the same 404. Joins are limited to 10 a minute per IP address and 100 a minute in all; behind a reverse proxy all count as the proxy's address.
 - A guest cannot share, list others' links or revoke, and never saves; in a room of one folder, they cannot load files from outside it either.
+- In a GitLab room a guest changes only files ending in `.typ`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.mmd` or `.ic` (in any case; clients read the list from the room's `meta.guestEditable`). A guest's change to any other file (edit, create, rename, delete) or to the room's `meta` is undone at once, before any commit can take it, and the guest's client is refused ("Guests may change only Typst files, images, Mermaid diagrams and spreadsheets; your change to another file was undone."). A guest's update that depends on changes the room does not hold yet is refused too, unapplied ("Your change depends on changes this project does not have; open the project again."), so no later change of a member's can complete it.
 - A guest's name has no `<`, `>`, control or bidirectional characters, so it cannot hide "(guest)" or name another email in a `Co-authored-by` trailer. The history a guest gets has no emails in its commit messages.
 
 == Trying it locally <configuration-collaboration-server-demo>
@@ -90,9 +92,9 @@ Security:
 `mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo).
 
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
-- *Sign in* with the status bar's "Sign in": the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
+- *Sign in* with "Sign in" on the card over the widget: the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
 - *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
-- *Guests:* the playground server has guest links on; "Share with guests…" makes one, a private window opens it.
+- *Guests:* the playground server has guest links on; "Share" in the title bar makes one, a private window opens it.
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
 - `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes pushes to that branch fail as if the fake GitLab were unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

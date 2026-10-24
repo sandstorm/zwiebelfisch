@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
-// Tests for widget.ts (commit, status bar entries, file decorations) and the extension's wiring (../source-control.ts)
+// Tests for window.ts (commit, the save status, file decorations) and the extension's wiring (../source-control.ts)
 // over a fake widget.
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { MenuItem } from '../../../hosts/commands/commands';
 import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceControl, SourceControlResourceState, SourceControlStatusBarItem } from '../../../hosts/scm/scm';
@@ -91,20 +90,20 @@ describe('commit', () => {
 /** The extension activated over a fake window with `controls` registered (`changed` fires when they change). */
 function activate(controls: SourceControl[], answers: { input?: string } = {}) {
   const changed = new EventEmitter<void>();
-  const menu: MenuItem[] = [];
-  const statusBar: HTMLElement[] = [];
+  const titleBar: { element: HTMLElement; alignment: string }[] = [];
   const decorations: FileDecorationProvider[] = [];
   const commands = new Map<string, () => unknown>();
   const { fake, told } = ui(controls, answers);
+  const shown = (alignment: string) => titleBar.filter((item) => item.alignment === alignment && !item.element.hidden).map((item) => item.element);
   const window = {
     ...fake.window,
     ownerDocument: document,
     registerStyleSheet: () => new Disposable(() => {}),
-    registerMenuItem: vi.fn((_menuId: string, item: MenuItem) => {
-      menu.push(item);
-      return new Disposable(() => menu.splice(menu.indexOf(item), 1));
-    }),
-    registerStatusBarItem: (element: HTMLElement) => (statusBar.push(element), new Disposable(() => statusBar.splice(statusBar.indexOf(element), 1))),
+    registerTitleBarItem: (element: HTMLElement, { alignment }: { alignment: string }) => {
+      const item = { element, alignment };
+      titleBar.push(item);
+      return new Disposable(() => titleBar.splice(titleBar.indexOf(item), 1));
+    },
     registerFileDecorationProvider: (provider: FileDecorationProvider) => (decorations.push(provider), new Disposable(() => decorations.splice(decorations.indexOf(provider), 1))),
   };
   const scm = {
@@ -113,45 +112,49 @@ function activate(controls: SourceControl[], answers: { input?: string } = {}) {
     },
     onDidChangeSourceControls: changed.event,
   };
-  const registry = { registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))) };
+  const registry = {
+    registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
+    executeCommand: (id: string) => commands.get(id)?.(),
+  };
   const subscriptions: { dispose(): unknown }[] = [];
   sourceControlExtension().activate({ commands: registry, window, scm, subscriptions } as unknown as ExtensionContext);
   const dispose = () => {
     for (const subscription of subscriptions.reverse()) subscription.dispose();
   };
-  return { changed, menu, statusBar, decorations, commands, told, window, dispose };
+  const save = () => shown('right').map((element) => element.textContent);
+  const status = () => shown('center');
+  return { changed, save, status, titleBar, decorations, commands, told, dispose };
 }
 
 describe('sourceControl extension', () => {
-  it('shows "Save to <label>…" in the tab bar while a source control is registered, and commits from it', async () => {
+  it('shows "Save to <label>…" at the right of the title bar while a source control is registered, and commits from it', async () => {
     const { sourceControl, committed, update } = control();
     const controls: SourceControl[] = [];
-    const { changed, menu, commands, told, window, dispose } = activate(controls, { input: 'Saved' });
-    expect(menu).toEqual([]);
+    const { changed, save, titleBar, told, dispose } = activate(controls, { input: 'Saved' });
+    expect(save()).toEqual([]);
     controls.push(sourceControl);
     changed.fire();
-    expect(window.registerMenuItem).toHaveBeenLastCalledWith('window/editorTitle', expect.objectContaining({ command: 'sourceControl.commit' }));
-    expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
-    await commands.get('sourceControl.commit')!();
-    expect(committed).toEqual(['Saved']);
-    expect(menu.map((item) => item.title)).toEqual(['Saving to GitLab…']);
+    expect(save()).toEqual(['Save to GitLab…']);
+    titleBar.find((item) => item.alignment === 'right')!.element.click();
+    await vi.waitFor(() => expect(committed).toEqual(['Saved']));
+    expect(save()).toEqual(['Saving to GitLab…']);
     update(false);
     expect(told).toEqual([]);
-    expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
+    expect(save()).toEqual(['Save to GitLab…']);
     controls.pop();
     changed.fire();
-    expect(menu).toEqual([]);
+    expect(save()).toEqual([]);
     dispose();
-    expect(commands.size).toBe(0);
+    expect(titleBar).toEqual([]);
   });
 
-  it('shows the status bar entries while there are any; a click commits to that source control', async () => {
+  it('shows the save status (the status bar entries) in the middle of the title bar while there are any; a click commits to that source control', async () => {
     const { sourceControl, committed, show } = control();
-    const { statusBar, dispose } = activate([sourceControl], { input: 'From the status bar' });
-    expect(statusBar).toEqual([]);
+    const { status, dispose } = activate([sourceControl], { input: 'From the status bar' });
+    expect(status()).toEqual([]);
     show({ resourceStates: [], statusBarItems: [{ title: 'Not in GitLab: 1 file · 3 min (Ann)', tooltip: 'M main.typ' }] });
-    expect(statusBar).toHaveLength(1);
-    const button = () => statusBar[0].querySelector('button')!;
+    expect(status()).toHaveLength(1);
+    const button = () => status()[0].querySelector('button')!;
     expect([button().textContent, button().title]).toEqual(['Not in GitLab: 1 file · 3 min (Ann)', 'M main.typ']);
     const first = button();
     show({ resourceStates: [], statusBarItems: [{ title: 'Saved · 01234567' }] });
@@ -159,14 +162,14 @@ describe('sourceControl extension', () => {
     expect(button().textContent).toBe('Saved · 01234567');
     expect(button().classList.contains('zwf-source-control__entry--warning')).toBe(false);
     show({ resourceStates: [], statusBarItems: [{ title: 'Conflict with GitLab: main.typ', backgroundColor: 'warning' }, { title: 'Saved · 01234567' }] });
-    expect([...statusBar[0].children].map((entry) => [entry.textContent, entry.classList.contains('zwf-source-control__entry--warning')])).toEqual([
+    expect([...status()[0].children].map((entry) => [entry.textContent, entry.classList.contains('zwf-source-control__entry--warning')])).toEqual([
       ['Conflict with GitLab: main.typ', true],
       ['Saved · 01234567', false],
     ]);
     button().click();
     await vi.waitFor(() => expect(committed).toEqual(['From the status bar']));
     show({ resourceStates: [], statusBarItems: [] });
-    expect(statusBar).toEqual([]);
+    expect(status()).toEqual([]);
     dispose();
   });
 
@@ -191,11 +194,11 @@ describe('a source control the user may not commit to (a guest\'s)', () => {
     const { sourceControl, show } = control();
     const viewOnly: SourceControl = { ...sourceControl, commit: undefined, onDidChange: sourceControl.onDidChange };
     Object.defineProperty(viewOnly, 'statusBarItems', { get: () => sourceControl.statusBarItems });
-    const { menu, statusBar, commands, dispose } = activate([viewOnly], { input: 'x' });
+    const { save, status, commands, dispose } = activate([viewOnly], { input: 'x' });
     show({ resourceStates: [], statusBarItems: [{ title: 'Not in GitLab: 1 file · 3 min (Jane (guest))' }] });
-    expect(menu).toEqual([]);
-    expect(statusBar).toHaveLength(1);
-    statusBar[0].querySelector('button')!.click();
+    expect(save()).toEqual([]);
+    expect(status()).toHaveLength(1);
+    status()[0].querySelector('button')!.click();
     await commands.get('sourceControl.commit')!();
     const asked = ui([viewOnly], { input: 'x' });
     await commit(asked.fake, viewOnly);

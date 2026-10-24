@@ -87,7 +87,7 @@ export const VISUAL_EDITOR = 'visualEditor';
  * `shortTitle`, else its title), its title and key as the tooltip, pressed where `toggled` holds, disabled where
  * `enabled` does not, left out where `when` does not:
  * - `visualEditor/toolbar`: the toolbar row, a group of buttons per `group` (by name: `1_history`, `2_textStyle` the
- *   text style menu, `3_lists`, `4_align`, `5_insert` the Insert menu, `6_comments`, `7_changes`)
+ *   text style menu, `3_lists`, `4_align`, `5_insert` the Insert menu, `6_comments`)
  * - `visualEditor/insert`: the Insert menu
  * - `visualEditor/selection`: the bar above a text selection
  * - `visualEditor/textStyle`: the text style menu (a `<select>`), after the host's "Normal text": its value the first

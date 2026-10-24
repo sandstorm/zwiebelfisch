@@ -22,6 +22,8 @@ const (
 	metaFailure    = "commitFailure" // *commitFailure: the last commit failed, or what it left out
 	metaAutoCommit = "autoCommit"    // minutes without edits before the server commits by itself; null: never
 	metaPulledIn   = "pulledIn"      // []string: the files from outside the room's folder it holds (pullIn), sorted
+	// []string: the endings of the files a guest may change (guestEditable); clients show the others read-only
+	metaGuestEditable = "guestEditable"
 )
 
 // base is the commit the room is based on, as kept in the meta map (one key per field).

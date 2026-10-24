@@ -47,7 +47,8 @@ type Options struct {
 	PlainRooms bool
 	// Guests enables guest links (package guest).
 	Guests bool
-	// GitLab enables GitLab rooms (nil: none). Its Authenticate, Token (Auth's) and Log are set here.
+	// GitLab enables GitLab rooms (nil: none). Its Authenticate, Token and SignedIn (Auth's) and Log are set
+	// here.
 	GitLab *gitlab.Options
 	Log    zerolog.Logger
 }
@@ -81,7 +82,8 @@ func New(o Options) (*Server, error) {
 	var extension collab.Extension
 	if o.GitLab != nil {
 		g := *o.GitLab
-		g.Authenticate, g.Token, g.Log = s.authenticate, o.Auth.Token, o.Log.With().Str("module", "gitlab").Logger()
+		g.Authenticate, g.Token, g.SignedIn = s.authenticate, o.Auth.Token, o.Auth.SignedInUsers
+		g.Log = o.Log.With().Str("module", "gitlab").Logger()
 		s.gitlab = gitlab.New(g)
 		extension = s.gitlab
 	}
@@ -283,7 +285,8 @@ func (s *Server) authenticate(r *http.Request, room string) (collab.User, error)
 }
 
 // mayShare is whether user may share room with guests (guest.Options.MayShare): a GitLab room if GitLab says
-// they may edit it, a plain room if they are signed in; never a guest.
+// they may edit it (asked with the token of any signed-in member while they are signed out), a plain room
+// if they are signed in; never a guest.
 func (s *Server) mayShare(ctx context.Context, user collab.User, room string) (bool, error) {
 	switch {
 	case user.IsGuest() || user.ID == "":

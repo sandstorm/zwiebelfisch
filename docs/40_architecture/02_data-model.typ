@@ -129,7 +129,7 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [awareness], [`user`, `cursor` (relative positions): other users' carets], [all],
   [`project`], [`main`, the main file's path], [plain],
   [`assets`], [the other files: blob sha, or uploaded bytes not committed yet], [GitLab],
-  [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`], [GitLab],
+  [`meta`], [written by the server only: the base commit, `changes`, `conflict`, `commitFailure`, `autoCommit`, `pulledIn`, `guestEditable`], [GitLab],
 )
 
 *Allowed pages* (`auth.AllowedOrigin`): one rule, nothing configured, for the session (`Identify`), CORS with credentials, the sign-in's return URL, the guest join and the WebSocket upgrade (`collab`).
@@ -153,7 +153,7 @@ A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configur
   [`id`], [public, random: lists and revokes, grants nothing],
   [`token_hash`], [SHA-256 of the link's secret (unique); the secret itself is never stored],
   [`room`], [the one room it opens],
-  [`label`, `creator_*`], [whom it is for; who made it (provider, user id, name: asked again whether they may still share)],
+  [`label`, `creator_*`], [whom it is for; who made it (provider, user id, name: asked again whether they may still share, with their token, else with any signed-in member's)],
   [`created_at`, `expires_at`], [milliseconds; an expired share is deleted],
 )
 
@@ -161,6 +161,15 @@ A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configur
   mermaid(read("../diagrams/guest-join.mmd"), width: 90%),
   caption: [Link → join → session → authenticate → room.],
 )
+
+The shares belong to the room: every member who may share it lists all of them and revokes any. In a GitLab room a guest changes only the files of the types in `meta.guestEditable` (Typst, images, Mermaid, IronCalc; the list is the server's, `gitlab/guestfiles.go`). The room keeps everything else of the document as it was after the last change that was not a guest's; a guest's change to it is written back before anything else runs, and the guest's client is refused. So that a guest's change never takes effect later with another origin, `collab` takes a guest's update only when it adds and deletes nothing past what the room holds (`ydoc.HandleSyncAtOnce`), else refuses the guest:
+
+#figure(
+  mermaid(read("../diagrams/guest-guard.mmd"), width: 85%),
+  caption: [A guest's change to a file guests may not change never reaches a commit.],
+)
+
+The guest's widget shows those files Readonly (`workspace.fs`, from `meta.guestEditable`) and shares no change of them, so a guest is refused only when their client misbehaves.
 
 === GitLab rooms <architecture-data-model-gitlab>
 

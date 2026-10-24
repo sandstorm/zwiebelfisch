@@ -390,6 +390,38 @@ func TestRefusalTellsItsReason(t *testing.T) {
 	require.Equal(t, "permission-denied", other.reasons[0], "other errors are not told")
 }
 
+func TestAGuestsUpdateThatWaitsForChangesToComeIsRefused(t *testing.T) {
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) {
+			if session(r) == "guest" {
+				return collab.User{Provider: collab.GuestProvider, ID: "share1/abc", Name: "Jane (guest)"}, nil
+			}
+			return signedIn(r, "")
+		}
+	})
+	a := dial(t, s, "report", "secret")
+	a.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "Hello") })
+	g := dial(t, s, "report", "guest")
+	g.eventually("the guest has the room", func() bool { return g.doc.Texts("files")["/main.typ"] == "Hello" })
+
+	// the second of two changes, without the first: it would wait for the first, and take effect with whoever sends it
+	g.mu.Lock()
+	other, err := ydoc.Load(g.doc.State())
+	g.mu.Unlock()
+	require.NoError(t, err)
+	require.NoError(t, other.Write(nil, func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 0, 0, "1 ") }))
+	var second []byte
+	other.OnUpdate(func(u []byte, _ any) { second = u })
+	require.NoError(t, other.Write(nil, func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 0, 0, "2 ") }))
+	g.send(msgSync, ydoc.SyncUpdate(second))
+	g.eventually("refused", func() bool { return len(g.reasons) == 1 })
+	require.Equal(t, "Your change depends on changes this project does not have; open the project again.", g.reasons[0])
+
+	a.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 5, 5, "!") })
+	b := dial(t, s, "report", "secret")
+	b.eventually("the room has the member's edit and nothing of the guest's", func() bool { return b.doc.Texts("files")["/main.typ"] == "Hello!" })
+}
+
 // extension is an Extension for tests: it opens every room whose name starts with "x-", records what it
 // is told and lets the test decide when Left returns.
 type extension struct {

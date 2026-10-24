@@ -1,6 +1,6 @@
 // What the widget and the collaboration server agree on: the maps of a room's Y.Doc, the messages of GitLab-backed
 // rooms, guest links, and the paths of the collaboration WebSocket and a room's file. The server's side is
-// server/lib/gitlab/protocol.go and server/lib/guest/guest.go (the paths: server/lib/app/app.go); a change here is a
+// server/lib/gitlab/protocol.go and server/lib/guest/guest.go (the paths and SIGNED_OUT: server/lib/app/app.go); a change here is a
 // change there. Outside the
 // lazily loaded model/ (which uses most of it), so the eager account.ts can build the WebSocket's URL. See
 // collaboration in collaboration.ts.
@@ -20,20 +20,28 @@ export const PROJECT_MAP = 'project';
 
 /**
  * Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`, or `gitlab:<project>@<branch>:/<folder>`
- * for a room of one folder of the branch (see `gitlabRoomFolder`).
+ * for a room of one folder of the branch (see `gitlabRoom`).
  */
 export const GITLAB_ROOM_PREFIX = 'gitlab:';
 
 /**
- * The folder a GitLab room holds (`/reports/q1` of `gitlab:group/report@main:/reports/q1`): its files, and the files
- * from outside it that it pulled in (`gitlab:pull`), at their paths in the repository. Null: the whole branch, or
- * not a GitLab room.
+ * What a GitLab room's name says: its project (`group/report`), its branch (`main`) and the folder it holds (`/reports/q1`
+ * of `gitlab:group/report@main:/reports/q1`: its files, and the files from outside it that it pulled in
+ * (`gitlab:pull`), at their paths in the repository; null: the whole branch). Null: not a GitLab room.
  */
-export function gitlabRoomFolder(room: string): ProjectPath | null {
-  if (!room.startsWith(GITLAB_ROOM_PREFIX)) return null;
-  const branch = room.slice(room.indexOf('@') + 1);
+export function gitlabRoom(room: string): GitLabRoom | null {
+  const rest = room.startsWith(GITLAB_ROOM_PREFIX) ? room.slice(GITLAB_ROOM_PREFIX.length) : '';
+  const at = rest.indexOf('@');
+  if (at <= 0) return null;
+  const branch = rest.slice(at + 1);
   const colon = branch.indexOf(':');
-  return colon < 0 ? null : ProjectPath.parse(branch.slice(colon + 1));
+  return colon < 0 ? { project: rest.slice(0, at), branch, folder: null } : { project: rest.slice(0, at), branch: branch.slice(0, colon), folder: ProjectPath.parse(branch.slice(colon + 1)) };
+}
+
+export interface GitLabRoom {
+  readonly project: string;
+  readonly branch: string;
+  readonly folder: ProjectPath | null;
 }
 
 /**
@@ -49,6 +57,7 @@ export function gitlabRoomFolder(room: string): ProjectPath | null {
  * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it), or what it left out (in a room of one folder); cleared by the next commit or merge, a conflict, or when nothing is left to commit |
  * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
  * | `pulledIn`    | `string[]`: the files from outside the room's folder it holds (`gitlab:pull`) |
+ * | `guestEditable` | `string[]`: the endings (`.typ`, lower case) of the files a guest may create, change, rename and delete; the others are read-only to guests (`guestMayChange`) |
  */
 export const META_MAP = 'meta';
 
@@ -59,6 +68,11 @@ export const META_MAP = 'meta';
  * committed yet).
  */
 export const ASSETS_MAP = 'assets';
+
+/** Whether a guest may change the file `path` in a room whose `guestEditable` (see `META_MAP`) is `endings`: its ending, in any case, is one of them. */
+export function guestMayChange(endings: readonly string[], path: ProjectPath): boolean {
+  return endings.includes(ProjectPath.extension(path).toLowerCase());
+}
 
 /** What the meta map holds (see `META_MAP`). */
 export interface RoomMeta {
@@ -139,6 +153,9 @@ export const DEFAULT_COMMIT_MESSAGE = 'Edit via Zwiebelfisch';
 
 /** The `commitFailure` message of an auto-save that guest edits held back: guests never save, a member must. */
 export const GUEST_EDITS = 'Guest edits: a member must save.';
+
+/** The server's reason for refusing a client whose session ended (signed out, expired), in the rooms it has open or opens. */
+export const SIGNED_OUT = 'You signed out.';
 
 /** The identity provider of a guest (`Identity.provider`): someone a member shared one room with, by a link. */
 export const GUEST_PROVIDER = 'guest';

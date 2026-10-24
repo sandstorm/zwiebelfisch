@@ -1,6 +1,7 @@
 package collab
 
 import (
+	"errors"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -170,6 +171,10 @@ func (r *room) unload() {
 	r.log.Debug().Msg("room unloaded")
 }
 
+// errNotAtOnce is what a guest's client is told when the room refused an update of theirs that waits for
+// changes it does not hold (ydoc.HandleSyncAtOnce).
+const errNotAtOnce = "Your change depends on changes this project does not have; open the project again."
+
 // receive handles a message from p (sent to the room by p's connection); nothing once p left (dropped).
 func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 	if _, ok := r.peers[p]; !ok {
@@ -177,8 +182,17 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 	}
 	switch typ {
 	case msgSync, msgSyncReply:
-		reply, isStep1, err := r.doc.HandleSync(d.rest(), p)
+		handle := r.doc.HandleSync
+		if p.user.IsGuest() {
+			handle = r.doc.HandleSyncAtOnce
+		}
+		reply, isStep1, err := handle(d.rest(), p)
 		switch {
+		case errors.Is(err, ydoc.ErrNotAtOnce):
+			r.log.Warn().Str("guest", p.user.Name).Msg("a guest's update waits for changes the room does not hold; refused")
+			if _, in := r.peers[p]; in {
+				r.drop(p, errNotAtOnce)
+			}
 		case err != nil:
 			r.log.Warn().Err(err).Msg("bad sync message; closing the connection")
 			p.conn.close(closeResetConnection, "Reset Connection")

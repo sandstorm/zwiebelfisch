@@ -84,7 +84,19 @@ describe('Widget', () => {
     expect(made.compiled).toEqual(['/a.typ']);
   });
 
-  it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {
+  it("shows a message as modal when VS Code's MessageOptions come before the items", async () => {
+    const { host, widget } = setup();
+    const chosen = widget.window.showWarningMessage('Signed out', { modal: true, detail: 'Sign in again.' }, { title: 'Sign in' }, { title: 'Later' });
+    const modal = host.querySelector<HTMLElement>('.zwf-editor__modal')!;
+    expect([...modal.querySelectorAll('button')].map((button) => button.textContent)).toEqual(['Sign in', 'Later']);
+    modal.querySelectorAll('button')[1].click();
+    expect(await chosen).toEqual({ title: 'Later' });
+    void widget.window.showWarningMessage('Not modal', { title: 'OK' });
+    expect(host.querySelector('.zwf-editor__modal')).toBeNull();
+    expect(host.querySelector('.zwf-notification__item')!.textContent).toBe('OK');
+  });
+
+  it('puts side panels, title bar and status bar items into the frame, and takes them out on dispose', () => {
     const { host, widget } = setup(({ window, subscriptions }) => {
       const doc = window.ownerDocument;
       const panel = window.registerSidePanel('outline', { label: 'Outline', icon: '<svg></svg>' });
@@ -92,10 +104,14 @@ describe('Widget', () => {
       panel.setDefault(true);
       const status = doc.createElement('span');
       status.textContent = 'status';
-      subscriptions.push(panel, window.registerStatusBarItem(status, { alignment: 'left' }));
+      const title = doc.createElement('span');
+      title.textContent = 'project';
+      subscriptions.push(panel, window.registerStatusBarItem(status, { alignment: 'left' }), window.registerTitleBarItem(title, { alignment: 'left' }));
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.zwf-editor__status-bar')!.textContent).toBe('status');
+    expect(host.firstElementChild!.className).toBe('zwf-editor__title-bar');
+    expect(host.querySelector('.zwf-editor__title-bar-left')!.textContent).toBe('project');
     widget.dispose();
     expect(host.children).toHaveLength(0);
   });
@@ -154,7 +170,7 @@ describe('Widget', () => {
     expect(press.defaultPrevented).toBe(true); // the editor keeps its selection
   });
 
-  it('shows "View" at the end of the tab bar while the menu `window/view` has entries, for any editor; it pops up the menu with check marks', async () => {
+  it('shows "View" at the right of the title bar while the menu `window/view` has entries, for any editor; it pops up the menu with check marks', async () => {
     const ran: string[] = [];
     let wrapped = false;
     const view = { registration: new Disposable(() => {}) };
@@ -170,14 +186,16 @@ describe('Widget', () => {
     });
     const bar = host.querySelector<HTMLElement>('.zwf-editor__tabs')!;
     const actions = () => [...bar.querySelectorAll<HTMLButtonElement>('[role=toolbar][aria-label="Editor actions"] button')];
-    const viewButton = () => actions().find((button) => button.textContent === 'View');
-    expect(actions().map((button) => button.textContent)).toEqual(['View']);
-    // a file with one editor: no tabs, the bar stays for "View"
+    const titleBar = host.querySelector<HTMLElement>('.zwf-editor__title-bar-right')!;
+    const viewButton = () => [...titleBar.querySelectorAll<HTMLButtonElement>('button')].find((button) => !button.hidden && button.textContent === 'View');
+    expect(actions()).toEqual([]);
+    expect(viewButton()).toBeDefined();
+    // a file with one editor: no tabs and no buttons, so no tab bar; "View" stays
     widget.window.showDocument(path('/logo.png'));
-    expect(bar.hidden).toBe(false);
-    expect(bar.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
+    expect(bar.hidden).toBe(true);
+    expect(viewButton()).toBeDefined();
     widget.window.showDocument(path('/a.typ'));
-    expect(actions().map((button) => button.textContent)).toEqual(['Wrap', 'View']);
+    expect(actions().map((button) => button.textContent)).toEqual(['Wrap']);
     expect(viewButton()!.getAttribute('aria-haspopup')).toBe('menu');
 
     wrapped = true;
@@ -194,8 +212,6 @@ describe('Widget', () => {
 
     view.registration.dispose();
     expect(viewButton()).toBeUndefined();
-    widget.window.showDocument(path('/logo.png'));
-    expect(bar.hidden).toBe(true);
   });
 
   it('names the shown editor in the window/editorTitle context (`activeEditorId`) for any file, not only Typst files', () => {
