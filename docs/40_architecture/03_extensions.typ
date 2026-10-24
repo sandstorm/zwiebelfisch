@@ -147,7 +147,7 @@ activate({ commands, window, subscriptions }) {
   [`window/view`], [the "View" dropdown there: invisible characters, the preview's view options], [as `window/editorTitle`], [—],
   [`window/railLeft` \ `window/railRight`], [a button on the rail beside the side panels' buttons: search everywhere], [—], [—],
   [`preview/toolbar`], [the preview's toolbar: follow cursor, renderers, zoom, "Download PDF"], [`previewRenderer`], [the context],
-  [`visualEditor/toolbar`], [the Visual editor's toolbar row, in groups `1_history` … `7_changes`: undo, lists, align, comment, changes], [the editor: `document`, `selection()`, `tiptap`], [the context],
+  [`visualEditor/toolbar`], [the Visual editor's toolbar row, in groups `1_history` … `6_comments`: undo, lists, align, comment], [the editor: `document`, `selection()`, `tiptap`], [the context],
   [`visualEditor/textStyle`], [the text style dropdown in that row: headings, styles], [as above], [the context],
   [`visualEditor/insert`], [the "Insert" dropdown: table, image, figure, diagram, math, outline, page break, label, …], [as above], [the context],
   [`visualEditor/selection`], [the bar floating above a text selection: bold, italic, link, comment, label, Styles], [as above], [the context],
@@ -195,7 +195,7 @@ window.registerMenuItem('visualEditor/toolbar', {
 #table(
   columns: (auto, 1fr),
   table.header[Menu][Its groups, in order],
-  [`visualEditor/toolbar`], [`1_history`, `2_textStyle`, `3_lists`, `4_align`, `5_insert`, `6_comments`, `7_changes`],
+  [`visualEditor/toolbar`], [`1_history`, `2_textStyle`, `3_lists`, `4_align`, `5_insert`, `6_comments`],
   [`visualEditor/textStyle`], [`''` (headings), `block` (block styles), `inline` (inline styles: toggles, never the dropdown's value), `new` ("New style…")],
   [`preview/toolbar`], [`1_sync`, `2_renderers`, `3_zoom`, `4_export`],
   [`window/view`], [`editor`, `preview`],
@@ -499,14 +499,14 @@ activate({ scm, project, subscriptions }) {
 }
 ```
 
-*`quickDiffProvider`* (optional): `provideOriginalText(path)` gives a file's text at the last commit (`''`: added since; `undefined`: not this source control's). Fire `onDidChange` when it moves (a commit, a merge). The `changes` extension diffs the Visual editor against it:
+*`quickDiffProvider`* (optional): `provideOriginalText(path)` gives a file's text at the last commit (`''`: added since; `undefined`: not this source control's). Fire `onDidChange` when it moves (a commit, a merge). The `changes` extension diffs the editors against it, or against a commit chosen in History, one baseline for all:
 
 #figure(
   mermaid(read("../diagrams/quick-diff.mmd"), width: 90%),
-  caption: [Changes since the last commit],
+  caption: [Changes since the last commit, or a chosen one],
 ) <fig:quick-diff>
 
-*`historyProvider`* (optional, VS Code's proposed API): `provideHistoryItems({ scope, cursor, limit })` pages the commits (of a file or folder), `provideHistoryItemChanges(id)` the files one changed, `provideFileContent(id, path)` a file at a commit; fire `onDidChangeCurrentHistoryItem` when the current commit moves. The `changes` extension's History panel and "Changes" tab read it, and it takes a chosen commit's texts as the Visual editor's baseline instead of `quickDiffProvider`'s.
+*`historyProvider`* (optional, VS Code's proposed API): `provideHistoryItems({ scope, cursor, limit })` pages the commits (of a file or folder), `provideHistoryItemChanges(id)` the files one changed, `provideFileContent(id, path)` a file at a commit; fire `onDidChangeCurrentHistoryItem` when the current commit moves. The `changes` extension's History panel reads it, and takes a chosen commit's texts as the baseline instead of `quickDiffProvider`'s.
 
 == Visual editor nodes <architecture-extensions-visual-editor>
 
@@ -750,7 +750,7 @@ Each kind has an explicit tie-breaker, so the result never depends on the list's
   [`mermaid`], [Mermaid diagrams (`.mmd`, drawn by `@preview/merman`)], [toolbar, links, help, import source, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to …" and status bar entries for the registered source controls], [menu, status bar, file decorations],
-  [`changes`], ["Show changes since last commit" (or since a commit chosen in History) in the Visual editor; the History panel; the read-only "Changes" tab (`@codemirror/merge`)], [toolbar, Tiptap extension, side panel, `files/row`, editor, style sheet],
+  [`changes`], ["Show changes since last commit" (or since a commit chosen in History), inline in the Visual and the Source editor (`@codemirror/merge`), since when in the status bar; the History panel], [View menu, command, Tiptap extension, CodeMirror extension, status bar, side panel, `files/row`, style sheet],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, commands, menus, floating bar],
   [`math`], [math boxes; "Inline math", "Display math"], [Tiptap extension, toolbar],
   [`headings`], [headings; Heading 1–3 in the text style menu], [node, commands, menu, search],

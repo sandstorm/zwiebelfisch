@@ -20,7 +20,7 @@ const item = (id: string, extra: Partial<SourceControlHistoryItem> = {}): Source
 
 const flush = () => new Promise((resolve) => setTimeout(resolve));
 
-function setup() {
+function setup(baseline: () => SourceControlHistoryItem | undefined = () => undefined) {
   const provideHistoryItems = vi.fn(async ({ cursor }: { cursor?: string }) => (cursor ? { items: [item('c3')] } : { items: [item('c1'), item('c2')], cursor: 'more' }));
   const control: SourceControl = {
     id: 'gitlab',
@@ -42,9 +42,9 @@ function setup() {
   const options = {
     sourceControl: () => control,
     visible: () => true,
-    baseline: () => undefined,
+    baseline,
     showChangesSince: vi.fn(),
-    openChanges: vi.fn(),
+    openFile: vi.fn(),
     isOpenable: (path: ProjectPath) => path !== '/gone.typ',
   } satisfies HistoryPanelOptions;
   const parent = document.createElement('div');
@@ -70,21 +70,23 @@ describe('HistoryPanel', () => {
     expect(provideHistoryItems).toHaveBeenCalledTimes(2);
   });
 
-  it('expands a commit into its files; a file opens that commit’s changes, a file not in the project does not', async () => {
-    const { parent, rows, options } = setup();
+  it('shows the changes since a commit chosen and lists its files; a file opens, one not in the project does not', async () => {
+    const { parent, rows, options, control } = setup();
     await flush();
     rows()[1].click();
+    expect(options.showChangesSince).toHaveBeenCalledWith(control, expect.objectContaining({ id: 'c1' }));
     expect(parent.textContent).toContain('Loading…');
     await flush();
     const files = [...parent.querySelectorAll<HTMLButtonElement>('.zwf-history__file-row')];
     expect(files.map((file) => file.textContent)).toEqual(['Mmain.typ', 'Dgone.typ']);
     expect(files[1].disabled).toBe(true);
     files[0].click();
-    expect(options.openChanges).toHaveBeenCalledWith('/main.typ', { item: expect.objectContaining({ id: 'c1' }), change: { path: '/main.typ', kind: 'modified' } });
+    expect(options.openFile).toHaveBeenCalledWith('/main.typ');
 
     rows()[0].click();
     parent.querySelector<HTMLButtonElement>('.zwf-history__entry--uncommitted .zwf-history__file-row')!.click();
-    expect(options.openChanges).toHaveBeenLastCalledWith('/main.typ', undefined);
+    expect(options.showChangesSince).toHaveBeenLastCalledWith(control, undefined);
+    expect(options.openFile).toHaveBeenLastCalledWith('/main.typ');
   });
 
   it('narrows to a scope: its commits and its uncommitted files; back to the project', async () => {
@@ -116,10 +118,16 @@ describe('HistoryPanel', () => {
     expect(more()).toBeNull();
   });
 
-  it('sets the baseline from a commit’s button', async () => {
-    const { parent, options, control } = setup();
+  it('marks the commit the changes are shown since; choosing it again only folds its files', async () => {
+    let baseline: SourceControlHistoryItem | undefined;
+    const { panel, rows, options } = setup(() => baseline);
     await flush();
-    parent.querySelector<HTMLButtonElement>('button[aria-label="Show changes since this commit"]')!.click();
-    expect(options.showChangesSince).toHaveBeenCalledWith(control, expect.objectContaining({ id: 'c1' }));
+    baseline = item('c1');
+    panel.render();
+    const row = () => rows().find((each) => each.getAttribute('aria-current') === 'true');
+    expect(row()?.querySelector('.zwf-history__subject')!.textContent).toBe('Commit c1');
+    row()!.click();
+    expect(options.showChangesSince).not.toHaveBeenCalled();
+    expect(row()!.getAttribute('aria-expanded')).toBe('true');
   });
 });

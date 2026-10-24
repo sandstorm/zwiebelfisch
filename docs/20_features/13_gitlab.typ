@@ -11,7 +11,7 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *The status bar shows what is not in GitLab yet*, e.g. "Not in GitLab: 3 files · 14 min (Ann, Bob)". The file panel marks changed files M and new ones A.
 
-*See what changed since the last commit:* the Visual editor's toolbar button "Show changes since last commit" marks new text green and shows deleted text struck through in red, where it was. It stays as you set it. Older commits are in the History panel (@features-history).
+*See what changed since the last commit:* View → "Show changes since last commit" marks new text green and deleted text struck through in red, in the Visual and the Source editor. The status bar says since when; click it to stop. Older commits are in the History panel (@features-history).
 
 *Click "Save to GitLab…"* to commit every change since the last commit, with a message you enter.
 
