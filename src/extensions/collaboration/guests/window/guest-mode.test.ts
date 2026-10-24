@@ -39,7 +39,7 @@ describe('guest mode', () => {
     const later = { ...share, expiresAt: now + 30 * DAY, online: ['Jane (guest)', 'Joe (guest)'] };
     expect(shareText([share, later])).toEqual({
       text: 'Shared · 2 guests',
-      tooltip: `Shared with guests until ${endDate(later.expiresAt)}; 2 online. Guests can edit; only members save. Click for this project's guest links.`,
+      tooltip: `Shared with guests until ${endDate(later.expiresAt)}; 2 online. Guests can edit; only members save. Click for a new link or to revoke one.`,
     });
     expect(shareText([{ ...share, online: ['Jane (guest)'] }]).text).toBe('Shared · 1 guest');
 
@@ -48,7 +48,8 @@ describe('guest mode', () => {
     button.element.click();
     button.show([share]);
     expect(button.element.textContent).toBe('Shared · 0 guests');
+    expect(button.element.getAttribute('aria-haspopup')).toBe('menu');
     button.element.click();
-    expect(clicked.mock.calls).toEqual([[false], [true]]);
+    expect(clicked).toHaveBeenCalledTimes(2);
   });
 });

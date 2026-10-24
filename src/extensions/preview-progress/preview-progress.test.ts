@@ -123,8 +123,8 @@ describe('previewProgress', () => {
     preview.crash({ message: 'capacity overflow', restarting: false });
     expect(note.textContent).toContain('crashed again');
     expect(errors()).toEqual([
-      expect.stringContaining('The Typst compiler crashed and was restarted. capacity overflow'),
       expect.stringContaining('The Typst compiler crashed again; it starts again with the next edit. capacity overflow'),
+      expect.stringContaining('The Typst compiler crashed and was restarted. capacity overflow'),
     ]);
   });
 });

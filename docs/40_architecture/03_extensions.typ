@@ -156,9 +156,10 @@ activate({ commands, window, subscriptions }) {
   [`files/row`], [a file row's right-click menu (drawn by `files`): new, rename, delete, set as main file, find in folder], [as `files/new`], [the row's path],
   [`help/row`], [a help row's right-click menu (drawn by `help`): insert at cursor], [—], [the row's text],
   [`collaboration/account`], [the account menu in the title bar (drawn by `collaboration`): sign out], [—], [—],
+  [`guests/share`], [the menu below a member's "Share" in the title bar (drawn by `collaboration`): new guest link, revoke a link], [—], [—],
 )
 
-The window, the preview and the Visual editor draw their own menus; the last four are drawn by the extension named.
+The window, the preview and the Visual editor draw their own menus; the last five are drawn by the extension named.
 
 === Entry fields <architecture-extensions-menu-item>
 
@@ -316,9 +317,11 @@ activate({ window, subscriptions }) {
 - *Buttons in the title bar look alike;* an item styles itself over that look.
 - *Tint:* while an item's element has `data-background="warning"` or `"error"`, the whole title bar takes that color (VS Code's `StatusBarItem.backgroundColor`). Collaboration's guest mode does (@features-guest-access).
 
-== Modal messages <architecture-extensions-modal-messages>
+== Messages <architecture-extensions-messages>
 
-`window.showErrorMessage(message, { modal: true, detail }, ...items)` (and the information and warning ones; VS Code's `MessageOptions`): a card over the whole widget, which takes no input meanwhile. Unlike VS Code's it has no Cancel: only an item closes it. For a state the user must act on: the `collaboration` extension says "You are not signed in" with "Sign in" this way.
+`window.showInformationMessage(message, ...items)` (and `showWarningMessage`, `showErrorMessage`): a notification at the top right of the widget, just below the title bar and never over it, the newest on top (at most three). Information without items closes by itself after 8 s, not while the pointer or the focus is on it; warnings, errors and messages with items stay until closed.
+
+With `{ modal: true, detail }` (VS Code's `MessageOptions`): a card over the whole widget, which takes no input meanwhile, with the items and Cancel (as VS Code's); Cancel and Escape resolve to `undefined`. Every yes/no about a destructive step asks this way: deleting a file, a big "Replace all", revoking a guest link. The `collaboration` extension's "You are not signed in" with "Sign in" too; it shows the card again after Cancel.
 
 == Editors <architecture-extensions-editors>
 

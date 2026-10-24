@@ -6,7 +6,7 @@
 
 A member shares one project with people who have no account, by a link: *guests* edit it with everyone else, members save their edits. The server must allow it (`ZWF_GUESTS=1`, @configuration-collaboration-server-guests).
 
-*Share:* "Share" (the title bar's right end) asks whom the link is for ("ACME reviewers") and how long it works: 1, 7 (preselected) or 30 days. The link is copied and shown once; it cannot be shown again. One link serves a group: each guest names themselves. A project has at most 10 links at a time.
+*Share:* "Share" (the title bar's right end) opens a menu; its "New guest link…" asks whom the link is for ("ACME reviewers") and how long it works: 1, 7 (preselected) or 30 days. The link is copied and shown once; it cannot be shown again. One link serves a group: each guest names themselves. A project has at most 10 links at a time.
 
 *Join:* the guest opens the link and enters their name (offered again next time). Others see them as "Jane (guest)": their carets and boxes are dashed. Someone signed in needs no link and stays who they are.
 
@@ -21,7 +21,7 @@ A member shares one project with people who have no account, by a link: *guests*
 
 *Members see that the project is shared:* while it has links, "Share" says "Shared · 2 guests" (until when, and how many are online, in its tooltip).
 
-*Manage and revoke:* the links belong to the project, not to who made them. While there are links, "Share" (or "Manage guest links…") lists this project's guest links, the same for every member: who made each, until when, and who of its guests is in; it also offers "New guest link…". Picking one revokes it: its guests are out at once and told so. Any member who may share revokes any link of the project.
+*Revoke:* the links belong to the project, not to who made them. Below "New guest link…", the menu of "Share" (or "Manage guest links…") has an entry per link of this project, the same for every member: "Revoke “ACME reviewers” (until Oct 30, 18:00 · 1 online)…". Choosing one asks first, on a card over the editor (Revoke or Cancel); then its guests are out at once and told so. Any member who may share revokes any link of the project.
 
 *A link ends with its creator's access:* when GitLab says its creator may no longer edit the project, their links end, also while they are signed out (another signed-in member's sign-in asks GitLab). Only when nobody signed in can ask does a link go on.
 

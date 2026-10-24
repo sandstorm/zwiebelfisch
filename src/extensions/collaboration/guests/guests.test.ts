@@ -46,6 +46,8 @@ function widget(answers: { input?: string[]; pick?: number[]; warning?: string }
   const told: string[] = [];
   const asked: unknown[] = [];
   const commands = new Map<string, () => unknown>();
+  const menuItems: { menuId: string; command: string; title: string; group: string }[] = [];
+  const menus: { menuId: string; anchor: unknown }[] = [];
   const inputs = [...(answers.input ?? [])];
   const picks = [...(answers.pick ?? [])];
   const window = {
@@ -59,7 +61,13 @@ function widget(answers: { input?: string[]; pick?: number[]; warning?: string }
     showInputBox: async (options: unknown) => (asked.push(options), inputs.shift()),
     showQuickPick: async (items: readonly unknown[], options: unknown) => (asked.push({ items, ...(options as object) }), items[picks.shift() ?? -1]),
     showInformationMessage: async (message: string) => void told.push(`info: ${message}`),
-    showWarningMessage: async (message: string) => (told.push(`warning: ${message}`), answers.warning),
+    showWarningMessage: async (message: string, options: { modal?: boolean; detail?: string }) => (told.push(`warning${options.modal ? ' (modal)' : ''}: ${message} ${options.detail}`), answers.warning),
+    registerMenuItem: (menuId: string, item: { command: string; title: string; group: string }) => {
+      const entry = { menuId, ...item };
+      menuItems.push(entry);
+      return new Disposable(() => menuItems.splice(menuItems.indexOf(entry), 1));
+    },
+    showContextMenu: (menuId: string, { anchor }: { anchor: unknown }) => void menus.push({ menuId, anchor }),
     showErrorMessage: async (message: string) => void told.push(`error: ${message}`),
   };
   const values: Record<string, unknown> = {};
@@ -80,7 +88,11 @@ function widget(answers: { input?: string[]; pick?: number[]; warning?: string }
   /** The text of the guest's access (left), of the member's "Share" (right). */
   const access = () => titleBar.filter((item) => item.alignment === 'left').map((item) => item.element.textContent);
   const share = () => titleBar.filter((item) => item.alignment === 'right').map((item) => item.element as HTMLButtonElement);
-  return { guests, account, titleBar, access, share, told, asked, commands, dispose };
+  /** The titles of the menu `guests/share`, by group. */
+  const shareMenu = () => menuItems.filter((item) => item.menuId === 'guests/share').sort((a, b) => a.group.localeCompare(b.group)).map((item) => item.title);
+  /** Runs the entry of the menu `guests/share` titled `title`. */
+  const choose = (title: string) => commands.get(menuItems.find((item) => item.title === title)!.command)!();
+  return { guests, account, titleBar, access, share, told, asked, commands, menus, shareMenu, choose, dispose };
 }
 
 describe('Guests', () => {
@@ -107,28 +119,31 @@ describe('Guests', () => {
     expect(titleBar).toEqual([]);
   });
 
-  it("shows a member the room's guest links while there are any, refetched when the server says they changed", async () => {
+  it("shows a member the room's guest links in the Share menu, refetched when the server says they changed", async () => {
     const shares: object[] = [];
     const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, shares);
-    const { guests, account, access, share, asked, dispose } = widget();
+    const { guests, account, access, share, menus, shareMenu, dispose } = widget();
     await guests.beforeConnect();
     await account.refresh();
     await vi.waitFor(() => expect(share().map((button) => button.textContent)).toEqual(['Share']));
     await vi.waitFor(() => expect(requests.filter((r) => r.endsWith('/shares'))).toHaveLength(1));
     expect(access()).toEqual([]);
     share()[0].click();
-    await vi.waitFor(() => expect(asked[0]).toMatchObject({ title: 'Share with guests' })); // no links yet: shares
+    expect(menus).toEqual([{ menuId: 'guests/share', anchor: share()[0] }]);
+    expect(shareMenu()).toEqual(['New guest link…']);
 
-    shares.push({ id: 's1', label: 'ACME', sharedBy: 'Ann', createdAt: 0, expiresAt: Date.now() + DAY, online: ['Jane (guest)'] });
+    const expiresAt = Date.now() + DAY;
+    shares.push({ id: 's1', label: 'ACME', sharedBy: 'Ann', createdAt: 0, expiresAt, online: ['Jane (guest)'] });
     guests.receive(GUESTS_CHANGED);
     await vi.waitFor(() => expect(share()[0].textContent).toBe('Shared · 1 guest'));
-    share()[0].click();
-    await vi.waitFor(() => expect(asked[1]).toMatchObject({ title: "This project's guest links" })); // with links: lists them
+    expect(shareMenu()).toEqual(['New guest link…', `Revoke “ACME” (until ${endDate(expiresAt)} · 1 online)…`]);
     shares.pop();
     guests.receive('{"type":"gitlab:merged"}');
     guests.receive(GUESTS_CHANGED);
     await vi.waitFor(() => expect(share()[0].textContent).toBe('Share'));
+    expect(shareMenu()).toEqual(['New guest link…']);
     dispose();
+    expect(shareMenu()).toEqual([]);
   });
 
   it('shares: whom for, how long (7 days first), then the link shown once', async () => {
@@ -143,15 +158,26 @@ describe('Guests', () => {
     expect(asked[2]).toMatchObject({ title: 'Guest link (shown only now)', value: `${location.origin}/?room=${encodeURIComponent(room)}#zwf-guest=NEWSECRET` });
   });
 
-  it("manages this project's links, whoever made them: picking one revokes it, once confirmed", async () => {
-    const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, [{ id: 's1', label: 'ACME', sharedBy: 'Bob', createdAt: 0, expiresAt: Date.now() + DAY }]);
-    const { account, commands, share, told, asked } = widget({ pick: [1], warning: 'Revoke' });
+  it("revokes any of this project's links, whoever made them, from the Share menu once confirmed on a modal card", async () => {
+    const expiresAt = Date.now() + DAY;
+    const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, [{ id: 's1', label: 'ACME', sharedBy: 'Bob', createdAt: 0, expiresAt }]);
+    const { account, commands, share, told, menus, shareMenu, choose } = widget({ warning: 'Revoke' });
     await account.refresh();
-    await vi.waitFor(() => expect(share()).toHaveLength(1));
+    await vi.waitFor(() => expect(shareMenu()).toHaveLength(2));
     await commands.get('collaboration.manageGuests')!();
-    expect(asked[0]).toMatchObject({ title: "This project's guest links", placeHolder: 'Pick a link to revoke it (any member may)' });
+    expect(menus).toEqual([{ menuId: 'guests/share', anchor: share()[0] }]);
+    await choose(`Revoke “ACME” (until ${endDate(expiresAt)} · 0 online)…`);
     expect(requests).toContain('DELETE /api/rooms/gitlab%3Ademo%2Freport%40main/shares/s1');
-    expect(told).toEqual(['warning: Revoke the guest link "ACME"? Its guests lose access at once.', 'info: Guest link "ACME" revoked.']);
+    expect(told).toEqual(['warning (modal): Revoke the guest link “ACME”? Its guests lose access at once.', 'info: Guest link “ACME” revoked.']);
+  });
+
+  it('revokes nothing when the confirmation is cancelled', async () => {
+    const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, [{ id: 's1', label: 'ACME', sharedBy: 'Bob', createdAt: 0, expiresAt: Date.now() + DAY }]);
+    const { account, shareMenu, choose } = widget({ warning: undefined });
+    await account.refresh();
+    await vi.waitFor(() => expect(shareMenu()).toHaveLength(2));
+    await choose(shareMenu()[1]);
+    expect(requests.filter((request) => request.startsWith('DELETE'))).toEqual([]);
   });
 
   it('offers nothing on a server without guest links', async () => {
@@ -162,5 +188,7 @@ describe('Guests', () => {
     expect(share()).toEqual([]);
     await commands.get('collaboration.shareWithGuests')!();
     expect(told[0]).toMatch(/^error: Only signed-in members share/);
+    await commands.get('collaboration.manageGuests')!();
+    expect(told[1]).toMatch(/^error: Only signed-in members manage/);
   });
 });

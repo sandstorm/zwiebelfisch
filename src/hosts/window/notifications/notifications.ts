@@ -3,13 +3,13 @@ import type { MessageItem, MessageOptions, MessageSeverity } from '../window';
 
 /**
  * The widget's notification area (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`): each message
- * is a small box with its text, a button per item and a close button, stacked at the bottom right, newest last. Not
- * modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
+ * is a small box with its text, a button per item and a close button, stacked at the top right of the widget below
+ * the title bar (never over it), newest on top. Not modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
  * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
  *
  * A modal message (`options.modal`) is a card in the middle of an overlay over the whole widget (`role=alertdialog`),
- * its `detail` below the text, a button per item, the first one focused; the rest of the widget is inert meanwhile. It
- * has no close button and closes only when an item is chosen (or the widget goes).
+ * its `detail` below the text, a button per item and Cancel after them (as VS Code's), the first button focused; the
+ * rest of the widget is inert meanwhile. Cancel and Escape close it, resolving to undefined.
  *
  * @internal Extensions use it through `window.showInformationMessage`, `showWarningMessage` and `showErrorMessage`.
  */
@@ -62,7 +62,7 @@ export class Notifications {
         start();
       }
       this.#shown.push(shown);
-      this.#area.append(element);
+      this.#area.prepend(element);
       while (this.#shown.length > MAX_SHOWN) this.#shown[0].close();
     });
   }
@@ -107,6 +107,13 @@ export class Notifications {
         resolve(item);
       };
       for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'zwf-modal__item', () => finish(item)));
+      actions.append(button(doc, 'Cancel', 'zwf-modal__cancel', () => finish(undefined)));
+      overlay.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        finish(undefined);
+      });
       for (const element of muted) element.setAttribute('inert', '');
       this.#modals.push(shown);
       this.#area.before(overlay);

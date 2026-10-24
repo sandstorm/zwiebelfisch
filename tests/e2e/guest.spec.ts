@@ -26,6 +26,7 @@ async function joinAsMember(browser: Browser, baseURL: string, room: string, use
 /** Ann makes a guest link for `label` (7 days, the default): the link, as shown once. */
 async function shareWithGuests(page: Page, label: string): Promise<string> {
   await shareButton(page).click();
+  await page.getByRole('menu', { name: 'Share with guests' }).getByRole('menuitem', { name: 'New guest link…' }).click();
   const form = page.getByRole('form', { name: 'Share with guests' });
   await form.getByRole('textbox').fill(label);
   await form.getByRole('button', { name: 'OK' }).click();
@@ -98,11 +99,18 @@ test('a guest joins by the link, sees that they are one, edits; only members sav
   await expect(visualText(ann, 'From a guest.')).toBeVisible();
   await expect(ann.locator('.zwf-source-control__entry')).toHaveText('Not in GitLab: 1 file · < 1 min (Jane (guest))');
 
-  // Ann revokes the link: Jane is told, and her title bar says her access ended
+  // a notification stands at the top right below the title bar, not over it
+  const [bar, note] = await Promise.all([titleBar(jane).boundingBox(), messages(jane).getByRole('alert').first().boundingBox()]);
+  expect(note!.y).toBeGreaterThanOrEqual(bar!.y + bar!.height);
+  expect(note!.x + note!.width).toBeGreaterThan(bar!.x + bar!.width - 40);
+
+  // Ann revokes the link from the Share menu, confirmed on a modal card: Jane is told, and her title bar says her access ended
   await shareButton(ann).click();
-  await ann.getByRole('dialog', { name: "This project's guest links" }).getByRole('option', { name: /ACME reviewers/ }).click();
-  await messages(ann).getByRole('button', { name: 'Revoke' }).click();
-  await expect(messages(ann)).toContainText('Guest link "ACME reviewers" revoked.');
+  await ann.getByRole('menu', { name: 'Share with guests' }).getByRole('menuitem', { name: /^Revoke “ACME reviewers” \(until .* · 1 online\)…$/ }).click();
+  const confirm = ann.getByTestId('zwf-modal').getByRole('alertdialog', { name: 'Revoke the guest link “ACME reviewers”?' });
+  await expect(confirm.getByRole('button')).toHaveText(['Revoke', 'Cancel']);
+  await confirm.getByRole('button', { name: 'Revoke' }).click();
+  await expect(messages(ann)).toContainText('Guest link “ACME reviewers” revoked.');
   await expect(messages(jane)).toContainText('Guest access to this project has ended.');
   await expect(guestAccess(jane)).toHaveText('Guest access has ended.');
   await expect(guestAccess(jane)).toHaveAttribute('data-background', 'error');
