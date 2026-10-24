@@ -64,14 +64,19 @@ export interface QuickDiffProvider {
  * (the commit its `quickDiffProvider`'s originals are of), what each changed, and files as they were.
  */
 export interface SourceControlHistoryProvider {
+  /** The current commit (VS Code's `currentHistoryItemRef`); undefined: not known yet. */
+  readonly currentHistoryItemRef: SourceControlHistoryItemRef | undefined;
   /**
    * The commits that changed `options.scope` (default: everything it holds), newest first, at most `options.limit` (it
    * may list fewer), from `options.cursor` on (an earlier answer's `cursor`; default: the current commit). Rejects
    * when they cannot be read.
    */
   provideHistoryItems(options: SourceControlHistoryOptions): Promise<SourceControlHistoryItems>;
-  /** The files commit `historyItemId` changed against its first parent (a first commit: every file, added). */
-  provideHistoryItemChanges(historyItemId: string): Promise<readonly SourceControlHistoryItemChange[]>;
+  /**
+   * The files that differ from commit `historyItemParentId` to commit `historyItemId`; without `historyItemParentId`,
+   * those `historyItemId` changed against its first parent (a first commit: every file, added).
+   */
+  provideHistoryItemChanges(historyItemId: string, historyItemParentId?: string): Promise<readonly SourceControlHistoryItemChange[]>;
   /** The content of `path` at commit `historyItemId`; undefined: no such file there. */
   provideFileContent(historyItemId: string, path: ProjectPath): Promise<Uint8Array | undefined>;
   /** The current commit moved (a commit was made, or others' commits came in). */
@@ -89,6 +94,13 @@ export interface SourceControlHistoryOptions {
 export interface SourceControlHistoryItems {
   readonly items: readonly SourceControlHistoryItem[];
   readonly cursor?: string;
+}
+
+/** A commit a name points at (VS Code's SourceControlHistoryItemRef), e.g. the current one. */
+export interface SourceControlHistoryItemRef {
+  readonly id: string;
+  /** What points at it ("main"). */
+  readonly name: string;
 }
 
 /** One commit (VS Code's SourceControlHistoryItem). */

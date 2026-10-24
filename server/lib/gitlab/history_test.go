@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -133,6 +134,18 @@ func TestHistory(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, e.request("compare?sha="+first[:8], "ann").Code)
 	})
 
+	t.Run("compares two commits: the files that differ from ?from= to ?sha=", func(t *testing.T) {
+		e := setup(t, setupOptions{})
+		first := e.repo.head("main").sha
+		e.repo.push("main", map[string]any{"/ch1.typ": "= One, again\n"})
+		third := e.repo.push("main", map[string]any{"/new.typ": "new\n"})
+		res := e.request("compare?sha="+third+"&from="+first, "ann")
+		require.Equal(t, http.StatusOK, res.Code)
+		require.JSONEq(t, `{"files":[{"path":"/ch1.typ","kind":"modified"},{"path":"/new.typ","kind":"added"}]}`, res.Body.String())
+		require.Equal(t, http.StatusNotFound, e.request("compare?sha="+third+"&from="+first[:8], "ann").Code, "a sha only")
+		require.Equal(t, http.StatusNotFound, e.request("compare?sha="+third+"&from="+strings.Repeat("0", 40), "ann").Code, "no such commit")
+	})
+
 	t.Run("answers only whom Authenticate lets in", func(t *testing.T) {
 		e := setup(t, setupOptions{})
 		sha := e.repo.head("main").sha
@@ -171,6 +184,8 @@ func TestFolderHistory(t *testing.T) {
 		res := e.request("compare?sha="+sha, "ann")
 		require.JSONEq(t, `{"files":[{"path":"/reports/q1/main.typ","kind":"modified"},{"path":"/template.typ","kind":"modified"}]}`, res.Body.String())
 		require.Equal(t, "private, no-cache", res.Header().Get("Cache-Control"), "what is pulled in may grow")
+		res = e.request("compare?sha="+sha+"&from="+first, "ann")
+		require.JSONEq(t, `{"files":[{"path":"/reports/q1/main.typ","kind":"modified"},{"path":"/template.typ","kind":"modified"}]}`, res.Body.String(), "a range, too")
 
 		require.Equal(t, http.StatusOK, e.request("files/template.typ?ref="+first, "ann").Code)
 		require.Equal(t, http.StatusOK, e.request("files/reports/q1/main.typ?ref="+first, "ann").Code)

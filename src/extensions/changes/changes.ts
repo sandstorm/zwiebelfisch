@@ -1,54 +1,77 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
-import type { Extension, ExtensionContext, Memento } from '../../hosts/extension-host/extension-host';
-import type { Scm, SourceControl, SourceControlHistoryItem } from '../../hosts/scm/scm';
+import type { Extension, ExtensionContext } from '../../hosts/extension-host/extension-host';
+import type { Scm, SourceControlHistoryItem, SourceControlHistoryItemChange } from '../../hosts/scm/scm';
 import css from './changes.css?inline';
-import { Baseline } from './baseline';
+import { describe, fromOf, ShownChanges, toOf, type Comparison } from './comparison';
+import { Snapshots } from './snapshots';
 import { inlineChanges } from './source-editor/inline-changes';
 import { changeDecorations } from './visual-editor/change-decorations';
-import { relativeTime, shortId } from './window/history-list';
+import { shortId } from './window/history-list';
 import { HistoryPanel } from './window/history-panel';
 
 /**
- * What changed since a commit, in the editors themselves:
- * - "Show changes since last commit" (the command `changes.toggle`, in the View menu) shows in every Visual editor
- *   new text green and deleted text struck through in red, where it was, and in every Source editor (and text file's
- *   editor) changed lines green and deleted lines read-only in red above them. All against one baseline: the last
- *   commit (the `quickDiffProvider`'s original), or the commit chosen in History. While shown, the status bar says
- *   since when ("Changes since last commit ✕"); clicking it, or the toggle, turns them off and the baseline back to the
- *   last commit. Off at first; the viewer's last choice is kept (`globalState`).
+ * What changed, in the editors themselves, as IntelliJ's "Show changes": one comparison at a time (`ShownChanges`),
+ * which every part below shows alike.
+ * - The changes since the last commit, or since a commit, to the current state: in every Visual editor new text green
+ *   and deleted text struck through in red, where it was; in every Source editor (and text file's editor) changed
+ *   lines green and deleted lines read-only in red above them. The files stay editable.
+ * - The changes of a commit (from its first parent), or from one commit to another: the files as they were at the
+ *   later commit, read-only (`Snapshots`, files outside the project at `/@84c6e2f/…`), in the same editors with the
+ *   same marks; the editor's title bar names them ("84c6e2f · read-only · changes since ebd0bc4", a click opens the
+ *   current file). A file deleted there shows its earlier text all deleted. Ending or changing the comparison takes a
+ *   file shown so to the current file, or to that file at the new commit.
+ * - "Show changes since last commit" (the command `changes.toggle`, in the View menu) turns them on (since the last
+ *   commit) and off. While on, the status bar says which ("Changes in 84c6e2f ✕"); a click turns them off. The
+ *   viewer's last choice is kept (`globalState`).
  * - The side panel "History" (`workbench.view.history`) lists the commits of the first source control with a
  *   `historyProvider`: of the project, or of a file or folder ("Show history" on the file panel's rows,
- *   `changes.showHistory`), with what is not committed yet on top. On top of it the panel says whether changes are shown and since
- *   what (✕ stops); choosing a commit shows the changes since it, choosing the compared one again stops them.
+ *   `changes.showHistory`), with what is not committed yet on top. A click on a commit shows its changes, a
+ *   Cmd/Ctrl-click on another compares the two; a right click offers "Show changes of this commit", "Compare with
+ *   current state" and "Compare with…" (the menu `changes/historyItem`, its commands taking the commit).
+ * The Typst preview always shows the project as it is now.
  */
 export function changes(): Extension {
   return {
     id: 'changes',
     contributes,
     activate(context) {
-      const { commands, window, scm, project, globalState, visualEditor, sourceEditor, subscriptions } = context;
+      const { commands, window, scm, globalState, workspace, visualEditor, sourceEditor, subscriptions } = context;
       const changed = new EventEmitter<void>();
-      const baseline = new Baseline(scm);
-      const shown = new Shown(globalState, baseline, changed);
-      const history = historyPanel(context, shown);
-      const original = (path: ProjectPath | null | undefined) => (shown.value && path ? baseline.original(path) : undefined);
-      const hasOriginals = () => scm.sourceControls.some((control) => control.quickDiffProvider);
-      const status = statusItem(context, shown, hasOriginals);
+      const shown = new ShownChanges(scm, globalState);
+      const snapshots = new Snapshots();
+      const files = shownFiles(context, shown, snapshots);
+      const history = historyPanel(context, shown, files.open);
+      const status = statusItem(context, shown);
+      const title = snapshotTitle(context, shown, snapshots);
+      const original = (path: ProjectPath | null | undefined) => originalOf(shown, snapshots, path);
+      let comparison = shown.comparison;
       subscriptions.push(
         window.registerStyleSheet(css),
-        baseline,
-        baseline.onDidChange(() => changed.fire()),
+        workspace.registerFileSystemProvider(snapshots),
+        shown,
+        shown.onDidChange(() => {
+          if (shown.comparison !== comparison) files.follow();
+          comparison = shown.comparison;
+          changed.fire();
+        }),
         changed.event(() => {
           history.panel.render();
           status.update();
+          title.update();
         }),
+        window.onDidChangeActiveFile(() => title.update()),
         history,
         status,
-        commands.registerCommand(TOGGLE, () => (shown.value ? shown.hide() : shown.show())),
-        window.registerMenuItem('window/view', { command: TOGGLE, group: 'editor', toggled: () => shown.value, when: hasOriginals }),
-        visualEditor.registerTiptapExtension((editor) => changeDecorations({ original: () => original(project.pathOf(editor.document)), onDidChange: changed.event })),
+        title,
+        commands.registerCommand(TOGGLE, () => (shown.comparison ? shown.hide() : shown.show())),
+        commands.registerCommand(SHOW_COMMIT, (item?: SourceControlHistoryItem) => item && shown.show({ kind: 'commit', item })),
+        commands.registerCommand(COMPARE_WITH_CURRENT, (item?: SourceControlHistoryItem) => item && shown.show({ kind: 'since', item })),
+        commands.registerCommand(COMPARE_WITH, (item?: SourceControlHistoryItem) => item && history.panel.compareWith(item)),
+        window.registerMenuItem('window/view', { command: TOGGLE, group: 'editor', toggled: () => shown.comparison !== undefined, when: () => shown.hasOriginals }),
+        ...ITEM_ENTRIES.map(({ command, title }, order) => window.registerMenuItem(HISTORY_ITEM_MENU, { command, title, order })),
+        visualEditor.registerTiptapExtension((editor) => changeDecorations({ original: () => original(editor.path()), onDidChange: changed.event })),
         sourceEditor.registerCodeMirrorExtension({}, (editor) => (editor.editor === 'rawBox' ? [] : inlineChanges({ original: () => original(editor.path()), onDidChange: changed.event }))),
         followSourceControls(scm, {
           changed: () => changed.fire(),
@@ -60,10 +83,27 @@ export function changes(): Extension {
   };
 }
 
-/** Shows or hides the changes since the baseline in every editor (the viewer's choice, kept for later visits). */
+/** Shows or hides the changes (since the last commit) in every editor (the viewer's choice, kept for later visits). */
 export const TOGGLE = 'changes.toggle';
 /** Shows the History panel, of the file or folder given (default: the whole project). */
 export const SHOW_HISTORY = 'changes.showHistory';
+/** Shows the changes of the commit given (a `SourceControlHistoryItem`). */
+export const SHOW_COMMIT = 'changes.showCommit';
+/** Shows the changes from the commit given to the current state. */
+export const COMPARE_WITH_CURRENT = 'changes.compareWithCurrent';
+/** The next commit clicked in History is compared with the commit given. */
+export const COMPARE_WITH = 'changes.compareWith';
+/** Opens the file shown as it was at a commit as it is now. */
+const OPEN_CURRENT = 'changes.openCurrent';
+/** The menu of a commit in History (a right click); its commands get the commit. */
+export const HISTORY_ITEM_MENU = 'changes/historyItem';
+
+/** The entries of a commit's menu (their commands need the commit: not declared for search everywhere). */
+const ITEM_ENTRIES = [
+  { command: SHOW_COMMIT, title: 'Show changes of this commit' },
+  { command: COMPARE_WITH_CURRENT, title: 'Compare with current state' },
+  { command: COMPARE_WITH, title: 'Compare with…' },
+];
 
 const contributes: Extension['contributes'] = {
   commands: [
@@ -73,45 +113,83 @@ const contributes: Extension['contributes'] = {
 };
 
 /**
- * Whether the editors show the changes: the viewer's choice, kept for later visits (`globalState`). Hiding them sets
- * the baseline back to the last commit.
+ * The original the changes of the file at `path` are drawn against: for a file as it was at the commit the
+ * comparison goes to, its text at the commit the comparison starts at; for a project file while the comparison goes to
+ * the current state, likewise; else (no comparison, a file of another commit) none.
  */
-class Shown {
-  #value: boolean;
-
-  constructor(
-    private readonly state: Memento,
-    readonly baseline: Baseline,
-    private readonly changed: EventEmitter<void>,
-  ) {
-    this.#value = state.get<unknown>(SHOWN_KEY) === true;
-  }
-
-  get value(): boolean {
-    return this.#value;
-  }
-
-  /** Shows the changes since `item` of `control` (default: since the last commit). */
-  show(control?: SourceControl, item?: SourceControlHistoryItem): void {
-    this.baseline.setCommit(control, item);
-    this.#set(true);
-  }
-
-  hide(): void {
-    this.baseline.setCommit();
-    this.#set(false);
-  }
-
-  #set(value: boolean): void {
-    if (this.#value === value) return;
-    this.#value = value;
-    void this.state.update(SHOWN_KEY, value);
-    this.changed.fire();
-  }
+function originalOf(shown: ShownChanges, snapshots: Snapshots, path: ProjectPath | null | undefined): string | undefined {
+  const comparison = shown.comparison;
+  if (!comparison || !path) return undefined;
+  const snapshot = snapshots.get(path);
+  if (snapshot) return snapshot.item.id === toOf(comparison)?.id ? shown.text(fromOf(comparison), snapshot.originalPath ?? snapshot.path) : undefined;
+  return toOf(comparison) ? undefined : shown.text(fromOf(comparison), path);
 }
 
-/** The status bar entry while the changes are shown and a source control `hasOriginals()`: since when; a click hides them. */
-function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOriginals: () => boolean): Disposable & { update(): void } {
+/**
+ * Opens the files of the comparison shown (`open`: to a commit, as they were there; else the project's), and keeps
+ * a file shown as it was at a commit with the comparison (`follow`, after it changed): the same file at the new
+ * commit, or the current file (the main file once it is gone) when the comparison no longer goes to a commit.
+ */
+function shownFiles({ window, project }: ExtensionContext, shown: ShownChanges, snapshots: Snapshots): { open(change: SourceControlHistoryItemChange): void; follow(): void } {
+  const at = async (item: SourceControlHistoryItem, path: ProjectPath, originalPath?: ProjectPath) => {
+    try {
+      const text = await shown.load(item.id, path);
+      const to = shown.comparison && toOf(shown.comparison);
+      // the comparison moved on meanwhile
+      if (to?.id !== item.id) return;
+      window.showDocument(snapshots.add(item, path, text, originalPath));
+      snapshots.retain((snapshot) => snapshot.item.id === item.id);
+    } catch (error) {
+      void window.showErrorMessage(`${ProjectPath.displayName(path)} at ${shortId(item)} could not be read: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  return {
+    open(change) {
+      const to = shown.comparison && toOf(shown.comparison);
+      if (to) void at(to, change.path, change.originalPath);
+      else window.showDocument(change.path);
+    },
+    follow() {
+      const active = snapshots.get(window.activeFile);
+      const to = shown.comparison && toOf(shown.comparison);
+      if (active && to) {
+        if (to.id !== active.item.id) void at(to, active.path);
+        return;
+      }
+      if (active) window.showDocument(project.has(active.path) ? active.path : project.main);
+      snapshots.retain(() => false);
+    },
+  };
+}
+
+/** While a file as it was at a commit is shown: the tab bar names it ("84c6e2f · read-only · changes since ebd0bc4"); a click opens the current file. */
+function snapshotTitle({ window, commands, project }: ExtensionContext, shown: ShownChanges, snapshots: Snapshots): Disposable & { update(): void } {
+  let registered: Disposable | undefined;
+  let shownTitle: string | undefined;
+  const update = () => {
+    const snapshot = snapshots.get(window.activeFile);
+    const comparison = shown.comparison;
+    const title = snapshot && [shortId(snapshot.item), 'read-only', comparison && toOf(comparison)?.id === snapshot.item.id ? describe(comparison, Date.now()).from : undefined].filter(Boolean).join(' · ');
+    if (title === shownTitle) return;
+    shownTitle = title;
+    registered?.dispose();
+    registered = title ? window.registerMenuItem('window/editorTitle', { command: OPEN_CURRENT, title, when: () => snapshots.get(window.activeFile) !== undefined }) : undefined;
+  };
+  const command = commands.registerCommand(OPEN_CURRENT, () => {
+    const snapshot = snapshots.get(window.activeFile);
+    if (snapshot && project.has(snapshot.path)) window.showDocument(snapshot.path);
+  });
+  return Object.assign(
+    new Disposable(() => {
+      command.dispose();
+      registered?.dispose();
+    }),
+    { update },
+  );
+}
+
+/** The status bar entry while changes are shown (and there is what they are of): which; a click hides them. */
+function statusItem({ window, commands }: ExtensionContext, shown: ShownChanges): Disposable & { update(): void } {
   const element = window.ownerDocument.createElement('button');
   element.type = 'button';
   element.className = 'zwf-changes__status';
@@ -119,14 +197,16 @@ function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOri
   element.addEventListener('click', () => void commands.executeCommand(TOGGLE));
   let registered: Disposable | undefined;
   const update = () => {
-    const commit = shown.baseline.commit;
-    const since = commit ? [shortId(commit), commit.timestamp === undefined ? '' : `(${relativeTime(commit.timestamp, Date.now())})`].filter(Boolean).join(' ') : 'last commit';
-    element.textContent = `Changes since ${since} ✕`;
-    element.title = `Shown in the editors: what changed since ${commit ? `“${commit.subject}”` : 'the last commit'}. Click to stop showing them.`;
-    const visible = shown.value && hasOriginals();
-    if (visible && !registered) registered = window.registerStatusBarItem(element, { alignment: 'left', priority: 150 });
-    if (!visible && registered) {
-      registered.dispose();
+    const comparison = shown.comparison;
+    // the changes since the last commit need its texts
+    const visible = comparison !== undefined && (comparison.kind !== 'since' || comparison.item !== undefined || shown.hasOriginals);
+    if (visible) {
+      const { short, long } = describe(comparison, Date.now());
+      element.textContent = `${short} ✕`;
+      element.title = `Shown in the editors: ${long}. Click to stop showing them.`;
+      registered ??= window.registerStatusBarItem(element, { alignment: 'left', priority: 150 });
+    } else {
+      registered?.dispose();
       registered = undefined;
     }
   };
@@ -135,19 +215,19 @@ function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOri
 }
 
 /**
- * The side panel "History", its command (`changes.showHistory`, of a file or folder) and the file panel's "Show
- * history"; it shows and stops the changes through the same state as the toggle.
+ * The side panel "History", its command (`changes.showHistory`, of a file or folder), the file panel's "Show
+ * history" and a commit's menu; it shows and ends comparisons through the same state as the toggle.
  */
-function historyPanel({ commands, window, project, scm }: ExtensionContext, shown: Shown): Disposable & { panel: HistoryPanel } {
+function historyPanel({ commands, window, project }: ExtensionContext, shown: ShownChanges, openFile: (change: SourceControlHistoryItemChange) => void): Disposable & { panel: HistoryPanel } {
   const side = window.registerSidePanel('history', { label: 'History', icon: CLOCK, order: 14 });
   const panel = new HistoryPanel(side.body, {
-    sourceControl: () => historyControl(scm),
+    sourceControl: () => shown.control,
     visible: () => side.visible,
-    changes: () => (shown.value ? { item: shown.baseline.commit } : undefined),
-    showChangesSince: (control, item) => shown.show(control, item),
-    hideChanges: () => shown.hide(),
-    openFile: (path) => window.showDocument(path),
+    comparison: () => shown.comparison,
+    compare: (comparison?: Comparison) => (comparison ? shown.show(comparison) : shown.hide()),
+    openFile,
     isOpenable: (path) => project.has(path),
+    showItemMenu: (item, anchor) => window.showContextMenu(HISTORY_ITEM_MENU, { anchor, title: item.subject, args: [item] }),
   });
   const disposable = Disposable.from(
     side,
@@ -157,7 +237,7 @@ function historyPanel({ commands, window, project, scm }: ExtensionContext, show
       panel.setScope(path ? { kind: project.has(path) ? 'file' : 'folder', path } : undefined);
       side.show();
     }),
-    window.registerMenuItem('files/row', { command: SHOW_HISTORY, group: 'history', when: () => historyControl(scm) !== undefined }),
+    window.registerMenuItem('files/row', { command: SHOW_HISTORY, group: 'history', when: () => shown.control !== undefined }),
   );
   return Object.assign(disposable, { panel });
 }
@@ -186,14 +266,6 @@ function followSourceControls(scm: Scm, on: { changed(): void; moved(): void }):
     followed.dispose();
   });
 }
-
-/** The source control whose history is shown: the first with a `historyProvider`. */
-function historyControl(scm: Scm): SourceControl | undefined {
-  return scm.sourceControls.find((control) => control.historyProvider);
-}
-
-/** Where the viewer's last choice is kept (`globalState`). */
-const SHOWN_KEY = 'show';
 
 /** The History panel's rail button: a clock. */
 const CLOCK =

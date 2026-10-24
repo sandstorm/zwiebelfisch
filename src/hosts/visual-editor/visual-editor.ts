@@ -4,6 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import type { MenuItem } from '../commands/commands';
 import type { DocumentNodeSpec, TypstMarkSpec } from './typst-conversion/typst-conversion';
@@ -140,6 +141,8 @@ export interface SourceHighlightProvider {
 export interface VisualEditorContext {
   /** The document the editor shows. */
   readonly document: TypstDocument;
+  /** The file it is, now (a file can be renamed): a project file, or a read-only one outside the project; null: none. */
+  path(): ProjectPath | null;
   /** The source range the editor's selection shows (see `VisualEditor.selection`). */
   selection(): SourceRange;
   /** Whether `node` shows as a box of its own (raw Typst, an image, a page break, a margin note), not as text. */
@@ -291,5 +294,5 @@ export interface CompletionItemProvider {
 /** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
 export type Anchor = { top: number; left: number; right: number } | null;
 
-export { VisualEditor, VisualEditorHost } from './visual-editor-impl';
+export { VisualEditor, VisualEditorHost, type VisualEditorOptions } from './visual-editor-impl';
 export { chainCommand, insertTypst, registerChainButton, svg } from './visual-editor-helpers';

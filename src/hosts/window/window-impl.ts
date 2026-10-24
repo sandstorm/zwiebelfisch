@@ -2,7 +2,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { FileChange } from '../../core/project/project';
+import type { FileChange, FileContent } from '../../core/project/project';
 import type { User } from '../../core/user/user';
 import type { CommandContribution, MenuItem } from '../commands/commands';
 import { ColorScheme } from './color-scheme/color-scheme';
@@ -197,10 +197,13 @@ export class WindowHost implements WindowApi {
   }
 
   showDocument(path: ProjectPath, options: DocumentShowOptions = {}): void {
-    const { project } = this.options;
-    if (!project.has(path)) return;
+    const content = this.#content(path);
+    if (content === undefined) return;
+    const left = this.#active;
     this.#active = path;
-    this.#activeEditorId = this.#editors.show({ path, content: project.content(path)! }, options.viewType, options.selection);
+    this.#activeEditorId = this.#editors.show({ path, content }, options.viewType, options.selection);
+    // a provider's file keeps no panel: it is shown anew the next time
+    if (left !== path && !this.options.project.has(left)) this.#editors.close(left);
     this.#tabs.update(this.#editors.choicesFor(path), this.#activeEditorId);
     this.#viewMenu.update();
     this.#placeHeaderFooter();
@@ -284,7 +287,12 @@ export class WindowHost implements WindowApi {
     const { project } = this.options;
     const active = this.#active;
     if (change.kind === 'rename' && change.from === active) this.showDocument(change.path);
-    else this.showDocument(project.has(active) ? active : project.main);
+    else this.showDocument(this.#content(active) !== undefined ? active : project.main);
+  }
+
+  /** The content of `path`: the project's file, else a file outside it (`files`); undefined: neither. */
+  #content(path: ProjectPath): FileContent | undefined {
+    return this.options.project.content(path) ?? this.options.files?.readFile(path);
   }
 
   /** The rail buttons of the menus `window/railLeft` and `window/railRight`, anew when `menuId` is one of them. */

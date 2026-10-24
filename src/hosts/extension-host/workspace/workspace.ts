@@ -1,7 +1,7 @@
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
-import type { FileChange } from '../../../core/project/project';
+import type { FileChange, FileContent } from '../../../core/project/project';
 
 /**
  * Changes to the project's files and the widget's settings (VS Code's `workspace` namespace).
@@ -9,7 +9,7 @@ import type { FileChange } from '../../../core/project/project';
  * Extensions use it to:
  * - change files (`applyEdit`): a change is applied only if the project's rules, the permissions of the files and
  *   folders it touches (`fs`) and then the host page (`allowFileChange`) allow it
- * - make files and folders read-only (`registerFileSystemProvider`)
+ * - make files and folders read-only, and serve read-only files of their own (`registerFileSystemProvider`)
  * - read the settings they declare (`contributes.configuration`), hear when the host page sets new values, and set
  *   them for the widget (a settings UI)
  *
@@ -22,11 +22,12 @@ export interface Workspace {
    * afterwards). Resolves to the reason it was refused, in words for people, or null once applied.
    */
   applyEdit(change: FileChange): Promise<string | null>;
-  /** The permissions of the project's files and folders (VS Code's `workspace.fs`; synchronous, the project is in memory). */
+  /** The permissions and contents of the files and folders (VS Code's `workspace.fs`; synchronous, the project is in memory). */
   readonly fs: FileSystem;
   /**
-   * Registers a provider of file and folder permissions (VS Code's `workspace.registerFileSystemProvider`, for `stat`
-   * only): a file or folder is Readonly while any registered provider says so.
+   * Registers a provider of file and folder permissions and of files of its own (VS Code's
+   * `workspace.registerFileSystemProvider`, for `stat` and `readFile`): a file or folder is Readonly while any
+   * registered provider says so.
    */
   registerFileSystemProvider(provider: FileSystemProvider): Disposable;
   /** The settings under `section` (`getConfiguration('pdfExport').get('download')`), or all by full id. */
@@ -53,16 +54,24 @@ export interface FileStat {
   readonly permissions?: FilePermission;
 }
 
-/** The project's files and folders (VS Code's FileSystem, `stat` only). */
+/** The project's files and folders (VS Code's FileSystem, `stat` and `readFile`). */
 export interface FileSystem {
   /** The stat of the file or folder `path` (it need not be there yet); null is the top level. */
   stat(path: ProjectPath | null): FileStat;
+  /** The content of the file `path`: the project's, else a provider's own (`FileSystemProvider.readFile`); undefined: none. */
+  readFile(path: ProjectPath): FileContent | undefined;
 }
 
-/** Says what may be done with files and in folders (VS Code's FileSystemProvider, `stat` only). */
+/** Says what may be done with files and in folders, and serves files of its own (VS Code's FileSystemProvider, `stat` and `readFile`). */
 export interface FileSystemProvider {
   /** The stat of the file or folder `path` (it need not be there yet); null is the top level. */
   stat(path: ProjectPath | null): FileStat;
+  /**
+   * The content of a file of its own at `path`, where the project has none (synchronous: kept in memory), e.g. a file
+   * as it was at a commit; undefined: none. Such a file is no project file (not listed, compiled, shared or committed):
+   * `window.showDocument` shows it read-only, in the editor of its name.
+   */
+  readFile?(path: ProjectPath): FileContent | undefined;
 }
 
 /** The values of settings by full id (`{ 'pdfExport.download': false }`): JSON-like values. */

@@ -12,6 +12,7 @@ function provider(pages: Record<string, { items: SourceControlHistoryItem[]; cur
   const calls: unknown[] = [];
   return {
     calls,
+    currentHistoryItemRef: undefined,
     provideHistoryItems: async (options) => {
       calls.push(options);
       const page = pages[options.cursor ?? ''];

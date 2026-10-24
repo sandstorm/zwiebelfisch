@@ -214,9 +214,13 @@ export function roomHistoryPath(room: string, query: { path?: string; cursor?: s
   return `/api/rooms/${encodeURIComponent(room)}/history?${params}`;
 }
 
-/** The HTTP path of the files commit `sha` of a GitLab room's branch changed (relative to the server's URL): `GET` answers a `CompareAnswer`. */
-export function roomComparePath(room: string, sha: string): string {
-  return `/api/rooms/${encodeURIComponent(room)}/compare?sha=${encodeURIComponent(sha)}`;
+/**
+ * The HTTP path of the files that differ from commit `from` (default: the first parent) to commit `sha` of a GitLab
+ * room's branch (relative to the server's URL): `GET` answers a `CompareAnswer`.
+ */
+export function roomComparePath(room: string, sha: string, from?: string): string {
+  const range = from === undefined ? '' : `&from=${encodeURIComponent(from)}`;
+  return `/api/rooms/${encodeURIComponent(room)}/compare?sha=${encodeURIComponent(sha)}${range}`;
 }
 
 /** A page of a GitLab room's history (`roomHistoryPath`), and where it goes on (missing: no more). */
@@ -236,7 +240,10 @@ export interface HistoryCommit {
   people: string[];
 }
 
-/** The files a commit changed against its first parent (`roomComparePath`): in a room of one folder, only those it holds or pulled in. */
+/**
+ * The files a commit changed against its first parent, or that differ between two commits (`roomComparePath`): in a
+ * room of one folder, only those it holds or pulled in.
+ */
 export interface CompareAnswer {
   files: { path: string; previousPath?: string; kind: 'added' | 'modified' | 'deleted' | 'renamed' }[];
 }

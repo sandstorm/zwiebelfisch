@@ -49,6 +49,15 @@ describe('GitLabHistory', () => {
       { path: '/b.typ', originalPath: '/old.typ', kind: 'renamed' },
     ]);
     expect(fetched[0].url).toBe(`https://zwf.test/api/rooms/${encodeURIComponent(ROOM)}/compare?sha=${SHA}`);
+    await history.provideHistoryItemChanges(SHA, 'b');
+    expect(fetched[1].url).toBe(`https://zwf.test/api/rooms/${encodeURIComponent(ROOM)}/compare?sha=${SHA}&from=b`);
+  });
+
+  it('names the room’s base commit as the current one, under the branch', () => {
+    const { history, ydoc } = setup(() => json({}));
+    expect(history.currentHistoryItemRef).toEqual({ id: 'a', name: 'main' });
+    ydoc.getMap(META_MAP).delete('baseSha');
+    expect(history.currentHistoryItemRef).toBeUndefined();
   });
 
   it('reads a file at a commit; undefined when it was not there; rejects on a failure', async () => {

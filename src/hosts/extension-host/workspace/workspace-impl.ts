@@ -32,6 +32,15 @@ export class WorkspaceHost implements Workspace {
   readonly fs: FileSystem = {
     stat: (folder): FileStat =>
       this.#fileSystems.some((provider) => provider.stat(folder).permissions === FilePermission.Readonly) ? { permissions: FilePermission.Readonly } : {},
+    readFile: (path) => {
+      const content = this.project.content(path);
+      if (content !== undefined) return content;
+      for (const provider of this.#fileSystems) {
+        const own = provider.readFile?.(path);
+        if (own !== undefined) return own;
+      }
+      return undefined;
+    },
   };
 
   constructor(

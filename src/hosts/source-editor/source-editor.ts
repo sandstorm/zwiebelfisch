@@ -57,8 +57,10 @@ export const fromDocument = Annotation.define<{ readonly origin: unknown }>();
 export interface SourceEditorOptions {
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
-  /** The project file the document is, now, for the contributions (`CodeMirrorContext.path`); default: none. */
+  /** The file the document is, now, for the contributions (`CodeMirrorContext.path`); default: none. */
   path?(): ProjectPath | null;
+  /** Takes no edit, only the document's own changes (a file as it was at a commit); default: editable. */
+  readOnly?: boolean;
 }
 
 /**

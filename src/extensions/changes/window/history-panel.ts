@@ -1,17 +1,23 @@
 // The History side panel. See changes in ../changes.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceControl, SourceControlHistoryItem, SourceControlHistoryItemChange } from '../../../hosts/scm/scm';
+import { describe, type Comparison } from '../comparison';
 import { byDay, HistoryList, initials, people, relativeTime, shortId, uncommitted, type HistoryScope } from './history-list';
 
 /**
- * The commits of a source control in a side panel: on top whether the editors show changes and since what ("Showing
- * changes since 84c6e2f “Title”" with ✕ to stop, else "Show changes since last commit"), then the changes not committed
- * yet ("Not in GitLab yet", no request), then the commits of the scope grouped by day, each with its first person's
- * initials (and "+N"), subject, people, age and short id, and "Load more". Choosing a commit shows the changes since it
- * (`showChangesSince`); the commit they are shown since is highlighted ("Compared", `aria-current`) and lists the
- * files it changed; choosing it again stops showing them (`hideChanges`). Choosing a file opens it; one not committed
- * yet shows the changes since the last commit first. Reads the mode only from `changes()` on each `render`. Loads only
- * while `visible()`; a new current commit (`refresh`) or scope starts the list anew.
+ * The commits of a source control in a side panel: on top the comparison the editors show ("Changes in 84c6e2f
+ * “Title”" with ✕ to stop, else "Show changes since last commit"), then the changes not committed yet ("Not in GitLab
+ * yet", no request), then the commits of the scope grouped by day, each with its first person's initials (and "+N"),
+ * subject, people, age and short id, and "Load more". As IntelliJ's log:
+ * - a click on a commit shows its changes (`compare` a `commit`); on the one shown alone, stops (`compare(undefined)`)
+ * - a Cmd/Ctrl-click on another commit compares the two, the older to the newer (a `range`); so does the next click
+ *   after `compareWith`
+ * - a right click opens the commit's menu (`showItemMenu`)
+ * The commits compared are highlighted (`aria-current`) and labelled ("Changes", "Since", "From", "To"); the one the
+ * changes go to (or start at, to the current state) lists the files that differ. Choosing a file opens it as the
+ * comparison shows it (`openFile`); one not committed yet shows the changes since the last commit first. Reads the
+ * comparison only from `comparison()` on each `render`. Loads only while `visible()`; a new current commit (`refresh`)
+ * or scope starts the list anew.
  *
  * Used by: the changes extension, in its side panel `history`.
  */
@@ -21,9 +27,11 @@ export class HistoryPanel {
   #list: HistoryList | undefined;
   #scope: HistoryScope;
   #listening: { dispose(): void } | undefined;
-  /** The files of the commits compared so far, by id: loaded, still loading, or why not. */
-  readonly #files = new Map<string, readonly SourceControlHistoryItemChange[] | 'loading' | { error: string }>();
+  /** The files of the comparisons shown so far, by `filesKey`: loaded, still loading, or why not. */
+  readonly #files = new Map<string, Files>();
   #uncommittedOpen = false;
+  /** The commit the next click compares with (`compareWith`). */
+  #picking: SourceControlHistoryItem | undefined;
 
   constructor(
     parent: HTMLElement,
@@ -43,6 +51,12 @@ export class HistoryPanel {
   setScope(scope: HistoryScope): void {
     this.#scope = scope;
     this.refresh();
+  }
+
+  /** The next click on a commit compares it with `item` (the strip says so; ✕ there cancels); undefined: cancels. */
+  compareWith(item: SourceControlHistoryItem | undefined): void {
+    this.#picking = item;
+    this.render();
   }
 
   /** Starts the list anew (another source control, a new current commit), or loads it if it waits for being seen. */
@@ -74,7 +88,7 @@ export class HistoryPanel {
       this.#root.append(element(doc, 'p', 'zwf-history__note', 'No history here: the project is not in a repository.'));
       return;
     }
-    top.append(this.#mode(doc, control));
+    top.append(this.#mode(doc));
     const ul = element(doc, 'ul', 'zwf-history__list');
     this.#uncommitted(doc, ul, control);
     const now = Date.now();
@@ -110,19 +124,25 @@ export class HistoryPanel {
     return header;
   }
 
-  /** The strip saying whether the editors show changes, and since what, with the way to turn them off or on. */
-  #mode(doc: Document, control: SourceControl): HTMLElement {
-    const changes = this.options.changes();
-    const strip = element(doc, 'div', `zwf-history__mode${changes ? ' zwf-history__mode--on' : ''}`);
+  /** The strip saying which changes the editors show, with the way to turn them off or on (or which commit is to be picked). */
+  #mode(doc: Document): HTMLElement {
+    const comparison = this.options.comparison();
+    const picking = this.#picking;
+    const strip = element(doc, 'div', `zwf-history__mode${comparison || picking ? ' zwf-history__mode--on' : ''}`);
     strip.dataset.testid = 'zwf-history-mode';
-    if (!changes) {
-      strip.append(button(doc, 'zwf-history__show', 'Show changes since last commit', () => this.options.showChangesSince(control, undefined)));
+    const stop = (label: string, onClick: () => void) => labelled(button(doc, 'zwf-history__icon', '✕', onClick), label);
+    if (picking) {
+      const text = element(doc, 'span', 'zwf-history__mode-text', `Choose the commit to compare ${shortId(picking)} with`);
+      strip.append(text, stop('Cancel', () => this.compareWith(undefined)));
       return strip;
     }
-    const since = changes.item ? `${shortId(changes.item)} “${changes.item.subject}”` : 'last commit';
-    const text = element(doc, 'span', 'zwf-history__mode-text', `Showing changes since ${since}`);
+    if (!comparison) {
+      strip.append(button(doc, 'zwf-history__show', 'Show changes since last commit', () => this.options.compare({ kind: 'since' })));
+      return strip;
+    }
+    const text = element(doc, 'span', 'zwf-history__mode-text', describe(comparison, Date.now()).long);
     text.title = text.textContent!;
-    strip.append(element(doc, 'span', 'zwf-history__dot'), text, labelled(button(doc, 'zwf-history__icon', '✕', () => this.options.hideChanges()), 'Stop showing changes'));
+    strip.append(element(doc, 'span', 'zwf-history__dot'), text, stop('Stop showing changes', () => this.options.compare(undefined)));
     return strip;
   }
 
@@ -141,10 +161,11 @@ export class HistoryPanel {
     if (this.#uncommittedOpen) {
       const files = element(doc, 'ul', 'zwf-history__files');
       for (const state of states) {
+        const change = { path: state.path, kind: BADGE_KINDS[state.decorations?.badge ?? ''] ?? 'modified' };
         files.append(
-          this.#file(doc, state.path, BADGE_KINDS[state.decorations?.badge ?? ''] ?? 'modified', () => {
-            this.options.showChangesSince(control, undefined);
-            this.options.openFile(state.path);
+          this.#file(doc, change, this.options.isOpenable(state.path), () => {
+            this.options.compare({ kind: 'since' });
+            this.options.openFile(change);
           }),
         );
       }
@@ -154,20 +175,49 @@ export class HistoryPanel {
   }
 
   #entry(doc: Document, control: SourceControl, item: SourceControlHistoryItem, now: number): HTMLElement {
-    const compared = item.id === this.options.changes()?.item?.id;
-    const li = element(doc, 'li', `zwf-history__entry${compared ? ' zwf-history__entry--compared' : ''}`);
-    const row = button(doc, 'zwf-history__row', '', () => (compared ? this.options.hideChanges() : this.options.showChangesSince(control, item)));
-    row.setAttribute('aria-expanded', String(compared));
-    if (compared) row.setAttribute('aria-current', 'true');
-    row.title = `${compared ? STOP_TITLE : SINCE_TITLE}\n\n${item.message}`;
+    const comparison = this.options.comparison();
+    const role = comparison && roleOf(comparison, item);
+    const li = element(doc, 'li', `zwf-history__entry${role ? ' zwf-history__entry--compared' : ''}`);
+    const row = button(doc, 'zwf-history__row', '', (event) => this.#choose(item, event.metaKey || event.ctrlKey));
+    row.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.options.showItemMenu(item, { x: event.clientX, y: event.clientY });
+    });
+    const listsFiles = role !== undefined && role !== 'from';
+    row.setAttribute('aria-expanded', String(listsFiles));
+    if (role) row.setAttribute('aria-current', 'true');
+    row.title = `${role === 'commit' || role === 'since' ? STOP_TITLE : CHOOSE_TITLE}\n\n${item.message}`;
     const names = people(item);
     const when = item.timestamp === undefined ? '' : relativeTime(item.timestamp, now);
     row.append(this.#people(doc, names), element(doc, 'span', 'zwf-history__subject', item.subject));
-    if (compared) row.append(element(doc, 'span', 'zwf-history__compared', 'Compared'));
+    if (role) row.append(element(doc, 'span', 'zwf-history__compared', ROLE_LABELS[role]));
     row.append(element(doc, 'span', 'zwf-history__meta', [names.join(', '), when, shortId(item)].filter(Boolean).join(' · ')));
     li.append(row);
-    if (compared) li.append(this.#changes(doc, this.#filesOf(control, item)));
+    if (listsFiles) li.append(this.#changes(doc, comparison!, this.#filesOf(control, comparison!)));
     return li;
+  }
+
+  /** A click on `item` (`range`: with Cmd/Ctrl): see the class. */
+  #choose(item: SourceControlHistoryItem, range: boolean): void {
+    const comparison = this.options.comparison();
+    const picking = this.#picking;
+    this.#picking = undefined;
+    const anchor = picking ?? (range && comparison ? anchorOf(comparison) : undefined);
+    if (anchor) {
+      if (anchor.id === item.id) this.render();
+      else this.options.compare(this.#range(anchor, item));
+      return;
+    }
+    const alone = comparison && comparison.kind !== 'range' && comparison.item?.id === item.id;
+    this.options.compare(alone ? undefined : { kind: 'commit', item });
+  }
+
+  /** `a` and `b` as a range, the older (further down the list, else earlier) to the newer. */
+  #range(a: SourceControlHistoryItem, b: SourceControlHistoryItem): Comparison {
+    const items = this.#list?.items ?? [];
+    const [ia, ib] = [items.findIndex((each) => each.id === a.id), items.findIndex((each) => each.id === b.id)];
+    const aOlder = ia >= 0 && ib >= 0 ? ia > ib : (a.timestamp ?? 0) < (b.timestamp ?? 0);
+    return aOlder ? { kind: 'range', from: a, to: b } : { kind: 'range', from: b, to: a };
   }
 
   /** The avatar column: the first person's initials, "+N" for the others, all names as tooltip. */
@@ -180,18 +230,20 @@ export class HistoryPanel {
     return column;
   }
 
-  /** The files `item` changed, as far as loaded. */
-  #changes(doc: Document, files: readonly SourceControlHistoryItemChange[] | 'loading' | { error: string }): HTMLElement {
+  /** The files that differ in `comparison`, as far as loaded. */
+  #changes(doc: Document, comparison: Comparison, files: Files): HTMLElement {
     if (files === 'loading') return element(doc, 'p', 'zwf-history__note zwf-history__note--files', 'Loading…');
     if ('error' in files) return element(doc, 'p', 'zwf-history__note zwf-history__note--files zwf-history__note--error', files.error);
     const ul = element(doc, 'ul', 'zwf-history__files');
-    for (const change of files) ul.append(this.#file(doc, change.path, change.kind, () => this.options.openFile(change.path)));
+    // to a commit: every file opens, as it was there; to the current state only those the project has
+    const live = comparison.kind === 'since';
+    for (const change of files) ul.append(this.#file(doc, change, !live || this.options.isOpenable(change.path), () => this.options.openFile(change)));
     if (files.length === 0) ul.append(element(doc, 'li', 'zwf-history__note zwf-history__note--files', 'No files changed here.'));
     return ul;
   }
 
   /** A file's row: its kind as a coloured symbol, its folder (cut from the left when long) and its name. */
-  #file(doc: Document, path: ProjectPath, kind: SourceControlHistoryItemChange['kind'], open: () => void): HTMLElement {
+  #file(doc: Document, { path, kind }: SourceControlHistoryItemChange, openable: boolean, open: () => void): HTMLElement {
     const li = element(doc, 'li', 'zwf-history__file');
     const row = button(doc, 'zwf-history__file-row', '', open);
     const symbol = labelled(element(doc, 'span', `zwf-history__kind zwf-history__kind--${kind}`, KINDS[kind].symbol), KINDS[kind].label);
@@ -203,7 +255,7 @@ export class HistoryPanel {
     shown.append(folder, element(doc, 'span', 'zwf-history__name', name));
     row.append(symbol, shown);
     row.title = ProjectPath.displayName(path);
-    if (!this.options.isOpenable(path)) {
+    if (!openable) {
       row.disabled = true;
       row.title += '\nNot in the project now';
     }
@@ -211,22 +263,28 @@ export class HistoryPanel {
     return li;
   }
 
-  /** The files of `item`, as far as loaded; starts loading them the first time (rendering again once they came). */
-  #filesOf(control: SourceControl, item: SourceControlHistoryItem): readonly SourceControlHistoryItemChange[] | 'loading' | { error: string } {
-    const known = this.#files.get(item.id);
+  /** The files that differ in `comparison`, as far as loaded; starts loading them the first time (rendering again once they came). */
+  #filesOf(control: SourceControl, comparison: Comparison): Files {
+    const provider = control.historyProvider!;
+    const [to, from] =
+      comparison.kind === 'commit' ? [comparison.item.id, undefined] : comparison.kind === 'range' ? [comparison.to.id, comparison.from.id] : [provider.currentHistoryItemRef?.id, comparison.item?.id];
+    if (to === undefined) return { error: 'The current commit is not known yet.' };
+    if (to === from) return [];
+    const key = `${from ?? ''}..${to}`;
+    const known = this.#files.get(key);
     if (known) return known;
-    this.#files.set(item.id, 'loading');
+    this.#files.set(key, 'loading');
     const list = this.#list;
-    control.historyProvider!.provideHistoryItemChanges(item.id).then(
-      (changes) => this.#loaded(list, item.id, changes),
-      (error: unknown) => this.#loaded(list, item.id, { error: `The files could not be read: ${error instanceof Error ? error.message : String(error)}` }),
+    provider.provideHistoryItemChanges(to, from).then(
+      (changes) => this.#loaded(list, key, changes),
+      (error: unknown) => this.#loaded(list, key, { error: `The files could not be read: ${error instanceof Error ? error.message : String(error)}` }),
     );
     return 'loading';
   }
 
-  #loaded(list: HistoryList | undefined, id: string, files: readonly SourceControlHistoryItemChange[] | { error: string }): void {
+  #loaded(list: HistoryList | undefined, key: string, files: Files): void {
     if (list !== this.#list) return;
-    this.#files.set(id, files);
+    this.#files.set(key, files);
     this.render();
   }
 }
@@ -236,22 +294,41 @@ export interface HistoryPanelOptions {
   sourceControl(): SourceControl | undefined;
   /** Whether the panel is seen. */
   visible(): boolean;
-  /** What the editors show the changes since: undefined: they show none; `item` undefined: the last commit. */
-  changes(): { readonly item: SourceControlHistoryItem | undefined } | undefined;
-  /** Shows the changes since `item` of `control` (undefined: since the last commit). */
-  showChangesSince(control: SourceControl, item: SourceControlHistoryItem | undefined): void;
-  /** Stops showing the changes. */
-  hideChanges(): void;
-  /** Opens `path` in its editor. */
-  openFile(path: ProjectPath): void;
-  /** Whether the project has `path` now (only such a file opens). */
+  /** The comparison the editors show; undefined: none. */
+  comparison(): Comparison | undefined;
+  /** Shows `comparison` in the editors; undefined: stops showing changes. */
+  compare(comparison: Comparison | undefined): void;
+  /** Opens a file of the comparison shown, as it shows it (to a commit: as it was there). */
+  openFile(change: SourceControlHistoryItemChange): void;
+  /** Whether the project has `path` now (only such a file opens while the changes go to the current state). */
   isOpenable(path: ProjectPath): boolean;
+  /** Shows the menu of `item` at `anchor` (viewport coordinates of a right click). */
+  showItemMenu(item: SourceControlHistoryItem, anchor: { readonly x: number; readonly y: number }): void;
 }
 
-/** What choosing a commit does (its tooltip, before its message). */
-export const SINCE_TITLE = 'Show changes since this commit';
-/** What choosing the compared commit does (its tooltip, before its message). */
-const STOP_TITLE = 'Compared: click to stop showing changes';
+/** The files that differ, as far as loaded: loaded, still loading, or why not. */
+type Files = readonly SourceControlHistoryItemChange[] | 'loading' | { error: string };
+
+/** How a commit takes part in a comparison: its changes alone, the changes since it to now, or one end of a range. */
+type Role = 'commit' | 'since' | 'from' | 'to';
+
+/** The part `item` plays in `comparison`; undefined: none. */
+function roleOf(comparison: Comparison, item: SourceControlHistoryItem): Role | undefined {
+  if (comparison.kind === 'range') return comparison.from.id === item.id ? 'from' : comparison.to.id === item.id ? 'to' : undefined;
+  return comparison.item?.id === item.id ? comparison.kind : undefined;
+}
+
+/** The commit a Cmd/Ctrl-click compares with: the one shown alone, or the start of the range or of the changes to now. */
+function anchorOf(comparison: Comparison): SourceControlHistoryItem | undefined {
+  return comparison.kind === 'range' ? comparison.from : comparison.item;
+}
+
+const ROLE_LABELS: Record<Role, string> = { commit: 'Changes', since: 'Since', from: 'From', to: 'To' };
+
+/** What clicking a commit does (its tooltip, before its message). */
+export const CHOOSE_TITLE = 'Click: show the changes of this commit\nCmd/Ctrl-click: compare it with the selected commit\nRight click: more';
+/** What clicking the commit shown alone does (its tooltip, before its message). */
+const STOP_TITLE = 'Click to stop showing changes\nCmd/Ctrl-click another commit to compare it with this one';
 
 const KINDS: Record<SourceControlHistoryItemChange['kind'], { symbol: string; label: string }> = {
   added: { symbol: '+', label: 'Added' },
@@ -270,7 +347,7 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
   return el;
 }
 
-function button(doc: Document, className: string, text: string, onClick: () => void): HTMLButtonElement {
+function button(doc: Document, className: string, text: string, onClick: (event: MouseEvent) => void): HTMLButtonElement {
   const el = element(doc, 'button', className, text);
   el.type = 'button';
   el.addEventListener('click', onClick);

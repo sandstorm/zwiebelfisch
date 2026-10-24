@@ -29,7 +29,7 @@ import { type CommandContribution, CommandsHost, type MenuItem } from '../hosts/
 import { LanguagesHost } from '../hosts/languages/languages';
 import type { SourceEditorContributions } from '../hosts/source-editor/source-editor';
 import type { PreviewContributions } from '../hosts/preview/preview';
-import { VisualEditor, VisualEditorHost, type VisualEditorContributions } from '../hosts/visual-editor/visual-editor';
+import { VisualEditor, VisualEditorHost, type VisualEditorContributions, type VisualEditorOptions } from '../hosts/visual-editor/visual-editor';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/visual-editor/typst-conversion/typst-conversion';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Extension, ExtensionContext } from '../hosts/extension-host/extension-host';
@@ -67,6 +67,8 @@ export const TEST_DOCUMENT_PATH = ProjectPath.of('/main.typ');
 export interface TestEditorOptions {
   /** The project's other files (images as bytes), by path; the editor's document is `TEST_DOCUMENT_PATH`. Default: none. */
   files?: Readonly<Record<string, FileContent>>;
+  /** How the editor shows its document; default: as `TEST_DOCUMENT_PATH`, editable. */
+  visualEditor?: VisualEditorOptions;
   /** Applies a change (an uploaded image): resolves to why it was refused, or null. Default: the file is added. */
   applyEdit?(change: FileChange): Promise<string | null>;
   /** The preview's compiled snippets of the document (raw boxes show them; default: none) and when they change. */
@@ -160,7 +162,7 @@ export const parseTypst = (source: string, withSchema: Schema = schema): Node =>
 
 /** A Visual editor of `document` with the built-ins configured from `options`. */
 export function createVisualEditor(parent: HTMLElement, document: TypstDocument, options: TestEditorOptions = {}): VisualEditor {
-  return new VisualEditor(parent, document, contributions(options));
+  return new VisualEditor(parent, document, contributions(options), { path: () => TEST_DOCUMENT_PATH, ...options.visualEditor });
 }
 
 /**
@@ -242,7 +244,7 @@ function testContext(options: TestEditorOptions) {
       showQuickPick: prompts.showQuickPick,
       showErrorMessage: prompts.showErrorMessage,
     } satisfies Partial<WindowApi>,
-    workspace: { applyEdit: options.applyEdit ?? added } satisfies Partial<Workspace>,
+    workspace: { applyEdit: options.applyEdit ?? added, registerFileSystemProvider: ignored } satisfies Partial<Workspace>,
     // real: the clipboard's paste edit provider takes part in pastes
     languages: new LanguagesHost(),
     sourceEditor: { registerCodeMirrorExtension: ignored } satisfies Partial<SourceEditorContributions>,

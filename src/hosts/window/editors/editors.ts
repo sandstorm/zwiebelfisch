@@ -100,11 +100,15 @@ export class Editors {
 
   /** Keeps the retained panels with their file: disposed when it is deleted, kept when it is renamed. */
   followFileChange(change: FileChange): void {
-    if (change.kind === 'delete') {
-      for (const panel of this.#retained.filter((p) => p.path === change.path)) this.#dispose(panel);
-    } else if (change.kind === 'rename') {
+    if (change.kind === 'delete') this.close(change.path);
+    else if (change.kind === 'rename') {
       for (const panel of this.#retained) if (panel.path === change.from) panel.path = change.path;
     }
+  }
+
+  /** Disposes the panels `path` is retained in. */
+  close(path: ProjectPath): void {
+    for (const panel of this.#retained.filter((p) => p.path === path)) this.#dispose(panel);
   }
 
   dispose(): void {

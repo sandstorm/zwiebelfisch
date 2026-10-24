@@ -1,10 +1,11 @@
 // The Typst files' editors in the window. See Widget in widget.ts.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Project } from '../../core/project/project';
-import type { SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { ProjectPath } from '../../core/paths/paths';
+import { type SourceRange, type TextChange, TypstDocument } from '../../core/typst-document/typst-document';
 import { SOURCE_EDITOR, type SourceEditor, type SourceEditorHost } from '../../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR, VisualEditor, type VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
-import type { EditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../hosts/window/window';
+import type { EditorDocument, EditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../hosts/window/window';
 
 /**
  * The Visual and Source editors as the two editors of `*.typ` (`visualEditor`, `sourceEditor`), with the
@@ -13,9 +14,12 @@ import type { EditorPanel, TextEditor, TextEditorEdit, WindowApi } from '../../h
  *
  * Per document, each editor is made the first time the document is shown in it; kept (with scroll and undo history)
  * while hidden, disposed with the panel (the file deleted). Switching a document between the two keeps the selection.
+ * A `.typ` file outside the project (a file system provider's own) is shown read-only, from the content it was opened
+ * with.
  */
 export class DocumentEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();
+  readonly #outsideDocuments = new Map<ProjectPath, TypstDocument>();
 
   constructor(
     private readonly project: Project,
@@ -29,26 +33,25 @@ export class DocumentEditors {
         { viewType: VISUAL_EDITOR, displayName: 'Visual' },
         { viewType: SOURCE_EDITOR, displayName: 'Source' },
       ].map(({ viewType, displayName }) =>
-        window.registerEditorProvider(
-          viewType,
-          { resolveEditor: (file, panel) => this.#resolve(viewType, this.project.document(file.path)!, panel) },
-          { filenamePattern: '*.typ', displayName, retainContextWhenHidden: true },
-        ),
+        window.registerEditorProvider(viewType, { resolveEditor: (file, panel) => this.#resolve(viewType, file, panel) }, { filenamePattern: '*.typ', displayName, retainContextWhenHidden: true }),
       ),
     );
   }
 
-  #resolve(viewType: string, document: TypstDocument, panel: EditorPanel): void {
+  #resolve(viewType: string, file: EditorDocument, panel: EditorPanel): void {
+    const own = this.project.document(file.path);
+    const document = own ?? this.#outside(file);
     let documentEditor = this.#editors.get(document);
     if (!documentEditor) this.#editors.set(document, (documentEditor = new DocumentEditor(document)));
     const owner = documentEditor;
     const element = panel.element;
     element.classList.add('zwf-editor__pane');
     const selected = () => this.options.onSelection(owner);
+    const options = { path: own ? () => this.project.pathOf(own) ?? null : () => file.path, readOnly: !own };
     const editor =
       viewType === VISUAL_EDITOR
-        ? new VisualEditor(element, document, this.options.visualEditor)
-        : this.options.sourceEditors.createEditor(element, document, { onSelection: selected, path: () => this.project.pathOf(document) ?? null });
+        ? new VisualEditor(element, document, this.options.visualEditor, options)
+        : this.options.sourceEditors.createEditor(element, document, { ...options, onSelection: selected });
     // disposed with the editor
     if (editor instanceof VisualEditor) editor.onDidChangeSelection(selected);
     owner.editors.set(viewType, editor);
@@ -64,8 +67,17 @@ export class DocumentEditors {
     panel.onDidDispose(() => {
       editor.dispose();
       owner.editors.delete(viewType);
-      if (owner.editors.size === 0) this.#editors.delete(document);
+      if (owner.editors.size > 0) return;
+      this.#editors.delete(document);
+      if (!own) this.#outsideDocuments.delete(file.path);
     });
+  }
+
+  /** The document of a file outside the project (a provider's, read-only): one per path while one of its editors lives. */
+  #outside(file: EditorDocument): TypstDocument {
+    let document = this.#outsideDocuments.get(file.path);
+    if (!document) this.#outsideDocuments.set(file.path, (document = new TypstDocument(typeof file.content === 'string' ? file.content : new TextDecoder().decode(file.content))));
+    return document;
   }
 }
 
