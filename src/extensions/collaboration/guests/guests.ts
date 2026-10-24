@@ -8,7 +8,7 @@ import css from './guests.css?inline';
 import { guestLink, joinWithLink, takeGuestToken } from './guest-link';
 import { Shares } from './shares';
 import { guestPermissions } from './window/guest-files';
-import { endDate, GuestView, SharedView } from './window/guest-mode';
+import { endDate, GuestView, ShareButton } from './window/guest-mode';
 
 /**
  * Guest mode of a room on a collaboration server that has guest links (`ZWF_GUESTS`):
@@ -16,12 +16,13 @@ import { endDate, GuestView, SharedView } from './window/guest-mode';
  *   name and signs them in as a guest before the room is joined (`beforeConnect`); someone signed in already is told
  *   they need no link
  * - in a GitLab room, the files a guest may not change are Readonly to them (`restrictFiles`, the server's list)
- * - a guest sees that they are one, all the time: a banner that cannot be closed (who shared, when access ends; red in
- *   the last hour), a "GUEST · 2 d left" badge, a warning-coloured frame; once access ends, the banner says so
- * - a member who may share sees, while the room has links, a banner ("Shared with guests · N online · until …",
- *   "Manage…") and a "Shared · N guests" badge; guests' carets are dashed, their names end in "(guest)"
+ * - a guest sees that they are one, all the time: the title bar tinted in the warning color with "Guest access · until
+ *   Oct 25, 18:00" (red in the last hour; who shared in its tooltip), a warning-coloured frame; once access ends, it
+ *   says so
+ * - a member who may share sees "Share" at the right of the title bar ("Shared · N guests" while the room has links): a
+ *   click shares, or, with links, lists them; guests' carets are dashed, their names end in "(guest)"
  * - the commands `collaboration.shareWithGuests` (whom for, how long, then the link: copied, and shown this once) and
- *   `collaboration.manageGuests` (this project's links, whoever made them; picking one revokes it)
+ *   `collaboration.manageGuests` (this project's links, whoever made them, and "New guest link…"; picking one revokes it)
  *
  * What the server says changed (`guests:changed`, `receive`) is asked for again.
  */
@@ -70,8 +71,9 @@ export class Guests {
   }
 
   /**
-   * The user is out of the room (`reason`), or their session ended: for a guest, their access has ended (the banner
-   * says so, and they are told to open the link again; true). False for a member: not guest mode's to tell.
+   * The user is out of the room (`reason`), or their session ended: for a guest, their access has ended (the title bar
+   * says so, and without `reason` they are told to open the link again; true). False for a member: not guest mode's to
+   * tell.
    */
   ended(reason?: string): boolean {
     if (!this.#mode || this.#member) return false;
@@ -176,29 +178,14 @@ export class Guests {
     this.#show = () => view.show(this.#shares.shares[0] ?? null, Date.now(), this.#ended);
     this.#show();
     const ticker = setInterval(() => this.#show(), TICK);
-    return Disposable.from(
-      window.registerBanner(view.banner),
-      window.registerStatusBarItem(view.badge, { alignment: 'left', priority: 1000 }),
-      new Disposable(() => clearInterval(ticker)),
-    );
+    return Disposable.from(window.registerTitleBarItem(view.element, { alignment: 'left', priority: 1000 }), new Disposable(() => clearInterval(ticker)));
   }
 
   #memberMode(): Disposable {
     const { window, commands } = this.context;
-    const view = new SharedView(window.ownerDocument, () => void commands.executeCommand('collaboration.manageGuests'));
-    let shown: Disposable | null = null;
-    this.#show = () => {
-      const any = view.show(this.#shares.shares);
-      if (any && !shown) shown = Disposable.from(window.registerBanner(view.banner), window.registerStatusBarItem(view.badge, { alignment: 'left', priority: 1000 }));
-      if (!any && shown) {
-        shown.dispose();
-        shown = null;
-      }
-    };
-    return Disposable.from(
-      window.registerMenuItem('window/editorTitle', { command: 'collaboration.shareWithGuests', group: 'sourceControl', order: 10 }),
-      new Disposable(() => shown?.dispose()),
-    );
+    const button = new ShareButton(window.ownerDocument, (any) => void commands.executeCommand(any ? 'collaboration.manageGuests' : 'collaboration.shareWithGuests'));
+    this.#show = () => button.show(this.#shares.shares);
+    return window.registerTitleBarItem(button.element, { alignment: 'right', priority: 300 });
   }
 }
 

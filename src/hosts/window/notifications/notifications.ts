@@ -1,5 +1,5 @@
 // See WindowApi in ../window.ts.
-import type { MessageItem, MessageSeverity } from '../window';
+import type { MessageItem, MessageOptions, MessageSeverity } from '../window';
 
 /**
  * The widget's notification area (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`): each message
@@ -7,11 +7,16 @@ import type { MessageItem, MessageSeverity } from '../window';
  * modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
  * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
  *
+ * A modal message (`options.modal`) is a card in the middle of an overlay over the whole widget (`role=alertdialog`),
+ * its `detail` below the text, a button per item, the first one focused; the rest of the widget is inert meanwhile. It
+ * has no close button and closes only when an item is chosen (or the widget goes).
+ *
  * @internal Extensions use it through `window.showInformationMessage`, `showWarningMessage` and `showErrorMessage`.
  */
 export class Notifications {
   readonly #area: HTMLElement;
   readonly #shown: Shown[] = [];
+  readonly #modals: Shown[] = [];
 
   constructor(host: HTMLElement) {
     this.#area = host.ownerDocument.createElement('div');
@@ -21,7 +26,8 @@ export class Notifications {
   }
 
   /** Shows `message`; resolves to the item chosen, or undefined once it is closed otherwise. */
-  show<T extends string | MessageItem>(severity: MessageSeverity, message: string, items: readonly T[]): Promise<T | undefined> {
+  show<T extends string | MessageItem>(severity: MessageSeverity, message: string, items: readonly T[], options: MessageOptions = {}): Promise<T | undefined> {
+    if (options.modal) return this.#showModal(severity, message, items, options.detail);
     return new Promise((resolve) => {
       const doc = this.#area.ownerDocument;
       const element = doc.createElement('div');
@@ -63,8 +69,49 @@ export class Notifications {
 
   /** Closes every message (resolving them to undefined) and removes the area. */
   dispose(): void {
-    for (const shown of [...this.#shown]) shown.close();
+    for (const shown of [...this.#shown, ...this.#modals]) shown.close();
     this.#area.remove();
+  }
+
+  #showModal<T extends string | MessageItem>(severity: MessageSeverity, message: string, items: readonly T[], detail: string | undefined): Promise<T | undefined> {
+    return new Promise((resolve) => {
+      const doc = this.#area.ownerDocument;
+      const overlay = doc.createElement('div');
+      overlay.className = 'zwf-editor__modal';
+      overlay.dataset.testid = 'zwf-modal';
+      const card = overlay.appendChild(doc.createElement('div'));
+      card.className = `zwf-modal zwf-modal--${severity}`;
+      card.setAttribute('role', 'alertdialog');
+      card.setAttribute('aria-modal', 'true');
+      card.setAttribute('aria-label', message);
+      const title = card.appendChild(doc.createElement('h2'));
+      title.className = 'zwf-modal__message';
+      title.textContent = message;
+      if (detail) {
+        const text = card.appendChild(doc.createElement('p'));
+        text.className = 'zwf-modal__detail';
+        text.textContent = detail;
+        card.setAttribute('aria-description', detail);
+      }
+      const actions = card.appendChild(doc.createElement('div'));
+      actions.className = 'zwf-modal__actions';
+      // the rest of the widget takes no input, by keyboard either, while the card is up
+      const muted = [...(this.#area.parentElement?.children ?? [])].filter((child) => !child.hasAttribute('inert'));
+      const shown: Shown = { element: overlay, close: () => finish(undefined) };
+      const finish = (item: T | undefined) => {
+        const at = this.#modals.indexOf(shown);
+        if (at < 0) return;
+        this.#modals.splice(at, 1);
+        overlay.remove();
+        for (const element of muted) element.removeAttribute('inert');
+        resolve(item);
+      };
+      for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'zwf-modal__item', () => finish(item)));
+      for (const element of muted) element.setAttribute('inert', '');
+      this.#modals.push(shown);
+      this.#area.before(overlay);
+      actions.querySelector('button')?.focus();
+    });
   }
 }
 

@@ -1,12 +1,12 @@
-// The account in the status bar. See collaboration in ../collaboration.ts.
+// The account in the title bar. See collaboration in ../collaboration.ts.
 import type { Account } from '../account';
 
 /**
- * The status bar entry of the user's account on the collaboration server: "Sign in" while signed out, the user's
+ * The title bar entry of the user's account on the collaboration server: "Sign in" while signed out, the user's
  * name while signed in (a click opens the account menu, with "Sign out"), nothing until the server answered.
  */
 export class AccountStatus {
-  /** The entry, for the status bar. */
+  /** The entry, for the title bar. */
   readonly element: HTMLButtonElement;
 
   constructor(

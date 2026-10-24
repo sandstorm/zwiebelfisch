@@ -1,26 +1,31 @@
-/* The source-control extension's styles: the source controls' status bar entries ("Not in GitLab: 3 files · 14 min").
-   See source-control.ts, which registers it; colors from the widget's --zwf-* tokens. */
+/* The source-control extension's styles: the save status in the title bar ("Not in GitLab: 3 files · 14 min", a
+   conflict in the warning color) and "Save to GitLab…". See source-control.ts, which registers it; colors from the
+   widget's --zwf-* tokens. */
 .zwf-source-control__status {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
-  padding: 4px 0 4px 8px;
-  font-size: 12px;
+  min-width: 0;
 }
-.zwf-source-control__entry {
-  font: inherit;
-  border: 0;
-  padding: 2px 6px;
-  border-radius: 3px;
+.zwf-editor__title-bar .zwf-source-control__entry {
+  border-color: transparent;
   background: none;
-  color: var(--zwf-text);
-  white-space: nowrap;
-  cursor: pointer;
+  color: var(--zwf-text-2);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.zwf-source-control__entry:hover { background: var(--zwf-hover); }
-.zwf-source-control__entry--warning,
-.zwf-source-control__entry--warning:hover {
+.zwf-editor__title-bar .zwf-source-control__entry:hover { background: var(--zwf-hover); }
+.zwf-editor__title-bar .zwf-source-control__entry--warning,
+.zwf-editor__title-bar .zwf-source-control__entry--warning:hover {
   background: var(--zwf-warning);
   color: var(--zwf-bg);
   font-weight: 600;
 }
+.zwf-editor__title-bar .zwf-source-control__save {
+  border-color: var(--zwf-accent);
+  background: var(--zwf-accent);
+  color: white;
+  font-weight: 600;
+}
+.zwf-editor__title-bar .zwf-source-control__save:hover { background: color-mix(in srgb, var(--zwf-accent) 85%, black); }

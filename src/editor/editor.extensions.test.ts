@@ -169,9 +169,9 @@ describe('editors', () => {
     editor.open('/logo.png');
     const asset = host.querySelector<HTMLElement>('[data-testid=zwf-asset]')!;
     expect(asset.hidden).toBe(false);
-    // one editor: no tabs; the bar stays for the View menu
-    expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(false);
-    expect(host.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
+    // one editor and no buttons: no tab bar (the View menu is in the title bar)
+    expect(host.querySelector<HTMLElement>('.zwf-editor__tabs')!.hidden).toBe(true);
+    expect(host.querySelector<HTMLElement>('.zwf-editor__view-menu')!.hidden).toBe(false);
     editor.open('/main.typ');
     expect(asset.isConnected).toBe(false);
     expect(host.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(false);
@@ -436,7 +436,7 @@ describe('the built-in extensions', () => {
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
   });
 
-  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, says while busy', async () => {
+  it('offers "Save to <label>…" in the title bar for a registered source control: asks for the message, commits, says while busy', async () => {
     const changed = new EventEmitter<void>();
     const committed: string[] = [];
     const gitlab: SourceControl & { busy: boolean } = {
@@ -458,7 +458,7 @@ describe('the built-in extensions', () => {
       activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
     const { host } = setup({ source: '= Hi', extensions: (builtinExtensions) => [...builtinExtensions, room] });
-    const action = () => host.querySelector<HTMLButtonElement>('.zwf-editor__tab-action[data-command="sourceControl.commit"]');
+    const action = () => host.querySelector<HTMLButtonElement>('.zwf-editor__title-bar .zwf-source-control__save:not([hidden])');
     const notifications = () => [...host.querySelectorAll('.zwf-notification__message')].map((message) => message.textContent);
     expect(action()!.textContent).toBe('Save to GitLab…');
 

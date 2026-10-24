@@ -72,7 +72,7 @@ export interface ExtensionContext {
   readonly commands: Commands;
   /**
    * Everything the user sees and interacts with (VS Code's `window`): which file is shown, messages, input, menus, side
-   * panels, the status bar, editors, the editor header and footer, style sheets, dropped files.
+   * panels, the title bar, the status bar, editors, the editor header and footer, style sheets, dropped files.
    */
   readonly window: WindowApi;
   /** The source controls (VS Code's `scm`). */

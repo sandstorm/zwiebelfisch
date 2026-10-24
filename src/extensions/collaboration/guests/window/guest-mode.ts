@@ -1,47 +1,39 @@
-// What guest mode looks like: the banners and status bar badges of guests and of members sharing. See Guests in ../guests.ts.
+// What guest mode looks like in the title bar: the guest's access, and the members' "Share". See Guests in ../guests.ts.
 import type { Share } from '../../room-protocol';
 
 /**
- * What a guest sees of their access while it lasts, at `now`: the banner (who shared, when it ends), the status bar
- * badge, and whether it is urgent (the last hour, or ended: red). `share` null: not known yet.
+ * What a guest sees of their access at `now`, and whether it is urgent (the last hour, or ended: red). `share` null:
+ * not known yet.
  */
-export function guestTexts(share: Share | null, now: number, ended = false): { banner: string; badge: string; urgent: boolean } {
+export function guestText(share: Share | null, now: number, ended = false): { text: string; tooltip: string; urgent: boolean } {
+  const tooltip = share ? `You are a guest of ${share.sharedBy}: you edit, members save.` : 'You are a guest: you edit, members save.';
   const left = share ? share.expiresAt - now : Infinity;
-  if (ended || left <= 0) return { banner: 'Guest access has ended.', badge: 'GUEST · ended', urgent: true };
-  if (!share) return { banner: 'Guest access', badge: 'GUEST', urgent: false };
-  if (left <= HOUR) {
-    return { banner: `Guest access ends in ${timeLeft(left)} (${endTime(share.expiresAt)}) · shared by ${share.sharedBy}`, badge: `GUEST · ${timeLeft(left, true)} left`, urgent: true };
-  }
-  return {
-    banner: `Guest access · shared by ${share.sharedBy} · ends in ${timeLeft(left)} (${endDate(share.expiresAt)})`,
-    badge: `GUEST · ${timeLeft(left, true)} left`,
-    urgent: false,
-  };
+  if (ended || left <= 0) return { text: 'Guest access has ended.', tooltip, urgent: true };
+  if (!share) return { text: 'Guest access', tooltip, urgent: false };
+  if (left <= HOUR) return { text: `Guest access · ends in ${timeLeft(left)} (${endTime(share.expiresAt)})`, tooltip, urgent: true };
+  return { text: `Guest access · until ${endDate(share.expiresAt)}`, tooltip, urgent: false };
 }
 
-/** What a member sees while the room has guest links: the banner and the status bar badge; null without links. */
-export function sharedTexts(shares: readonly Share[]): { banner: string; badge: string } | null {
-  if (shares.length === 0) return null;
+/** What a member's "Share" says: "Share" without guest links, else how many guests are in, and until when the links last. */
+export function shareText(shares: readonly Share[]): { text: string; tooltip: string } {
+  if (shares.length === 0) return { text: 'Share', tooltip: 'Share this project with guests, by a link' };
   const online = shares.reduce((sum, share) => sum + (share.online?.length ?? 0), 0);
   const until = Math.max(...shares.map((share) => share.expiresAt));
   return {
-    banner: `Shared with guests · ${online} online · until ${endDate(until)}`,
-    badge: `Shared · ${online} ${online === 1 ? 'guest' : 'guests'}`,
+    text: `Shared · ${online} ${online === 1 ? 'guest' : 'guests'}`,
+    tooltip: `Shared with guests until ${endDate(until)}; ${online} online. Guests can edit; only members save. Click for this project's guest links.`,
   };
 }
 
-/**
- * "7 days", "1 day", "5 hours", "1 hour", "12 min" (`short`: "7 d", "5 h", "12 min"): days and hours rounded (a link
- * made a moment ago for 7 days has 7 left), minutes rounded up.
- */
-export function timeLeft(ms: number, short = false): string {
+/** "7 days", "1 day", "5 hours", "1 hour", "12 min": days and hours rounded (a link made a moment ago for 7 days has 7 left), minutes rounded up. */
+export function timeLeft(ms: number): string {
   if (ms >= DAY) {
     const days = Math.round(ms / DAY);
-    return short ? `${days} d` : `${days} ${days === 1 ? 'day' : 'days'}`;
+    return `${days} ${days === 1 ? 'day' : 'days'}`;
   }
   if (ms >= HOUR) {
     const hours = Math.round(ms / HOUR);
-    return short ? `${hours} h` : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
   }
   return `${Math.max(1, Math.ceil(ms / MINUTE))} min`;
 }
@@ -61,59 +53,46 @@ const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
 /**
- * A guest's view of their access: a banner (it cannot be closed) and a status bar badge, warning-coloured, red in the
- * last hour and once ended; and a warning-coloured frame around the widget while the banner is in it (guests.css).
+ * A guest's access, for the title bar: it tints the bar in the warning color (`data-background`), red in the last hour
+ * and once ended; and a warning-coloured frame goes around the widget while it is in it (guests.css).
  */
 export class GuestView {
-  readonly banner: HTMLElement;
-  readonly badge: HTMLElement;
+  readonly element: HTMLElement;
 
   constructor(doc: Document) {
-    this.banner = doc.createElement('div');
-    this.banner.className = 'zwf-guests__banner zwf-guests__banner--guest';
-    this.banner.setAttribute('role', 'status');
-    this.badge = doc.createElement('span');
-    this.badge.className = 'zwf-guests__badge zwf-guests__badge--guest';
+    this.element = doc.createElement('span');
+    this.element.className = 'zwf-guests__access';
+    this.element.setAttribute('role', 'status');
   }
 
-  /** Shows the access of `share` at `now` (see `guestTexts`). */
+  /** Shows the access of `share` at `now` (see `guestText`). */
   show(share: Share | null, now: number, ended = false): void {
-    const { banner, badge, urgent } = guestTexts(share, now, ended);
-    this.banner.textContent = banner;
-    this.badge.textContent = badge;
-    this.badge.title = share ? `You are a guest of ${share.sharedBy}: you edit, members save.` : 'You are a guest: you edit, members save.';
-    for (const element of [this.banner, this.badge]) element.classList.toggle('zwf-guests--urgent', urgent);
+    const { text, tooltip, urgent } = guestText(share, now, ended);
+    this.element.textContent = text;
+    this.element.title = tooltip;
+    this.element.dataset.background = urgent ? 'error' : 'warning';
   }
 }
 
-/** A member's view of the room's guest links: a thin banner with "Manage…" and a status bar badge, while there are any. */
-export class SharedView {
-  readonly banner: HTMLElement;
-  readonly badge: HTMLButtonElement;
-  readonly #text: HTMLElement;
+/** A member's "Share" in the title bar (see `shareText`); a click runs `onClick` with whether there are guest links. */
+export class ShareButton {
+  readonly element: HTMLButtonElement;
+  #any = false;
 
-  constructor(doc: Document, manage: () => void) {
-    this.banner = doc.createElement('div');
-    this.banner.className = 'zwf-guests__banner zwf-guests__banner--shared';
-    this.#text = this.banner.appendChild(doc.createElement('span'));
-    const button = this.banner.appendChild(doc.createElement('button'));
-    button.type = 'button';
-    button.className = 'zwf-guests__manage';
-    button.textContent = 'Manage…';
-    button.onclick = manage;
-    this.badge = doc.createElement('button');
-    this.badge.type = 'button';
-    this.badge.className = 'zwf-guests__badge zwf-guests__badge--shared';
-    this.badge.title = "Guests can edit this project; only members save. Click to manage this project's guest links.";
-    this.badge.onclick = manage;
+  constructor(doc: Document, onClick: (any: boolean) => void) {
+    this.element = doc.createElement('button');
+    this.element.type = 'button';
+    this.element.className = 'zwf-guests__share';
+    this.element.onclick = () => onClick(this.#any);
+    this.show([]);
   }
 
-  /** Shows `shares`; false when there are none (nothing to show). */
-  show(shares: readonly Share[]): boolean {
-    const texts = sharedTexts(shares);
-    if (!texts) return false;
-    this.#text.textContent = texts.banner;
-    this.badge.textContent = texts.badge;
-    return true;
+  /** Shows `shares`. */
+  show(shares: readonly Share[]): void {
+    const { text, tooltip } = shareText(shares);
+    this.#any = shares.length > 0;
+    this.element.textContent = text;
+    this.element.title = tooltip;
+    this.element.classList.toggle('zwf-guests__share--shared', this.#any);
   }
 }

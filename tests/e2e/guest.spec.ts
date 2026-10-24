@@ -25,7 +25,7 @@ async function joinAsMember(browser: Browser, baseURL: string, room: string, use
 
 /** Ann makes a guest link for `label` (7 days, the default): the link, as shown once. */
 async function shareWithGuests(page: Page, label: string): Promise<string> {
-  await page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Share with guests…' }).click();
+  await shareButton(page).click();
   const form = page.getByRole('form', { name: 'Share with guests' });
   await form.getByRole('textbox').fill(label);
   await form.getByRole('button', { name: 'OK' }).click();
@@ -51,10 +51,13 @@ async function joinAsGuest(browser: Browser, baseURL: string, link: string, name
   return page;
 }
 
-const guestBanner = (page: Page) => page.locator('.zwf-guests__banner--guest');
-const guestBadge = (page: Page) => page.locator('.zwf-guests__badge--guest');
-const sharedBanner = (page: Page) => page.locator('.zwf-guests__banner--shared');
-const sharedBadge = (page: Page) => page.locator('.zwf-guests__badge--shared');
+const titleBar = (page: Page) => page.getByTestId('zwf-title-bar');
+/** The guest's access in the title bar ("Guest access · until …"), which tints it. */
+const guestAccess = (page: Page) => titleBar(page).locator('.zwf-guests__access');
+/** The member's "Share" ("Shared · N guests" while the room has links). */
+function shareButton(page: Page) {
+  return titleBar(page).locator('.zwf-guests__share');
+}
 const messages = (page: Page) => page.getByTestId('zwf-notifications');
 const visualText = (page: Page, text: string) => page.getByTestId('zwf-visual').getByText(text);
 
@@ -62,19 +65,20 @@ test('a guest joins by the link, sees that they are one, edits; only members sav
   const room = newRoom(info.project.name);
   const ann = await joinAsMember(browser, baseURL!, room, 'Ann');
   const link = await shareWithGuests(ann, 'ACME reviewers');
-  await expect(sharedBanner(ann)).toContainText('Shared with guests · 0 online');
+  await expect(shareButton(ann)).toHaveText('Shared · 0 guests');
 
   const jane = await joinAsGuest(browser, baseURL!, link, 'Jane');
   expect(new URL(jane.url()).hash).not.toContain('zwf-guest'); // the secret left the URL at once
   await expect(jane.locator('.zwf-collaboration__account')).toHaveText('Jane (guest)');
-  await expect(guestBanner(jane)).toContainText('Guest access · shared by Ann · ends in 7 days');
-  await expect(guestBadge(jane)).toHaveText('GUEST · 7 d left');
-  await expect(jane.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Save to GitLab…' })).toHaveCount(0);
-  await expect(jane.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Share with guests…' })).toHaveCount(0);
+  await expect(guestAccess(jane)).toContainText('Guest access · until ');
+  await expect(guestAccess(jane)).toHaveAttribute('title', 'You are a guest of Ann: you edit, members save.');
+  await expect(guestAccess(jane)).toHaveAttribute('data-background', 'warning');
+  await expect(titleBar(jane).getByRole('button', { name: 'Save to GitLab…' })).toHaveCount(0);
+  await expect(shareButton(jane)).toHaveCount(0);
 
   // Ann sees her guest
-  await expect(sharedBadge(ann)).toHaveText('Shared · 1 guest');
-  await expect(sharedBanner(ann)).toContainText('1 online');
+  await expect(shareButton(ann)).toHaveText('Shared · 1 guest');
+  await expect(shareButton(ann)).toHaveAttribute('title', /; 1 online\./);
 
   // a file of a type guests may not change: not created, and Jane is told why
   await jane.getByTestId('zwf-files').getByRole('button', { name: 'New', exact: true }).click();
@@ -94,14 +98,15 @@ test('a guest joins by the link, sees that they are one, edits; only members sav
   await expect(visualText(ann, 'From a guest.')).toBeVisible();
   await expect(ann.locator('.zwf-source-control__entry')).toHaveText('Not in GitLab: 1 file · < 1 min (Jane (guest))');
 
-  // Ann revokes the link: Jane is told, and her banner says her access ended
-  await sharedBadge(ann).click();
+  // Ann revokes the link: Jane is told, and her title bar says her access ended
+  await shareButton(ann).click();
   await ann.getByRole('dialog', { name: "This project's guest links" }).getByRole('option', { name: /ACME reviewers/ }).click();
   await messages(ann).getByRole('button', { name: 'Revoke' }).click();
   await expect(messages(ann)).toContainText('Guest link "ACME reviewers" revoked.');
   await expect(messages(jane)).toContainText('Guest access to this project has ended.');
-  await expect(guestBanner(jane)).toHaveText('Guest access has ended.');
-  await expect(sharedBanner(ann)).toHaveCount(0);
+  await expect(guestAccess(jane)).toHaveText('Guest access has ended.');
+  await expect(guestAccess(jane)).toHaveAttribute('data-background', 'error');
+  await expect(shareButton(ann)).toHaveText('Share');
 
   // the link is gone for good
   const late = await (await browser.newContext()).newPage();

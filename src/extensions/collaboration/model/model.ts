@@ -6,9 +6,9 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
-import type { PlacedPresence } from '../presence/presence';
+import type { Participant, PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { gitlabRoomFolder, guestMayChange, META_MAP, roomFilePath } from '../room-protocol';
+import { gitlabRoom, guestMayChange, META_MAP, roomFilePath, SIGNED_OUT } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
@@ -42,6 +42,9 @@ export class Collaboration {
   private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
   /** Every other user's place, in any file, whenever one changes. */
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
+  private readonly participantsChanged = new EventEmitter<readonly Participant[]>();
+  /** Every other user in the room, whenever someone comes or goes. */
+  readonly onDidChangeParticipants: Event<readonly Participant[]> = this.participantsChanged.event;
   /** Commits to the branch, in a room backed by a GitLab branch (else null). */
   readonly sourceControl: GitLabSourceControl | null = null;
   /** Settles when the server's connection ended because the session did (it no longer reconnects then). */
@@ -84,7 +87,8 @@ export class Collaboration {
     if (!this.sourceControl && !project.mainLocked) this.mainFile = new SharedMainFile(project, ydoc);
     const text = (path: ProjectPath) => this.sharedProject.text(path);
     const onPresence = (presences: readonly PlacedPresence[]) => this.presenceChanged.fire(presences);
-    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
+    const onParticipants = (participants: readonly Participant[]) => this.participantsChanged.fire(participants);
+    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence, onParticipants }) : null;
   }
 
   /**
@@ -93,8 +97,9 @@ export class Collaboration {
    * and news with `tell` (default: not at all). The WebSocket carries the session cookie: the server knows who
    * connects, and refuses it without a session (401, which a browser does not tell; the connection just closes).
    * So `signedIn` is asked whenever it closes: false, and it stops reconnecting, `start` rejecting with
-   * SignInRequired, or later `signedOut` settling. Rejects with the server's reason when it refuses the room (no
-   * access to the GitLab project; a plain room on a server that opens only GitLab rooms).
+   * SignInRequired (as when the server refuses the room with SIGNED_OUT), or later `signedOut` settling. Rejects with
+   * the server's reason when it refuses the room otherwise (no access to the GitLab project; a plain room on a server
+   * that opens only GitLab rooms).
    */
   static async start(
     options: CollaborationOptions,
@@ -108,7 +113,7 @@ export class Collaboration {
     const { signedOut, refused } = whenEnded(provider, signedIn);
     try {
       await new Promise<void>((resolve, reject) => {
-        void refused.then((reason) => reject(new Error(reason)));
+        void refused.then((reason) => reject(reason === SIGNED_OUT ? new SignInRequired() : new Error(reason)));
         void signedOut.then(() => reject(new SignInRequired()));
         if (provider.isSynced) resolve();
         else provider.on('synced', () => resolve());
@@ -118,7 +123,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoomFolder(options.room) });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoom(options.room)?.folder ?? null });
   }
 
   /**
@@ -141,6 +146,7 @@ export class Collaboration {
 
   dispose(): void {
     this.presenceChanged.dispose();
+    this.participantsChanged.dispose();
     this.sourceControl?.dispose();
     this.cursors?.dispose();
     this.assets?.dispose();

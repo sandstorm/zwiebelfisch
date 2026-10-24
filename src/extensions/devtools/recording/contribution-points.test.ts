@@ -30,7 +30,7 @@ describe('describeContribution', () => {
     expect(describeAt('contributes.keybindings', 'Ctrl+Alt+M', 'comments.addComment').title).toBe('Ctrl+Alt+M → comments.addComment');
   });
 
-  it('submenus, floating bars, menu items, side panels, status bar items: where they go and in which order', () => {
+  it('submenus, floating bars, menu items, side panels, status and title bar items: where they go and in which order', () => {
     expect(describeAt('visualEditor.registerSubmenu', { id: 'visualEditor/align', label: 'Align', parent: 'visualEditor/toolbar', group: '4_align', icon: () => '' })).toEqual({
       title: 'visualEditor/align',
       details: ['"Align"', 'in visualEditor/toolbar', 'group 4_align', 'order 0'],
@@ -53,7 +53,12 @@ describe('describeContribution', () => {
     expect(describeAt('window.registerStatusBarItem', { textContent: ' 12 words ', nodeName: 'SPAN' }, { alignment: 'right', priority: 5 })).toEqual({
       title: '12 words',
       details: ['right', 'priority 5'],
-      rank: [1, -5],
+      rank: [2, -5],
+    });
+    expect(describeAt('window.registerTitleBarItem', { textContent: 'Share', nodeName: 'BUTTON' }, { alignment: 'center' })).toEqual({
+      title: 'Share',
+      details: ['center', 'priority 0'],
+      rank: [1, -0],
     });
   });
 

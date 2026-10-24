@@ -83,7 +83,7 @@ activate({ workspace, subscriptions }) {
   columns: (auto, auto, 1fr),
   table.header[`context.`][Host][What it offers],
   [`commands`], [`hosts/commands`], [`registerCommand`; keys via `contributes.keybindings`],
-  [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerStatusBarItem`, `registerBanner`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
+  [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerTitleBarItem`, `registerStatusBarItem`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
   [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `registerFileSystemProvider`],
   [`languages`], [`hosts/languages`], [`registerDocumentLinkProvider`, `registerDocumentDropEditProvider`, `registerDocumentPasteEditProvider`, `registerHelpSheet`, `registerImportSource`; languages via `contributes.languages`],
   [`scm`], [`hosts/scm`], [`registerSourceControl` (with an optional `quickDiffProvider` and `historyProvider`)],
@@ -143,8 +143,8 @@ activate({ commands, window, subscriptions }) {
 #table(
   columns: (auto, 2fr, 1.4fr, 0.9fr),
   table.header[Menu][Where it shows, what is in it][Context][Command gets],
-  [`window/editorTitle`], [buttons at the right end of the editor tab bar: "Comment", "Save to …"], [`activeEditorId` \ `resource`], [—],
-  [`window/view`], [the "View" dropdown there: invisible characters, the preview's view options], [as `window/editorTitle`], [—],
+  [`window/editorTitle`], [buttons at the right end of the editor tab bar: "Comment"], [`activeEditorId` \ `resource`], [—],
+  [`window/view`], [the "View" dropdown in the title bar: invisible characters, the preview's view options], [as `window/editorTitle`], [—],
   [`window/railLeft` \ `window/railRight`], [a button on the rail beside the side panels' buttons: search everywhere], [—], [—],
   [`preview/toolbar`], [the preview's toolbar: follow cursor, renderers, zoom, "Download PDF"], [`previewRenderer`], [the context],
   [`visualEditor/toolbar`], [the Visual editor's toolbar row, in groups `1_history` … `6_comments`: undo, lists, align, comment], [the editor: `document`, `selection()`, `tiptap`], [the context],
@@ -155,7 +155,7 @@ activate({ commands, window, subscriptions }) {
   [`files/new`], [the "New" dropdown in the file panel (drawn by `files`): file, folder, upload, diagram, spreadsheet], [`resource`, `resourceKind`, `resourceIsMain`, `resourceIsFixed`, `folderIsReadonly`], [the folder's path],
   [`files/row`], [a file row's right-click menu (drawn by `files`): new, rename, delete, set as main file, find in folder], [as `files/new`], [the row's path],
   [`help/row`], [a help row's right-click menu (drawn by `help`): insert at cursor], [—], [the row's text],
-  [`collaboration/account`], [the account menu in the status bar (drawn by `collaboration`): sign out], [—], [—],
+  [`collaboration/account`], [the account menu in the title bar (drawn by `collaboration`): sign out], [—], [—],
 )
 
 The window, the preview and the Visual editor draw their own menus; the last four are drawn by the extension named.
@@ -294,9 +294,14 @@ activate({ window, subscriptions }) {
 - *The panel* also has `show()`, `dismiss()`, `visible`, `setDefault(open)`. Its key goes into `contributes.keybindings` for the command `workbench.view.<id>`.
 - *One panel per side* is open at a time.
 
-== Status bar items <architecture-extensions-status-bar>
+== Title bar and status bar items <architecture-extensions-status-bar>
 
-`window.registerStatusBarItem(element, { alignment, priority })`: an element of your own in the status bar below the editors.
+`window.registerTitleBarItem(element, { alignment, priority })` and `window.registerStatusBarItem(element, { alignment, priority })`: an element of your own in the bar above everything (`left`, `center`, `right`) or below the editors (`left`, `right`). Within a side a higher `priority` sits further left. A bar shows while it has an item that is not `hidden`.
+
+#figure(
+  mermaid(read("../diagrams/title-bar.mmd"), width: 90%),
+  caption: [The title bar's items by side and priority, as the built-in and collaboration extensions place them],
+) <fig:title-bar>
 
 ```ts
 activate({ window, subscriptions }) {
@@ -307,19 +312,13 @@ activate({ window, subscriptions }) {
 }
 ```
 
-`alignment` is the side; a higher `priority` sits further left.
+- *The window's own item:* "View" (the menu `window/view`), right, priority 100.
+- *Buttons in the title bar look alike;* an item styles itself over that look.
+- *Tint:* while an item's element has `data-background="warning"` or `"error"`, the whole title bar takes that color (VS Code's `StatusBarItem.backgroundColor`). Collaboration's guest mode does (@features-guest-access).
 
-== Banners <architecture-extensions-banners>
+== Modal messages <architecture-extensions-modal-messages>
 
-`window.registerBanner(element)`: an element of your own in the band above the editing area's tab bar, after the banners there are, until disposed (VS Code's workbench banner for Restricted Mode). For a state the user must not miss while working; the window offers no close button: the owner removes it. Collaboration's guest mode shows "Guest access · shared by Ann · ends in 2 days" this way (@features-guest-access).
-
-```ts
-activate({ window, subscriptions }) {
-  const banner = window.ownerDocument.createElement('div');
-  banner.textContent = 'Read-only copy: changes are not kept';
-  subscriptions.push(window.registerBanner(banner));
-}
-```
+`window.showErrorMessage(message, { modal: true, detail }, ...items)` (and the information and warning ones; VS Code's `MessageOptions`): a card over the whole widget, which takes no input meanwhile. Unlike VS Code's it has no Cancel: only an item closes it. For a state the user must act on: the `collaboration` extension says "You are not signed in" with "Sign in" this way.
 
 == Editors <architecture-extensions-editors>
 
@@ -496,7 +495,7 @@ activate({ languages, subscriptions }) {
 
 == Source controls <architecture-extensions-scm>
 
-`scm.registerSourceControl(sourceControl)`: somewhere the project can be committed. The `sourceControl` extension shows it: status bar, "Save to …", file badges. Without `commit`, the user may not commit there (a guest's GitLab room): no "Save to …", the status bar only shows.
+`scm.registerSourceControl(sourceControl)`: somewhere the project can be committed. The `sourceControl` extension shows it in the title bar (its `statusBarItems` as the save status in the middle, "Save to …" at the right) and as file badges. Without `commit`, the user may not commit there (a guest's GitLab room): no "Save to …", the save status only shows.
 
 ```ts
 activate({ scm, project, subscriptions }) {
@@ -726,7 +725,7 @@ Each kind has an explicit tie-breaker, so the result never depends on the list's
   table.header[Contribution][Ordered by],
   [Menu items (toolbars and submenus too)], [`group` (`navigation` first, then by name), then `order`],
   [Visual editor floating bars], [`order`: the first with an anchor shows],
-  [Status bar items], [`alignment`, then `priority` (higher further left)],
+  [Title bar and status bar items], [`alignment`, then `priority` (higher further left)],
   [Raw box renderers, document links, drop and paste edits], [`priority`, default 100, higher first],
   [Editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
   [Search providers' groups], [`order` (default 100, lower first), then `id`],
@@ -758,7 +757,7 @@ Each kind has an explicit tie-breaker, so the result never depends on the list's
   [`diagrams`], [`.drawio.png` in diagrams.net], [editor, toolbar, links, drop edit],
   [`mermaid`], [Mermaid diagrams (`.mmd`, drawn by `@preview/merman`)], [toolbar, links, help, import source, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
-  [`sourceControl`], ["Save to …" and status bar entries for the registered source controls], [menu, status bar, file decorations],
+  [`sourceControl`], ["Save to …" and the save status of the registered source controls], [title bar, file decorations],
   [`changes`], ["Show changes since last commit" (or since a commit chosen in History), inline in the Visual and the Source editor (`@codemirror/merge`), since when in the status bar; the History panel], [View menu, command, Tiptap extension, CodeMirror extension, status bar, side panel, `files/row`, style sheet],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, commands, menus, floating bar],
   [`math`], [math boxes; "Inline math", "Display math"], [Tiptap extension, toolbar],

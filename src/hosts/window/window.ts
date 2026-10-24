@@ -12,7 +12,7 @@ import type { CommandsHost, MenuContext, MenuItem } from '../commands/commands';
  *
  * Extensions use it to:
  * - tell and ask: messages, input boxes, quick picks, a save dialog, context menus, progress
- * - fill places: side panels, the status bar, banners, the editing area (editors), the editor header and footer, menus,
+ * - fill places: side panels, the title bar, the status bar, the editing area (editors), the editor header and footer, menus,
  *   file decorations, search providers, style sheets
  * - open files, and follow which file and which Typst editor the user works in
  */
@@ -30,13 +30,16 @@ export interface WindowApi {
   /**
    * Shows `message` in the widget's notification area (VS Code's `window.showInformationMessage`), with a button per
    * item. Resolves to the item chosen, or undefined once it is closed (an information message without items closes
-   * by itself after a while). Not modal: the user goes on working meanwhile.
+   * by itself after a while). Not modal: the user goes on working meanwhile; with `options.modal`, see MessageOptions.
    */
   showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  showInformationMessage<T extends string | MessageItem>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
   /** As `showInformationMessage`, as a warning (stays until closed). */
   showWarningMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  showWarningMessage<T extends string | MessageItem>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
   /** As `showInformationMessage`, as an error (stays until closed). */
   showErrorMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  showErrorMessage<T extends string | MessageItem>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
   /**
    * Asks for one line of text (VS Code's `window.showInputBox`), below what the user just used (a button, a row),
    * or at the selection when they work in an editor. Resolves to the text on Enter / OK, undefined on Escape or a
@@ -88,11 +91,12 @@ export interface WindowApi {
    */
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
   /**
-   * Puts `element` into the band above the editing area's tab bar, after the banners there are, until disposed (as
-   * VS Code's workbench banner for Restricted Mode): for a state the user must not miss while they work, e.g. guest
-   * access. Not dismissable by the window: its owner decides when it goes.
+   * Puts `element` into the title bar above everything, until disposed (VS Code's title bar, with its command center):
+   * on the side `placement.alignment` says, the higher `placement.priority` further left within it. The bar shows while
+   * one of its items is not `hidden`; the window's own "View" menu is one (right, priority 100). Buttons in it look alike; while an
+   * item's element has `data-background="warning"` or `"error"`, the whole bar takes that color (guest access).
    */
-  registerBanner(element: HTMLElement): Disposable;
+  registerTitleBarItem(element: HTMLElement, placement: TitleBarPlacement): Disposable;
   /**
    * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
    * area, until disposed (VS Code's editors; the Typst files' Visual and Source editors are two of them,
@@ -172,7 +176,7 @@ export interface WindowApi {
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
    * arguments. The window shows these: `window/editorTitle`, buttons at the right end of the editing area's tab bar, and
-   * `window/view`, the "View" menu after them (context of both: `activeEditorId` (the view type of the editor shown),
+   * `window/view`, the "View" menu in the title bar (context of both: `activeEditorId` (the view type of the editor shown),
    * `resource` (the shown file); no arguments); `window/railLeft` and `window/railRight`, a button per item
    * among the side's rail buttons by `order` (as `SidePanelOptions.order`; the tooltip names the key; no context, no
    * arguments). Other ids are menus that extensions show (`showContextMenu`), documented there (the file panel:
@@ -247,6 +251,16 @@ export interface SidePanel {
  * data is its path. Any editor may take such a drop (the Typst editors insert what the drop edit providers make of it).
  */
 export const PROJECT_PATH_TYPE = 'application/x-zwf-project-path';
+
+/**
+ * How a message is shown (VS Code's MessageOptions). `modal`: a card in the middle of an overlay over the whole widget,
+ * which takes no input meanwhile, with `detail` below the message; unlike VS Code's it has no Cancel: it closes only
+ * when one of its items is chosen (for a state the user must act on, e.g. being signed out).
+ */
+export interface MessageOptions {
+  readonly modal?: boolean;
+  readonly detail?: string;
+}
 
 /** A button of a message (VS Code's MessageItem); the message resolves to the one chosen. */
 export interface MessageItem {
@@ -444,6 +458,15 @@ export interface StatusBarPlacement {
   readonly priority?: number;
 }
 
+/**
+ * Where a title bar item goes: `left` items from the bar's start, `center` items in its middle, `right` items at its
+ * end; within a side the higher `priority` further left (default 0), equal priorities in registration order.
+ */
+export interface TitleBarPlacement {
+  readonly alignment: 'left' | 'center' | 'right';
+  readonly priority?: number;
+}
+
 /** How a side panel that lists files marks one (VS Code's FileDecoration): a small badge with a tooltip. */
 export interface FileDecoration {
   /** A short text drawn as a badge (one or two characters, e.g. initials). */
@@ -578,7 +601,7 @@ export interface TextEditorSelectionChangeEvent {
 
 /** What the window shows and works with: the project, the widget's element, and the hosts it shows. */
 export interface WindowOptions {
-  /** The widget's element: the window builds its regions (sides, editing area, status bar) in it. */
+  /** The widget's element: the window builds its regions (title bar, sides, editing area, status bar) in it. */
   readonly host: HTMLElement;
   /** The files it shows (the main file first); it keeps the editing area on an existing file as they change. */
   readonly project: Project;

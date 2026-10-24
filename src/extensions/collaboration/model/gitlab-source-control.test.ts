@@ -69,7 +69,7 @@ describe('GitLabSourceControl', () => {
 describe('GitLabSourceControl: what is not in GitLab', () => {
   const T0 = Date.parse('2026-10-11T10:00:00Z');
 
-  it('shows the room\'s changes as M / A / D resource states and in the status bar, its age kept up to date', () => {
+  it('shows the room\'s changes as M / A / D resource states and as its save status, its age kept up to date', () => {
     vi.useFakeTimers({ now: T0 + 30_000, toFake: ['setInterval', 'clearInterval', 'Date'] });
     const { meta, sourceControl, changes } = setup();
     meta.set('baseSha', '0123456789abcdef');

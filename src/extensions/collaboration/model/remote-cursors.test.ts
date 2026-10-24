@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { PlacedPresence } from '../presence/presence';
+import type { Participant, PlacedPresence } from '../presence/presence';
 import { connect, connectAwareness } from './in-process';
 import { RemoteCursors } from './remote-cursors';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -19,9 +19,10 @@ function client(name: string, ydoc = new Y.Doc()) {
   const awareness = new Awareness(ydoc);
   const text = (path: string) => ydoc.getMap<Y.Text>('files').get(path);
   const everywhere: (readonly PlacedPresence[])[] = [];
-  const cursors = new RemoteCursors(awareness, { user: { name, color: '#c00' }, text, onPresence: (all) => everywhere.push(all) });
+  const participants: (readonly Participant[])[] = [];
+  const cursors = new RemoteCursors(awareness, { user: { name, color: '#c00' }, text, onPresence: (all) => everywhere.push(all), onParticipants: (all) => participants.push(all) });
   cleanup.push(() => cursors.dispose(), () => awareness.destroy());
-  return { ydoc, awareness, cursors, everywhere };
+  return { ydoc, awareness, cursors, everywhere, participants };
 }
 
 function room(initial: string) {
@@ -96,5 +97,19 @@ describe('RemoteCursors', () => {
     a.cursors.setLocal(null);
     await settle();
     expect(b.everywhere.at(-1)).toEqual([]);
+  });
+
+  it('reports who else is in the room, with a cursor or without, once per change', async () => {
+    const { a, b } = room('Hello world');
+    a.cursors.setLocal(null); // Ann's state reaches Bob
+    await settle();
+    expect(b.participants.at(-1)).toEqual([{ id: String(a.awareness.clientID), user: { name: 'Ann', color: '#c00' } }]);
+    const reports = b.participants.length;
+    a.cursors.setLocal(PATH, SourceRange.of({ from: 1, to: 1 }));
+    await settle();
+    expect(b.participants).toHaveLength(reports);
+    a.awareness.setLocalState(null);
+    await settle();
+    expect(b.participants.at(-1)).toEqual([]);
   });
 });

@@ -35,8 +35,8 @@ export interface SourceControl {
   /** The files whose changes it has not committed (VS Code: the resource states of its resource groups). */
   readonly resourceStates?: readonly SourceControlResourceState[];
   /**
-   * What it shows in the status bar (VS Code: `statusBarCommands`), e.g. how much is not committed. Clicking one
-   * commits: whoever shows source controls asks for the message, as for any commit.
+   * Its save status (VS Code: `statusBarCommands`; the source-control extension shows it in the title bar), e.g. how
+   * much is not committed. Clicking one commits: whoever shows source controls asks for the message, as for any commit.
    */
   readonly statusBarItems?: readonly SourceControlStatusBarItem[];
   /** The files' texts at the last commit, for showing what changed since (VS Code: its `quickDiffProvider`). */
@@ -124,7 +124,7 @@ export interface SourceControlResourceState {
   readonly decorations?: { readonly badge?: string; readonly tooltip?: string; readonly color?: string };
 }
 
-/** A status bar entry of a source control (VS Code: a `Command` of `statusBarCommands`); a click commits. */
+/** A save status entry of a source control (VS Code: a `Command` of `statusBarCommands`); a click commits. */
 export interface SourceControlStatusBarItem {
   readonly title: string;
   readonly tooltip?: string;

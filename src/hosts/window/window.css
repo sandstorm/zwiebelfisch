@@ -1,4 +1,4 @@
-/* Messages (show…Message), input boxes and quick picks, menus (showContextMenu), an editor's panel, progress
+/* Messages (show…Message, modal ones too), input boxes and quick picks, menus (showContextMenu), an editor's panel, progress
    (withProgress). See WindowHost in window-impl.ts, which adds it after the layout's. */
 /* An editor's panel (registerEditorProvider): fills the editing area, a flex column for the editor. */
 .zwf-editor__panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -57,6 +57,51 @@
   cursor: pointer;
 }
 .zwf-notification__close:hover { background: var(--zwf-hover); color: var(--zwf-text); }
+/* A modal message (show…Message with { modal: true }): a card in the middle of an overlay over the whole widget. */
+.zwf-editor__modal {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--zwf-bg) 70%, transparent);
+  backdrop-filter: blur(3px);
+}
+.zwf-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  padding: 24px;
+  border: 1px solid var(--zwf-border);
+  border-top: 4px solid var(--zwf-accent);
+  border-radius: 10px;
+  background: var(--zwf-surface);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  color: var(--zwf-text);
+  font: 14px/1.5 system-ui, sans-serif;
+  text-align: center;
+}
+.zwf-modal--warning { border-top-color: var(--zwf-warning); }
+.zwf-modal--error { border-top-color: var(--zwf-danger); }
+.zwf-modal__message { margin: 0; font-size: 18px; font-weight: 600; }
+.zwf-modal__detail { margin: 0; color: var(--zwf-text-2); }
+.zwf-modal__actions { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
+.zwf-modal__actions:empty { display: none; }
+.zwf-modal__item {
+  border: 1px solid var(--zwf-accent);
+  border-radius: 6px;
+  padding: 6px 18px;
+  background: var(--zwf-accent);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.zwf-modal__item:focus-visible { outline: 2px solid var(--zwf-jump); outline-offset: 2px; }
 /* Menus (showContextMenu): at a right click's point or below a button, kept inside the viewport. */
 .zwf-context-menu {
   position: fixed;
@@ -144,7 +189,7 @@
    editor.css), while the area is inert. */
 .zwf-editor__editing-progress {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
   z-index: 5;
   display: flex;
   flex-direction: column;
