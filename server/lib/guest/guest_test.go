@@ -66,7 +66,7 @@ func newWorld(t *testing.T) *world {
 	require.NoError(t, err)
 	t.Cleanup(func() { st.Close() })
 	w := &world{t: t, store: st, rooms: &fakeRooms{}, now: time.Now(), may: map[string]bool{}, mayErr: map[string]error{}}
-	w.auth = auth.New(auth.Options{Provider: "gitlab", Log: zerolog.Nop()})
+	w.auth = auth.New(auth.Options{Provider: "gitlab", AllowedOrigins: []string{"http://127.0.0.1:5199"}, Log: zerolog.Nop()})
 	w.start()
 	return w
 }

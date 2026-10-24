@@ -1,6 +1,7 @@
 // Command zwiebelfisch is the collaboration server (`mise run server:dev`).
 //
-// It reads its settings from the environment (package config) and serves on ADDRESS:PORT:
+// It reads its settings from the environment (package config) and serves on ADDRESS:PORT; it does not start
+// without ZWF_ALLOWED_ORIGINS, or with an invalid one:
 //   - the Hocuspocus protocol (a WebSocket at /api/collaboration)
 //   - the HTTP endpoints of package app
 //
@@ -62,7 +63,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	log.Info().Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).
+	log.Info().Strs("allowedOrigins", cfg.AllowedOrigins).Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).
 		Str("gitlab", cfg.GitLab.URL).Msg("collaboration server")
 	return app.Run(log, server.Close, app.Site{
 		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: server,
@@ -79,7 +80,7 @@ func signInWith(cfg config.Config, log zerolog.Logger) (*auth.Auth, error) {
 	}
 	o := auth.Options{
 		Provider: "oidc", Issuer: a.Issuer, ClientID: a.ClientID, ClientSecret: a.ClientSecret, RedirectURL: a.RedirectURL,
-		Log: log.With().Str("module", "auth").Logger(),
+		AllowedOrigins: cfg.AllowedOrigins, Log: log.With().Str("module", "auth").Logger(),
 	}
 	if cfg.GitLab.URL != "" && strings.TrimSuffix(a.Issuer, "/") == strings.TrimSuffix(cfg.GitLab.URL, "/") {
 		o.Provider = gitlab.DefaultID

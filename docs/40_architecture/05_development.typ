@@ -28,7 +28,7 @@ The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collabora
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
   [`build:engine`], [Rust → wasm; skipped when the Rust sources are unchanged],
   [`test:e2e`], [Playwright in chromium, firefox and webkit, or one (`test:e2e chromium`); `test:e2e-all` runs every suite],
-  [`server:dev`], [the collaboration server with SQLite in `server/.data/`; GitLab rooms need `ZWF_GITLAB_URL`, the sign-in `ZWF_AUTH_CLIENT_ID` and `ZWF_AUTH_CLIENT_SECRET` (@architecture-data-model-collaboration)],
+  [`server:dev`], [the collaboration server with SQLite in `server/.data/`, allowing the demo's pages (`ZWF_ALLOWED_ORIGINS`); GitLab rooms need `ZWF_GITLAB_URL`, the sign-in `ZWF_AUTH_CLIENT_ID` and `ZWF_AUTH_CLIENT_SECRET` (@architecture-data-model-collaboration)],
   [`docs:pdf`], [this book → `dist/docs/zwiebelfisch.pdf`],
 )
 

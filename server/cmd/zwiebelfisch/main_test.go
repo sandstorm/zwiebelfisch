@@ -26,9 +26,8 @@ import (
 // The built binary on a real port, with real WebSockets from the real HocuspocusProvider: sign in (at the
 // fake GitLab's OpenID Connect provider, on a port of its own), edit with two clients in a plain room,
 // refuse a client without a session (401, before the WebSocket's upgrade), restart (SIGTERM stores the rooms; the sessions are gone: sign in
-// again), read the room back; without sign-in or rooms, it does not start. Needs ports: it skips where none
-// can be bound (the agent sandbox); TestRealHocuspocusProvider in package collab and the tests of package
-// app and auth cover it there.
+// again), read the room back. Needs ports: it skips where none can be bound (the agent sandbox);
+// TestRealHocuspocusProvider in package collab and the tests of package app and auth cover it there.
 func TestServerBinary(t *testing.T) {
 	probe, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -38,10 +37,7 @@ func TestServerBinary(t *testing.T) {
 	require.NoError(t, probe.Close())
 
 	dir := t.TempDir()
-	binary := filepath.Join(dir, "zwiebelfisch")
-	build := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", binary, ".")
-	out, err := build.CombinedOutput()
-	require.NoError(t, err, string(out))
+	binary := build(t, dir)
 
 	issuer := httptest.NewUnstartedServer(nil)
 	issuerURL := "http://" + issuer.Listener.Addr().String()
@@ -49,7 +45,7 @@ func TestServerBinary(t *testing.T) {
 	issuer.Start()
 	defer issuer.Close()
 	signIn := []string{"ZWF_AUTH_ISSUER=" + issuerURL, "ZWF_AUTH_CLIENT_ID=" + fakegitlab.ClientID, "ZWF_AUTH_CLIENT_SECRET=" + fakegitlab.ClientSecret}
-	env := append(append(os.Environ(), fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
+	env := append(append(os.Environ(), "ZWF_ALLOWED_ORIGINS=http://127.0.0.1:5199", fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB="+filepath.Join(dir, "collab.sqlite"),
 		"ZWF_PLAIN_ROOMS=1", "ZWF_LOG_LEVEL=debug"), signIn...)
 	server := fmt.Sprintf("http://127.0.0.1:%d", port)
 	ws := fmt.Sprintf("ws://127.0.0.1:%d/api/collaboration", port)
@@ -68,17 +64,38 @@ func TestServerBinary(t *testing.T) {
 	stop = start(t, binary, env, port)
 	require.Equal(t, edit["texts"], clients(t, "read", ws, session(t, server, "Ann"))["texts"])
 	stop()
+}
 
+// Without allowed origins (or with an invalid one), sign-in or rooms, the binary exits before it listens.
+func TestServerBinaryRefusesToStart(t *testing.T) {
+	binary := build(t, t.TempDir())
+	origins := "ZWF_ALLOWED_ORIGINS=https://editor.example.org"
+	signIn := []string{"ZWF_AUTH_ISSUER=https://id.example", "ZWF_AUTH_CLIENT_ID=app", "ZWF_AUTH_CLIENT_SECRET=secret"}
 	for _, bare := range []struct {
 		env     []string
 		refusal string
-	}{{nil, "sign-in is not configured"}, {signIn, "no rooms to serve"}} {
+	}{
+		{append([]string{"ZWF_PLAIN_ROOMS=1"}, signIn...), "ZWF_ALLOWED_ORIGINS is required"},
+		{append([]string{"ZWF_PLAIN_ROOMS=1", "ZWF_ALLOWED_ORIGINS="}, signIn...), "ZWF_ALLOWED_ORIGINS is required"},
+		{append([]string{"ZWF_PLAIN_ROOMS=1", "ZWF_ALLOWED_ORIGINS=*"}, signIn...), "ZWF_ALLOWED_ORIGINS: "},
+		{append([]string{"ZWF_PLAIN_ROOMS=1", "ZWF_ALLOWED_ORIGINS=https://editor.example.org/app"}, signIn...), "ZWF_ALLOWED_ORIGINS: "},
+		{[]string{"ZWF_PLAIN_ROOMS=1", origins}, "sign-in is not configured"},
+		{append([]string{origins}, signIn...), "no rooms to serve"},
+	} {
 		cmd := exec.Command(binary)
-		cmd.Env = append([]string{fmt.Sprintf("PORT=%d", port), "ZWF_COLLAB_DB=:memory:"}, bare.env...)
-		out, err = cmd.CombinedOutput()
-		require.Error(t, err)
-		require.Contains(t, string(out), bare.refusal)
+		cmd.Env = append([]string{"PORT=1", "ZWF_COLLAB_DB=:memory:"}, bare.env...)
+		out, err := cmd.CombinedOutput()
+		require.Error(t, err, bare.env)
+		require.Contains(t, string(out), bare.refusal, bare.env)
 	}
+}
+
+// build compiles the command into dir.
+func build(t *testing.T, dir string) string {
+	binary := filepath.Join(dir, "zwiebelfisch")
+	out, err := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), "build", "-o", binary, ".").CombinedOutput()
+	require.NoError(t, err, string(out))
+	return binary
 }
 
 // session signs name in at server (through the issuer, following the redirects) and returns the Cookie

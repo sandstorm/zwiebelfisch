@@ -23,7 +23,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: a card over the whole widget says "You are not signed in" with "Sign in" (also when the session ends, with the reason), and it cannot be closed. The title bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page's origin must be one of the server's `ZWF_ALLOWED_ORIGINS` (@configuration-collaboration-server-running): only then do its requests carry the session to the WebSocket and the room's files. Signed out, the widget does not connect: a card over the whole widget says "You are not signed in" with "Sign in" (also when the session ends, with the reason), and it cannot be closed. The title bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
@@ -33,12 +33,13 @@ The collaboration code loads on demand. `onDidChangeFiles` and `change` also fir
 `server/` is a Go server that stores rooms in SQLite (@architecture-data-model-collaboration). Its rooms are GitLab folders (@configuration-gitlab-integration); rooms of any other name without a colon (*plain rooms*) only when enabled; a name with a colon (`gitlab:…`) is never a plain room. Run it with:
 
 ```sh
-mise run server:dev    # ws://127.0.0.1:1234
+mise run server:dev    # ws://127.0.0.1:1234, allowing the demo's pages on :5199
 ```
 
 #table(
   columns: 2,
   [Variable], [Meaning],
+  [`ZWF_ALLOWED_ORIGINS`], [Required: the origins of the pages that embed the editor, comma-separated, each exactly `scheme://host[:port]` (`http` or `https`; no path, no `*`; the host as browsers send it, an international one in punycode `xn--…`), e.g. `https://editor.example.org,https://intranet.example.org:8443`. Only their requests use the session (@configuration-collaboration-server-sign-in). The server's own origin counts only if listed. `mise run server:dev` sets `http://127.0.0.1:5199,http://localhost:5199` unless it is set.],
   [`PORT`], [Default `1234`.],
   [`ZWF_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
   [`ZWF_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],
@@ -48,7 +49,7 @@ mise run server:dev    # ws://127.0.0.1:1234
   [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
 )
 
-A server without sign-in, or with neither GitLab nor plain rooms, does not start. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false, "guests": true|false}`, for clients to offer only what works. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.
+A server without `ZWF_ALLOWED_ORIGINS` (or with an entry that is not an exact origin), without sign-in, or with neither GitLab nor plain rooms does not start, and says which variable is missing. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false, "guests": true|false}`, for clients to offer only what works. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.
 
 === Sign-in <configuration-collaboration-server-sign-in>
 
@@ -64,8 +65,8 @@ People sign in with an #link("https://openid.net/specs/openid-connect-core-1_0.h
 )
 
 - The server keeps who signed in in memory, with the user's tokens (refreshed when they expire): nothing of it is stored. A restart signs everyone out; a sign-in lasts 7 days otherwise. A sign-in on its way keeps nothing on the server: its state is in a cookie sealed with a key made at start.
-- The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). Requests from other sites' pages are nobody's.
-- Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards, a URL of the same host), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
+- The session is a cookie (httpOnly, SameSite=Lax; Secure unless the host is `localhost` or a loopback address: serve the editor over HTTPS). A request is the session's only without an `Origin` (a navigation, not a browser) or with an `Origin` that is exactly one of `ZWF_ALLOWED_ORIGINS` (scheme, host and port; `:443` and `:80` as their scheme's default). Requests from any other page are nobody's: no session, no readable answer, no WebSocket, no guest join. The `Host` the request names plays no part.
+- Endpoints: `GET /api/public/auth/login?return=<url>` (back to `<url>` afterwards: a path on the server, or a URL on one of `ZWF_ALLOWED_ORIGINS`), `GET /api/public/auth/callback`, `POST /api/auth/logout`, `GET /api/me` (who is signed in, or 401).
 - A sign-out ends that session's open connections: its rooms refuse them ("You signed out."), as they refuse any room opened again on a connection whose session ended; the user's other browsers stay in.
 
 === Guest access <configuration-collaboration-server-guests>
@@ -82,14 +83,14 @@ With `ZWF_GUESTS=1`, a member shares a room with people who have no account (@fe
 Security:
 - The link is `<page URL>#zwf-guest=<secret>` (130 random bits). The secret is in the fragment, which browsers send to no server and put in no `Referer`; the page takes it out of the address bar at once.
 - The server keeps only the secret's SHA-256 hash; it never stores or logs the secret. The secret is shown once, when the link is made.
-- A join must come from a page of this host as JSON. Every link that does not let in (unknown, expired, revoked) gets the same 404. Joins are limited to 10 a minute per IP address and 100 a minute in all; behind a reverse proxy all count as the proxy's address.
+- A join must come from an allowed origin's page as JSON. Every link that does not let in (unknown, expired, revoked) gets the same 404. Joins are limited to 10 a minute per IP address and 100 a minute in all; behind a reverse proxy all count as the proxy's address.
 - A guest cannot share, list others' links or revoke, and never saves; in a room of one folder, they cannot load files from outside it either.
 - In a GitLab room a guest changes only files ending in `.typ`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.webp`, `.mmd` or `.ic` (in any case; clients read the list from the room's `meta.guestEditable`). A guest's change to any other file (edit, create, rename, delete) or to the room's `meta` is undone at once, before any commit can take it, and the guest's client is refused ("Guests may change only Typst files, images, Mermaid diagrams and spreadsheets; your change to another file was undone."). A guest's update that depends on changes the room does not hold yet is refused too, unapplied ("Your change depends on changes this project does not have; open the project again."), so no later change of a member's can complete it.
 - A guest's name has no `<`, `>`, control or bidirectional characters, so it cannot hide "(guest)" or name another email in a `Co-authored-by` trailer. The history a guest gets has no emails in its commit messages.
 
 == Trying it locally <configuration-collaboration-server-demo>
 
-`mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo).
+`mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo). Without `ZWF_ALLOWED_ORIGINS` it allows the demo's pages, `http://127.0.0.1:5199` and `http://localhost:5199`.
 
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
 - *Sign in* with "Sign in" on the card over the widget: the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.

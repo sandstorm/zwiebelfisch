@@ -67,6 +67,8 @@ type Options struct {
 type Sessions interface {
 	StartSession(w http.ResponseWriter, r *http.Request, identity auth.Identity, expires time.Time)
 	EndSessions(match func(auth.Identity) bool)
+	AllowedOrigin(r *http.Request) bool
+	AllowCredentials(w http.ResponseWriter, r *http.Request)
 }
 
 // Rooms are the collaboration server's rooms: collab.Server.
@@ -211,9 +213,9 @@ func (g *Guests) PeerChanged(room string, user collab.User, joined bool) {
 // not let in (unknown, expired, revoked, its creator may no longer share), and for a request from another
 // site's page or not of JSON; 400 for a missing name (or one with < or >), 429 beyond the join limits.
 func (g *Guests) Join(w http.ResponseWriter, r *http.Request) {
-	auth.AllowCredentials(w, r)
+	g.opts.Sessions.AllowCredentials(w, r)
 	w.Header().Set("Cache-Control", "no-store")
-	if !auth.SameSite(r) || !isJSON(r) {
+	if !g.opts.Sessions.AllowedOrigin(r) || !isJSON(r) {
 		http.Error(w, notFound, http.StatusNotFound)
 		return
 	}

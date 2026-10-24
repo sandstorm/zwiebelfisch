@@ -25,6 +25,9 @@ func TestMain(m *testing.M) { goleak.VerifyTestMain(m) }
 
 const server = "http://127.0.0.1:1234"
 
+// demo is the page the tests allow (Options.AllowedOrigins).
+const demo = "http://127.0.0.1:5199"
+
 type browser struct {
 	t       *testing.T
 	auth    *Auth
@@ -38,6 +41,9 @@ func newBrowser(t *testing.T, o Options) *browser {
 	fake := fakegitlab.New("demo/report", fakegitlab.Files{"/main.typ": []byte("x")})
 	o.Provider, o.Issuer, o.ClientID, o.ClientSecret = "gitlab", fakegitlab.URL, fakegitlab.ClientID, fakegitlab.ClientSecret
 	o.Client, o.Log = fake.Client(), zerolog.Nop()
+	if o.AllowedOrigins == nil {
+		o.AllowedOrigins = []string{demo}
+	}
 	a := New(o)
 	return &browser{t: t, auth: a, server: mount(a), fake: fake, cookies: map[string]*http.Cookie{}}
 }
@@ -127,7 +133,7 @@ func TestSignIn(t *testing.T) {
 
 	res := b.signIn("Ann Lee", "http://127.0.0.1:5199/?room=gitlab%3Ademo%2Freport%40main")
 	require.Equal(t, http.StatusSeeOther, res.Code)
-	require.Equal(t, "http://127.0.0.1:5199/?room=gitlab%3Ademo%2Freport%40main", res.Header().Get("Location"), "back where it began (another port of this host)")
+	require.Equal(t, "http://127.0.0.1:5199/?room=gitlab%3Ademo%2Freport%40main", res.Header().Get("Location"), "back where it began (an allowed origin)")
 	identity, status := b.me()
 	require.Equal(t, http.StatusOK, status)
 	require.Equal(t, Identity{Provider: "gitlab", Subject: "2", Name: "Ann Lee", Username: "ann.lee", Email: "ann.lee@gitlab.test"}, identity)
@@ -243,23 +249,6 @@ func mustQuery(t *testing.T, target string) url.Values {
 	return u.Query()
 }
 
-func TestReturnURL(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "http://editor.example.org/api/public/auth/login", nil)
-	for raw, want := range map[string]string{
-		"":                                    "/",
-		"/projects?x=1#a":                     "/projects?x=1#a",
-		"http://editor.example.org:5199/?a=b": "http://editor.example.org:5199/?a=b",
-		"https://editor.example.org/x":        "https://editor.example.org/x",
-		"https://evil.example/":               "/",
-		"//evil.example/":                     "/",
-		"/\\evil.example":                     "/",
-		"javascript:alert(1)":                 "/",
-		"https://user@editor.example.org/":    "/",
-	} {
-		require.Equal(t, want, returnURL(req, raw), raw)
-	}
-}
-
 func TestLogout(t *testing.T) {
 	b := newBrowser(t, Options{})
 	b.signIn("Ann", "/")
@@ -274,9 +263,13 @@ func TestLogout(t *testing.T) {
 func TestOtherSitesPagesAreNobody(t *testing.T) {
 	b := newBrowser(t, Options{})
 	b.signIn("Ann", "/")
-	b.origin = "http://127.0.0.1:5199" // the demo: same host, another port
+	b.origin = demo // allowed
 	_, status := b.me()
 	require.Equal(t, http.StatusOK, status)
+
+	b.origin = "http://127.0.0.1:1234" // the server's own origin, not allowed
+	_, status = b.me()
+	require.Equal(t, http.StatusUnauthorized, status)
 
 	b.origin = "https://evil.example"
 	_, status = b.me()

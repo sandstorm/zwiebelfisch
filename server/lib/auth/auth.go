@@ -2,7 +2,7 @@
 // the rest of the server who sent a request: Identify, from the session cookie. Its handlers (package app
 // mounts them):
 //
-//	Login     GET  /api/public/auth/login?return=<url>[&login_hint=<name>]  to the provider; afterwards back to <url> (this host only)
+//	Login     GET  /api/public/auth/login?return=<url>[&login_hint=<name>]  to the provider; afterwards back to <url> (an allowed page only)
 //	Callback  GET  /api/public/auth/callback  the provider's redirect: starts the session
 //	Logout    POST /api/auth/logout           ends it (signed in only)
 //	Me        GET  /api/me                    the Identity (signed in only)
@@ -19,8 +19,8 @@
 //     on their way).
 //   - Sessions, with the user's tokens, live in this process's memory only: no token is stored, logged or
 //     put in an error, and a restart signs everyone out.
-//   - A request whose Origin is another host is never identified, a WebSocket included: the app's page and
-//     the server must be on the same host (ports may differ).
+//   - Only a request without an Origin or from one of Options.AllowedOrigins (AllowedOrigin) is identified
+//     and may read the answers.
 package auth
 
 import (
@@ -60,6 +60,9 @@ type Options struct {
 	RedirectURL string
 	// Scopes asked for (default openid, profile, email).
 	Scopes []string
+	// AllowedOrigins are the pages whose requests may use the session (AllowedOrigin), each as ParseOrigin
+	// takes it; New panics on another. None: only requests without an Origin.
+	AllowedOrigins []string
 	// Client makes the requests to the provider (default: one with a 30 s timeout).
 	Client *http.Client
 	Log    zerolog.Logger
@@ -79,8 +82,9 @@ type Identity struct {
 
 // Auth is the sign-in and its sessions. Create it with New.
 type Auth struct {
-	opts  Options
-	login cipher.AEAD // seals the login cookie; its key lives in memory only
+	opts    Options
+	login   cipher.AEAD     // seals the login cookie; its key lives in memory only
+	origins map[string]bool // Options.AllowedOrigins, as ParseOrigin returns them
 
 	mu       sync.Mutex
 	provider *oidc.Provider // nil until discovered (on the first sign-in, so a server starts without it)
@@ -118,8 +122,17 @@ const (
 	loginLifetime   = 10 * time.Minute
 )
 
-// New returns the sign-in for o. The provider is asked for its configuration on the first sign-in.
+// New returns the sign-in for o. The provider is asked for its configuration on the first sign-in. It panics
+// on an origin ParseOrigin refuses (package config checks them first).
 func New(o Options) *Auth {
+	origins := map[string]bool{}
+	for _, raw := range o.AllowedOrigins {
+		origin, err := ParseOrigin(raw)
+		if err != nil {
+			panic("auth: " + err.Error())
+		}
+		origins[origin] = true
+	}
 	if len(o.Scopes) == 0 {
 		o.Scopes = []string{oidc.ScopeOpenID, "profile", "email"}
 	}
@@ -133,14 +146,14 @@ func New(o Options) *Auth {
 	_, _ = rand.Read(key) // crypto/rand does not fail
 	block, _ := aes.NewCipher(key)
 	aead, _ := cipher.NewGCM(block)
-	return &Auth{opts: o, login: aead, sessions: map[string]*session{}}
+	return &Auth{opts: o, login: aead, origins: origins, sessions: map[string]*session{}}
 }
 
 // Identify is who sent r: the session its cookie names. False without a session, with an expired one, or
-// for a request from another host's page.
+// for a request from a page AllowedOrigin refuses.
 func (a *Auth) Identify(r *http.Request) (Identity, bool) {
 	cookie, err := r.Cookie(sessionCookie)
-	if err != nil || !SameSite(r) {
+	if err != nil || !a.AllowedOrigin(r) {
 		return Identity{}, false
 	}
 	a.mu.Lock()
@@ -170,27 +183,6 @@ func SignedIn(r *http.Request) (Identity, bool) {
 	return identity, ok
 }
 
-// SameSite reports whether r comes from a page of this host (any port), or names no page (no Origin: a
-// navigation, or not a browser).
-func SameSite(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return true
-	}
-	u, err := url.Parse(origin)
-	return err == nil && u.Hostname() != "" && u.Hostname() == hostname(r.Host)
-}
-
-// AllowCredentials lets a page of this host on another port (the demo on :5199, the server on :1234) read
-// the answer to a request that carries the cookie (fetch with credentials: 'include').
-func AllowCredentials(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Vary", "Origin")
-	if origin := r.Header.Get("Origin"); origin != "" && SameSite(r) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-	}
-}
-
 // Login sends the browser to the provider to sign in (GET /api/public/auth/login).
 func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	provider, _, err := a.discover(r.Context())
@@ -202,7 +194,7 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	l := login{
 		State: rand.Text(), Nonce: rand.Text(), Verifier: oauth2.GenerateVerifier(), Redirect: a.redirectURL(r),
-		Back: returnURL(r, query.Get("return")), Expires: a.opts.now().Add(loginLifetime).Unix(),
+		Back: a.returnURL(query.Get("return")), Expires: a.opts.now().Add(loginLifetime).Unix(),
 	}
 	http.SetCookie(w, cookie(r, loginCookie, a.seal(l), "/api/public/auth/", loginLifetime))
 	options := []oauth2.AuthCodeOption{oidc.Nonce(l.Nonce), oauth2.S256ChallengeOption(l.Verifier)}
@@ -493,16 +485,16 @@ func (a *Auth) prune() {
 	}
 }
 
-// returnURL is where to send the browser after signing in: raw if it is a path here or a URL of this host
-// (any port: the demo runs on another), else "/" (never elsewhere: an open redirect).
-func returnURL(r *http.Request, raw string) string {
+// returnURL is where to send the browser after signing in: raw if it is a path here or a URL on one of the
+// allowed origins, else "/" (never elsewhere: an open redirect).
+func (a *Auth) returnURL(raw string) string {
 	u, err := url.Parse(raw)
 	switch {
 	case raw == "" || err != nil || strings.ContainsAny(raw, "\\\r\n"):
 		return "/"
 	case u.Scheme == "" && u.Host == "" && strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//"):
 		return raw
-	case (u.Scheme == "http" || u.Scheme == "https") && u.User == nil && u.Hostname() == hostname(r.Host):
+	case u.User == nil && a.allowed(u.Scheme+"://"+u.Host):
 		return u.String()
 	}
 	return "/"
@@ -521,7 +513,7 @@ func cookie(r *http.Request, name, value, path string, maxAge time.Duration) *ht
 }
 
 func loopback(host string) bool {
-	h := hostname(host)
+	h := strings.ToLower(hostname(host))
 	if h == "localhost" {
 		return true
 	}

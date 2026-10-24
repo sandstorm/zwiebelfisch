@@ -22,12 +22,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Options configure a Server. Store and Authenticate are required.
+// Options configure a Server. Store and Authenticate are required, and AllowedOrigin for ServeHTTP.
 type Options struct {
 	// Store loads and saves room states.
 	Store Store
 	// Authenticate decides whether a client may open a room.
 	Authenticate Authenticate
+	// AllowedOrigin decides whether ServeHTTP accepts a WebSocket from r's page (auth.Auth.AllowedOrigin);
+	// nil: none.
+	AllowedOrigin func(r *http.Request) bool
 	// Debounce is the quiet time after a change before the room is stored (default 2 s); MaxDebounce bounds
 	// how long changes stay unstored while edits keep coming (default 10 s). As in Hocuspocus.
 	Debounce, MaxDebounce time.Duration
@@ -98,10 +101,13 @@ func (s *Server) Close(ctx context.Context) error {
 }
 
 // ServeHTTP accepts a WebSocket (the room is named in each message, not in the URL) and serves it until it
-// closes.
+// closes; 403 before the upgrade when Options.AllowedOrigin refuses r.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Any origin here: Authenticate decides per room, from r (the session cookie, which other sites' pages
-	// do not get to send).
+	if s.opts.AllowedOrigin == nil || !s.opts.AllowedOrigin(r) {
+		http.Error(w, "Forbidden: this page may not connect", http.StatusForbidden)
+		return
+	}
+	// websocket's own origin check is skipped: it lets in r's Host on any scheme and matches patterns
 	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
 		return // Accept has answered
