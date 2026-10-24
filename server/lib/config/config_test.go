@@ -103,7 +103,7 @@ func TestAllowedOriginsAreRequiredAndExact(t *testing.T) {
 		"https://editor.example.org/", "https://editor.example.org/app", "https://editor.example.org?a",
 		" , ", "https://editor.example.org#a", "https://user@editor.example.org", "https://*.example.org",
 		"https://editor.example.org:99999", "https://editor.example.org,", "https://editor.example.org,,http://localhost:5199",
-		"https://editor.example.org,*", "://x", "http://exa mple.org",
+		"https://editor.example.org,*", "://x", "http://exa mple.org", "https://bücher.example",
 	} {
 		_, err := config.Load([]string{"ZWF_ALLOWED_ORIGINS=" + value})
 		require.ErrorContains(t, err, "ZWF_ALLOWED_ORIGINS: ", value)

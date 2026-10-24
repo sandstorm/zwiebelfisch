@@ -47,6 +47,8 @@ func TestParseOrigin(t *testing.T) {
 		"https://":                           "",
 		"https://:443":                       "",
 		"https://exa mple.org":               "",
+		"https://bücher.example":             "", // browsers send xn--bcher-kva.example
+		"https://xn--bcher-kva.example":      "https://xn--bcher-kva.example",
 		"://x":                               "",
 		"javascript:alert(1)":                "",
 		"http:editor.example.org":            "",

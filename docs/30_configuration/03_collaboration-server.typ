@@ -39,7 +39,7 @@ mise run server:dev    # ws://127.0.0.1:1234, allowing the demo's pages on :5199
 #table(
   columns: 2,
   [Variable], [Meaning],
-  [`ZWF_ALLOWED_ORIGINS`], [Required: the origins of the pages that embed the editor, comma-separated, each exactly `scheme://host[:port]` (`http` or `https`; no path, no `*`), e.g. `https://editor.example.org,https://intranet.example.org:8443`. Only their requests use the session (@configuration-collaboration-server-sign-in). The server's own origin counts only if listed. `mise run server:dev` sets `http://127.0.0.1:5199,http://localhost:5199` unless it is set.],
+  [`ZWF_ALLOWED_ORIGINS`], [Required: the origins of the pages that embed the editor, comma-separated, each exactly `scheme://host[:port]` (`http` or `https`; no path, no `*`; the host as browsers send it, an international one in punycode `xn--…`), e.g. `https://editor.example.org,https://intranet.example.org:8443`. Only their requests use the session (@configuration-collaboration-server-sign-in). The server's own origin counts only if listed. `mise run server:dev` sets `http://127.0.0.1:5199,http://localhost:5199` unless it is set.],
   [`PORT`], [Default `1234`.],
   [`ZWF_ADDRESS`], [The interface to listen on (default `127.0.0.1`; `0.0.0.0` in a container).],
   [`ZWF_COLLAB_DB`], [The SQLite file (default `server/.data/collab.sqlite`; `:memory:` keeps nothing).],

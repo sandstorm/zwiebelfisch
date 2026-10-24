@@ -7,12 +7,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 // ParseOrigin is raw as the origin AllowedOrigin compares: scheme://host[:port], the scheme http or https,
 // scheme and host lower-cased, the scheme's default port (80, 443) left out. An error for anything else:
-// another scheme, user info, a path (also "/"), a query or fragment, no host, a port outside 1–65535, "*",
-// "null".
+// another scheme, user info, a path (also "/"), a query or fragment, no host, a host not in ASCII (as
+// punycode it is: xn--…), a port outside 1–65535, "*", "null".
 //   - package config, for ZWF_ALLOWED_ORIGINS
 //   - New, AllowedOrigin and the sign-in's return URL
 func ParseOrigin(raw string) (string, error) {
@@ -20,11 +21,13 @@ func ParseOrigin(raw string) (string, error) {
 	switch {
 	case err != nil || u.Scheme != "http" && u.Scheme != "https":
 		return "", fmt.Errorf("%q is not http://host[:port] or https://host[:port]", raw)
-	case u.Opaque != "" || u.User != nil || u.Path != "" || u.RawPath != "" || u.ForceQuery || u.RawQuery != "" ||
+	case u.Opaque != "" || u.User != nil || u.Path != "" || u.ForceQuery || u.RawQuery != "" ||
 		strings.ContainsAny(raw, "#%*") || strings.HasSuffix(u.Host, ":"):
 		return "", fmt.Errorf("%q is more than scheme://host[:port] (user info, a path, query or fragment, a wildcard)", raw)
 	case u.Hostname() == "":
 		return "", fmt.Errorf("%q has no host", raw)
+	case strings.ContainsFunc(u.Host, func(c rune) bool { return c > unicode.MaxASCII }):
+		return "", fmt.Errorf("%q has a host not in ASCII: write it as browsers send it, in punycode (xn--…)", raw)
 	}
 	host := strings.ToLower(u.Hostname())
 	if port := u.Port(); port != "" {
