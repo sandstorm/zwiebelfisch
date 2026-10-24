@@ -63,9 +63,14 @@ function setup(stored: Record<string, unknown> = {}) {
   const changed = new EventEmitter<void>();
   let base = 'The quick fox.\n';
   const historyProvider: SourceControlHistoryProvider = {
-    provideHistoryItems: async () => ({ items: [{ id: 'c0ffee1', parentIds: [], subject: 'First', message: 'First', displayId: 'c0ffee1', author: 'Ann', timestamp: Date.now() }] }),
+    provideHistoryItems: async () => ({
+      items: [
+        { id: 'b0a7b0a', parentIds: ['c0ffee1'], subject: 'Second', message: 'Second', displayId: 'b0a7b0a', author: 'Ann', timestamp: Date.now() },
+        { id: 'c0ffee1', parentIds: [], subject: 'First', message: 'First', displayId: 'c0ffee1', author: 'Ann', timestamp: Date.now() },
+      ],
+    }),
     provideHistoryItemChanges: async () => [],
-    provideFileContent: async () => new TextEncoder().encode('The slow fox.\n'),
+    provideFileContent: async (id) => new TextEncoder().encode(id === 'c0ffee1' ? 'The slow fox.\n' : 'The brown fox.\n'),
     onDidChangeCurrentHistoryItem: new EventEmitter<void>().event,
   };
   const register = (history = false) =>
@@ -85,7 +90,10 @@ function setup(stored: Record<string, unknown> = {}) {
   const settle = async () => {
     await vi.advanceTimersByTimeAsync(1000);
   };
-  return { parent, body, toggle, inView, status, sourceEditor, register, moveBase, settle, stored };
+  const row = (subject: string) => [...body.querySelectorAll<HTMLButtonElement>('.zwf-history__row')].find((each) => each.querySelector('.zwf-history__subject')?.textContent === subject)!;
+  const compared = () => body.querySelector('.zwf-history__row[aria-current="true"] .zwf-history__subject')?.textContent;
+  const mode = () => body.querySelector('[data-testid="zwf-history-mode"]')?.textContent;
+  return { parent, body, row, compared, mode, toggle, inView, status, sourceEditor, register, moveBase, settle, stored };
 }
 
 describe('changes', () => {
@@ -152,12 +160,12 @@ describe('changes', () => {
   });
 
   it('shows the changes since a commit chosen in History, says so in the status bar, and turns off back to the last commit', async () => {
-    const { parent, body, toggle, status, register, settle, stored } = setup();
+    const { parent, body, row, toggle, status, register, settle, stored } = setup();
     register(true);
     await settle();
     expect(body.textContent).toContain('First');
 
-    body.querySelector<HTMLButtonElement>('.zwf-history__row[title^="Show changes since this commit"]')!.click();
+    row('First').click();
     await settle();
     expect(stored.show).toBe(true);
     expect(parent.querySelector('.zwf-changes__inserted')?.textContent?.trim()).toBe('brown');
@@ -176,5 +184,48 @@ describe('changes', () => {
     await settle();
     expect(parent.querySelector('.zwf-changes__inserted')?.textContent).toBe('slow brown');
     expect(status()?.textContent).toBe('Changes since last commit ✕');
+  });
+
+  it('keeps the panel, the toggle, the status bar and the editors as one: pick A, B, B again, toggle off, A, ✕', async () => {
+    const { parent, body, row, compared, mode, toggle, inView, status, register, settle } = setup();
+    register(true);
+    await settle();
+    const state = () => ({
+      compared: compared(),
+      mode: mode(),
+      toggled: inView()?.toggled?.({}),
+      status: status()?.textContent,
+      inserted: parent.querySelector('.zwf-changes__inserted')?.textContent?.trim(),
+    });
+    const off = { compared: undefined, mode: 'Show changes since last commit', toggled: false, status: undefined, inserted: undefined };
+    expect(state()).toEqual(off);
+
+    row('First').click();
+    await settle();
+    expect(state()).toMatchObject({ compared: 'First', mode: 'Showing changes since c0ffee1 “First”✕', toggled: true, status: expect.stringMatching(/^Changes since c0ffee1 /), inserted: 'brown' });
+
+    row('Second').click();
+    await settle();
+    expect(state()).toMatchObject({ compared: 'Second', mode: 'Showing changes since b0a7b0a “Second”✕', toggled: true, status: expect.stringMatching(/^Changes since b0a7b0a /), inserted: 'slow' });
+
+    row('Second').click();
+    await settle();
+    expect(state()).toEqual(off);
+    expect(body.querySelector('.zwf-history__file-row')).toBeNull();
+
+    await toggle();
+    await settle();
+    expect(state()).toEqual({ compared: undefined, mode: 'Showing changes since last commit✕', toggled: true, status: 'Changes since last commit ✕', inserted: 'slow brown' });
+    await toggle();
+    await settle();
+    expect(state()).toEqual(off);
+
+    row('First').click();
+    await settle();
+    expect(state()).toMatchObject({ compared: 'First', toggled: true, inserted: 'brown' });
+
+    body.querySelector<HTMLButtonElement>('button[aria-label="Stop showing changes"]')!.click();
+    await settle();
+    expect(state()).toEqual(off);
   });
 });

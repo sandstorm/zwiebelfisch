@@ -20,8 +20,12 @@ const item = (id: string, extra: Partial<SourceControlHistoryItem> = {}): Source
 
 const flush = () => new Promise((resolve) => setTimeout(resolve));
 
-function setup(baseline: () => SourceControlHistoryItem | undefined = () => undefined) {
-  const provideHistoryItems = vi.fn(async ({ cursor }: { cursor?: string }) => (cursor ? { items: [item('c3')] } : { items: [item('c1'), item('c2')], cursor: 'more' }));
+function setup() {
+  const provideHistoryItems = vi.fn(async ({ cursor }: { cursor?: string }) => (cursor ? { items: [item('c3')] } : { items: [item('c1'), item('c2', { coAuthors: [] })], cursor: 'more' }));
+  const provideHistoryItemChanges = vi.fn(async (id: string) => [
+    { path: ProjectPath.of(`/letters/${id}/main.typ`), kind: 'added' as const },
+    { path: ProjectPath.of('/gone.typ'), kind: 'deleted' as const },
+  ]);
   const control: SourceControl = {
     id: 'gitlab',
     label: 'GitLab',
@@ -31,19 +35,23 @@ function setup(baseline: () => SourceControlHistoryItem | undefined = () => unde
     resourceStates: [{ path: ProjectPath.of('/main.typ'), decorations: { badge: 'M' } }, { path: ProjectPath.of('/notes/a.typ'), decorations: { badge: 'A' } }],
     historyProvider: {
       provideHistoryItems,
-      provideHistoryItemChanges: async () => [
-        { path: ProjectPath.of('/main.typ'), kind: 'modified' },
-        { path: ProjectPath.of('/gone.typ'), kind: 'deleted' },
-      ],
+      provideHistoryItemChanges,
       provideFileContent: async () => undefined,
       onDidChangeCurrentHistoryItem: new EventEmitter<void>().event,
     },
   };
+  /** The mode, as the changes extension keeps it: undefined off, else since `item` (undefined: the last commit). */
+  let changes: { item: SourceControlHistoryItem | undefined } | undefined;
+  const setChanges = (value: typeof changes) => {
+    changes = value;
+    panel.render();
+  };
   const options = {
     sourceControl: () => control,
     visible: () => true,
-    baseline,
-    showChangesSince: vi.fn(),
+    changes: () => changes,
+    showChangesSince: vi.fn((_control: SourceControl, since: SourceControlHistoryItem | undefined) => setChanges({ item: since })),
+    hideChanges: vi.fn(() => setChanges(undefined)),
     openFile: vi.fn(),
     isOpenable: (path: ProjectPath) => path !== '/gone.typ',
   } satisfies HistoryPanelOptions;
@@ -51,17 +59,23 @@ function setup(baseline: () => SourceControlHistoryItem | undefined = () => unde
   const panel = new HistoryPanel(parent, options);
   panel.refresh();
   const rows = () => [...parent.querySelectorAll<HTMLButtonElement>('.zwf-history__row')];
-  return { parent, panel, options, control, provideHistoryItems, rows };
+  const subject = (row: HTMLElement) => row.querySelector('.zwf-history__subject')!.textContent;
+  const row = (text: string) => rows().find((each) => subject(each) === text)!;
+  const compared = () => rows().filter((each) => each.getAttribute('aria-current') === 'true').map(subject);
+  const mode = () => parent.querySelector('[data-testid="zwf-history-mode"]')!;
+  const files = () => [...parent.querySelectorAll<HTMLButtonElement>('.zwf-history__entry:not(.zwf-history__entry--uncommitted) .zwf-history__file-row')];
+  return { parent, panel, options, control, provideHistoryItems, provideHistoryItemChanges, rows, subject, row, compared, mode, files, setChanges };
 }
 
 describe('HistoryPanel', () => {
-  it('lists what is not committed, then the commits by day with initials, and loads more', async () => {
-    const { parent, rows, provideHistoryItems } = setup();
+  it('lists what is not committed, then the commits by day with one avatar and "+N", and loads more', async () => {
+    const { parent, rows, subject, provideHistoryItems } = setup();
     await flush();
-    expect(rows().map((row) => row.querySelector('.zwf-history__subject')!.textContent)).toEqual(['Not in GitLab yet', 'Commit c1', 'Commit c2']);
+    expect(rows().map(subject)).toEqual(['Not in GitLab yet', 'Commit c1', 'Commit c2']);
     expect(parent.querySelector('.zwf-history__day')!.textContent).toBe('Today');
-    expect([...rows()[1].querySelectorAll('.zwf-history__avatar')].map((avatar) => avatar.textContent)).toEqual(['AL', 'B']);
-    expect(rows()[1].querySelector('.zwf-history__meta')!.textContent).toBe('just now · c1');
+    expect(rows().map((each) => each.querySelector('.zwf-history__people')!.textContent)).toEqual(['', 'AL+1', 'AL']);
+    expect(rows()[1].querySelector<HTMLElement>('.zwf-history__people')!.title).toBe('Ada Lovelace, Bob');
+    expect(rows()[1].querySelector('.zwf-history__meta')!.textContent).toBe('Ada Lovelace, Bob · just now · c1');
 
     parent.querySelector<HTMLButtonElement>('.zwf-history__more')!.click();
     await flush();
@@ -70,21 +84,76 @@ describe('HistoryPanel', () => {
     expect(provideHistoryItems).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the changes since a commit chosen and lists its files; a file opens, one not in the project does not', async () => {
+  it('says on top whether changes are shown and since what, and turns them on and off there', async () => {
+    const { mode, options, control, setChanges } = setup();
+    await flush();
+    expect(mode().textContent).toBe('Show changes since last commit');
+    mode().querySelector('button')!.click();
+    expect(options.showChangesSince).toHaveBeenLastCalledWith(control, undefined);
+    expect(mode().textContent).toBe('Showing changes since last commit✕');
+    setChanges({ item: item('84c6e2f', { subject: 'Fix the letter' }) });
+    expect(mode().textContent).toBe('Showing changes since 84c6e2f “Fix the letter”✕');
+    mode().querySelector<HTMLButtonElement>('button[aria-label="Stop showing changes"]')!.click();
+    expect(options.hideChanges).toHaveBeenCalledOnce();
+    expect(mode().textContent).toBe('Show changes since last commit');
+  });
+
+  it('compares with a commit chosen and lists its files; another switches; the compared one again stops; off folds them', async () => {
+    const { rows, row, compared, mode, files, options, setChanges, provideHistoryItemChanges } = setup();
+    await flush();
+    row('Commit c1').click();
+    expect(compared()).toEqual(['Commit c1']);
+    expect(row('Commit c1').getAttribute('aria-expanded')).toBe('true');
+    expect(row('Commit c1').textContent).toContain('Compared');
+    expect(mode().textContent).toContain('since c1 “Commit c1”');
+    await flush();
+    expect(files().map((file) => file.textContent)).toEqual(['+letters/c1/main.typ', '−gone.typ']);
+
+    row('Commit c2').click();
+    expect(compared()).toEqual(['Commit c2']);
+    expect(row('Commit c1').getAttribute('aria-expanded')).toBe('false');
+    await flush();
+    expect(files().map((file) => file.textContent)).toEqual(['+letters/c2/main.typ', '−gone.typ']);
+
+    row('Commit c2').click();
+    expect(options.hideChanges).toHaveBeenCalledOnce();
+    expect(compared()).toEqual([]);
+    expect(files()).toEqual([]);
+    expect(rows().every((each) => each.getAttribute('aria-expanded') !== 'true')).toBe(true);
+
+    row('Commit c1').click();
+    expect(compared()).toEqual(['Commit c1']);
+    expect(files()).toHaveLength(2);
+    expect(provideHistoryItemChanges).toHaveBeenCalledTimes(2);
+    setChanges(undefined);
+    expect(compared()).toEqual([]);
+    expect(files()).toEqual([]);
+    setChanges({ item: undefined });
+    expect(compared()).toEqual([]);
+  });
+
+  it("shows a file's kind as a symbol with its name, opens it, one not in the project does not", async () => {
+    const { row, files, options } = setup();
+    await flush();
+    row('Commit c1').click();
+    await flush();
+    const kind = files()[0].querySelector('.zwf-history__kind')!;
+    expect(kind.getAttribute('aria-label')).toBe('Added');
+    expect(kind.classList).toContain('zwf-history__kind--added');
+    expect(files()[0].querySelector('.zwf-history__name')!.textContent).toBe('main.typ');
+    expect(files()[0].title).toBe('letters/c1/main.typ');
+    expect(files()[1].disabled).toBe(true);
+    files()[0].click();
+    expect(options.openFile).toHaveBeenCalledWith('/letters/c1/main.typ');
+  });
+
+  it('opens a file not committed yet with the changes since the last commit', async () => {
     const { parent, rows, options, control } = setup();
     await flush();
-    rows()[1].click();
-    expect(options.showChangesSince).toHaveBeenCalledWith(control, expect.objectContaining({ id: 'c1' }));
-    expect(parent.textContent).toContain('Loading…');
-    await flush();
-    const files = [...parent.querySelectorAll<HTMLButtonElement>('.zwf-history__file-row')];
-    expect(files.map((file) => file.textContent)).toEqual(['Mmain.typ', 'Dgone.typ']);
-    expect(files[1].disabled).toBe(true);
-    files[0].click();
-    expect(options.openFile).toHaveBeenCalledWith('/main.typ');
-
     rows()[0].click();
-    parent.querySelector<HTMLButtonElement>('.zwf-history__entry--uncommitted .zwf-history__file-row')!.click();
+    const uncommittedFiles = [...parent.querySelectorAll<HTMLButtonElement>('.zwf-history__entry--uncommitted .zwf-history__file-row')];
+    expect(uncommittedFiles.map((file) => file.querySelector('.zwf-history__kind')!.getAttribute('aria-label'))).toEqual(['Modified', 'Added']);
+    uncommittedFiles[0].click();
     expect(options.showChangesSince).toHaveBeenLastCalledWith(control, undefined);
     expect(options.openFile).toHaveBeenLastCalledWith('/main.typ');
   });
@@ -116,18 +185,5 @@ describe('HistoryPanel', () => {
     await flush();
     expect(parent.textContent).toContain('Commit c9');
     expect(more()).toBeNull();
-  });
-
-  it('marks the commit the changes are shown since; choosing it again only folds its files', async () => {
-    let baseline: SourceControlHistoryItem | undefined;
-    const { panel, rows, options } = setup(() => baseline);
-    await flush();
-    baseline = item('c1');
-    panel.render();
-    const row = () => rows().find((each) => each.getAttribute('aria-current') === 'true');
-    expect(row()?.querySelector('.zwf-history__subject')!.textContent).toBe('Commit c1');
-    row()!.click();
-    expect(options.showChangesSince).not.toHaveBeenCalled();
-    expect(row()!.getAttribute('aria-expanded')).toBe('true');
   });
 });
