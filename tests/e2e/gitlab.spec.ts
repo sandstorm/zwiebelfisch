@@ -84,6 +84,22 @@ test('Save to GitLab commits, and everyone in the room is told', async ({ browse
   }
 });
 
+test('"Show changes since last commit" marks a new line in the Source editor and says so in the status bar; its ✕ turns it off', async ({ browser, baseURL }, info) => {
+  const { ann } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.press('Enter');
+  await ann.keyboard.type('Changed here.');
+  await ann.evaluate(() => (window as unknown as { editor: { executeCommand(id: string): Promise<unknown> } }).editor.executeCommand('changes.toggle'));
+  const status = ann.getByTestId('zwf-changes-status');
+  await expect(status).toHaveText('Changes since last commit ✕');
+  await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine', { hasText: 'Changed here.' })).toBeVisible();
+  await status.click();
+  await expect(status).toHaveCount(0);
+  await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine')).toHaveCount(0);
+});
+
 test('a click on the status bar entry opens the save dialog', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await expect(scmStatus(ann)).toHaveText(/^Saved · /);

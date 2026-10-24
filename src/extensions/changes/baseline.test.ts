@@ -51,7 +51,7 @@ describe('Baseline', () => {
     expect(changed).toHaveBeenCalledTimes(2);
     expect(baseline.original(MAIN)).toBe('at c1');
 
-    baseline.setCommit(control, undefined);
+    baseline.setCommit();
     expect(baseline.original(MAIN)).toBe('last commit');
   });
 

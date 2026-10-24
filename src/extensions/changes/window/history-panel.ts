@@ -6,9 +6,10 @@ import { byDay, HistoryList, initials, people, relativeTime, uncommitted, type H
 /**
  * The commits of a source control in a side panel: at the top its changes not committed yet ("Not in GitLab yet", no
  * request), then the commits of the scope grouped by day, each with its people's initials, subject, age and short id,
- * and "Load more". Choosing a commit shows the files it changed; choosing a file opens its changes. Each commit's
- * button "Show changes since this commit" sets the baseline; the commit that is it is marked. Loads only while
- * `visible()`; a new current commit (`refresh`) or scope starts the list anew.
+ * and "Load more". Choosing a commit shows the changes since it (`showChangesSince`) and lists the files it changed;
+ * the commit the changes are shown since is marked. Choosing a file opens it; one not committed yet shows the changes
+ * since the last commit first. Loads only while `visible()`; a new current commit (`refresh`) or scope starts the list
+ * anew.
  *
  * Used by: the changes extension, in its side panel `history`.
  */
@@ -69,12 +70,6 @@ export class HistoryPanel {
       this.#root.append(element(doc, 'p', 'zwf-history__note', 'No history here: the project is not in a repository.'));
       return;
     }
-    const baseline = this.options.baseline();
-    if (baseline) {
-      const bar = element(doc, 'div', 'zwf-history__baseline', `Changes shown since ${baseline.displayId ?? baseline.id}`);
-      bar.append(button(doc, 'zwf-history__link', 'Since last commit', () => this.options.showChangesSince(control, undefined)));
-      this.#root.append(bar);
-    }
     const ul = element(doc, 'ul', 'zwf-history__list');
     this.#uncommitted(doc, ul, control);
     const now = Date.now();
@@ -124,7 +119,14 @@ export class HistoryPanel {
     li.append(row);
     if (this.#uncommittedOpen) {
       const files = element(doc, 'ul', 'zwf-history__files');
-      for (const state of states) files.append(this.#file(doc, state.path, state.decorations?.badge ?? 'M', () => this.options.openChanges(state.path, undefined)));
+      for (const state of states) {
+        files.append(
+          this.#file(doc, state.path, state.decorations?.badge ?? 'M', () => {
+            this.options.showChangesSince(control, undefined);
+            this.options.openFile(state.path);
+          }),
+        );
+      }
       li.append(files);
     }
     ul.append(li);
@@ -134,9 +136,17 @@ export class HistoryPanel {
     const isBaseline = item.id === this.options.baseline()?.id;
     const li = element(doc, 'li', `zwf-history__entry${isBaseline ? ' zwf-history__entry--baseline' : ''}`);
     const expanded = this.#expanded.get(item.id);
-    const row = button(doc, 'zwf-history__row', '', () => this.#toggle(control, item));
+    const row = button(doc, 'zwf-history__row', '', () => {
+      if (isBaseline) {
+        this.#toggle(control, item);
+        return;
+      }
+      if (expanded === undefined) this.#toggle(control, item);
+      this.options.showChangesSince(control, item);
+    });
     row.setAttribute('aria-expanded', String(expanded !== undefined));
-    row.title = item.message;
+    if (isBaseline) row.setAttribute('aria-current', 'true');
+    row.title = `${SINCE_TITLE}\n\n${item.message}`;
     const avatars = element(doc, 'span', 'zwf-history__people');
     for (const name of people(item).slice(0, 3)) {
       const avatar = element(doc, 'span', 'zwf-history__avatar', initials(name));
@@ -145,20 +155,17 @@ export class HistoryPanel {
     }
     const when = item.timestamp === undefined ? '' : relativeTime(item.timestamp, now);
     row.append(avatars, element(doc, 'span', 'zwf-history__subject', item.subject), element(doc, 'span', 'zwf-history__meta', [when, item.displayId].filter(Boolean).join(' · ')));
-    const since = labelled(button(doc, 'zwf-history__since', '', () => this.options.showChangesSince(control, item)), SINCE_TITLE);
-    since.innerHTML = SINCE_ICON;
-    since.setAttribute('aria-pressed', String(isBaseline));
-    li.append(row, since);
-    if (expanded) li.append(this.#changes(doc, item, expanded));
+    li.append(row);
+    if (expanded) li.append(this.#changes(doc, expanded));
     return li;
   }
 
   /** The files `item` changed, as far as loaded. */
-  #changes(doc: Document, item: SourceControlHistoryItem, expanded: readonly SourceControlHistoryItemChange[] | 'loading' | { error: string }): HTMLElement {
+  #changes(doc: Document, expanded: readonly SourceControlHistoryItemChange[] | 'loading' | { error: string }): HTMLElement {
     if (expanded === 'loading') return element(doc, 'p', 'zwf-history__note', 'Loading…');
     if ('error' in expanded) return element(doc, 'p', 'zwf-history__note zwf-history__note--error', expanded.error);
     const files = element(doc, 'ul', 'zwf-history__files');
-    for (const change of expanded) files.append(this.#file(doc, change.path, BADGES[change.kind], () => this.options.openChanges(change.path, { item, change })));
+    for (const change of expanded) files.append(this.#file(doc, change.path, BADGES[change.kind], () => this.options.openFile(change.path)));
     if (expanded.length === 0) files.append(element(doc, 'li', 'zwf-history__note', 'No files changed here.'));
     return files;
   }
@@ -202,24 +209,20 @@ export interface HistoryPanelOptions {
   sourceControl(): SourceControl | undefined;
   /** Whether the panel is seen. */
   visible(): boolean;
-  /** The commit the changes are shown since (undefined: the last one). */
+  /** The commit the changes are shown since; undefined: none (not shown, or since the last commit). */
   baseline(): SourceControlHistoryItem | undefined;
   /** Shows the changes since `item` of `control` (undefined: since the last commit). */
   showChangesSince(control: SourceControl, item: SourceControlHistoryItem | undefined): void;
-  /** Opens the changes of `path`: those `commit` made, or those not committed yet. */
-  openChanges(path: ProjectPath, commit: { item: SourceControlHistoryItem; change: SourceControlHistoryItemChange } | undefined): void;
-  /** Whether the project has `path` now (only such a file's changes open). */
+  /** Opens `path` in its editor. */
+  openFile(path: ProjectPath): void;
+  /** Whether the project has `path` now (only such a file opens). */
   isOpenable(path: ProjectPath): boolean;
 }
 
-/** The tooltip of a commit's baseline button. */
+/** What choosing a commit does (its tooltip, before its message). */
 export const SINCE_TITLE = 'Show changes since this commit';
 
 const BADGES: Record<SourceControlHistoryItemChange['kind'], string> = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R' };
-
-/** A flag on a pole (lucide's `flag`), drawn in `currentColor`. */
-const SINCE_ICON =
-  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></svg>';
 
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
   const el = doc.createElement(tag);

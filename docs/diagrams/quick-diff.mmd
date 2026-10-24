@@ -1,5 +1,9 @@
 flowchart LR
   B["meta.base<br/>(texts at the last commit)"] --> Q["GitLabSourceControl<br/>quickDiffProvider"]
-  Q -- "provideOriginalText(path)" --> C["changes extension"]
-  D["Visual editor document"] --> C
-  C -- "parseTypst + prosemirror-changeset" --> R["decorations:<br/>inserted · deleted"]
+  H["History: a commit chosen"] --> P["historyProvider<br/>provideFileContent(id, path)"]
+  Q -- "provideOriginalText(path)" --> BL["Baseline<br/>(one original per file)"]
+  P --> BL
+  T["changes.toggle<br/>(View menu)"] --> BL
+  BL --> V["Visual editor<br/>parseTypst + prosemirror-changeset<br/>→ decorations"]
+  BL --> S["Source editor<br/>@codemirror/merge unifiedMergeView"]
+  BL --> ST["status bar<br/>Changes since … ✕"]
