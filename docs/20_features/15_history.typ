@@ -11,7 +11,7 @@
   table.header[What][How][The files],
   [The changes since the last commit], [View → "Show changes since last commit"], [as they are now, editable],
   [The changes of one commit], [click it in History], [as they were at that commit, read-only],
-  [The changes from one commit to another], [click one, then Cmd-click (Ctrl-click) the other: always from the older to the newer], [as they were at the newer, read-only],
+  [The changes from one commit to another], [click one, then Cmd-click (Ctrl-click, Shift-click) the other: always from the older to the newer], [as they were at the newer, read-only],
   [The changes since a commit, to now], [right click it in History → "Compare with current state"], [as they are now, editable],
 )
 
@@ -27,7 +27,7 @@ The side panel *History* (the clock on the left rail) lists the commits of the p
 - *On top it says the comparison:* "● Changes in 84c6e2f “Fix the letter”", "Changes from ebd0bc4 to 84c6e2f", "Changes since 84c6e2f (to now)" or "Changes since last commit", with ✕ to end it; while off, "Show changes since last commit" turns them on. It is the same switch as the menu entry and the status bar: whichever you use, all agree at once.
 - *Then "Not in GitLab yet"*, the files changed since the last commit. Click it to list them; click a file to open it with the changes since the last commit shown.
 - *Each commit* shows one round badge with its author's initials ("+1" when there are co-authors), its first line (all of it in the tooltip), and below the names, how long ago and its short id, grouped by day. "Load more" shows older commits.
-- *Click a commit* to show its changes. It is highlighted, labelled "Changes", and lists the files it changed: #text(green)[+] added, #text(red)[−] deleted, #text(orange)[\~] modified, → renamed; long folders are cut at the left so the file name stays visible. Click a file to open it as it was there. *Click it again* to stop.
-- *Cmd-click (Ctrl-click) another commit* to compare the two: they are labelled "From" and "To", and "To" lists the files that differ.
+- *Click a commit* to show its changes. It is highlighted, labelled "Changes", and lists the files it changed: #text(green)[+] added, #text(red)[−] deleted, #text(orange)[\~] modified, → renamed; long folders are cut at the left so the file name stays visible. The file you have open opens as it was there, if the commit changed it, else the first file it changed; click a file to open it as it was there. *Click the commit again* to stop: the file as it is now comes back.
+- *Cmd-click (Ctrl-click, Shift-click) another commit* to compare the two: they are labelled "From" and "To", "To" lists the files that differ, and the file you have open shows as it was at "To" (likewise).
 - *Right click a commit* for "Show changes of this commit", "Compare with current state" (labelled "Since"; it lists the files changed since, and opens them as they are now) and "Compare with…": the next commit you click is the other end.
 - *History of a file or folder:* right click it in the file panel → "Show history". ✕ in the panel's title goes back to the whole project. A project in a folder of the repository shows the folder's history.

@@ -5,7 +5,7 @@ import type { Extension, ExtensionContext } from '../../hosts/extension-host/ext
 import type { Scm, SourceControlHistoryItem, SourceControlHistoryItemChange } from '../../hosts/scm/scm';
 import css from './changes.css?inline';
 import { describe, fromOf, ShownChanges, toOf, type Comparison } from './comparison';
-import { Snapshots } from './snapshots';
+import { Snapshots, type Snapshot } from './snapshots';
 import { inlineChanges } from './source-editor/inline-changes';
 import { changeDecorations } from './visual-editor/change-decorations';
 import { shortId } from './window/history-list';
@@ -20,15 +20,16 @@ import { HistoryPanel } from './window/history-panel';
  * - The changes of a commit (from its first parent), or from one commit to another: the files as they were at the
  *   later commit, read-only (`Snapshots`, files outside the project at `/@84c6e2f/…`), in the same editors with the
  *   same marks; the editor's title bar names them ("84c6e2f · read-only · changes since ebd0bc4", a click opens the
- *   current file). A file deleted there shows its earlier text all deleted. Ending or changing the comparison takes a
- *   file shown so to the current file, or to that file at the new commit.
+ *   current file). A file deleted there shows its earlier text all deleted. Starting or changing such a comparison
+ *   opens the file shown, at the new commit, if the comparison changed it, else the first file it changed; ending it
+ *   takes a file shown so to the current file.
  * - "Show changes since last commit" (the command `changes.toggle`, in the View menu) turns them on (since the last
  *   commit) and off. While on, the status bar says which ("Changes in 84c6e2f ✕"); a click turns them off. The
  *   viewer's last choice is kept (`globalState`).
  * - The side panel "History" (`workbench.view.history`) lists the commits of the first source control with a
  *   `historyProvider`: of the project, or of a file or folder ("Show history" on the file panel's rows,
  *   `changes.showHistory`), with what is not committed yet on top. A click on a commit shows its changes, a
- *   Cmd/Ctrl-click on another compares the two; a right click offers "Show changes of this commit", "Compare with
+ *   Cmd/Ctrl- or Shift-click on another compares the two; a right click offers "Show changes of this commit", "Compare with
  *   current state" and "Compare with…" (the menu `changes/historyItem`, its commands taking the commit).
  * The Typst preview always shows the project as it is now.
  */
@@ -127,8 +128,9 @@ function originalOf(shown: ShownChanges, snapshots: Snapshots, path: ProjectPath
 
 /**
  * Opens the files of the comparison shown (`open`: to a commit, as they were there; else the project's), and keeps
- * a file shown as it was at a commit with the comparison (`follow`, after it changed): the same file at the new
- * commit, or the current file (the main file once it is gone) when the comparison no longer goes to a commit.
+ * the editor with the comparison (`follow`, after it changed): to a commit, the file shown (as it was at a commit, or
+ * the current one) at the new commit if the comparison changed it, else the first file it changed (else, for a file
+ * of another commit, that file all the same); else the current file (the main file once it is gone).
  */
 function shownFiles({ window, project }: ExtensionContext, shown: ShownChanges, snapshots: Snapshots): { open(change: SourceControlHistoryItemChange): void; follow(): void } {
   const at = async (item: SourceControlHistoryItem, path: ProjectPath, originalPath?: ProjectPath) => {
@@ -143,6 +145,14 @@ function shownFiles({ window, project }: ExtensionContext, shown: ShownChanges, 
       void window.showErrorMessage(`${ProjectPath.displayName(path)} at ${shortId(item)} could not be read: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+  // at `to`: the file shown if `comparison` changed it, else the first file it changed, else `active`'s file
+  const changed = async (comparison: Comparison, to: SourceControlHistoryItem, active: Snapshot | undefined) => {
+    const path = active?.path ?? window.activeFile;
+    const files = await changedFiles(shown, comparison, to);
+    const change = files.find((each) => each.path === path) ?? files[0];
+    if (change) await at(to, change.path, change.originalPath);
+    else if (active) await at(to, active.path);
+  };
   return {
     open(change) {
       const to = shown.comparison && toOf(shown.comparison);
@@ -151,15 +161,25 @@ function shownFiles({ window, project }: ExtensionContext, shown: ShownChanges, 
     },
     follow() {
       const active = snapshots.get(window.activeFile);
-      const to = shown.comparison && toOf(shown.comparison);
-      if (active && to) {
-        if (to.id !== active.item.id) void at(to, active.path);
+      const comparison = shown.comparison;
+      const to = comparison && toOf(comparison);
+      if (comparison && to) {
+        if (to.id !== active?.item.id) void changed(comparison, to, active);
         return;
       }
       if (active) window.showDocument(project.has(active.path) ? active.path : project.main);
       snapshots.retain(() => false);
     },
   };
+}
+
+/** The files `comparison` (to the commit `to`) changed; none when they cannot be read. */
+async function changedFiles(shown: ShownChanges, comparison: Comparison, to: SourceControlHistoryItem): Promise<readonly SourceControlHistoryItemChange[]> {
+  try {
+    return (await shown.control?.historyProvider?.provideHistoryItemChanges(to.id, fromOf(comparison) ?? undefined)) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /** While a file as it was at a commit is shown: the tab bar names it ("84c6e2f · read-only · changes since ebd0bc4"); a click opens the current file. */

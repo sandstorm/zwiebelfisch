@@ -10,7 +10,7 @@ import { byDay, HistoryList, initials, people, relativeTime, shortId, uncommitte
  * yet", no request), then the commits of the scope grouped by day, each with its first person's initials (and "+N"),
  * subject, people, age and short id, and "Load more". As IntelliJ's log:
  * - a click on a commit shows its changes (`compare` a `commit`); on the one shown alone, stops (`compare(undefined)`)
- * - a Cmd/Ctrl-click on another commit compares the two, the older to the newer (a `range`); so does the next click
+ * - a Cmd/Ctrl- or Shift-click on another commit compares the two, the older to the newer (a `range`); so does the next click
  *   after `compareWith`
  * - a right click opens the commit's menu (`showItemMenu`)
  * The commits compared are highlighted (`aria-current`) and labelled ("Changes", "Since", "From", "To"); the one the
@@ -178,7 +178,7 @@ export class HistoryPanel {
     const comparison = this.options.comparison();
     const role = comparison && roleOf(comparison, item);
     const li = element(doc, 'li', `zwf-history__entry${role ? ' zwf-history__entry--compared' : ''}`);
-    const row = button(doc, 'zwf-history__row', '', (event) => this.#choose(item, event.metaKey || event.ctrlKey));
+    const row = button(doc, 'zwf-history__row', '', (event) => this.#choose(item, event.metaKey || event.ctrlKey || event.shiftKey));
     row.addEventListener('contextmenu', (event) => {
       event.preventDefault();
       this.options.showItemMenu(item, { x: event.clientX, y: event.clientY });
@@ -197,7 +197,7 @@ export class HistoryPanel {
     return li;
   }
 
-  /** A click on `item` (`range`: with Cmd/Ctrl): see the class. */
+  /** A click on `item` (`range`: with Cmd/Ctrl or Shift): see the class. */
   #choose(item: SourceControlHistoryItem, range: boolean): void {
     const comparison = this.options.comparison();
     const picking = this.#picking;
@@ -318,7 +318,7 @@ function roleOf(comparison: Comparison, item: SourceControlHistoryItem): Role | 
   return comparison.item?.id === item.id ? comparison.kind : undefined;
 }
 
-/** The commit a Cmd/Ctrl-click compares with: the one shown alone, or the start of the range or of the changes to now. */
+/** The commit a Cmd/Ctrl- or Shift-click compares with: the one shown alone, or the start of the range or of the changes to now. */
 function anchorOf(comparison: Comparison): SourceControlHistoryItem | undefined {
   return comparison.kind === 'range' ? comparison.from : comparison.item;
 }
@@ -326,9 +326,9 @@ function anchorOf(comparison: Comparison): SourceControlHistoryItem | undefined 
 const ROLE_LABELS: Record<Role, string> = { commit: 'Changes', since: 'Since', from: 'From', to: 'To' };
 
 /** What clicking a commit does (its tooltip, before its message). */
-export const CHOOSE_TITLE = 'Click: show the changes of this commit\nCmd/Ctrl-click: compare it with the selected commit\nRight click: more';
+export const CHOOSE_TITLE = 'Click: show the changes of this commit\nCmd/Ctrl- or Shift-click: compare it with the selected commit\nRight click: more';
 /** What clicking the commit shown alone does (its tooltip, before its message). */
-const STOP_TITLE = 'Click to stop showing changes\nCmd/Ctrl-click another commit to compare it with this one';
+const STOP_TITLE = 'Click to stop showing changes\nCmd/Ctrl- or Shift-click another commit to compare it with this one';
 
 const KINDS: Record<SourceControlHistoryItemChange['kind'], { symbol: string; label: string }> = {
   added: { symbol: '+', label: 'Added' },

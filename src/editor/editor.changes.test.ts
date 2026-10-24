@@ -117,12 +117,8 @@ describe('changes in the widget', () => {
       const { editor, visual, source, row, file, editorTitle, settle, history } = setup();
       await editor.executeCommand('workbench.view.history');
       await settle();
+      // the click on the commit opens the file shown as it was there, as the commit changed it
       row('Second').click();
-      await settle();
-      expect(editor.activeFile).toBe('/main.typ');
-      expect(visual()!.querySelector('.zwf-changes__inserted')).toBeNull();
-
-      file('main.typ').click();
       await settle();
       expect(editor.activeFile).toBe('/@b0a7b0a/main.typ');
       expect(visual()!.textContent).toBe('The slowbrown fox.');
@@ -163,14 +159,18 @@ describe('changes in the widget', () => {
   it('follows a file shown as it was when the comparison changes: the later commit of a range, then the project’s file', async () => {
     vi.useFakeTimers();
     try {
-      const { editor, row, file, editorTitle, settle, host } = setup();
+      const { editor, row, editorTitle, settle, host } = setup();
       await editor.executeCommand('workbench.view.history');
       await settle();
       row('Second').click();
       await settle();
-      file('main.typ').click();
-      await settle();
       expect(editor.activeFile).toBe('/@b0a7b0a/main.typ');
+      // the click on it again: off, back to the project's file
+      row('Second').click();
+      await settle();
+      expect(editor.activeFile).toBe('/main.typ');
+      row('Second').click();
+      await settle();
 
       row('Third').dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
       await settle();

@@ -103,7 +103,7 @@ test('"Show changes since last commit" marks a new line in the Source editor and
   await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine')).toHaveCount(0);
 });
 
-test('History: a click on a commit shows its changes; its file opens as it was there, read-only; ✕ goes back', async ({ browser, baseURL }, info) => {
+test('History: a click on a commit shows its changes: the file shown opens as it was there, read-only; ✕ goes back', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
@@ -117,7 +117,7 @@ test('History: a click on a commit shows its changes; its file opens as it was t
   await history.locator('.zwf-history__row', { hasText: 'Add a line' }).click();
   await expect(history.getByTestId('zwf-history-mode')).toContainText(/Changes in [0-9a-f]{7} “Add a line”/);
   await expect(ann.getByTestId('zwf-changes-status')).toHaveText(/^Changes in [0-9a-f]{7} ✕$/);
-  await history.locator('.zwf-history__file-row', { hasText: 'main.typ' }).click();
+  // the commit changed the file shown: it opens as it was there at once
   await expect(ann.locator('.zwf-editor__tab-action', { hasText: /[0-9a-f]{7} · read-only · changes since [0-9a-f]{7}/ })).toBeVisible();
   const source = ann.locator('.zwf-editor__pane:not([hidden]) [data-testid=zwf-source]');
   await expect(source.locator('.cm-changedLine', { hasText: 'Committed here.' })).toBeVisible();
