@@ -6,7 +6,7 @@ import { ASSETS_MAP, type ClientMessage, FILES_MAP, META_MAP } from '../room-pro
 import type { StatelessChannel } from './gitlab-source-control';
 
 /**
- * A client's side of a GitLab room of one folder (`gitlab:<project>@<branch>:/<folder>`, see `gitlabRoomFolder`):
+ * A client's side of a GitLab room of one folder (`gitlab:<project>@<branch>:/<folder>`, see `gitlabRoom`):
  * - constructed before the room's files are shared, it makes the main file the folder's `main.typ`, else its first
  *   `.typ` file, else a new `main.typ` in it; not when the host fixed the main file or the room holds it
  * - then it drops the host's files outside the folder that the room does not hold (but a main file the host fixed),

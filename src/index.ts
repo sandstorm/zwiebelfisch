@@ -25,6 +25,7 @@ export type {
   FileDecorationProvider,
   InputBoxOptions,
   MessageItem,
+  MessageOptions,
   ProgressOptions,
   QuickPickItem,
   QuickPickOptions,
@@ -34,6 +35,7 @@ export type {
   StatusBarPlacement,
   TextEditor,
   TextEditorSelectionChangeEvent,
+  TitleBarPlacement,
   WindowApi,
 } from './hosts/window/window';
 export { ProgressLocation } from './hosts/window/window';

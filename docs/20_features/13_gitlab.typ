@@ -7,13 +7,13 @@
 
 A project can be a branch of a GitLab repository: everyone edits the branch's files together, and the changes go back to GitLab as commits.
 
-*Sign in with GitLab:* the status bar's "Sign in". You edit a project when you are a Developer (or more) in it, and save when you may push to its branch.
+*Sign in with GitLab:* "Sign in" on the card that covers the editor until you have. You edit a project when you are a Developer (or more) in it, and save when you may push to its branch.
 
-*The status bar shows what is not in GitLab yet*, e.g. "Not in GitLab: 3 files · 14 min (Ann, Bob)". The file panel marks changed files M and new ones A.
+*The title bar shows where you are and what is not in GitLab yet:* the project, branch and folder at its left ("demo/report ⎇ main /letters"); in its middle the save status, e.g. "Not in GitLab: 3 files · 14 min (Ann, Bob)" ("Saved · 0123abcd" once everything is), and who else is in. The file panel marks changed files M and new ones A.
 
 *See what changed since the last commit:* the Visual editor's toolbar button "Show changes since last commit" marks new text green and shows deleted text struck through in red, where it was. It stays as you set it. Older commits are in the History panel (@features-history).
 
-*Click "Save to GitLab…"* to commit every change since the last commit, with a message you enter.
+*Click "Save to GitLab…"* (the title bar's right end; "Saving to GitLab…" meanwhile) to commit every change since the last commit, with a message you enter.
 
 *It saves by itself* when nobody edited for 10 minutes, when the last user leaves, and when you sign out; only if everyone who edited may push to the branch and is still signed in, else someone who may must save.
 
@@ -27,6 +27,6 @@ A project can be a branch of a GitLab repository: everyone edits the branch's fi
 
 *Shared files:* a file from outside the project's folder that the project uses (`#import "/template.typ"`, an image) is loaded once a compile asks for it. It is marked S (used from outside this project's folder): you edit it as any file, and the change is saved to GitLab for everyone who uses it.
 
-*Conflicts must be resolved by hand:* where the project and GitLab changed the same lines, nothing is merged or saved. The status bar warns "Conflict with GitLab: main.typ". Make the lines match, here or on GitLab, then save again.
+*Conflicts must be resolved by hand:* where the project and GitLab changed the same lines, nothing is merged or saved. The save status warns "Conflict with GitLab: main.typ". Make the lines match, here or on GitLab, then save again.
 
 To try it, use the demo's "GitLab (fake)" mode; `?room=gitlab:demo/report@main:/letters/welcome` opens a project in a folder that uses the report's template.

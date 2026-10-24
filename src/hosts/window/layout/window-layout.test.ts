@@ -55,9 +55,10 @@ afterEach(() => {
 });
 
 describe('WindowLayout', () => {
-  it('puts the left side, the editing area, the right side and the status bar into the host', () => {
+  it('puts the title bar, the left side, the editing area, the right side and the status bar into the host', () => {
     const { host, layout } = setup();
     expect([...host.children].map((c) => c.className)).toEqual([
+      'zwf-editor__title-bar',
       'zwf-editor__side zwf-editor__side--left',
       'zwf-editor__editor-area',
       'zwf-editor__side zwf-editor__side--right',

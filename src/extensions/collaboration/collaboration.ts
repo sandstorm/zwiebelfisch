@@ -10,9 +10,10 @@ import { perUserUndo, sourcePresence } from './source-editor/source-editor';
 import { registerVisualPresence } from './visual-editor/visual-editor';
 import { boxPresence } from './visual-editor/box-carets';
 import { AccountStatus } from './window/account';
+import { ParticipantsView, roomTitle } from './window/title-bar';
 import { leaveWarning, presenceDecorations } from './window/window';
 import { folderPermissions, missingFiles, sharedDecorations } from './window/room-folder';
-import { gitlabRoomFolder } from './room-protocol';
+import { gitlabRoom } from './room-protocol';
 import { Guests } from './guests/guests';
 
 /**
@@ -22,11 +23,13 @@ import { Guests } from './guests/guests';
  * Shows the other users, each in their color:
  * - carets and selections in the Source and Visual editors
  * - file decorations in the window
+ * - their initials in the middle of the title bar
  *
  * Until the room's text is in the project, the editing area takes no input. Other users' edits never enter the local
- * undo history. With a server, only signed-in users connect: the status bar shows the account and offers signing in,
- * also when the session ends. A room backed by a GitLab branch is a source control, and the browser warns before
- * leaving changes nobody commits. In a room of one folder of the branch (`gitlab:<project>@<branch>:/<folder>`):
+ * undo history. With a server, only signed-in users connect: the title bar shows the account (right); signed out, or
+ * once the session ended, a card over the whole widget says so and offers signing in. A GitLab room's project, branch
+ * and folder are at the left of the title bar. A room backed by a GitLab branch is a source control, and the browser
+ * warns before leaving changes nobody commits. In a room of one folder of the branch (`gitlab:<project>@<branch>:/<folder>`):
  * - files are created, renamed and deleted only in that folder (every other folder is Readonly)
  * - a file from outside it that a compile misses is asked for; it comes in, marked "S" (shared)
  *
@@ -56,7 +59,8 @@ export function collaboration(options: CollaborationOptions): Extension {
       const guests = account && 'url' in options ? new Guests(context, account, options) : null;
       // whoever signed in at the server is the one working here: comments are signed with the name the others see
       if (account) subscriptions.push(account.onDidChange(() => account.identity && window.setUser({ ...user, name: account.identity.name })));
-      const link = new CollaborationLink(options, { project, user }, linkedWidget(context, presences, guests), account);
+      const participants = new ParticipantsView(window.ownerDocument);
+      const link = new CollaborationLink(options, { project, user }, linkedWidget(context, presences, participants, guests), account);
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
       subscriptions.push(
         presences,
@@ -65,11 +69,14 @@ export function collaboration(options: CollaborationOptions): Extension {
         sourceEditor.registerCodeMirrorExtension({ editor: 'source' }, perUserUndo),
         sourceEditor.registerCodeMirrorExtension({ editor: 'rawBox' }, boxPresence),
         window.registerFileDecorationProvider(presenceDecorations(presences)),
+        window.registerTitleBarItem(participants.element, { alignment: 'center' }),
         link,
         // fired from the editors' own updates, after their state has the new selection
         window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
-      const folder = 'room' in options ? gitlabRoomFolder(options.room) : null;
+      const room = 'room' in options ? gitlabRoom(options.room) : null;
+      if (room) subscriptions.push(window.registerTitleBarItem(roomTitle(window.ownerDocument, room), { alignment: 'left', priority: 100 }));
+      const folder = room?.folder;
       if (folder) {
         subscriptions.push(
           workspace.registerFileSystemProvider(folderPermissions(folder)),
@@ -86,7 +93,7 @@ export function collaboration(options: CollaborationOptions): Extension {
 }
 
 /** What the room's link asks of the widget and tells it: the editors, the window, the source controls, guest mode. */
-function linkedWidget(context: ExtensionContext, presences: Presences, guests: Guests | null): LinkedWidget {
+function linkedWidget(context: ExtensionContext, presences: Presences, participants: ParticipantsView, guests: Guests | null): LinkedWidget {
   const { project, window, scm, subscriptions } = context;
   return {
     current: () => {
@@ -96,11 +103,11 @@ function linkedWidget(context: ExtensionContext, presences: Presences, guests: G
     },
     focused: () => window.isEditorFocused(),
     onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
-    tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
+    tell: (message, severity) =>
+      void (severity === 'info' ? window.showInformationMessage(message) : severity === 'warning' ? window.showWarningMessage(message) : window.showErrorMessage(message)),
     onPresence: (all) => presences.set(all),
-    signInRequired: () =>
-      guests?.ended() ||
-      void window.showErrorMessage(SignInRequired.reason, 'Sign in').then((choice) => choice && context.commands.executeCommand('collaboration.signIn')),
+    onParticipants: (all) => participants.show(all),
+    signInRequired: (reason) => guests?.ended() || askToSignIn(context, reason),
     beforeConnect: async () => guests?.beforeConnect(),
     onMessage: (payload) => guests?.receive(payload),
     onRefused: (reason) => guests?.ended(reason),
@@ -108,7 +115,21 @@ function linkedWidget(context: ExtensionContext, presences: Presences, guests: G
 }
 
 /**
- * The account's status bar entry and the commands `collaboration.signIn` (to the server's sign-in, back to this page)
+ * "You are not signed in" with "Sign in" on a card over the whole widget (a modal message), and `reason` (why the
+ * session ended) when there is one; it cannot be closed: after "Sign in" it is shown again until the page has left for
+ * the sign-in (or a leave warning kept it).
+ */
+function askToSignIn(context: Pick<ExtensionContext, 'window' | 'commands'>, reason: string | undefined): void {
+  const { window, commands } = context;
+  const detail = reason ? `${reason} Sign in again to go on editing.` : SignInRequired.reason;
+  void window.showErrorMessage('You are not signed in', { modal: true, detail }, 'Sign in').then(async (choice) => {
+    if (choice) await commands.executeCommand('collaboration.signIn');
+    askToSignIn(context, reason);
+  });
+}
+
+/**
+ * The account's title bar entry and the commands `collaboration.signIn` (to the server's sign-in, back to this page)
  * and `collaboration.signOut` (then the page reloads: the room's connection was the signed-in user's; a guest's menu
  * calls it "Leave guest access").
  */
@@ -121,7 +142,7 @@ function signInOut(account: Account, { commands, window, subscriptions }: Extens
   subscriptions.push(
     account,
     account.onDidChange(() => status.show()),
-    window.registerStatusBarItem(status.element, { alignment: 'right', priority: 10 }),
+    window.registerTitleBarItem(status.element, { alignment: 'right' }),
     window.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut', when: () => !account.isGuest }),
     window.registerMenuItem(ACCOUNT_MENU, { command: 'collaboration.signOut', title: 'Leave guest access', when: () => account.isGuest }),
     commands.registerCommand('collaboration.signIn', () => view?.location.assign(account.signInUrl(view.location.href))),

@@ -11,7 +11,7 @@ const TEXT = 'One two  three\n\nA~B\n';
 
 /** Chooses "Invisible characters" in the View menu, after checking whether it is checked now. */
 async function toggle(page: Page, checked: boolean) {
-  await page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'View', exact: true }).click();
+  await page.getByTestId('zwf-title-bar').getByRole('button', { name: 'View', exact: true }).click();
   const entry = page.getByRole('menu', { name: 'View' }).getByRole('menuitemcheckbox', { name: 'Invisible characters' });
   await expect(entry).toHaveAttribute('aria-checked', String(checked));
   await entry.click();

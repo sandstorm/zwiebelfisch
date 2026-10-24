@@ -7,9 +7,9 @@ import { commit, commitTitle, committable, resourceDecorations, SourceControlSta
 
 /**
  * The UI over the registered source controls (`scm`), shown while there is at least one:
- * - "Save to <label>…" in the tab bar (menu `window/editorTitle`, "Saving to <label>…" while busy), while one lets the
- *   user commit (has `commit`): the command `sourceControl.commit` asks for a commit message and commits
- * - their `statusBarItems` at the start of the status bar (a click commits, too, where the user may)
+ * - "Save to <label>…" in the title bar (right, "Saving to <label>…" while busy), while one lets the user commit (has
+ *   `commit`): the command `sourceControl.commit` asks for a commit message and commits
+ * - their `statusBarItems` in the middle of the title bar, the save status (a click commits, too, where the user may)
  * - their `resourceStates` as file decorations
  */
 export function sourceControl(): Extension {
@@ -20,20 +20,17 @@ export function sourceControl(): Extension {
       const followed = new Map<SourceControl, Disposable>();
       const changed = new EventEmitter<void>();
       const status = new SourceControlStatus(window.ownerDocument, (control) => void commit(context, control));
-      let entry: Disposable | null = null;
-      let statusItem: Disposable | null = null;
+      const save = window.ownerDocument.createElement('button');
+      save.type = 'button';
+      save.className = 'zwf-source-control__save';
+      save.onclick = () => void commands.executeCommand('sourceControl.commit');
       const show = () => {
         const controls = scm.sourceControls;
         const savable = committable(controls);
-        entry?.dispose();
-        entry = savable.length === 0 ? null : window.registerMenuItem('window/editorTitle', { command: 'sourceControl.commit', title: commitTitle(savable), group: 'sourceControl' });
+        save.hidden = savable.length === 0;
+        save.textContent = commitTitle(savable);
         status.show(controls);
-        const hasStatus = controls.some((control) => control.statusBarItems?.length);
-        if (hasStatus && !statusItem) statusItem = window.registerStatusBarItem(status.element, { alignment: 'left', priority: 200 });
-        if (!hasStatus && statusItem) {
-          statusItem.dispose();
-          statusItem = null;
-        }
+        status.element.hidden = !controls.some((control) => control.statusBarItems?.length);
         changed.fire();
       };
       const update = () => {
@@ -50,12 +47,12 @@ export function sourceControl(): Extension {
       };
       subscriptions.push(
         window.registerStyleSheet(css),
+        window.registerTitleBarItem(save, { alignment: 'right', priority: 200 }),
+        window.registerTitleBarItem(status.element, { alignment: 'center', priority: 100 }),
         window.registerFileDecorationProvider(resourceDecorations(scm, changed.event)),
         commands.registerCommand('sourceControl.commit', () => commit(context)),
         scm.onDidChangeSourceControls(update),
         new Disposable(() => {
-          entry?.dispose();
-          statusItem?.dispose();
           for (const subscription of followed.values()) subscription.dispose();
           followed.clear();
         }),

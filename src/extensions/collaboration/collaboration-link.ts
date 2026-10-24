@@ -5,13 +5,15 @@ import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
-import type { PlacedPresence } from './presence/presence';
+import type { Participant, PlacedPresence } from './presence/presence';
+import { SIGNED_OUT } from './room-protocol';
 
 /**
  * The widget's side of a Collaboration, which it loads on demand: publishes the local selection on `selectionChanged`
  * and tells the widget where everyone else is. With a server, it connects only as the account's signed-in user (a
- * guest link signs a guest in first: `beforeConnect`); signed out (before connecting or when the session ends), it
- * asks the widget to offer signing in. When the server refuses the user while in the room, the widget is told why.
+ * guest link signs a guest in first: `beforeConnect`); signed out (before connecting, or when the session ends: the
+ * connection closes, or the server refuses it with SIGNED_OUT), it asks the widget to offer signing in. When the
+ * server refuses the user for another reason while in the room, the widget is told why.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
@@ -62,10 +64,16 @@ export class CollaborationLink {
       return;
     }
     this.collaboration = collaboration;
-    void collaboration.signedOut.then(() => this.disposed || this.widget.signInRequired?.());
-    void collaboration.refused.then((reason) => this.disposed || (this.widget.tell?.(reason, 'error'), this.widget.onRefused?.(reason)));
+    void collaboration.signedOut.then(() => this.disposed || this.widget.signInRequired?.(SESSION_ENDED));
+    void collaboration.refused.then((reason) => {
+      if (this.disposed) return;
+      if (reason === SIGNED_OUT) return this.widget.signInRequired?.(reason);
+      this.widget.tell?.(reason, 'error');
+      this.widget.onRefused?.(reason);
+    });
     collaboration.onDidReceiveMessage((payload) => this.widget.onMessage?.(payload));
     collaboration.onDidChangePresence((presences) => this.widget.onPresence?.(presences));
+    collaboration.onDidChangeParticipants((participants) => this.widget.onParticipants?.(participants));
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
 
@@ -112,10 +120,15 @@ export interface LinkedWidget {
   onSourceControl?(sourceControl: GitLabSourceControl): void;
   /** Tells the user what the room's source control has to say (its outcomes and news). */
   tell?: Tell;
-  /** The server lets only signed-in users join, and the user is not (or no longer) signed in. */
-  signInRequired?(): void;
+  /**
+   * The server lets only signed-in users join, and the user is not signed in: before joining (`reason` undefined), or
+   * no longer (`reason`: why, e.g. the server's "You signed out.").
+   */
+  signInRequired?(reason?: string): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
+  /** Someone came into the room or left it (every other user, with a caret in a file or not). */
+  onParticipants?(participants: readonly Participant[]): void;
   /** Runs before the account is asked who is signed in (a guest link signs its guest in here); a rejection is told. */
   beforeConnect?(): Promise<void>;
   /** A stateless message from the server (e.g. that the room's guests changed). */
@@ -123,3 +136,6 @@ export interface LinkedWidget {
   /** The server refused the user while in the room, for `reason` (after it was told): they are out of it now. */
   onRefused?(reason: string): void;
 }
+
+/** Why the user must sign in again when the connection closed because the session is gone. */
+const SESSION_ENDED = 'Your session ended.';

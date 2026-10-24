@@ -4,7 +4,7 @@ import type { Menus } from '../menus/menus';
 
 /**
  * The tab bar of the editing area: a tab per editor the shown file can be shown in ("open with"; Visual / Source for
- * a Typst file), the shown one selected, and at its end the window/editorTitle menu and "View" (`EditorTitleMenu`). The tabs
+ * a Typst file), the shown one selected, and at its end the window/editorTitle menu (`EditorTitleMenu`). The tabs
  * show while the file has several editors, the bar while it has tabs or buttons. Choosing another tab asks for the
  * file in that editor (`onDidChoose`).
  *

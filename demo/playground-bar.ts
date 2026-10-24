@@ -24,7 +24,7 @@ export interface BarOptions {
 
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
- * every state has a URL), the user's name in Local mode (in a room, the widget's status bar shows whom the user
+ * every state has a URL), the user's name in Local mode (in a room, the widget's title bar shows whom the user
  * signed in as), how to be a second user in a room, the server status with the command to start it, and in GitLab
  * mode "Simulate upstream commit". Collaborate (a plain room) is offered once the server says it has plain rooms,
  * or when the page is in one.

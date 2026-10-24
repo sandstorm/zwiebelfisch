@@ -1,8 +1,8 @@
-/* The two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar, the custom
-   editors' panels, the window/editorTitle menu) and the status bar. See WindowHost in ../window-impl.ts, which puts it in
+/* The title bar, the two sides (rail, resizable panel; the left one an overlay when narrow), the editing area (tab bar,
+   the custom editors' panels, the window/editorTitle menu) and the status bar. See WindowHost in ../window-impl.ts, which puts it in
    first, after the tokens and the frame of editor.css. */
 .zwf-editor__side {
-  grid-row: 1;
+  grid-row: 2;
   position: relative;
   display: flex;
   min-width: 0;
@@ -81,7 +81,7 @@
    the end (StatusBar orders them; hidden while there is none). */
 .zwf-editor__status-bar {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 3;
   display: flex;
   min-width: 0;
   border-top: 1px solid var(--zwf-border);
@@ -91,9 +91,56 @@
 .zwf-editor__status-bar-right { display: flex; }
 /* The window's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .zwf-editor { position: relative; }
-/* The banners above the tab bar (window.registerBanner; banners/banners.ts): each extension styles its own. */
-.zwf-editor__banners { display: flex; flex-direction: column; }
-.zwf-editor__banners[hidden] { display: none; }
+/* Above everything: the title bar items (window.registerTitleBarItem; ItemBar orders them; hidden while none shows),
+   left ones from the start, center ones in the middle, right ones at the end. Buttons in it share one look (an item
+   styles itself over it); an item with data-background="warning" or "error" tints the whole bar. */
+.zwf-editor__title-bar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--zwf-border);
+  background: var(--zwf-subtle);
+  color: var(--zwf-text);
+  font-size: 13px;
+}
+.zwf-editor__title-bar[hidden],
+.zwf-editor__title-bar:not(:has(> div > :not([hidden]))) { display: none; }
+.zwf-editor__title-bar-left,
+.zwf-editor__title-bar-center,
+.zwf-editor__title-bar-right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.zwf-editor__title-bar-left { flex: 1 1 0; }
+.zwf-editor__title-bar-center { flex: 0 1 auto; justify-content: center; }
+.zwf-editor__title-bar-right { flex: 1 1 0; justify-content: flex-end; }
+:where(.zwf-editor__title-bar) button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--zwf-border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: var(--zwf-surface);
+  color: var(--zwf-text-2);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.zwf-editor__title-bar [hidden] { display: none; }
+:where(.zwf-editor__title-bar) button:hover { background: var(--zwf-hover); }
+:where(.zwf-editor__title-bar) button:focus-visible { outline: 2px solid var(--zwf-accent); outline-offset: 1px; }
+:where(.zwf-editor__title-bar) button svg { width: 16px; height: 16px; }
+.zwf-editor__title-bar:has([data-background='warning']) {
+  background: color-mix(in srgb, var(--zwf-warning) 22%, var(--zwf-bg));
+  border-bottom-color: var(--zwf-warning);
+}
+.zwf-editor__title-bar:has([data-background='error']) {
+  background: var(--zwf-danger-soft);
+  border-bottom-color: var(--zwf-danger);
+}
 /* The editing area: the tab bar (the shown file's editors), the Visual / Source editors' panels, a dragged file over the widget. */
 .zwf-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
 .zwf-editor__editor-area .cm-scroller { overflow: auto; }
@@ -119,7 +166,7 @@
 .zwf-editor__pane { overflow: auto; }
 .zwf-editor__tabs[hidden] { display: none; }
 .zwf-editor.zwf-editor--dropping { outline: 2px dashed var(--zwf-accent); outline-offset: -4px; }
-/* The window/editorTitle menu and "View": at the end of the tab bar (e.g. Comment, Save to GitLab…, View ▾). */
+/* The window/editorTitle menu: at the end of the tab bar (e.g. Comment). */
 .zwf-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
 .zwf-editor__tab-actions:empty { display: none; }
 .zwf-editor__tab-action {
@@ -140,3 +187,4 @@
 .zwf-editor__tab-action-icon { display: inline-flex; }
 .zwf-editor__tab-action-icon svg { width: 16px; height: 16px; }
 .zwf-editor__view-menu { gap: 2px; padding-right: 6px; }
+.zwf-editor__view-menu-icon { display: inline-flex; }

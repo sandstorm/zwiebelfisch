@@ -4,17 +4,19 @@ import type { SidePanel, SidePanelOptions, WindowOptions } from '../window';
 import { div, restoreSideBarState, SideBar, type PanelCommands, type RailAction, type Side } from './side-bar';
 
 /**
- * The widget's regions in one grid: the left side (a rail with a button per side panel and the shown panel), the
- * editing area, the right side (the shown panel and its rail, on the outer edge), and the status bar below spanning
- * them all. Each side shows one panel at a time; clicking the shown one's rail button hides the side and the editing
+ * The widget's regions in one grid: the title bar above spanning them all, the left side (a rail with a button per
+ * side panel and the shown panel), the editing area, the right side (the shown panel and its rail, on the outer edge),
+ * and the status bar below spanning them all. Each side shows one panel at a time; clicking the shown one's rail button hides the side and the editing
  * area takes the room. Sizes and the panels picked are remembered for the session.
  *
  * While the widget is narrower than 720px the left side's panel lies over the editing area and closes on Escape, a
  * click outside, or `dismiss()` (e.g. after a file was chosen in it).
  *
- * @internal Extensions fill it through `window.registerSidePanel` and `window.registerStatusBarItem`.
+ * @internal Extensions fill it through `window.registerSidePanel`, `window.registerTitleBarItem` and
+ * `window.registerStatusBarItem`.
  */
 export class WindowLayout {
+  readonly titleBar: HTMLElement;
   readonly editor: HTMLElement;
   readonly statusBar: HTMLElement;
   readonly #sides: Record<Side, SideBar>;
@@ -34,9 +36,11 @@ export class WindowLayout {
       left: new SideBar(host, 'left', restoreSideBarState(saved, 'left'), { save, commands }),
       right: new SideBar(host, 'right', restoreSideBarState(saved, 'right'), { save, commands }),
     };
+    this.titleBar = div(doc, 'zwf-editor__title-bar');
+    this.titleBar.dataset.testid = 'zwf-title-bar';
     this.editor = div(doc, 'zwf-editor__editor-area');
     this.statusBar = div(doc, 'zwf-editor__status-bar');
-    host.append(this.#sides.left.element, this.editor, this.#sides.right.element, this.statusBar);
+    host.append(this.titleBar, this.#sides.left.element, this.editor, this.#sides.right.element, this.statusBar);
     this.#watchWidth();
   }
 
@@ -67,6 +71,7 @@ export class WindowLayout {
     for (const stop of this.#cleanup) stop();
     this.#sides.left.dispose();
     this.#sides.right.dispose();
+    this.titleBar.remove();
     this.editor.remove();
     this.statusBar.remove();
     this.host.classList.remove('zwf-editor--narrow');

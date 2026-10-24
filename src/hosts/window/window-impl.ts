@@ -5,28 +5,28 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange } from '../../core/project/project';
 import type { User } from '../../core/user/user';
 import type { CommandContribution, MenuItem } from '../commands/commands';
-import { Banners } from './banners/banners';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Editors } from './editors/editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
+import { ItemBar } from './item-bar/item-bar';
 import { EditorTabs } from './layout/editor-tabs';
 import { WindowLayout } from './layout/window-layout';
 import layoutCss from './layout/window-layout.css?inline';
 import { ContextMenu } from './menus/context-menu';
 import { Menus } from './menus/menus';
+import { ViewMenu } from './menus/view-menu';
 import { Notifications } from './notifications/notifications';
 import { ProgressIndicators } from './progress/progress';
 import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
-import { StatusBar } from './status-bar/status-bar';
 import { StyleSheets } from './style-sheets/style-sheets';
 import css from './window.css?inline';
-import type { WindowApi, MessageItem, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, StatusBarPlacement, FileDecoration, FileDecorationProvider, EditorProviderOptions, EditorProvider, TextEditor, TextEditorSelectionChangeEvent, DocumentShowOptions, SidePanel, SidePanelOptions, WindowOptions } from './window';
+import type { WindowApi, MessageItem, MessageOptions, InputBoxOptions, QuickPick, QuickPickItem, QuickPickOptions, SearchProvider, SaveDialogOptions, ContextMenuOptions, ProgressOptions, StatusBarPlacement, TitleBarPlacement, FileDecoration, FileDecorationProvider, EditorProviderOptions, EditorProvider, TextEditor, TextEditorSelectionChangeEvent, DocumentShowOptions, SidePanel, SidePanelOptions, WindowOptions } from './window';
 
 /**
- * The `WindowApi` of one widget on `options.host`: its regions (the sides with their panels, the editing area with its
- * banners, tabs and editors, the status bar), menus, messages and input, the style sheets and the color scheme.
+ * The `WindowApi` of one widget on `options.host`: its regions (the title bar with "View", the sides with their panels,
+ * the editing area with its tabs and editors, the status bar), menus, messages and input, the style sheets and the color scheme.
  * It shows the main file once `open` is first called and keeps the editing area on an existing file as files change.
  */
 export class WindowHost implements WindowApi {
@@ -45,8 +45,9 @@ export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
   readonly #contextMenu: ContextMenu;
-  readonly #statusBar: StatusBar;
-  readonly #banners: Banners;
+  readonly #titleBar: ItemBar<TitleBarPlacement['alignment']>;
+  readonly #statusBar: ItemBar<StatusBarPlacement['alignment']>;
+  readonly #viewMenu: ViewMenu;
   readonly #progress: ProgressIndicators;
   readonly #editors: Editors;
   readonly #fileDecorations = new FileDecorations();
@@ -74,13 +75,17 @@ export class WindowHost implements WindowApi {
       onDidChoose: (viewType) => this.showDocument(this.#active, { viewType }),
       context: () => ({ activeEditorId: this.#activeEditorId, resource: this.#active }),
       commands,
-      showContextMenu: (menuId, menuOptions) => this.showContextMenu(menuId, menuOptions),
     });
     this.#notifications = new Notifications(host);
     this.#quickInput = new QuickInput(host);
     this.#contextMenu = new ContextMenu(host, this.#menus, commands);
-    this.#statusBar = new StatusBar(this.#layout.statusBar);
-    this.#banners = new Banners(this.#layout.editor);
+    this.#titleBar = new ItemBar(this.#layout.titleBar, ['left', 'center', 'right']);
+    this.#statusBar = new ItemBar(this.#layout.statusBar, ['left', 'right']);
+    this.#viewMenu = new ViewMenu(host.ownerDocument, this.#menus, {
+      context: () => ({ activeEditorId: this.#activeEditorId, resource: this.#active }),
+      showContextMenu: (menuId, menuOptions) => this.showContextMenu(menuId, menuOptions),
+      place: (button) => this.registerTitleBarItem(button, { alignment: 'right', priority: VIEW_MENU_PRIORITY }),
+    });
     this.#progress = new ProgressIndicators(this.#layout.editor);
     this.#editors = new Editors(this.#layout.editor);
     this.#subscriptions = Disposable.from(
@@ -120,16 +125,16 @@ export class WindowHost implements WindowApi {
     this.#user = user;
   }
 
-  showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
-    return this.#notifications.show('info', message, items);
+  showInformationMessage<T extends string | MessageItem>(message: string, ...rest: (MessageOptions | T)[]): Promise<T | undefined> {
+    return this.#notifications.show('info', message, ...optionsAndItems(rest));
   }
 
-  showWarningMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
-    return this.#notifications.show('warning', message, items);
+  showWarningMessage<T extends string | MessageItem>(message: string, ...rest: (MessageOptions | T)[]): Promise<T | undefined> {
+    return this.#notifications.show('warning', message, ...optionsAndItems(rest));
   }
 
-  showErrorMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
-    return this.#notifications.show('error', message, items);
+  showErrorMessage<T extends string | MessageItem>(message: string, ...rest: (MessageOptions | T)[]): Promise<T | undefined> {
+    return this.#notifications.show('error', message, ...optionsAndItems(rest));
   }
 
   showInputBox(options?: InputBoxOptions): Promise<string | undefined> {
@@ -170,8 +175,8 @@ export class WindowHost implements WindowApi {
     return this.#statusBar.add(element, placement);
   }
 
-  registerBanner(element: HTMLElement): Disposable {
-    return this.#banners.add(element);
+  registerTitleBarItem(element: HTMLElement, placement: TitleBarPlacement): Disposable {
+    return this.#titleBar.add(element, placement);
   }
 
   registerEditorProvider(viewType: string, provider: EditorProvider, options: EditorProviderOptions): Disposable {
@@ -196,6 +201,7 @@ export class WindowHost implements WindowApi {
     this.#active = path;
     this.#activeEditorId = this.#editors.show({ path, content: project.content(path)! }, options.viewType, options.selection);
     this.#tabs.update(this.#editors.choicesFor(path), this.#activeEditorId);
+    this.#viewMenu.update();
     this.#placeHeaderFooter();
     this.#shown.fire(path);
   }
@@ -243,7 +249,7 @@ export class WindowHost implements WindowApi {
 
   dispose(): void {
     this.#searchProviders.clear();
-    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#editors, this.#fileDecorations, this.#tabs, this.#banners, this.#menus, this.#drops).dispose();
+    Disposable.from(this.#subscriptions, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#editors, this.#fileDecorations, this.#tabs, this.#viewMenu, this.#menus, this.#drops).dispose();
     this.#shown.dispose();
     const { host } = this.options;
     host.classList.remove('zwf-editor');
@@ -287,6 +293,16 @@ export class WindowHost implements WindowApi {
     const actions = this.#menus.items(menuId).map(({ command, title, icon, order }) => ({ command, title: title ?? command, icon: icon ?? '', order: order ?? 0 }));
     this.#layout.setRailActions(side, actions);
   }
+}
+
+/** Where "View" sits among the title bar's right items (higher further left): extensions place theirs around it. */
+const VIEW_MENU_PRIORITY = 100;
+
+/** A message's arguments after the text: VS Code's optional MessageOptions first (an object without `title`), then the items. */
+function optionsAndItems<T extends string | MessageItem>(rest: readonly (MessageOptions | T)[]): [T[], MessageOptions] {
+  const [first, ...others] = rest;
+  const isOptions = typeof first === 'object' && first !== null && !('title' in first);
+  return isOptions ? [others as T[], first as MessageOptions] : [rest as T[], {}];
 }
 
 /** The menu whose items each side's rail shows. */

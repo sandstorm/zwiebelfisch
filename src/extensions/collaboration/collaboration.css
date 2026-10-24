@@ -1,5 +1,6 @@
 /* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source editors,
-   in each user's color (--zwf-remote-color, and --zwf-remote-text for text on it); the account in the status bar.
+   in each user's color (--zwf-remote-color, and --zwf-remote-text for text on it); in the title bar the GitLab room,
+   the others' initials and the account.
    See collaboration in collaboration.ts, which registers it. */
 .zwf-collaboration__selection {
   background: color-mix(in srgb, var(--zwf-remote-color, #268bd2) 22%, transparent);
@@ -69,17 +70,27 @@
   bottom: calc(100% + 3px);
   border-radius: 3px 3px 0 3px;
 }
-/* The account in the status bar: "Sign in", or the signed-in user's name (a click: the account menu). */
-.zwf-collaboration__account {
-  font: inherit;
-  font-size: 12px;
-  border: 0;
-  margin: 4px 8px 4px 0;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: none;
-  color: var(--zwf-text);
-  white-space: nowrap;
-  cursor: pointer;
+/* The title bar: the GitLab room (project, branch, folder), the others' initials, the account. */
+.zwf-collaboration__room { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.zwf-collaboration__project { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.zwf-collaboration__branch,
+.zwf-collaboration__folder { color: var(--zwf-text-2); font-size: 12px; }
+.zwf-collaboration__branch::before { content: '\2387  '; color: var(--zwf-muted); }
+.zwf-collaboration__participants { display: flex; align-items: center; }
+.zwf-collaboration__participant {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -4px;
+  border: 2px solid var(--zwf-subtle);
+  border-radius: 50%;
+  background: var(--zwf-remote-color, var(--zwf-muted));
+  color: var(--zwf-remote-text, #fff);
+  font: 600 10px/1 system-ui, sans-serif;
+  cursor: default;
 }
-.zwf-collaboration__account:hover { background: var(--zwf-hover); }
+.zwf-collaboration__participant:first-child { margin-left: 0; }
+.zwf-editor__title-bar .zwf-collaboration__account { border-color: transparent; background: none; color: var(--zwf-text); }
+.zwf-editor__title-bar .zwf-collaboration__account:hover { background: var(--zwf-hover); }

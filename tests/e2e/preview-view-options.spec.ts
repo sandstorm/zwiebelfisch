@@ -1,5 +1,5 @@
-// End-to-end tests (Playwright, against the demo build): the preview's view options in the View menu at the top right
-// of the editing area ("Comments", "Page guides", "Box outlines", "Block spacing") change the preview's pages, are remembered, and
+// End-to-end tests (Playwright, against the demo build): the preview's view options in the View menu at the right of
+// the title bar ("Comments", "Page guides", "Box outlines", "Block spacing") change the preview's pages, are remembered, and
 // leave the PDF and the Visual editor alone.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -22,9 +22,9 @@ type Editor = { source: string; executeCommand<T>(id: string, ...args: unknown[]
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
 
-/** Opens "View" in the tab bar; the menu's checkbox entry `name`. */
+/** Opens "View" in the title bar; the menu's checkbox entry `name`. */
 async function viewEntry(page: Page, name: string) {
-  await page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'View', exact: true }).click();
+  await page.getByTestId('zwf-title-bar').getByRole('button', { name: 'View', exact: true }).click();
   const menu = page.getByRole('menu', { name: 'View' });
   await expect(menu).toBeVisible();
   return menu.getByRole('menuitemcheckbox', { name });

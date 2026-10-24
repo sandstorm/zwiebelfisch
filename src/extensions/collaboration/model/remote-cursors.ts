@@ -4,11 +4,11 @@ import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset, type SourceRange } from '../../../core/typst-document/typst-document';
 import type { User } from '../../../core/user/user';
-import type { PlacedPresence } from '../presence/presence';
+import type { Participant, PlacedPresence } from '../presence/presence';
 
 /**
  * Publishes the local user's selection through y-protocols awareness, and reports the other users' places, in every
- * file, through `onPresence` (only when they changed). Positions travel as Y relative
+ * file, through `onPresence`, and who else is in the room through `onParticipants` (each only when it changed). Positions travel as Y relative
  * positions, so they stay on their characters while anyone edits; they are
  * resolved again after every change of the shared texts and every presence
  * update (once per microtask, after the editors have taken the change).
@@ -18,6 +18,8 @@ export class RemoteCursors {
   private destroyed = false;
   /** What `onPresence` was last told (as JSON), so unchanged places are not reported again. */
   private reported = '[]';
+  /** What `onParticipants` was last told (as JSON). */
+  private reportedParticipants = '[]';
 
   constructor(
     private readonly awareness: Awareness,
@@ -54,6 +56,7 @@ export class RemoteCursors {
     this.awareness.doc.off('update', this.schedule);
     this.awareness.setLocalStateField('cursor', null);
     if (this.reported !== '[]') this.options.onPresence?.([]);
+    if (this.reportedParticipants !== '[]') this.options.onParticipants?.([]);
   }
 
   private readonly schedule = (): void => {
@@ -65,13 +68,30 @@ export class RemoteCursors {
     });
   };
 
-  /** Tells `onPresence` the others' places, if they changed. */
+  /** Tells `onPresence` the others' places, and `onParticipants` who they are, if that changed. */
   private report(): void {
     const everyone = this.others();
     const json = JSON.stringify(everyone);
-    if (json === this.reported) return;
-    this.reported = json;
-    this.options.onPresence?.(everyone);
+    if (json !== this.reported) {
+      this.reported = json;
+      this.options.onPresence?.(everyone);
+    }
+    const participants = this.participants();
+    const participantsJson = JSON.stringify(participants);
+    if (participantsJson === this.reportedParticipants) return;
+    this.reportedParticipants = participantsJson;
+    this.options.onParticipants?.(participants);
+  }
+
+  /** Every other client in the room that says who it is, with a cursor or without. */
+  private participants(): Participant[] {
+    const result: Participant[] = [];
+    this.awareness.getStates().forEach((state, client) => {
+      const user = state.user as User | undefined;
+      if (client === this.awareness.clientID || typeof user?.name !== 'string') return;
+      result.push({ id: String(client), user: { name: user.name, color: user.color ?? colorFor(user.name) } });
+    });
+    return result;
   }
 
   /** The other users' places, in every file they are in. */
@@ -115,6 +135,8 @@ export interface RemoteCursorsOptions {
   text(path: ProjectPath): Y.Text | undefined;
   /** Called with every other user's place, in any file, whenever one changes (the editors, the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
+  /** Called with every other user in the room whenever someone comes, goes or is renamed (the title bar). */
+  onParticipants?(participants: readonly Participant[]): void;
 }
 
 /** A stable color for a user without one. */

@@ -21,7 +21,8 @@ import {
  * - `commit` asks the server to commit the room's changes in the signed-in user's name (`busy` until it answers);
  *   a guest has none (members save their edits)
  * - the server's answers (saved, nothing to save, a conflict, a failure) and news (upstream merged) go to `tell`
- * - what the room has that the branch has not shows as resource states (M / A / D) and in the status bar
+ * - what the room has that the branch has not shows as resource states (M / A / D) and as its save status
+ *   (`statusBarItems`)
  * - a conflict with upstream shows as "!" on its files and a warning entry while it lasts; a failed commit as a
  *   warning entry until the next commit or merge ("Guest edits: a member must save" when guest edits held it back)
  * - the files' texts at the last commit (`meta.base`) are its quick diff's originals
@@ -42,7 +43,7 @@ export class GitLabSourceControl {
 
   /** Asks the server to commit; undefined for a guest, who never commits. */
   readonly commit?: (message: string) => void;
-  /** What a click on the status bar entries does, as their tooltips end. */
+  /** What a click on the save status entries does, as their tooltips end. */
   readonly #click: { save: string; retry: string };
 
   readonly historyProvider?: GitLabHistory;
@@ -254,7 +255,7 @@ function age(ms: number): string {
   return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes / 60} h`;
 }
 
-/** How often the status bar entry's age ("14 min") is brought up to date. */
+/** How often the save status entry's age ("14 min") is brought up to date. */
 const MINUTE = 60_000;
 
 /** "Not in GitLab: 3 files · 14 min (Ann, Bob)": how many files, for how long (at `now`), by whom. */

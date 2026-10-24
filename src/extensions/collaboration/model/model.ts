@@ -6,9 +6,9 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
-import type { PlacedPresence } from '../presence/presence';
+import type { Participant, PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { gitlabRoomFolder, roomFilePath } from '../room-protocol';
+import { gitlabRoom, roomFilePath } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
@@ -41,6 +41,9 @@ export class Collaboration {
   private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
   /** Every other user's place, in any file, whenever one changes. */
   readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
+  private readonly participantsChanged = new EventEmitter<readonly Participant[]>();
+  /** Every other user in the room, whenever someone comes or goes. */
+  readonly onDidChangeParticipants: Event<readonly Participant[]> = this.participantsChanged.event;
   /** Commits to the branch, in a room backed by a GitLab branch (else null). */
   readonly sourceControl: GitLabSourceControl | null = null;
   /** Settles when the server's connection ended because the session did (it no longer reconnects then). */
@@ -80,7 +83,8 @@ export class Collaboration {
     if (!this.sourceControl && !project.mainLocked) this.mainFile = new SharedMainFile(project, ydoc);
     const text = (path: ProjectPath) => this.sharedProject.text(path);
     const onPresence = (presences: readonly PlacedPresence[]) => this.presenceChanged.fire(presences);
-    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
+    const onParticipants = (participants: readonly Participant[]) => this.participantsChanged.fire(participants);
+    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence, onParticipants }) : null;
   }
 
   /**
@@ -114,7 +118,7 @@ export class Collaboration {
       ydoc.destroy();
       throw error;
     }
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoomFolder(options.room) });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), history: (doc) => new GitLabHistory(serverHttpBase(options.url), options.room, doc), tell, signedOut, refused, folder: gitlabRoom(options.room)?.folder ?? null });
   }
 
   /**
@@ -137,6 +141,7 @@ export class Collaboration {
 
   dispose(): void {
     this.presenceChanged.dispose();
+    this.participantsChanged.dispose();
     this.sourceControl?.dispose();
     this.cursors?.dispose();
     this.assets?.dispose();

@@ -23,7 +23,7 @@ On `<zwiebelfisch-editor>`, put `extensions` and `user` into `options` before th
 
 `collaboration(…)` takes one of:
 
-- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: it offers to sign in. The status bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
+- *`{ url, room }`*: this repository's server (@configuration-collaboration-server-running), which speaks the #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] protocol and lets in only people signed in there (@configuration-collaboration-server-sign-in). `url` is the server's URL (a path prefix allowed); the widget connects to `<url>/api/collaboration`. The page must be on the server's host (any port): the session cookie goes along to the WebSocket and the room's files. Signed out, the widget does not connect: a card over the whole widget says "You are not signed in" with "Sign in" (also when the session ends, with the reason), and it cannot be closed. The title bar shows the account: "Sign in", or the user's name with "Sign out" in its menu (commands `collaboration.signIn`, `collaboration.signOut`); others see the signed-in name.
 - *`{ doc, awareness? }`*: a `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must use the editor's Yjs instance, so bundle the editor from source; `dist/lib` has its own copy.
 
 The collaboration code loads on demand. `onDidChangeFiles` and `change` also fire for the others' edits.
@@ -90,7 +90,7 @@ Security:
 `mise run demo` starts the demo with a server whose GitLab is an in-memory fake (@getting-started-demo).
 
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
-- *Sign in* with the status bar's "Sign in": the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
+- *Sign in* with "Sign in" on the card over the widget: the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
 - *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
 - *Guests:* the playground server has guest links on; "Share with guests…" makes one, a private window opens it.
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
