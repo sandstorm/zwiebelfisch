@@ -172,26 +172,33 @@ func (r *room) unload() {
 }
 
 // errNotAtOnce is what a guest's client is told when the room refused an update of theirs that waits for
-// changes it does not hold (ydoc.HandleSyncAtOnce).
+// changes it does not hold (ydoc.ErrNotAtOnce).
 const errNotAtOnce = "Your change depends on changes this project does not have; open the project again."
+
+// errNotYours is what a client is told when the room refused an update of theirs that adds items under a
+// Yjs client id of someone else's (ydoc.ErrNotYours).
+const errNotYours = "Your change was made in an editing session that is not yours in this project; open the project again."
 
 // receive handles a message from p (sent to the room by p's connection); nothing once p left (dropped).
 func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 	if _, ok := r.peers[p]; !ok {
 		return
 	}
+	from := ydoc.Sender{Origin: p, Author: p.user.key(), Restricted: p.user.IsGuest()}
 	switch typ {
 	case msgSync, msgSyncReply:
-		handle := r.doc.HandleSync
-		if p.user.IsGuest() {
-			handle = r.doc.HandleSyncAtOnce
-		}
-		reply, isStep1, err := handle(d.rest(), p)
+		reply, isStep1, err := r.doc.HandleSyncFrom(d.rest(), from)
 		switch {
 		case errors.Is(err, ydoc.ErrNotAtOnce):
 			r.log.Warn().Str("guest", p.user.Name).Msg("a guest's update waits for changes the room does not hold; refused")
 			if _, in := r.peers[p]; in {
 				r.drop(p, errNotAtOnce)
+			}
+		case errors.Is(err, ydoc.ErrNotYours):
+			r.log.Warn().Err(err).Str("user", p.user.Name).Bool("guest", p.user.IsGuest()).
+				Msg("an update adds items under a Yjs client id that is not the user's; refused")
+			if _, in := r.peers[p]; in {
+				r.drop(p, errNotYours)
 			}
 		case err != nil:
 			r.log.Warn().Err(err).Msg("bad sync message; closing the connection")
@@ -212,13 +219,16 @@ func (r *room) receive(p *Peer, typ uint64, d *decoder) {
 			r.log.Debug().Err(err).Msg("bad awareness message")
 			return
 		}
-		if err := r.awareness.Apply(update, p); err != nil {
+		relay, err := r.awareness.Apply(update, p, func(client uint64) bool { return r.doc.Claim(client, from) })
+		if err != nil {
 			r.log.Debug().Err(err).Msg("bad awareness update")
 			return
 		}
 		p.noteAwareness(r.awareness.States(p))
-		// to everyone, the sender too: the provider closes a connection that has been silent for 30 s
-		r.broadcast(msgAwareness, new(encoder).bytes(update).buf)
+		if relay != nil {
+			// to everyone, the sender too: the provider closes a connection that has been silent for 30 s
+			r.broadcast(msgAwareness, new(encoder).bytes(relay).buf)
+		}
 	case msgQueryAwareness:
 		update := r.awareness.Encode()
 		if update == nil {

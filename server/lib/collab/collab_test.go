@@ -124,7 +124,9 @@ type client struct {
 	acks      int
 	awareness [][]byte
 	stateless []string
-	foreign   []byte // types of messages to other addresses
+	foreign   []byte   // types of messages to other addresses
+	hold      bool     // keep the document's changes in held instead of sending them
+	held      [][]byte // sync messages
 }
 
 type serverOrigin struct{ _ byte }
@@ -140,7 +142,12 @@ func dial(t *testing.T, s *collab.Server, address, session string) *client {
 
 // connect opens a connection without sending anything yet.
 func connect(t *testing.T, s *collab.Server, address, session string) *client {
-	c := &client{t: t, address: address, p: newPipe(), done: make(chan struct{}), doc: ydoc.New()}
+	return connectWith(t, s, address, session, ydoc.New())
+}
+
+// connectWith is connect for a client that continues with doc (a provider that reconnects keeps its Y.Doc).
+func connectWith(t *testing.T, s *collab.Server, address, session string, doc *ydoc.Doc) *client {
+	c := &client{t: t, address: address, p: newPipe(), done: make(chan struct{}), doc: doc}
 	upgrade := httptest.NewRequest(http.MethodGet, "/", nil)
 	if session != "" {
 		upgrade.AddCookie(&http.Cookie{Name: "session", Value: session})
@@ -148,11 +155,16 @@ func connect(t *testing.T, s *collab.Server, address, session string) *client {
 	served := make(chan struct{})
 	go func() { defer close(served); s.Serve(context.Background(), c.p, upgrade) }()
 	go c.read()
-	c.doc.OnUpdate(func(update []byte, origin any) {
-		if origin != fromServer {
+	stop := c.doc.OnUpdate(func(update []byte, origin any) {
+		switch {
+		case origin == fromServer:
+		case c.hold:
+			c.held = append(c.held, ydoc.SyncUpdate(update))
+		default:
 			c.send(msgSync, ydoc.SyncUpdate(update))
 		}
 	})
+	t.Cleanup(stop)
 	t.Cleanup(func() { c.close(); <-served; <-c.done })
 	return c
 }
@@ -779,4 +791,163 @@ func TestWebSocketsOnlyFromAllowedPages(t *testing.T) {
 		s.ServeHTTP(res, upgrade)
 		require.Equal(t, c.refused, res.Code == http.StatusForbidden, "%s from %q", c.host, c.origin)
 	}
+}
+
+// users lets in "guest…" sessions as guests and the others as members, each as the user its session names;
+// left counts the clients that left a room.
+func users(left *atomic.Int32) func(*collab.Options) {
+	return func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) {
+			if strings.HasPrefix(session(r), "guest") {
+				return collab.User{Provider: collab.GuestProvider, ID: "share1/" + session(r), Name: session(r)}, nil
+			}
+			return collab.User{Provider: "test", ID: session(r), Name: session(r)}, nil
+		}
+		o.PeerChanged = func(_ string, _ collab.User, joined bool) {
+			if !joined {
+				left.Add(1)
+			}
+		}
+	}
+}
+
+const notYours = "Your change was made in an editing session that is not yours in this project; open the project again."
+
+// heldEdit makes an edit in c's document without sending it, and returns its sync message.
+func (c *client) heldEdit(fn func(w *ydoc.Writer)) []byte {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.hold = true
+	defer func() { c.hold, c.held = false, nil }()
+	require.NoError(c.t, c.doc.Write(nil, fn))
+	return c.held[0]
+}
+
+func TestAnUpdateUnderAnotherUsersClientIDIsRefused(t *testing.T) {
+	var left atomic.Int32
+	s := newServer(t, memStore(t), users(&left))
+	alice := dial(t, s, "report", "alice")
+	alice.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "Hello") })
+	bob := dial(t, s, "report", "bob")
+	guest := dial(t, s, "report", "guest")
+	guest.eventually("synced", func() bool { return guest.doc.Texts("files")["/main.typ"] == "Hello" })
+
+	// items under alice's client id at her current clock, from bob or the guest: refused, nothing applied
+	next := alice.heldEdit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 5, 5, "!") })
+	for _, c := range []*client{bob, guest} {
+		c.send(msgSync, next)
+		c.eventually("refused", func() bool { return len(c.reasons) == 1 })
+		require.Equal(t, notYours, c.reasons[0])
+	}
+
+	// alice's own change at that clock, and her later ones, take effect
+	alice.send(msgSync, next)
+	alice.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 0, 0, "» ") })
+	carol := dial(t, s, "report", "carol")
+	carol.eventually("the room has alice's edits", func() bool { return carol.doc.Texts("files")["/main.typ"] == "» Hello!" })
+	require.Equal(t, []string{"authenticated"}, alice.auth)
+}
+
+func TestAClientContinuesWithItsClientIDAfterAReconnect(t *testing.T) {
+	var left atomic.Int32
+	s := newServer(t, memStore(t), users(&left))
+	alice := dial(t, s, "report", "alice")
+	alice.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "a") })
+	guest := dial(t, s, "report", "guest")
+	guest.eventually("synced", func() bool { return guest.doc.Texts("files")["/main.typ"] == "a" })
+	guest.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 1, 1, "g") })
+	bob := dial(t, s, "report", "bob") // keeps the room loaded
+	bob.eventually("synced", func() bool { return bob.doc.Texts("files")["/main.typ"] == "ag" })
+
+	// in a loaded room: both reconnect with their documents and go on
+	alice.close()
+	guest.close()
+	require.Eventually(t, func() bool { return left.Load() == 2 }, 5*time.Second, 2*time.Millisecond)
+	alice = connectWith(t, s, "report", "alice", alice.doc)
+	alice.authenticate()
+	guest = connectWith(t, s, "report", "guest", guest.doc)
+	guest.authenticate()
+	alice.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 0, 0, "A") })
+	guest.eventually("synced", func() bool { return guest.doc.Texts("files")["/main.typ"] == "Aag" })
+	guest.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 3, 3, "G") })
+	bob.eventually("bob gets both", func() bool { return bob.doc.Texts("files")["/main.typ"] == "AagG" })
+
+	// after the room reloaded: alice (a member) goes on with her client id, the guest may not
+	alice.close()
+	guest.close()
+	bob.close()
+	require.Eventually(t, func() bool { return left.Load() == 5 }, 5*time.Second, 2*time.Millisecond)
+	alice = connectWith(t, s, "report", "alice", alice.doc)
+	alice.authenticate()
+	alice.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 0, 0, "1") })
+	guest = connectWith(t, s, "report", "guest", guest.doc)
+	guest.authenticate()
+	guest.eventually("synced", func() bool { return guest.doc.Texts("files")["/main.typ"] == "1AagG" })
+	guest.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 5, 5, "2") })
+	guest.eventually("refused", func() bool { return len(guest.reasons) == 1 })
+	require.Equal(t, notYours, guest.reasons[0])
+	alice.edit(func(w *ydoc.Writer) { w.Edit("files", "/main.typ", 5, 5, "3") })
+	carol := dial(t, s, "report", "carol")
+	carol.eventually("the room has alice's edits, not the guest's", func() bool { return carol.doc.Texts("files")["/main.typ"] == "1AagG3" })
+	require.Equal(t, []string{"authenticated"}, alice.auth)
+}
+
+func TestAClientCannotChangeAnothersPresence(t *testing.T) {
+	var left atomic.Int32
+	s := newServer(t, memStore(t), users(&left))
+	alice := dial(t, s, "r", "alice")
+	update := awarenessUpdate(7, 1, `{"user":"alice"}`)
+	alice.send(msgAwareness, append([]byte{byte(len(update))}, update...))
+	alice.eventually("echo", func() bool { return len(alice.awareness) == 1 })
+
+	guest := dial(t, s, "r", "guest")
+	guest.eventually("the room's presence", func() bool { return len(guest.awareness) == 1 })
+	for _, state := range []string{`{"user":"mallory"}`, "null"} {
+		spoof := awarenessUpdate(7, 9, state)
+		guest.send(msgAwareness, append([]byte{byte(len(spoof))}, spoof...))
+	}
+	own := awarenessUpdate(8, 1, `{"user":"guest"}`)
+	guest.send(msgAwareness, append([]byte{byte(len(own))}, own...))
+	alice.eventually("alice gets the guest's own presence only", func() bool { return len(alice.awareness) == 2 })
+	require.Equal(t, own, alice.awareness[1])
+
+	carol := dial(t, s, "r", "carol")
+	carol.send(msgQueryAwareness, nil)
+	carol.eventually("alice's presence is unchanged", func() bool { return len(carol.awareness) == 2 })
+	require.Contains(t, string(carol.awareness[1]), `{"user":"alice"}`)
+	require.NotContains(t, string(carol.awareness[1]), "mallory")
+}
+
+// valueUnder is a Yjs update that sets key in root map "values" to the string v as the first item of client.
+func valueUnder(client byte, key, v string) []byte {
+	update := []byte{1, 1, client, 0, 0x20 | 8, 1} // a client, a struct, its clock 0; parentSub, ContentAny; parent by name
+	update = append(update, lib0String("values")...)
+	update = append(update, lib0String(key)...)
+	update = append(update, 1, 119) // one value, a string
+	update = append(update, lib0String(v)...)
+	return append(update, 0) // no deletions
+}
+
+func TestAClientIDInSomeonesPresenceIsTheirs(t *testing.T) {
+	var left atomic.Int32
+	s := newServer(t, memStore(t), users(&left))
+	alice := dial(t, s, "r", "alice")
+	presence := awarenessUpdate(7, 1, `{"user":"alice"}`)
+	alice.send(msgAwareness, append([]byte{byte(len(presence))}, presence...))
+	guest := dial(t, s, "r", "guest")
+	bob := dial(t, s, "r", "bob")
+	guest.eventually("alice's presence", func() bool { return len(guest.awareness) == 1 })
+
+	// alice has not edited yet: her client id, which the others learnt from her presence, is hers all the same
+	for _, c := range []*client{guest, bob} {
+		c.send(msgSync, ydoc.SyncUpdate(valueUnder(7, "k", "spoof")))
+	}
+	guest.eventually("guest refused", func() bool { return len(guest.reasons) == 1 })
+	bob.eventually("bob refused", func() bool { return len(bob.reasons) == 1 })
+	require.Equal(t, notYours, guest.reasons[0])
+	require.Equal(t, notYours, bob.reasons[0])
+
+	alice.send(msgSync, ydoc.SyncUpdate(valueUnder(7, "k", "alice")))
+	carol := dial(t, s, "r", "carol")
+	carol.eventually("alice's value", func() bool { return carol.doc.Values("values")["k"] == "alice" })
 }

@@ -142,6 +142,19 @@ The `collaboration` extension shares the project through one #link("https://yjs.
   [anything else: another port, scheme or host, `null`, malformed; the request's `Host` plays no part], [no],
 )
 
+Every Yjs item carries its client id and clock, and the room takes only the first item at a clock: items sent under someone else's client id at their next clock would make the room ignore that user's own edit there. So in a loaded room each client id belongs to a user (provider and id), who brought the first items or the first awareness entry under it (a client's awareness entry has its Yjs client id; `ydoc.HandleSyncFrom`, `ydoc.Doc.Claim`; in memory, gone when the room unloads):
+
+#table(
+  columns: (auto, 1fr),
+  table.header[An update with items under a client id …][The room],
+  [new to the room], [takes it; the id is now the sender's],
+  [of the sender (also from another connection of theirs: a reconnect)], [takes it],
+  [of another user, or the server's own (its `Write`s)], [refuses it, nothing of it applied, and the client ("an editing session that is not yours")],
+  [in the stored document, nobody's yet (after a reload)], [a member's: takes it, the id is now theirs; a guest's: refuses it],
+)
+
+Deletions name no client id of the sender's and are not checked. An awareness entry follows the same rules, except that one the room may not take is only left out of the update (not applied, not relayed).
+
 === Guest links <architecture-data-model-guests>
 
 A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configuration-collaboration-server-guests). The shares are the server's only state besides the rooms; guests' sessions live in `auth`'s memory like members', without a token.
@@ -161,7 +174,7 @@ A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configur
   caption: [Link → join → session → authenticate → room.],
 )
 
-The shares belong to the room: every member who may share it lists all of them and revokes any. In a GitLab room a guest changes only the files of the types in `meta.guestEditable` (Typst, images, Mermaid, IronCalc; the list is the server's, `gitlab/guestfiles.go`). The room keeps everything else of the document as it was after the last change that was not a guest's; a guest's change to it is written back before anything else runs, and the guest's client is refused. So that a guest's change never takes effect later with another origin, `collab` takes a guest's update only when it adds and deletes nothing past what the room holds (`ydoc.HandleSyncAtOnce`), else refuses the guest:
+The shares belong to the room: every member who may share it lists all of them and revokes any. In a GitLab room a guest changes only the files of the types in `meta.guestEditable` (Typst, images, Mermaid, IronCalc; the list is the server's, `gitlab/guestfiles.go`). The room keeps everything else of the document as it was after the last change that was not a guest's; a guest's change to it is written back before anything else runs, and the guest's client is refused. So that a guest's change never takes effect later with another origin, `collab` takes a guest's update only when it adds and deletes nothing past what the room holds (`ydoc.HandleSyncFrom`, Restricted), else refuses the guest:
 
 #figure(
   mermaid(read("../diagrams/guest-guard.mmd"), width: 85%),
