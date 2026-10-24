@@ -57,9 +57,9 @@ test('⌘⇧H shows Replace mode; Replace all asks first, replaces in both files
   await panel(page).getByRole('textbox', { name: 'Replace' }).fill('build');
   await expect(panel(page).locator('.zwf-search__new').first()).toHaveText('build');
   await panel(page).locator('.zwf-search__replace-all').click();
-  // two files: confirmed first, in a notification
-  const confirm = editor(page).getByTestId('zwf-notifications');
-  await expect(confirm).toContainText('Replace 2 occurrences in 2 files?');
+  // two files: confirmed first, on a modal card
+  const confirm = editor(page).getByTestId('zwf-modal').getByRole('alertdialog', { name: 'Replace 2 occurrences in 2 files?' });
+  await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeVisible();
   await confirm.getByRole('button', { name: 'Replace' }).click();
   await expect(panel(page).locator('.zwf-search__outcome')).toHaveText('Replaced 2 occurrences in 2 files');
   await expect.poll(() => editor(page).evaluate((el: Editor) => el.value)).toContain('Cold build times');

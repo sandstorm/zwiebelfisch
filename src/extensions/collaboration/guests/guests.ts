@@ -1,7 +1,6 @@
 // Guest mode of a room on a collaboration server. See collaboration in ../collaboration.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { ExtensionContext } from '../../../hosts/extension-host/extension-host';
-import type { QuickPickItem } from '../../../hosts/window/window';
 import { serverHttpBase, type Account } from '../account';
 import { DEFAULT_GUEST_DAYS, GUEST_LIFETIMES, GUESTS_CHANGED, type Share } from '../room-protocol';
 import css from './guests.css?inline';
@@ -20,9 +19,11 @@ import { endDate, GuestView, ShareButton } from './window/guest-mode';
  *   Oct 25, 18:00" (red in the last hour; who shared in its tooltip), a warning-coloured frame; once access ends, it
  *   says so
  * - a member who may share sees "Share" at the right of the title bar ("Shared · N guests" while the room has links): a
- *   click shares, or, with links, lists them; guests' carets are dashed, their names end in "(guest)"
+ *   click opens the menu `guests/share` below it: "New guest link…", then "Revoke “ACME” (until Oct 30, 18:00 · 1
+ *   online)…" per link of this project, whoever made it (revoked once confirmed on a modal card); guests' carets are
+ *   dashed, their names end in "(guest)"
  * - the commands `collaboration.shareWithGuests` (whom for, how long, then the link: copied, and shown this once) and
- *   `collaboration.manageGuests` (this project's links, whoever made them, and "New guest link…"; picking one revokes it)
+ *   `collaboration.manageGuests` (the menu `guests/share`, below "Share")
  *
  * What the server says changed (`guests:changed`, `receive`) is asked for again.
  */
@@ -35,6 +36,8 @@ export class Guests {
   #ended = false;
   #member = false;
   #show: () => void = () => {};
+  /** The member's "Share" (null: not a member, or not known yet). */
+  #button: ShareButton | null = null;
 
   constructor(
     private readonly context: ExtensionContext,
@@ -126,32 +129,24 @@ export class Guests {
     });
   }
 
-  /** Lists the links (and "New guest link…"); picking one revokes it, once confirmed. */
-  async manage(): Promise<void> {
+  /** Opens the menu `guests/share` below "Share". */
+  manage(): void {
     const { window } = this.context;
-    if (!this.#member) {
+    if (!this.#button) {
       void window.showErrorMessage('Only signed-in members manage the guest links of this project.');
       return;
     }
-    await this.#shares.refresh();
-    type Item = QuickPickItem & { share?: Share };
-    const items: Item[] = [
-      { label: 'New guest link…' },
-      ...this.#shares.shares.map((share) => ({
-        label: share.label,
-        description: `by ${share.sharedBy} · until ${endDate(share.expiresAt)} · ${share.online?.length ?? 0} online`,
-        detail: share.online?.length ? share.online.join(', ') : undefined,
-        share,
-      })),
-    ];
-    const picked = await window.showQuickPick(items, { title: "This project's guest links", placeHolder: 'Pick a link to revoke it (any member may)' });
-    if (!picked) return;
-    if (!picked.share) return this.share();
-    const { share } = picked;
-    if ((await window.showWarningMessage(`Revoke the guest link "${share.label}"? Its guests lose access at once.`, 'Revoke')) !== 'Revoke') return;
+    window.showContextMenu(SHARE_MENU, { anchor: this.#button.element, title: 'Share with guests' });
+  }
+
+  /** Revokes `share`, once confirmed. */
+  async #revoke(share: Share): Promise<void> {
+    const { window } = this.context;
+    const confirmed = await window.showWarningMessage(`Revoke the guest link “${share.label}”?`, { modal: true, detail: 'Its guests lose access at once.' }, 'Revoke');
+    if (confirmed !== 'Revoke') return;
     try {
       await this.#shares.revoke(share.id!);
-      void window.showInformationMessage(`Guest link "${share.label}" revoked.`);
+      void window.showInformationMessage(`Guest link “${share.label}” revoked.`);
     } catch (error) {
       void window.showErrorMessage(`Cannot revoke: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -183,10 +178,40 @@ export class Guests {
 
   #memberMode(): Disposable {
     const { window, commands } = this.context;
-    const button = new ShareButton(window.ownerDocument, (any) => void commands.executeCommand(any ? 'collaboration.manageGuests' : 'collaboration.shareWithGuests'));
-    this.#show = () => button.show(this.#shares.shares);
-    return window.registerTitleBarItem(button.element, { alignment: 'right', priority: 300 });
+    const button = new ShareButton(window.ownerDocument, () => this.manage());
+    let links = new Disposable(() => {});
+    this.#button = button;
+    this.#show = () => {
+      if (this.#button !== button) return;
+      button.show(this.#shares.shares);
+      links.dispose();
+      links = Disposable.from(
+        ...this.#shares.shares.flatMap((share) => {
+          const command = `collaboration.revokeGuestLink.${share.id}`;
+          return [
+            commands.registerCommand(command, () => this.#revoke(share)),
+            window.registerMenuItem(SHARE_MENU, { command, title: revokeTitle(share), group: '2_links' }),
+          ];
+        }),
+      );
+    };
+    return Disposable.from(
+      window.registerTitleBarItem(button.element, { alignment: 'right', priority: 300 }),
+      window.registerMenuItem(SHARE_MENU, { command: 'collaboration.shareWithGuests', title: 'New guest link…', group: '1_new' }),
+      new Disposable(() => {
+        links.dispose();
+        this.#button = null;
+      }),
+    );
   }
+}
+
+/** The menu below the member's "Share": a new link, then one entry per link that revokes it. */
+const SHARE_MENU = 'guests/share';
+
+/** "Revoke “ACME reviewers” (until Oct 30, 18:00 · 1 online)…" */
+function revokeTitle(share: Share): string {
+  return `Revoke “${share.label}” (until ${endDate(share.expiresAt)} · ${share.online?.length ?? 0} online)…`;
 }
 
 /** How often the guest's countdown is brought up to date. */

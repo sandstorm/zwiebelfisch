@@ -21,7 +21,7 @@ export function shareText(shares: readonly Share[]): { text: string; tooltip: st
   const until = Math.max(...shares.map((share) => share.expiresAt));
   return {
     text: `Shared · ${online} ${online === 1 ? 'guest' : 'guests'}`,
-    tooltip: `Shared with guests until ${endDate(until)}; ${online} online. Guests can edit; only members save. Click for this project's guest links.`,
+    tooltip: `Shared with guests until ${endDate(until)}; ${online} online. Guests can edit; only members save. Click for a new link or to revoke one.`,
   };
 }
 
@@ -74,25 +74,24 @@ export class GuestView {
   }
 }
 
-/** A member's "Share" in the title bar (see `shareText`); a click runs `onClick` with whether there are guest links. */
+/** A member's "Share" in the title bar (see `shareText`); a click runs `onClick`. */
 export class ShareButton {
   readonly element: HTMLButtonElement;
-  #any = false;
 
-  constructor(doc: Document, onClick: (any: boolean) => void) {
+  constructor(doc: Document, onClick: () => void) {
     this.element = doc.createElement('button');
     this.element.type = 'button';
     this.element.className = 'zwf-guests__share';
-    this.element.onclick = () => onClick(this.#any);
+    this.element.setAttribute('aria-haspopup', 'menu');
+    this.element.onclick = onClick;
     this.show([]);
   }
 
   /** Shows `shares`. */
   show(shares: readonly Share[]): void {
     const { text, tooltip } = shareText(shares);
-    this.#any = shares.length > 0;
     this.element.textContent = text;
     this.element.title = tooltip;
-    this.element.classList.toggle('zwf-guests__share--shared', this.#any);
+    this.element.classList.toggle('zwf-guests__share--shared', shares.length > 0);
   }
 }

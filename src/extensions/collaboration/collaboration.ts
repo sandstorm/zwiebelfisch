@@ -118,8 +118,8 @@ function linkedWidget(context: ExtensionContext, presences: Presences, participa
 
 /**
  * "You are not signed in" with "Sign in" on a card over the whole widget (a modal message), and `reason` (why the
- * session ended) when there is one; it cannot be closed: after "Sign in" it is shown again until the page has left for
- * the sign-in (or a leave warning kept it).
+ * session ended) when there is one; it does not go away: after "Sign in" or Cancel it is shown again, until the page
+ * has left for the sign-in (or a leave warning kept it).
  */
 function askToSignIn(context: Pick<ExtensionContext, 'window' | 'commands'>, reason: string | undefined): void {
   const { window, commands } = context;

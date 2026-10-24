@@ -88,7 +88,7 @@ describe('Widget', () => {
     const { host, widget } = setup();
     const chosen = widget.window.showWarningMessage('Signed out', { modal: true, detail: 'Sign in again.' }, { title: 'Sign in' }, { title: 'Later' });
     const modal = host.querySelector<HTMLElement>('.zwf-editor__modal')!;
-    expect([...modal.querySelectorAll('button')].map((button) => button.textContent)).toEqual(['Sign in', 'Later']);
+    expect([...modal.querySelectorAll('button')].map((button) => button.textContent)).toEqual(['Sign in', 'Later', 'Cancel']);
     modal.querySelectorAll('button')[1].click();
     expect(await chosen).toEqual({ title: 'Later' });
     void widget.window.showWarningMessage('Not modal', { title: 'OK' });

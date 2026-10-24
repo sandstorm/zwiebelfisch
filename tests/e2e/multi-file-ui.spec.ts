@@ -54,10 +54,10 @@ test('creates and deletes a file from the file panel', async ({ page }) => {
   await editor.getByRole('textbox', { name: 'File name' }).press('Enter');
   await expect(fileRow(editor, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 
-  // the row's context menu, then the confirmation (a warning message)
+  // the row's context menu, then the confirmation (a modal warning)
   await fileRow(editor, 'appendix.typ').click({ button: 'right' });
   await editor.getByRole('menuitem', { name: 'Delete' }).click();
-  const confirmation = editor.getByTestId('zwf-notifications').getByRole('alert').filter({ hasText: 'Delete appendix.typ?' });
+  const confirmation = editor.getByTestId('zwf-modal').getByRole('alertdialog', { name: 'Delete appendix.typ? This cannot be undone.' });
   await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(fileRow(editor, 'appendix.typ')).toHaveCount(0);
   await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');

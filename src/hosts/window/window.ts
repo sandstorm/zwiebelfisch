@@ -254,8 +254,9 @@ export const PROJECT_PATH_TYPE = 'application/x-zwf-project-path';
 
 /**
  * How a message is shown (VS Code's MessageOptions). `modal`: a card in the middle of an overlay over the whole widget,
- * which takes no input meanwhile, with `detail` below the message; unlike VS Code's it has no Cancel: it closes only
- * when one of its items is chosen (for a state the user must act on, e.g. being signed out).
+ * which takes no input meanwhile, with `detail` below the message and Cancel after the items (as VS Code's): Cancel
+ * and Escape resolve to undefined. For a question the user must answer before going on (a confirmation of a
+ * destructive step).
  */
 export interface MessageOptions {
   readonly modal?: boolean;

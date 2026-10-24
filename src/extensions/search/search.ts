@@ -52,7 +52,7 @@ export function search(): Extension {
         window: context.window,
         highlights,
         replace: (query, files, replace) => Replacement.apply({ project, applyEdit: (change) => workspace.applyEdit(change) }, query, files, replace),
-        confirm: async (message, action) => (await context.window.showWarningMessage(message, action)) === action,
+        confirm: async (message, action) => (await context.window.showWarningMessage(message, { modal: true }, action)) === action,
         state: globalState,
         keys: [
           { label: 'Find in files', key: commands.keybindingLabel(FIND_IN_FILES) ?? '' },

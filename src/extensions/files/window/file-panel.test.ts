@@ -39,7 +39,7 @@ function setup(
       const answer = answers.shift();
       return answer === undefined ? undefined : ProjectPath.of(`/${answer}`);
     },
-    showWarningMessage: async (message: string) => (warned.push(message), answers.shift()),
+    showWarningMessage: async (message: string, options: { modal?: boolean }) => (warned.push(options.modal ? `${message} (modal)` : message), answers.shift()),
     showErrorMessage: async (message: string) => (errors.push(message), undefined),
     showContextMenu: (menuId: string, options: ContextMenuOptions) => void menus.push({ menuId, ...options }),
   } as unknown as FilePanelPrompts;
@@ -238,7 +238,7 @@ describe('FilePanel', () => {
       await panel.delete(path('/logo.png'));
       expect(change).not.toHaveBeenCalled(); // not confirmed
       await panel.delete(path('/logo.png'));
-      expect(warned).toEqual(['Delete logo.png? This cannot be undone.', 'Delete logo.png? This cannot be undone.']);
+      expect(warned).toEqual(['Delete logo.png? This cannot be undone. (modal)', 'Delete logo.png? This cannot be undone. (modal)']);
       expect(change).toHaveBeenCalledWith({ kind: 'delete', path: path('/logo.png') });
     });
 
@@ -252,7 +252,7 @@ describe('FilePanel', () => {
       ]);
       change.mockClear();
       await panel.delete(path('/img'));
-      expect(warned).toEqual(['Delete img and the 1 files in it? This cannot be undone.']);
+      expect(warned).toEqual(['Delete img and the 1 files in it? This cannot be undone. (modal)']);
       expect(change.mock.calls.map(([c]) => c)).toEqual([{ kind: 'delete', path: path('/img/logo.png') }]);
     });
   });

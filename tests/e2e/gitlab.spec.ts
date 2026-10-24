@@ -233,7 +233,9 @@ test('signed out: a card over the widget offers to sign in, the fake GitLab sign
   const room = newRoom(info.project.name);
   await page.goto(`/?room=${encodeURIComponent(room)}`);
   await expect(signedOut(page)).toContainText('Sign in to join this room.');
-  await expect(signedOut(page).getByRole('button')).toHaveText(['Sign in']); // no way to close it
+  await expect(signedOut(page).getByRole('button')).toHaveText(['Sign in', 'Cancel']);
+  await signedOut(page).getByRole('button', { name: 'Cancel' }).click();
+  await expect(signedOut(page)).toContainText('Sign in to join this room.'); // shown again at once
   await expect(account(page)).toHaveText('Sign in');
   await signedOut(page).getByRole('button', { name: 'Sign in' }).click();
   // the fake GitLab's page (on the server), then back to the room

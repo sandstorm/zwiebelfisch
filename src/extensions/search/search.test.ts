@@ -3,7 +3,7 @@
 // command, with the selection or the arguments as query; a match opening in the editor shown now (Visual or Source),
 // a match inside a raw box opening in its code, a text file's match opening in that file's editor, selected; the
 // matches highlighted in the shown editor; "Find in folder…" on a folder's row in the file panel; search everywhere's
-// row "Find in files: …"; Replace mode by key, Replace all confirmed in a notification, a text file changed through the
+// row "Find in files: …"; Replace mode by key, Replace all confirmed on a modal card, a text file changed through the
 // host (and its veto).
 import { EditorView as CodeView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -190,16 +190,16 @@ describe('search', () => {
     expect(panel.querySelector('input[aria-label=Replace]')!.closest('[hidden]')).not.toBeNull();
   });
 
-  it('Replace all asks in a notification, then replaces in the Typst and the text files; the host may refuse a text file', async () => {
+  it('Replace all asks on a modal card, then replaces in the Typst and the text files; the host may refuse a text file', async () => {
     let allowed = true;
     const { host, widget, project, panel } = setup(VISUAL_EDITOR, undefined, () => allowed);
     await widget.commands.executeCommand('workbench.action.replaceInFiles', { query: 'world', replace: 'globe' });
     await vi.runAllTimersAsync();
     panel.querySelector<HTMLButtonElement>('.zwf-search__replace-all')!.click();
     await vi.runAllTimersAsync();
-    const notification = host.querySelector('.zwf-notification')!;
-    expect(notification.textContent).toContain('Replace 3 occurrences in 2 files?');
-    [...notification.querySelectorAll('button')].find((button) => button.textContent === 'Replace')!.click();
+    const card = host.querySelector('.zwf-editor__modal [role=alertdialog]')!;
+    expect(card.textContent).toContain('Replace 3 occurrences in 2 files?');
+    [...card.querySelectorAll('button')].find((button) => button.textContent === 'Replace')!.click();
     await vi.runAllTimersAsync();
     expect([project.content(path('/main.typ')), project.content(path('/notes.txt'))]).toEqual(['Hello globe\n\nThe globe is round.\n', 'globe notes']);
     expect(panel.querySelector('.zwf-search__notice')?.textContent).toBe('Replaced 3 occurrences in 2 filesUndo');

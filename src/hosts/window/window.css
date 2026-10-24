@@ -3,11 +3,14 @@
 /* An editor's panel (registerEditorProvider): fills the editing area, a flex column for the editor. */
 .zwf-editor__panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .zwf-editor__panel[hidden] { display: none; }
-/* Messages (showInformationMessage, …): stacked at the bottom right, above the status bar. */
+/* Messages (showInformationMessage, …): stacked at the top right of the frame's middle row (editor.css), so just below
+   the title bar, shown or not, and never over it; newest on top. */
 .zwf-editor__notifications {
+  grid-column: 1 / -1;
+  grid-row: 2;
   position: absolute;
+  top: 8px;
   right: 12px;
-  bottom: 32px;
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -90,7 +93,6 @@
 .zwf-modal__message { margin: 0; font-size: 18px; font-weight: 600; }
 .zwf-modal__detail { margin: 0; color: var(--zwf-text-2); }
 .zwf-modal__actions { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
-.zwf-modal__actions:empty { display: none; }
 .zwf-modal__item {
   border: 1px solid var(--zwf-accent);
   border-radius: 6px;
@@ -101,7 +103,18 @@
   font-weight: 600;
   cursor: pointer;
 }
-.zwf-modal__item:focus-visible { outline: 2px solid var(--zwf-jump); outline-offset: 2px; }
+.zwf-modal__cancel {
+  border: 1px solid var(--zwf-border);
+  border-radius: 6px;
+  padding: 6px 18px;
+  background: var(--zwf-surface);
+  color: var(--zwf-text);
+  font: inherit;
+  cursor: pointer;
+}
+.zwf-modal__cancel:hover { background: var(--zwf-hover); }
+.zwf-modal__item:focus-visible,
+.zwf-modal__cancel:focus-visible { outline: 2px solid var(--zwf-jump); outline-offset: 2px; }
 /* Menus (showContextMenu): at a right click's point or below a button, kept inside the viewport. */
 .zwf-context-menu {
   position: fixed;

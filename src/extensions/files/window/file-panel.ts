@@ -145,7 +145,7 @@ export class FilePanel {
     const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
     const shown = ProjectPath.displayName(path);
     const what = files.length === 1 && files[0] === path ? shown : `${shown} and the ${files.length} files in it`;
-    const confirmed = await this.options.prompts.showWarningMessage(`Delete ${what}? This cannot be undone.`, 'Delete');
+    const confirmed = await this.options.prompts.showWarningMessage(`Delete ${what}? This cannot be undone.`, { modal: true }, 'Delete');
     if (confirmed !== 'Delete') return;
     this.emptyFolders.delete(path);
     this.render(this.state);
