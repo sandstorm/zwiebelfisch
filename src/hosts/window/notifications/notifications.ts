@@ -8,8 +8,8 @@ import type { MessageItem, MessageOptions, MessageSeverity } from '../window';
  * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
  *
  * A modal message (`options.modal`) is a card in the middle of an overlay over the whole widget (`role=alertdialog`),
- * its `detail` below the text, a button per item, the first one focused; it has no close button and closes only when an
- * item is chosen (or the widget goes).
+ * its `detail` below the text, a button per item, the first one focused; the rest of the widget is inert meanwhile. It
+ * has no close button and closes only when an item is chosen (or the widget goes).
  *
  * @internal Extensions use it through `window.showInformationMessage`, `showWarningMessage` and `showErrorMessage`.
  */
@@ -95,15 +95,19 @@ export class Notifications {
       }
       const actions = card.appendChild(doc.createElement('div'));
       actions.className = 'zwf-modal__actions';
+      // the rest of the widget takes no input, by keyboard either, while the card is up
+      const muted = [...(this.#area.parentElement?.children ?? [])].filter((child) => !child.hasAttribute('inert'));
       const shown: Shown = { element: overlay, close: () => finish(undefined) };
       const finish = (item: T | undefined) => {
         const at = this.#modals.indexOf(shown);
         if (at < 0) return;
         this.#modals.splice(at, 1);
         overlay.remove();
+        for (const element of muted) element.removeAttribute('inert');
         resolve(item);
       };
       for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'zwf-modal__item', () => finish(item)));
+      for (const element of muted) element.setAttribute('inert', '');
       this.#modals.push(shown);
       this.#area.before(overlay);
       actions.querySelector('button')?.focus();

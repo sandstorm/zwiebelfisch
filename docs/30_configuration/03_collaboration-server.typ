@@ -92,7 +92,7 @@ Security:
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Another branch name starts a fresh branch from `main`.
 - *Sign in* with "Sign in" on the card over the widget: the fake GitLab asks for a name (anyone, no password). A second user is a private window, signed in as someone else.
 - *Collaborate:* a plain room (the playground server enables them; the bar offers it once the server says so).
-- *Guests:* the playground server has guest links on; "Share with guests…" makes one, a private window opens it.
+- *Guests:* the playground server has guest links on; "Share" in the title bar makes one, a private window opens it.
 - "Simulate upstream commit" pushes a change to the fake repository, to try merges and conflicts.
 - `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes pushes to that branch fail as if the fake GitLab were unreachable (`&on=false` ends it).
 - Restart `mise run demo` to reset the fake repository.

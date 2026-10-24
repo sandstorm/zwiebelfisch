@@ -8,7 +8,7 @@ import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
 import type { Participant, PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { gitlabRoom, roomFilePath } from '../room-protocol';
+import { gitlabRoom, roomFilePath, SIGNED_OUT } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
@@ -93,8 +93,9 @@ export class Collaboration {
    * and news with `tell` (default: not at all). The WebSocket carries the session cookie: the server knows who
    * connects, and refuses it without a session (401, which a browser does not tell; the connection just closes).
    * So `signedIn` is asked whenever it closes: false, and it stops reconnecting, `start` rejecting with
-   * SignInRequired, or later `signedOut` settling. Rejects with the server's reason when it refuses the room (no
-   * access to the GitLab project; a plain room on a server that opens only GitLab rooms).
+   * SignInRequired (as when the server refuses the room with SIGNED_OUT), or later `signedOut` settling. Rejects with
+   * the server's reason when it refuses the room otherwise (no access to the GitLab project; a plain room on a server
+   * that opens only GitLab rooms).
    */
   static async start(
     options: CollaborationOptions,
@@ -108,7 +109,7 @@ export class Collaboration {
     const { signedOut, refused } = whenEnded(provider, signedIn);
     try {
       await new Promise<void>((resolve, reject) => {
-        void refused.then((reason) => reject(new Error(reason)));
+        void refused.then((reason) => reject(reason === SIGNED_OUT ? new SignInRequired() : new Error(reason)));
         void signedOut.then(() => reject(new SignInRequired()));
         if (provider.isSynced) resolve();
         else provider.on('synced', () => resolve());
