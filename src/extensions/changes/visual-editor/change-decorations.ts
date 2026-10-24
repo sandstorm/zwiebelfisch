@@ -1,4 +1,4 @@
-// The changes since the last commit, drawn in the Visual editor. See changes in ../changes.ts.
+// The changes of the comparison shown, drawn in the Visual editor. See changes in ../changes.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
