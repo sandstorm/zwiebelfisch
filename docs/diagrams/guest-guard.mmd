@@ -9,4 +9,4 @@ sequenceDiagram
   R->>R: .gitlab-ci.yml differs from what was kept
   R->>M: .gitlab-ci.yml written back (the room's own change)
   R-->>G: refused: "Guests may change only Typst files, …"
-  Note over R,M: main.typ keeps the guest's edit; a commit sees only the kept .gitlab-ci.yml
+  Note over R,M: main.typ keeps the guest's edit, and a commit sees only the kept .gitlab-ci.yml

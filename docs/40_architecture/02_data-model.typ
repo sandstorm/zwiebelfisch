@@ -151,7 +151,7 @@ A member shares one room with guests (package `guest`, `ZWF_GUESTS=1`; @configur
   caption: [Link → join → session → authenticate → room.],
 )
 
-The shares belong to the room: every member who may share it lists all of them and revokes any. In a GitLab room a guest changes only the files of the types in `meta.guestEditable` (Typst, images, Mermaid, IronCalc; the list is the server's, `gitlab/guestfiles.go`). The room keeps everything else of the document as it was after the last change that was not a guest's; a guest's change to it is written back before anything else runs, and the guest's client is refused:
+The shares belong to the room: every member who may share it lists all of them and revokes any. In a GitLab room a guest changes only the files of the types in `meta.guestEditable` (Typst, images, Mermaid, IronCalc; the list is the server's, `gitlab/guestfiles.go`). The room keeps everything else of the document as it was after the last change that was not a guest's; a guest's change to it is written back before anything else runs, and the guest's client is refused. So that a guest's change never takes effect later with another origin, `collab` takes a guest's update only when it adds and deletes nothing past what the room holds (`ydoc.HandleSyncAtOnce`), else refuses the guest:
 
 #figure(
   mermaid(read("../diagrams/guest-guard.mmd"), width: 85%),

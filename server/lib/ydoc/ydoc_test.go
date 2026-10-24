@@ -171,6 +171,57 @@ func TestSyncHandshake(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestHandleSyncAtOnceRefusesWhatWaitsForChangesToCome(t *testing.T) {
+	server := ydoc.New()
+	require.NoError(t, server.Write("server", func(w *ydoc.Writer) { w.SetText("files", "/a", "server") }))
+	member, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	// what the member does next, which the server does not hold yet
+	updateOf := func(d *ydoc.Doc, fn func(w *ydoc.Writer)) []byte {
+		var update []byte
+		stop := d.OnUpdate(func(u []byte, _ any) { update = u })
+		defer stop()
+		require.NoError(t, d.Write(nil, fn))
+		return update
+	}
+	first := updateOf(member, func(w *ydoc.Writer) { w.SetText("files", "/m", "member") })
+	second := updateOf(member, func(w *ydoc.Writer) { w.Edit("files", "/m", 0, 0, "the ") })
+	guest, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	require.NoError(t, guest.Apply(first, nil))
+
+	// a sync and an edit of what the server holds take effect
+	reply, isStep1, err := server.HandleSyncAtOnce(guest.SyncStep1(), "guest")
+	require.NoError(t, err)
+	require.True(t, isStep1)
+	_, _, err = guest.HandleSync(reply, "server")
+	require.NoError(t, err)
+	edit := updateOf(guest, func(w *ydoc.Writer) { w.Edit("files", "/a", 0, 0, "the ") })
+	_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(edit), "guest")
+	require.NoError(t, err)
+	require.Equal(t, "the server", server.Texts("files")["/a"])
+
+	// deleting what the member has not sent yet, or adding the member's later change without the first: refused, unapplied
+	ahead := updateOf(guest, func(w *ydoc.Writer) { w.Edit("files", "/m", 0, 1, "") })
+	for name, update := range map[string][]byte{"delete ahead": ahead, "gap": second} {
+		_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(update), "guest")
+		require.ErrorIs(t, err, ydoc.ErrNotAtOnce, name)
+	}
+	_, _, err = server.HandleSync(ydoc.SyncUpdate(first), "member")
+	require.NoError(t, err)
+	require.Equal(t, "member", server.Texts("files")["/m"], "nothing of the refused updates waited")
+
+	// items that wait for the member's change still to come: refused (they are kept)
+	later := updateOf(member, func(w *ydoc.Writer) { w.Edit("files", "/m", 0, 0, "X") })
+	guest2, err := ydoc.Load(server.State())
+	require.NoError(t, err)
+	require.NoError(t, guest2.Apply(second, nil))
+	require.NoError(t, guest2.Apply(later, nil))
+	waits := updateOf(guest2, func(w *ydoc.Writer) { w.Edit("files", "/m", 1, 1, "Y") })
+	_, _, err = server.HandleSyncAtOnce(ydoc.SyncUpdate(waits), "guest")
+	require.ErrorIs(t, err, ydoc.ErrNotAtOnce)
+}
+
 func TestAwarenessRemovesWhatAnOriginBroughtIn(t *testing.T) {
 	// updates as y-protocols encodes them: count, then (client id, clock, JSON state) per client
 	update := func(entries ...any) []byte {

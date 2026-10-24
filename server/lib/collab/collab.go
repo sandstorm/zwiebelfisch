@@ -5,7 +5,9 @@
 // relays every change and presence update to the room's other clients, and stores the document (debounced,
 // and when the last client leaves, after which the room unloads). An Extension decides what a room is.
 //
-// A room sees its events in order, and a slow client never blocks a room.
+// A room sees its events in order, and a slow client never blocks a room. Every change of a guest's
+// (User.IsGuest) takes effect as it arrives, with the guest's client as its origin: an update of theirs that
+// would wait for changes the room does not hold is refused, and so is their client.
 package collab
 
 import (
