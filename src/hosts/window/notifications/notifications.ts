@@ -4,12 +4,14 @@ import type { MessageItem, MessageOptions, MessageSeverity } from '../window';
 /**
  * The widget's notification area (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`): each message
  * is a small box with its text, a button per item and a close button, stacked at the top right of the widget below
- * the title bar (never over it), newest on top. Not modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
- * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
+ * the title bar (never over it), newest on top. Not modal; nothing takes the focus. Information is `role=status` (read
+ * out politely) and closes by itself after a while unless it has items or the pointer or focus is on it; warnings and
+ * errors are `role=alert` and stay until closed.
  *
  * A modal message (`options.modal`) is a card in the middle of an overlay over the whole widget (`role=alertdialog`),
  * its `detail` below the text, a button per item and Cancel after them (as VS Code's), the first button focused; the
- * rest of the widget is inert meanwhile. Cancel and Escape close it, resolving to undefined.
+ * rest of the widget is inert meanwhile. Cancel and Escape close it, resolving to undefined; once closed, the focus is
+ * back where it was (if that is still there).
  *
  * @internal Extensions use it through `window.showInformationMessage`, `showWarningMessage` and `showErrorMessage`.
  */
@@ -98,12 +100,14 @@ export class Notifications {
       // the rest of the widget takes no input, by keyboard either, while the card is up
       const muted = [...(this.#area.parentElement?.children ?? [])].filter((child) => !child.hasAttribute('inert'));
       const shown: Shown = { element: overlay, close: () => finish(undefined) };
+      const focused = doc.activeElement;
       const finish = (item: T | undefined) => {
         const at = this.#modals.indexOf(shown);
         if (at < 0) return;
         this.#modals.splice(at, 1);
         overlay.remove();
         for (const element of muted) element.removeAttribute('inert');
+        if (focused?.isConnected) (focused as HTMLElement).focus();
         resolve(item);
       };
       for (const item of items) actions.append(button(doc, typeof item === 'string' ? item : item.title, 'zwf-modal__item', () => finish(item)));

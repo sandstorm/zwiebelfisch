@@ -82,14 +82,17 @@ describe('Notifications', () => {
     expect(editing.hasAttribute('inert')).toBe(false);
   });
 
-  it('closes a modal message on Cancel or Escape, resolving to undefined', async () => {
+  it('closes a modal message on Cancel or Escape, resolving to undefined, the focus back where it was', async () => {
     const host = document.body.appendChild(document.createElement('div'));
     const editing = host.appendChild(document.createElement('div'));
+    const row = editing.appendChild(document.createElement('button'));
+    row.focus();
     const notifications = new Notifications(host);
     const cancelled = notifications.show('warning', 'Delete a.typ?', ['Delete'], { modal: true });
     host.querySelector<HTMLButtonElement>('.zwf-modal__cancel')!.click();
     expect(await cancelled).toBeUndefined();
     expect(editing.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(row); // the focus is back
     const escaped = notifications.show('warning', 'Delete a.typ?', ['Delete'], { modal: true });
     document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(await escaped).toBeUndefined();
