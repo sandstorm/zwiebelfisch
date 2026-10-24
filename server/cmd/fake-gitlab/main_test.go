@@ -23,7 +23,8 @@ import (
 
 // The built binary on real ports: the playground endpoints next to the collaboration server, sign-in at the
 // fake GitLab (its page served here), plain rooms refused (not enabled) with the reason the real
-// HocuspocusProvider gets (signed in), the built demo on DEMO_PORT, a clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
+// HocuspocusProvider gets (signed in), the demo's origins allowed by default, the built demo on DEMO_PORT, a
+// clean exit on SIGTERM. Needs ports: it skips where none can be bound (the agent sandbox);
 // package playground covers the handlers in-process.
 func TestPlaygroundBinary(t *testing.T) {
 	port, demoPort := freePort(t), freePort(t)
@@ -53,6 +54,19 @@ func TestPlaygroundBinary(t *testing.T) {
 	require.Contains(t, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/upstream?room=gitlab%%3Ademo%%2Freport%%40main", port)), "chapters/introduction.typ")
 	require.Equal(t, `{"autoCommit":false,"room":"gitlab:demo/report@other"}`, body(t, "POST", fmt.Sprintf("http://127.0.0.1:%d/playground/auto-commit?room=gitlab%%3Ademo%%2Freport%%40other", port)))
 	require.Equal(t, `{"plainRooms":false,"guests":false}`, body(t, "GET", fmt.Sprintf("http://127.0.0.1:%d/api/public/info", port)))
+	for origin, allowed := range map[string]bool{
+		"http://127.0.0.1:5199": true, "http://localhost:5199": true,
+		fmt.Sprintf("http://127.0.0.1:%d", port): false, "https://evil.example": false,
+	} {
+		req, err := http.NewRequest(http.MethodOptions, fmt.Sprintf("http://127.0.0.1:%d/api/me", port), nil)
+		require.NoError(t, err)
+		req.Header.Set("Origin", origin)
+		req.Header.Set("Access-Control-Request-Method", "GET")
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+		require.Equal(t, allowed, res.Header.Get("Access-Control-Allow-Origin") == origin, origin)
+	}
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err)
 	browser := &http.Client{Jar: jar}

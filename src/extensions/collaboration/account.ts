@@ -14,8 +14,8 @@ export interface Identity {
 /**
  * The local user's account on a collaboration server: whether and as whom they are signed in, and the ways to sign in
  * and out. The server keeps the session in an httpOnly cookie, so the widget never holds a token: it asks the server
- * (`/api/me`) and sends the cookie along (`credentials: 'include'`, for a page of another origin the server allows:
- * another loopback port). Signing in leaves the page: the server sends the browser to the provider and back to `returnTo`; a guest signs in
+ * (`/api/me`) and sends the cookie along (`credentials: 'include'`, for a page of an origin the server allows:
+ * `ZWF_ALLOWED_ORIGINS`). Signing in leaves the page: the server sends the browser to the provider and back to `returnTo`; a guest signs in
  * with a guest link's secret instead (`joinAsGuest`). Everything but the sign-in (`/api/public/`) answers only the
  * signed-in user, so the widget asks before it connects.
  */

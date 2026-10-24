@@ -754,23 +754,29 @@ func TestDisconnectWhileAClientIsLetInRefusesItToo(t *testing.T) {
 }
 
 func TestWebSocketsOnlyFromAllowedPages(t *testing.T) {
-	s := newServer(t, memStore(t))
-	for origin, refused := range map[string]bool{
-		"http://editor.example.org:5199": true, // same host, another port
-		"https://evil.example":           true,
-		"https://editor.example.org":     false,
-		"":                               false,
+	allowed := func(r *http.Request) bool { return r.Header.Get("Origin") == "https://editor.example.org" }
+	for _, c := range []struct {
+		allowedOrigin func(*http.Request) bool
+		host, origin  string
+		refused       bool
+	}{
+		{allowed, "zwf.example.org", "https://editor.example.org", false},
+		{allowed, "zwf.example.org", "https://evil.example", true},
+		{allowed, "evil.example", "https://evil.example", true}, // websocket.Accept alone lets in its Host's pages
+		{nil, "zwf.example.org", "https://editor.example.org", true},
+		{nil, "zwf.example.org", "", true}, // nil: no WebSocket at all
 	} {
-		upgrade := httptest.NewRequest(http.MethodGet, "http://editor.example.org/", nil)
+		s := newServer(t, memStore(t), func(o *collab.Options) { o.AllowedOrigin = c.allowedOrigin })
+		upgrade := httptest.NewRequest(http.MethodGet, "http://"+c.host+"/", nil)
 		upgrade.Header.Set("Connection", "Upgrade")
 		upgrade.Header.Set("Upgrade", "websocket")
 		upgrade.Header.Set("Sec-WebSocket-Version", "13")
 		upgrade.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-		if origin != "" {
-			upgrade.Header.Set("Origin", origin)
+		if c.origin != "" {
+			upgrade.Header.Set("Origin", c.origin)
 		}
 		res := httptest.NewRecorder()
 		s.ServeHTTP(res, upgrade)
-		require.Equal(t, refused, res.Code == http.StatusForbidden, origin)
+		require.Equal(t, c.refused, res.Code == http.StatusForbidden, "%s from %q", c.host, c.origin)
 	}
 }

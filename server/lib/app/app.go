@@ -88,7 +88,7 @@ func New(o Options) (*Server, error) {
 		extension = s.gitlab
 	}
 	collabOptions := collab.Options{
-		Store: o.Store, Authenticate: s.authenticate, Extension: extension,
+		Store: o.Store, Authenticate: s.authenticate, AllowedOrigin: o.Auth.AllowedOrigin, Extension: extension,
 		Log: o.Log.With().Str("module", "collab").Logger(),
 	}
 	if o.Guests {
@@ -148,16 +148,16 @@ func New(o Options) (*Server, error) {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
-		preflight(w, r)
+		s.preflight(w, r)
 		return
 	}
 	s.mux.ServeHTTP(w, r)
 }
 
-// preflight answers a browser's CORS preflight for any path: an allowed page of another origin (auth.AllowedOrigin:
-// the widget's demo on another loopback port) may send JSON bodies and DELETEs with the cookie; another site's page is permitted nothing.
-func preflight(w http.ResponseWriter, r *http.Request) {
-	auth.AllowCredentials(w, r)
+// preflight answers a browser's CORS preflight for any path: an allowed origin's page (auth.Auth.AllowedOrigin)
+// may send JSON bodies and DELETEs with the cookie; any other page is permitted nothing.
+func (s *Server) preflight(w http.ResponseWriter, r *http.Request) {
+	s.auth.AllowCredentials(w, r)
 	if w.Header().Get("Access-Control-Allow-Origin") != "" {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -167,11 +167,11 @@ func preflight(w http.ResponseWriter, r *http.Request) {
 }
 
 // requireSignIn lets only signed-in clients through to next, their identity in the request (auth.SignedIn);
-// others get 401. The answers carry CORS with credentials: the widget, on an allowed page of another origin, sends
-// the cookie and reads them (a 401 too: signed out).
+// others get 401. The answers carry CORS with credentials: the widget, on an allowed origin's page, sends the
+// cookie and reads them (a 401 too: signed out).
 func requireSignIn(a *auth.Auth, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth.AllowCredentials(w, r)
+		a.AllowCredentials(w, r)
 		identity, ok := a.Identify(r)
 		if !ok {
 			http.Error(w, "Not signed in", http.StatusUnauthorized)

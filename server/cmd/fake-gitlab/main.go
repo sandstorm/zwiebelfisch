@@ -10,7 +10,8 @@
 // their token. Nothing is stored (the git clones are in memory too). Any branch works:
 // gitlab:demo/report@<branch> starts at main.
 //
-// Environment: as package config, except that the database, sign-in and GitLab settings are ignored, and
+// Environment: as package config, except that the database, sign-in and GitLab settings are ignored,
+// ZWF_ALLOWED_ORIGINS is demoOrigins when unset, and
 //
 //	ZWF_DEMO_DIST  (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199)
 package main
@@ -34,6 +35,10 @@ import (
 
 const projectDir = "demo/examples/advanced"
 
+// demoOrigins are the allowed origins without ZWF_ALLOWED_ORIGINS: the demo on port 5199 of loopback (Vite,
+// ZWF_DEMO_DIST, the e2e specs, the Docker image published on 127.0.0.1).
+const demoOrigins = "http://127.0.0.1:5199,http://localhost:5199"
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "fake-gitlab:", err)
@@ -42,7 +47,11 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.Load(os.Environ())
+	environ := os.Environ()
+	if _, set := os.LookupEnv("ZWF_ALLOWED_ORIGINS"); !set {
+		environ = append(environ, "ZWF_ALLOWED_ORIGINS="+demoOrigins)
+	}
+	cfg, err := config.Load(environ)
 	if err != nil {
 		return err
 	}
@@ -72,7 +81,8 @@ func run() error {
 		Store: st, PlainRooms: cfg.Rooms.Plain, Guests: cfg.Rooms.Guests, Log: log,
 		Auth: auth.New(auth.Options{
 			Provider: gitlab.DefaultID, Issuer: fakegitlab.URL, ClientID: fakegitlab.ClientID,
-			ClientSecret: fakegitlab.ClientSecret, Client: fake.Client(), Log: log.With().Str("module", "auth").Logger(),
+			ClientSecret: fakegitlab.ClientSecret, Client: fake.Client(), AllowedOrigins: cfg.AllowedOrigins,
+			Log: log.With().Str("module", "auth").Logger(),
 		}),
 		GitLab: &gitlab.Options{
 			URL: fakegitlab.URL, Client: fake.Client(), WebhookSecret: webhookSecret, AutoCommit: autoCommit,
@@ -87,7 +97,7 @@ func run() error {
 		Rooms: server.GitLab(),
 	}, server)
 
-	log.Info().Str("room", playground.Room).Str("folderRoom", playground.FolderRoom).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).Msg("playground server with the fake GitLab")
+	log.Info().Strs("allowedOrigins", cfg.AllowedOrigins).Str("room", playground.Room).Str("folderRoom", playground.FolderRoom).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).Msg("playground server with the fake GitLab")
 	sites := []app.Site{{Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler}}
 	if dist := os.Getenv("ZWF_DEMO_DIST"); dist != "" {
 		port, err := strconv.Atoi(envOr("DEMO_PORT", "5199"))

@@ -239,8 +239,8 @@ func TestSignOutAndRevocationEndOpenConnections(t *testing.T) {
 	bobConn.eventually(t, "plain", "authenticated")
 }
 
-// The widget's page on another loopback port sends JSON and DELETEs with the cookie: the browser asks first.
-func TestPreflightPermitsThisHostsPagesOnly(t *testing.T) {
+// The widget's page, an allowed origin, sends JSON and DELETEs with the cookie: the browser asks first.
+func TestPreflightPermitsAllowedOriginsOnly(t *testing.T) {
 	fake, gl := fakeGitLab()
 	s := newServer(t, fake, Options{GitLab: gl, Guests: true})
 	ask := func(origin, path string) *http.Response {
@@ -258,7 +258,9 @@ func TestPreflightPermitsThisHostsPagesOnly(t *testing.T) {
 		require.Contains(t, res.Header.Get("Access-Control-Allow-Methods"), "DELETE")
 		require.Equal(t, "Content-Type", res.Header.Get("Access-Control-Allow-Headers"))
 	}
-	res := ask("https://evil.example", "/api/public/guest/join")
-	require.Empty(t, res.Header.Get("Access-Control-Allow-Origin"))
-	require.Empty(t, res.Header.Get("Access-Control-Allow-Methods"))
+	for _, origin := range []string{"https://evil.example", host, "http://localhost:5199"} {
+		res := ask(origin, "/api/public/guest/join")
+		require.Empty(t, res.Header.Get("Access-Control-Allow-Origin"), origin)
+		require.Empty(t, res.Header.Get("Access-Control-Allow-Methods"), origin)
+	}
 }

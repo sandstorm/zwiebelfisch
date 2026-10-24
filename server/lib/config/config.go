@@ -1,5 +1,8 @@
 // Package config reads the server's settings: defaults, then environment variables.
 //
+//	ZWF_ALLOWED_ORIGINS (required) the pages that may use a session, comma-separated exact origins
+//	                    (scheme://host[:port]), e.g. https://editor.example.org; Load fails without one or
+//	                    on an invalid one (auth.ParseOrigin)
 //	PORT                (default 1234)
 //	ZWF_ADDRESS       (default 127.0.0.1) the interface to listen on; 0.0.0.0 in a container
 //	ZWF_COLLAB_DB     (default server/.data/collab.sqlite; ":memory:" keeps nothing) the rooms; the GitLab
@@ -31,17 +34,22 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
 )
 
 // Config is the server's configuration.
 type Config struct {
-	Address string `koanf:"address"`
-	Port    int    `koanf:"port"`
-	Collab  struct {
+	// AllowedOrigins are ZWF_ALLOWED_ORIGINS's origins, as auth.ParseOrigin returns them: at least one.
+	AllowedOrigins []string `koanf:"-"`
+	Address        string   `koanf:"address"`
+	Port           int      `koanf:"port"`
+	Collab         struct {
 		DB string `koanf:"db"`
 	} `koanf:"collab"`
 	Auth struct {
@@ -75,7 +83,12 @@ var defaults = map[string]any{
 	"log.format": "console",
 }
 
+// allowedOriginsExample is how ZWF_ALLOWED_ORIGINS looks, for the errors.
+const allowedOriginsExample = "e.g. ZWF_ALLOWED_ORIGINS=https://editor.example.org,http://localhost:5199"
+
 var envKeys = map[string]string{
+	"ZWF_ALLOWED_ORIGINS": "allowed_origins",
+
 	"PORT":            "port",
 	"ZWF_ADDRESS":     "address",
 	"ZWF_COLLAB_DB":   "collab.db",
@@ -121,5 +134,27 @@ func Load(environ []string) (Config, error) {
 	if c.Log.Format != "console" && c.Log.Format != "json" {
 		return Config{}, fmt.Errorf("config: ZWF_LOG_FORMAT %q is neither console nor json", c.Log.Format)
 	}
+	origins, err := allowedOrigins(k.String("allowed_origins"))
+	if err != nil {
+		return Config{}, err
+	}
+	c.AllowedOrigins = origins
 	return c, nil
+}
+
+// allowedOrigins is the comma-separated list as auth.ParseOrigin returns each entry; an error for an empty
+// list or entry, or an entry ParseOrigin refuses.
+func allowedOrigins(list string) ([]string, error) {
+	if strings.TrimSpace(list) == "" {
+		return nil, fmt.Errorf("config: ZWF_ALLOWED_ORIGINS is required: the origins of the pages that embed the editor, comma-separated (%s)", allowedOriginsExample)
+	}
+	var origins []string
+	for _, raw := range strings.Split(list, ",") {
+		origin, err := auth.ParseOrigin(strings.TrimSpace(raw))
+		if err != nil {
+			return nil, fmt.Errorf("config: ZWF_ALLOWED_ORIGINS: %w; each entry is scheme://host[:port] (%s)", err, allowedOriginsExample)
+		}
+		origins = append(origins, origin)
+	}
+	return origins, nil
 }

@@ -18,6 +18,7 @@ Then open #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`]. You get the
 - *Nothing is saved*: rooms live in memory. Ctrl-C stops both.
 - The first build takes a while, as it compiles the Typst compiler to wasm.
 - With mise: `mise run docker:build` and `mise run docker:run`.
+- Only pages at `http://127.0.0.1:5199` and `http://localhost:5199` may use a session. Opened under another address, name it: `-e ZWF_ALLOWED_ORIGINS=https://demo.example.org` (the real server, @configuration-collaboration-server-running, requires it).
 
 To work on the code, run `mise run demo` from a checkout instead (@architecture-development-setup).
 

@@ -1,7 +1,8 @@
 # The demo playground as one image: `mise run docker:build`, then `mise run docker:run` (or the docker commands in
 # mise-tasks/docker/). It serves the built demo on :5199 and runs the collaboration server with the in-memory fake
 # GitLab on :1234 (server/cmd/fake-gitlab, plain rooms and guest links on), as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT)
-# or SIGTERM stops both. GitHub builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io
+# or SIGTERM stops both. The server lets only the demo's pages at http://127.0.0.1:5199 and http://localhost:5199 use a session:
+# opened under another address, ZWF_ALLOWED_ORIGINS (required by the real server, server/cmd/zwiebelfisch) must name it. GitHub builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io
 # (.github/workflows/docker.yml).
 #
 # Stage `build` installs the tools mise.toml pins (so the image builds with the same versions as a checkout) and runs

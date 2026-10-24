@@ -49,7 +49,7 @@ func newServer(t *testing.T, fake *fakegitlab.GitLab, o Options) *testServer {
 	o.Log = zerolog.Nop()
 	o.Auth = auth.New(auth.Options{
 		Provider: gitlab.DefaultID, Issuer: fakegitlab.URL, ClientID: fakegitlab.ClientID, ClientSecret: fakegitlab.ClientSecret,
-		Client: fake.Client(), Log: zerolog.Nop(),
+		Client: fake.Client(), AllowedOrigins: []string{"http://127.0.0.1:5199"}, Log: zerolog.Nop(),
 	})
 	s, err := New(o)
 	require.NoError(t, err)
@@ -209,8 +209,39 @@ func TestRoomFilesNeedASession(t *testing.T) {
 	req := request("GET", files, ann)
 	req.Header.Set("Origin", "http://127.0.0.1:5199")
 	res = get(t, s, req)
-	require.Equal(t, "http://127.0.0.1:5199", res.Header.Get("Access-Control-Allow-Origin"), "the demo, on another loopback port, sends the cookie")
+	require.Equal(t, "http://127.0.0.1:5199", res.Header.Get("Access-Control-Allow-Origin"), "the demo, an allowed origin, sends the cookie")
 	require.Equal(t, "true", res.Header.Get("Access-Control-Allow-Credentials"))
+}
+
+// A signed-in user's WebSocket only from an allowed origin: from any other page the session is nobody's.
+func TestWebSocketOnlyFromAllowedOrigins(t *testing.T) {
+	fake, gl := fakeGitLab()
+	s := newServer(t, fake, Options{GitLab: gl})
+	ann := signIn(t, fake, s, "Ann")
+	for origin, refused := range map[string]bool{
+		"http://127.0.0.1:5199":  false,
+		"":                       false,
+		host:                     true, // the server's own origin, not listed
+		"http://localhost:5199":  true,
+		"https://127.0.0.1:5199": true,
+		"https://evil.example":   true,
+		"null":                   true,
+	} {
+		upgrade := request("GET", host+"/api/collaboration", ann)
+		upgrade.Header.Set("Connection", "Upgrade")
+		upgrade.Header.Set("Upgrade", "websocket")
+		upgrade.Header.Set("Sec-WebSocket-Version", "13")
+		upgrade.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+		if origin != "" {
+			upgrade.Header.Set("Origin", origin)
+		}
+		status := get(t, s, upgrade).StatusCode
+		if refused {
+			require.Equal(t, http.StatusUnauthorized, status, origin)
+		} else {
+			require.NotContains(t, []int{http.StatusUnauthorized, http.StatusForbidden}, status, origin) // the recorder cannot be hijacked: Accept fails after the checks
+		}
+	}
 }
 
 func TestMe(t *testing.T) {
