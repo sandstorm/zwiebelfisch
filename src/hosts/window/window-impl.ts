@@ -9,7 +9,8 @@ import { ColorScheme } from './color-scheme/color-scheme';
 import { Editors } from './editors/editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
-import { ItemBar } from './item-bar/item-bar';
+import { StatusBar } from './status-bar/status-bar';
+import { TitleBar } from './title-bar/title-bar';
 import { EditorTabs } from './layout/editor-tabs';
 import { WindowLayout } from './layout/window-layout';
 import layoutCss from './layout/window-layout.css?inline';
@@ -45,8 +46,8 @@ export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
   readonly #contextMenu: ContextMenu;
-  readonly #titleBar: ItemBar<TitleBarPlacement['alignment']>;
-  readonly #statusBar: ItemBar<StatusBarPlacement['alignment']>;
+  readonly #titleBar: TitleBar;
+  readonly #statusBar: StatusBar;
   readonly #viewMenu: ViewMenu;
   readonly #progress: ProgressIndicators;
   readonly #editors: Editors;
@@ -79,8 +80,8 @@ export class WindowHost implements WindowApi {
     this.#notifications = new Notifications(host);
     this.#quickInput = new QuickInput(host);
     this.#contextMenu = new ContextMenu(host, this.#menus, commands);
-    this.#titleBar = new ItemBar(this.#layout.titleBar, ['left', 'center', 'right']);
-    this.#statusBar = new ItemBar(this.#layout.statusBar, ['left', 'right']);
+    this.#titleBar = new TitleBar(this.#layout.titleBar);
+    this.#statusBar = new StatusBar(this.#layout.statusBar);
     this.#viewMenu = new ViewMenu(host.ownerDocument, this.#menus, {
       context: () => ({ activeEditorId: this.#activeEditorId, resource: this.#active }),
       showContextMenu: (menuId, menuOptions) => this.showContextMenu(menuId, menuOptions),

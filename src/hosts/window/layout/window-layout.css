@@ -91,7 +91,7 @@
 .zwf-editor__status-bar-right { display: flex; }
 /* The window's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .zwf-editor { position: relative; }
-/* Above everything: the title bar items (window.registerTitleBarItem; ItemBar orders them; hidden while none shows),
+/* Above everything: the title bar items (window.registerTitleBarItem; TitleBar orders them; hidden while none shows),
    left ones from the start, center ones in the middle, right ones at the end. Buttons in it share one look (an item
    styles itself over it); an item with data-background="warning" or "error" tints the whole bar. */
 .zwf-editor__title-bar {
