@@ -61,6 +61,14 @@ describe('WorkspaceHost.fs', () => {
     expect(workspace.fs.stat(null)).toEqual({});
   });
 
+  it('reads a project file, else a provider’s own', () => {
+    const workspace = new WorkspaceHost(new Project(path('/main.typ'), { '/main.typ': 'main' }));
+    workspace.registerFileSystemProvider({ stat: () => ({}), readFile: (at) => (at === '/@c1/main.typ' || at === '/main.typ' ? 'old' : undefined) });
+    expect(workspace.fs.readFile(path('/main.typ'))).toBe('main');
+    expect(workspace.fs.readFile(path('/@c1/main.typ'))).toBe('old');
+    expect(workspace.fs.readFile(path('/other.typ'))).toBeUndefined();
+  });
+
   it('refuses to create, delete or rename a file in a Readonly folder; its content stays editable', async () => {
     const project = new Project(path('/project/main.typ'), { '/project/main.typ': '', '/shared/lib.typ': 'lib', '/project/a.typ': 'a' });
     const allowFileChange = vi.fn(() => true);

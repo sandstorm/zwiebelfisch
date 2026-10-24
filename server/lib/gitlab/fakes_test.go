@@ -284,16 +284,21 @@ func (r *fakeRepo) changes(c *fakeCommit, p string) bool {
 	return false
 }
 
-func (r *fakeRepo) Compare(sha string) ([]FileChange, error) {
+func (r *fakeRepo) Compare(from, sha string) ([]FileChange, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	c := r.commits[sha]
 	if c == nil {
 		return nil, plumbing.ErrObjectNotFound
 	}
+	if from == "" {
+		from = c.parent
+	} else if r.commits[from] == nil {
+		return nil, plumbing.ErrObjectNotFound
+	}
 	var before map[string][]byte
-	if parent := r.commits[c.parent]; parent != nil {
-		before = parent.files
+	if base := r.commits[from]; base != nil {
+		before = base.files
 	}
 	var out []FileChange
 	for path, content := range c.files {

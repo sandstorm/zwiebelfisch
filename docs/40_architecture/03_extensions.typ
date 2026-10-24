@@ -84,7 +84,7 @@ activate({ workspace, subscriptions }) {
   table.header[`context.`][Host][What it offers],
   [`commands`], [`hosts/commands`], [`registerCommand`; keys via `contributes.keybindings`],
   [`window`], [`hosts/window`], [`registerMenuItem`, `registerSidePanel`, `registerTitleBarItem`, `registerStatusBarItem`, `registerEditorProvider`, `registerFileDecorationProvider`, `registerSearchProvider`, `registerStyleSheet`, `registerEditorHeaderFooter`],
-  [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `registerFileSystemProvider`],
+  [`workspace`], [`hosts/extension-host/workspace`], [`contributes.configuration`; `applyEdit`, `fs.stat`, `fs.readFile`, `registerFileSystemProvider`],
   [`languages`], [`hosts/languages`], [`registerDocumentLinkProvider`, `registerDocumentDropEditProvider`, `registerDocumentPasteEditProvider`, `registerHelpSheet`, `registerImportSource`; languages via `contributes.languages`],
   [`scm`], [`hosts/scm`], [`registerSourceControl` (with an optional `quickDiffProvider` and `historyProvider`)],
   [`visualEditor`], [`hosts/visual-editor`], [`registerNode`, `registerMark`, `registerTiptapExtension`, `registerSubmenu`, `registerFloatingBar`, `registerCompletionItemProvider`, `registerHighlightProvider`, `registerRawBoxRenderer`, `registerRawBoxBehavior`],
@@ -154,12 +154,13 @@ activate({ commands, window, subscriptions }) {
   [`visualEditor/align` \ `visualEditor/inlineStyles` \ `visualEditor/table` \ `visualEditor/image` \ `visualEditor/link`], [submenus and floating bars of extensions (@architecture-extensions-submenus)], [as above], [the context],
   [`files/new`], [the "New" dropdown in the file panel (drawn by `files`): file, folder, upload, diagram, spreadsheet], [`resource`, `resourceKind`, `resourceIsMain`, `resourceIsFixed`, `folderIsReadonly`], [the folder's path],
   [`files/row`], [a file row's right-click menu (drawn by `files`): new, rename, delete, set as main file, find in folder], [as `files/new`], [the row's path],
+  [`changes/historyItem`], [a commit's right-click menu in History (drawn by `changes`): show its changes, compare with current state, compare with…], [—], [the commit (`SourceControlHistoryItem`)],
   [`help/row`], [a help row's right-click menu (drawn by `help`): insert at cursor], [—], [the row's text],
   [`collaboration/account`], [the account menu in the title bar (drawn by `collaboration`): sign out], [—], [—],
   [`guests/share`], [the menu below a member's "Share" in the title bar (drawn by `collaboration`): new guest link, revoke a link], [—], [—],
 )
 
-The window, the preview and the Visual editor draw their own menus; the last five are drawn by the extension named.
+The window, the preview and the Visual editor draw their own menus; the last six are drawn by the extension named.
 
 === Entry fields <architecture-extensions-menu-item>
 
@@ -410,7 +411,7 @@ activate({ commands, workspace, window, subscriptions }) {
 
 Text edits of an open `.typ` file go to its `TypstDocument` (`change`, with the extension's own origin).
 
-`workspace.registerFileSystemProvider({ stat })`: folders and files an extension makes read-only. While a provider's `stat(path)` (null: the top level) says `{ permissions: FilePermission.Readonly }`, `applyEdit` refuses:
+`workspace.registerFileSystemProvider({ stat, readFile })`: folders and files an extension makes read-only. While a provider's `stat(path)` (null: the top level) says `{ permissions: FilePermission.Readonly }`, `applyEdit` refuses:
 
 #table(
   columns: (auto, 1fr),
@@ -420,6 +421,8 @@ Text edits of an open `.typ` file go to its `TypstDocument` (`change`, with the 
 )
 
 The file panel keeps such rows where they are, and the text editor opens such a file read-only; `workspace.fs.stat(path)` reads it. The `collaboration` extension makes every folder but a GitLab room's own read-only, and, for a guest, every file of a type guests may not change.
+
+*Files of its own:* a provider's `readFile(path)` (VS Code's, synchronous) serves a file outside the project, e.g. a file as it was at a commit (`/@84c6e2f/main.typ`). `window.showDocument(path)` opens it in the editor of its name, read-only (the Visual editor without its toolbar); it is not listed, compiled, shared or committed, and keeps no panel once another file is shown. `workspace.fs.readFile(path)` reads any file. Editor contributions find the path with `editor.path()`.
 
 == Document links <architecture-extensions-links>
 
@@ -510,14 +513,16 @@ activate({ scm, project, subscriptions }) {
 }
 ```
 
-*`quickDiffProvider`* (optional): `provideOriginalText(path)` gives a file's text at the last commit (`''`: added since; `undefined`: not this source control's). Fire `onDidChange` when it moves (a commit, a merge). The `changes` extension diffs the editors against it, or against a commit chosen in History, one baseline for all:
+*`quickDiffProvider`* (optional): `provideOriginalText(path)` gives a file's text at the last commit (`''`: added since; `undefined`: not this source control's). Fire `onDidChange` when it moves (a commit, a merge).
+
+*`historyProvider`* (optional, VS Code's proposed API): `currentHistoryItemRef` the current commit, `provideHistoryItems({ scope, cursor, limit })` pages the commits (of a file or folder), `provideHistoryItemChanges(id, parentId?)` the files that differ from `parentId` (default: the first parent) to `id`, `provideFileContent(id, path)` a file at a commit; fire `onDidChangeCurrentHistoryItem` when the current commit moves.
+
+The `changes` extension shows one comparison `{from, to}` at a time, in every editor alike. To the current state, it marks the live files against `from`'s texts (the last commit: `quickDiffProvider`'s); to a commit, it opens the files as they were there, read-only, as files of its own (`registerFileSystemProvider`, `/@<id>/<path>`), marked the same way:
 
 #figure(
   mermaid(read("../diagrams/quick-diff.mmd"), width: 90%),
-  caption: [Changes since the last commit, or a chosen one],
+  caption: [One comparison: the changes of a commit, between two, or since one to now],
 ) <fig:quick-diff>
-
-*`historyProvider`* (optional, VS Code's proposed API): `provideHistoryItems({ scope, cursor, limit })` pages the commits (of a file or folder), `provideHistoryItemChanges(id)` the files one changed, `provideFileContent(id, path)` a file at a commit; fire `onDidChangeCurrentHistoryItem` when the current commit moves. The `changes` extension's History panel reads it, and takes a chosen commit's texts as the baseline instead of `quickDiffProvider`'s.
 
 == Visual editor nodes <architecture-extensions-visual-editor>
 
@@ -761,7 +766,7 @@ Each kind has an explicit tie-breaker, so the result never depends on the list's
   [`mermaid`], [Mermaid diagrams (`.mmd`, drawn by `@preview/merman`)], [toolbar, links, help, import source, drop edit],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to …" and the save status of the registered source controls], [title bar, file decorations],
-  [`changes`], ["Show changes since last commit" (or since a commit chosen in History), inline in the Visual and the Source editor (`@codemirror/merge`), since when in the status bar; the History panel], [View menu, command, Tiptap extension, CodeMirror extension, status bar, side panel, `files/row`, style sheet],
+  [`changes`], [one comparison, as IntelliJ's "Show changes": a commit's changes, two commits', or since one (or the last) to now; inline in the Visual and the Source editor (`@codemirror/merge`), to a commit in its files shown read-only; named in the status bar; the History panel (click, Cmd-click, right click)], [View menu, commands, Tiptap extension, CodeMirror extension, file system provider, status bar, side panel, `files/row`, `window/editorTitle`, `changes/historyItem`, style sheet],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes], [nodes, marks, commands, menus, floating bar],
   [`math`], [math boxes; "Inline math", "Display math"], [Tiptap extension, toolbar],
   [`headings`], [headings; Heading 1–3 in the text style menu], [node, commands, menu, search],

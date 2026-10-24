@@ -26,9 +26,9 @@ type Repository interface {
 	// parent, newest first (by commit time), at most q.Limit (fewer, even none, once it checked logWork
 	// commits); next continues the list as q.Cursor ("": no more). An unknown cursor: errBadCursor.
 	Log(q LogQuery) (commits []CommitInfo, next string, err error)
-	// Compare lists the files commit sha changed against its first parent (a commit without one: every file
-	// added); a file moved unchanged is renamed.
-	Compare(sha string) ([]FileChange, error)
+	// Compare lists the files that differ from commit from to commit sha; from "": sha's first parent (a
+	// commit without one: every file added). A file moved unchanged is renamed.
+	Compare(from, sha string) ([]FileChange, error)
 	// File is path's content at commit sha; false: no such file there. Larger than maxBlobSize: errTooLarge.
 	File(sha, path string) ([]byte, bool, error)
 }

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-// Tests for changes.ts: one toggle (the View menu's) shows the changes in the Visual and the Source editor against the
-// last commit, or against a commit chosen in the History panel; the status bar says since when and turns them off.
+// Tests for changes.ts: one comparison shown alike by the History panel, the View menu's toggle, the status bar and
+// the live Visual and Source editors (marks only while it goes to the current state). Files of a commit shown
+// read-only are in editor.changes.test.ts.
 import { EditorState, type Extension as CodeExtension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,13 +9,16 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Extension, ExtensionContext, Memento } from '../../hosts/extension-host/extension-host';
-import { ScmHost, type SourceControlHistoryProvider } from '../../hosts/scm/scm';
+import { ScmHost, type SourceControlHistoryItem, type SourceControlHistoryProvider } from '../../hosts/scm/scm';
 import type { CodeMirrorContext } from '../../hosts/source-editor/source-editor';
 import type { SidePanel } from '../../hosts/window/window';
 import { createVisualEditor, TEST_DOCUMENT_PATH } from '../../testing/testing';
-import { changes, TOGGLE } from './changes';
+import { changes, COMPARE_WITH_CURRENT, TOGGLE } from './changes';
 
 afterEach(() => void vi.useRealTimers());
+
+const SECOND: SourceControlHistoryItem = { id: 'b0a7b0a', parentIds: ['c0ffee1'], subject: 'Second', message: 'Second', displayId: 'b0a7b0a', author: 'Ann', timestamp: Date.now() };
+const FIRST: SourceControlHistoryItem = { id: 'c0ffee1', parentIds: [], subject: 'First', message: 'First', displayId: 'c0ffee1', author: 'Ann', timestamp: Date.now() };
 
 function setup(stored: Record<string, unknown> = {}) {
   vi.useFakeTimers();
@@ -37,6 +41,8 @@ function setup(stored: Record<string, unknown> = {}) {
         window: {
           ...given.window,
           ownerDocument: document,
+          activeFile: TEST_DOCUMENT_PATH,
+          onDidChangeActiveFile: new EventEmitter<never>().event,
           showDocument: () => {},
           registerSidePanel: () => side,
           registerStatusBarItem: (element) => (statusBar.append(element), new Disposable(() => element.remove())),
@@ -49,6 +55,7 @@ function setup(stored: Record<string, unknown> = {}) {
   const text = new TypstDocument('The slow brown fox.\n');
   createVisualEditor(parent, text, { contributions: [withScm] });
   const toggle = () => context.commands.executeCommand(TOGGLE);
+  const command = (id: string, ...args: unknown[]) => context.commands.executeCommand(id, ...args);
   const inView = () => context.window.getMenuItems('window/view').find((item) => item.command === TOGGLE);
   const status = () => statusBar.querySelector<HTMLButtonElement>('[data-testid="zwf-changes-status"]');
   /** A Source editor of the document's text, with the extension's CodeMirror contribution. */
@@ -63,12 +70,8 @@ function setup(stored: Record<string, unknown> = {}) {
   const changed = new EventEmitter<void>();
   let base = 'The quick fox.\n';
   const historyProvider: SourceControlHistoryProvider = {
-    provideHistoryItems: async () => ({
-      items: [
-        { id: 'b0a7b0a', parentIds: ['c0ffee1'], subject: 'Second', message: 'Second', displayId: 'b0a7b0a', author: 'Ann', timestamp: Date.now() },
-        { id: 'c0ffee1', parentIds: [], subject: 'First', message: 'First', displayId: 'c0ffee1', author: 'Ann', timestamp: Date.now() },
-      ],
-    }),
+    currentHistoryItemRef: { id: SECOND.id, name: 'main' },
+    provideHistoryItems: async () => ({ items: [SECOND, FIRST] }),
     provideHistoryItemChanges: async () => [],
     provideFileContent: async (id) => new TextEncoder().encode(id === 'c0ffee1' ? 'The slow fox.\n' : 'The brown fox.\n'),
     onDidChangeCurrentHistoryItem: new EventEmitter<void>().event,
@@ -91,9 +94,9 @@ function setup(stored: Record<string, unknown> = {}) {
     await vi.advanceTimersByTimeAsync(1000);
   };
   const row = (subject: string) => [...body.querySelectorAll<HTMLButtonElement>('.zwf-history__row')].find((each) => each.querySelector('.zwf-history__subject')?.textContent === subject)!;
-  const compared = () => body.querySelector('.zwf-history__row[aria-current="true"] .zwf-history__subject')?.textContent;
+  const compared = () => [...body.querySelectorAll('.zwf-history__row[aria-current="true"]')].map((each) => `${each.querySelector('.zwf-history__subject')!.textContent}: ${each.querySelector('.zwf-history__compared')!.textContent}`);
   const mode = () => body.querySelector('[data-testid="zwf-history-mode"]')?.textContent;
-  return { parent, body, row, compared, mode, toggle, inView, status, sourceEditor, register, moveBase, settle, stored };
+  return { parent, body, row, compared, mode, toggle, command, inView, status, sourceEditor, register, moveBase, settle, stored };
 }
 
 describe('changes', () => {
@@ -159,35 +162,8 @@ describe('changes', () => {
     view.destroy();
   });
 
-  it('shows the changes since a commit chosen in History, says so in the status bar, and turns off back to the last commit', async () => {
-    const { parent, body, row, toggle, status, register, settle, stored } = setup();
-    register(true);
-    await settle();
-    expect(body.textContent).toContain('First');
-
-    row('First').click();
-    await settle();
-    expect(stored.show).toBe(true);
-    expect(parent.querySelector('.zwf-changes__inserted')?.textContent?.trim()).toBe('brown');
-    expect(parent.querySelector('.zwf-changes__deleted')).toBeNull();
-    expect(status()?.textContent).toMatch(/^Changes since c0ffee1 \(.+\) ✕$/);
-    expect(body.querySelector('.zwf-history__row[aria-current="true"]')).not.toBeNull();
-
-    status()!.click();
-    await settle();
-    expect(stored.show).toBe(false);
-    expect(status()).toBeNull();
-    expect(parent.querySelector('.zwf-changes__inserted')).toBeNull();
-    expect(body.querySelector('.zwf-history__row[aria-current="true"]')).toBeNull();
-
-    await toggle();
-    await settle();
-    expect(parent.querySelector('.zwf-changes__inserted')?.textContent).toBe('slow brown');
-    expect(status()?.textContent).toBe('Changes since last commit ✕');
-  });
-
-  it('keeps the panel, the toggle, the status bar and the editors as one: pick A, B, B again, toggle off, A, ✕', async () => {
-    const { parent, body, row, compared, mode, toggle, inView, status, register, settle } = setup();
+  it('keeps the panel, the toggle, the status bar and the editors as one: A, A again, A then Cmd-click B, B with now, toggle, ✕', async () => {
+    const { parent, body, row, compared, mode, toggle, command, inView, status, register, settle, stored } = setup();
     register(true);
     await settle();
     const state = () => ({
@@ -197,35 +173,39 @@ describe('changes', () => {
       status: status()?.textContent,
       inserted: parent.querySelector('.zwf-changes__inserted')?.textContent?.trim(),
     });
-    const off = { compared: undefined, mode: 'Show changes since last commit', toggled: false, status: undefined, inserted: undefined };
+    const off = { compared: [], mode: 'Show changes since last commit', toggled: false, status: undefined, inserted: undefined };
     expect(state()).toEqual(off);
 
-    row('First').click();
+    // the changes of a commit: its files as they were there, not marked in the live editor
+    row('Second').click();
     await settle();
-    expect(state()).toMatchObject({ compared: 'First', mode: 'Showing changes since c0ffee1 “First”✕', toggled: true, status: expect.stringMatching(/^Changes since c0ffee1 /), inserted: 'brown' });
+    expect(state()).toEqual({ compared: ['Second: Changes'], mode: 'Changes in b0a7b0a “Second”✕', toggled: true, status: 'Changes in b0a7b0a ✕', inserted: undefined });
+    expect(stored.show).toBe(true);
 
     row('Second').click();
     await settle();
-    expect(state()).toMatchObject({ compared: 'Second', mode: 'Showing changes since b0a7b0a “Second”✕', toggled: true, status: expect.stringMatching(/^Changes since b0a7b0a /), inserted: 'slow' });
+    expect(state()).toEqual(off);
 
     row('Second').click();
+    row('First').dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
     await settle();
-    expect(state()).toEqual(off);
-    expect(body.querySelector('.zwf-history__file-row')).toBeNull();
+    expect(state()).toEqual({ compared: ['Second: To', 'First: From'], mode: 'Changes from c0ffee1 to b0a7b0a✕', toggled: true, status: 'Changes from c0ffee1 to b0a7b0a ✕', inserted: undefined });
+
+    // the right click's "Compare with current state": the live editor marks the changes since it
+    await command(COMPARE_WITH_CURRENT, FIRST);
+    await settle();
+    expect(state()).toMatchObject({ compared: ['First: Since'], mode: 'Changes since c0ffee1 (to now)✕', toggled: true, status: expect.stringMatching(/^Changes since c0ffee1 \(.+\) ✕$/), inserted: 'brown' });
 
     await toggle();
     await settle();
-    expect(state()).toEqual({ compared: undefined, mode: 'Showing changes since last commit✕', toggled: true, status: 'Changes since last commit ✕', inserted: 'slow brown' });
+    expect(state()).toEqual(off);
     await toggle();
     await settle();
-    expect(state()).toEqual(off);
-
-    row('First').click();
-    await settle();
-    expect(state()).toMatchObject({ compared: 'First', toggled: true, inserted: 'brown' });
+    expect(state()).toEqual({ compared: [], mode: 'Changes since last commit✕', toggled: true, status: 'Changes since last commit ✕', inserted: 'slow brown' });
 
     body.querySelector<HTMLButtonElement>('button[aria-label="Stop showing changes"]')!.click();
     await settle();
     expect(state()).toEqual(off);
+    expect(stored.show).toBe(false);
   });
 });

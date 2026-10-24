@@ -52,6 +52,7 @@ export class Widget {
     this.window = new WindowHost({
       host,
       project,
+      files: this.#workspace.fs,
       commands: this.commands,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
       layoutState: StorageMemento.of(doc, 'sessionStorage', `zwf:${project.main}:workbench:`),

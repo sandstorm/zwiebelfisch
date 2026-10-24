@@ -103,6 +103,32 @@ test('"Show changes since last commit" marks a new line in the Source editor and
   await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine')).toHaveCount(0);
 });
 
+test('History: a click on a commit shows its changes; its file opens as it was there, read-only; ✕ goes back', async ({ browser, baseURL }, info) => {
+  const { ann } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.press('Enter');
+  await ann.keyboard.type('Committed here.');
+  await saveToGitLab(ann, 'Add a line');
+  await expect(messages(ann)).toContainText('Saved version');
+  await ann.evaluate(() => (window as unknown as { editor: { executeCommand(id: string): Promise<unknown> } }).editor.executeCommand('workbench.view.history'));
+  const history = ann.locator('.zwf-history');
+  await history.locator('.zwf-history__row', { hasText: 'Add a line' }).click();
+  await expect(history.getByTestId('zwf-history-mode')).toContainText(/Changes in [0-9a-f]{7} “Add a line”/);
+  await expect(ann.getByTestId('zwf-changes-status')).toHaveText(/^Changes in [0-9a-f]{7} ✕$/);
+  await history.locator('.zwf-history__file-row', { hasText: 'main.typ' }).click();
+  await expect(ann.locator('.zwf-editor__tab-action', { hasText: /[0-9a-f]{7} · read-only · changes since [0-9a-f]{7}/ })).toBeVisible();
+  const source = ann.locator('.zwf-editor__pane:not([hidden]) [data-testid=zwf-source]');
+  await expect(source.locator('.cm-changedLine', { hasText: 'Committed here.' })).toBeVisible();
+  await expect(source.locator('.cm-content')).toHaveAttribute('aria-readonly', 'true');
+
+  await history.getByRole('button', { name: 'Stop showing changes' }).click();
+  await expect(ann.locator('.zwf-editor__tab-action', { hasText: 'read-only' })).toHaveCount(0);
+  await expect(source.locator('.cm-changedLine')).toHaveCount(0);
+  await expect(source.locator('.cm-line', { hasText: 'Committed here.' })).toBeVisible();
+});
+
 test('a click on the status bar entry opens the save dialog', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await expect(scmStatus(ann)).toHaveText(/^Saved · /);

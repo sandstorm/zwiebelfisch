@@ -124,11 +124,13 @@ export interface WindowApi {
   getFileIcon(path: ProjectPath): string | undefined;
 
   /**
-   * Shows `path` in the editing area (VS Code's `window.showTextDocument`, for any file the project has), in a custom
+   * Shows `path` in the editing area (VS Code's `window.showTextDocument`, for any file the project has, or a file
+   * provider's own: `workspace.fs.readFile`, read-only), in a custom
    * editor (`registerEditorProvider`; a Typst file's are the Visual and the Source editor): the one `viewType`
    * names, else the one the user chose last, else the default one; nothing without one. Showing the shown file again shows it again (an editor without
    * `retainContextWhenHidden` gets the current content in a new panel). `selection` is revealed in that editor
-   * (offsets into the file's text; an editor gets it as `onDidRequestReveal`).
+   * (offsets into the file's text; an editor gets it as `onDidRequestReveal`). A provider's file keeps no panel once
+   * another file is shown.
    */
   showDocument(path: ProjectPath, options?: DocumentShowOptions): void;
   /** The file shown in the editing area. */
@@ -606,6 +608,8 @@ export interface WindowOptions {
   readonly host: HTMLElement;
   /** The files it shows (the main file first); it keeps the editing area on an existing file as they change. */
   readonly project: Project;
+  /** The files outside the project it shows too, read-only (the workspace's `fs.readFile`); default: none. */
+  readonly files?: { readFile(path: ProjectPath): FileContent | undefined };
   /** Runs the menus' commands and names their keys; gets the side panels' commands `workbench.view.<id>`. */
   readonly commands: CommandsHost;
   /** The selection changes of the Typst files' editors, as `onDidChangeTextEditorSelection`. */

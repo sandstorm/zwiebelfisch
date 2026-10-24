@@ -53,20 +53,21 @@ func (x *Rooms) ServeHistory(w http.ResponseWriter, r *http.Request) {
 	reply(w, page)
 }
 
-// ServeCompare answers the files commit ?sha= changed against its first parent (compareAnswer); in a room of
-// one folder only those it holds or pulled in (a rename from or to elsewhere as added or deleted). Access as
-// ServeFile; cached for good in a room of the whole repository.
+// ServeCompare answers the files that differ from commit ?from= (default: the first parent) to commit ?sha=
+// (compareAnswer); in a room of one folder only those it holds or pulled in (a rename from or to elsewhere as
+// added or deleted). Access as ServeFile; cached for good in a room of the whole repository.
 func (x *Rooms) ServeCompare(w http.ResponseWriter, r *http.Request) {
 	open, _ := x.openFor(w, r)
 	if open == nil {
 		return
 	}
-	sha := r.URL.Query().Get("sha")
-	if !plumbing.IsHash(sha) {
+	q := r.URL.Query()
+	sha, from := q.Get("sha"), q.Get("from")
+	if !plumbing.IsHash(sha) || (from != "" && !plumbing.IsHash(from)) {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
-	changes, err := open.repo.Compare(sha)
+	changes, err := open.repo.Compare(from, sha)
 	if !answered(w, err) {
 		return
 	}

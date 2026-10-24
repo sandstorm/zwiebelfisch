@@ -1,9 +1,9 @@
-// The changes since the last commit, drawn in the Visual editor. See changes in ../changes.ts.
+// The changes of the comparison shown, drawn in the Visual editor. See changes in ../changes.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import type { ChangesState } from '../baseline';
+import type { ChangesState } from '../comparison';
 import { changesSince, type Deletion, type DocumentChanges } from './changes-since';
 
 /**

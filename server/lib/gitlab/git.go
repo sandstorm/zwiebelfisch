@@ -579,7 +579,7 @@ func (g *gitRepo) hashAt(c *object.Commit, p string) (plumbing.Hash, error) {
 	return e.Hash, nil
 }
 
-func (g *gitRepo) Compare(sha string) ([]FileChange, error) {
+func (g *gitRepo) Compare(from, sha string) ([]FileChange, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	if g.repo == nil {
@@ -593,13 +593,16 @@ func (g *gitRepo) Compare(sha string) ([]FileChange, error) {
 	if err != nil {
 		return nil, err
 	}
+	if from == "" && len(c.ParentHashes) > 0 {
+		from = c.ParentHashes[0].String()
+	}
 	var before *object.Tree
-	if len(c.ParentHashes) > 0 {
-		parent, err := g.repo.CommitObject(c.ParentHashes[0])
+	if from != "" {
+		base, err := g.repo.CommitObject(plumbing.NewHash(from))
 		if err != nil {
 			return nil, err
 		}
-		if before, err = parent.Tree(); err != nil {
+		if before, err = base.Tree(); err != nil {
 			return nil, err
 		}
 	}

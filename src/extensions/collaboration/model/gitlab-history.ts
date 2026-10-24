@@ -2,12 +2,12 @@
 import type * as Y from 'yjs';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import { META_MAP, roomComparePath, roomFilePath, roomHistoryPath, type CompareAnswer, type HistoryCommit, type HistoryPage } from '../room-protocol';
+import { gitlabRoom, META_MAP, roomComparePath, roomFilePath, roomHistoryPath, type CompareAnswer, type HistoryCommit, type HistoryPage } from '../room-protocol';
 
 /**
  * The commits of a GitLab room's branch, read from the server's clone with the session cookie (the scm host's
  * `SourceControlHistoryProvider`): pages of commits of the room (in a room of one folder: the folder), of a folder or
- * of a file; the files a commit changed; a file at a commit. The current commit is the room's base (`meta.baseSha`):
+ * of a file; the files a commit changed, or that differ between two; a file at a commit. The current commit is the room's base (`meta.baseSha`):
  * `onDidChangeCurrentHistoryItem` fires when it moves. Answers that name a commit are the browser's to cache.
  *
  * Used by: GitLabSourceControl, as its `historyProvider`.
@@ -33,8 +33,14 @@ export class GitLabHistory {
     return { items: page.commits.map(item), cursor: page.cursor || undefined };
   }
 
-  async provideHistoryItemChanges(historyItemId: string): Promise<HistoryItemChange[]> {
-    const answer = (await this.#json(roomComparePath(this.room, historyItemId))) as CompareAnswer;
+  /** The room's base commit, under the branch's name; undefined before the room has one. */
+  get currentHistoryItemRef(): { id: string; name: string } | undefined {
+    const id = this.#meta.get('baseSha');
+    return typeof id === 'string' && id ? { id, name: gitlabRoom(this.room)?.branch ?? '' } : undefined;
+  }
+
+  async provideHistoryItemChanges(historyItemId: string, historyItemParentId?: string): Promise<HistoryItemChange[]> {
+    const answer = (await this.#json(roomComparePath(this.room, historyItemId, historyItemParentId))) as CompareAnswer;
     return answer.files.flatMap((file) => {
       const path = ProjectPath.parse(file.path);
       const originalPath = file.previousPath ? ProjectPath.parse(file.previousPath) : null;

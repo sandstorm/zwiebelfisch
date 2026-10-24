@@ -1,8 +1,8 @@
-// The changes since the baseline, drawn in a CodeMirror. See changes in ../changes.ts.
+// The changes of the comparison shown, drawn in a CodeMirror. See changes in ../changes.ts.
 import { getOriginalDoc, originalDocChangeEffect, unifiedMergeView } from '@codemirror/merge';
 import { ChangeSet, Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin } from '@codemirror/view';
-import type { ChangesState } from '../baseline';
+import type { ChangesState } from '../comparison';
 
 /**
  * What the CodeMirror's text changed since `original()` (nothing while that is undefined), in `@codemirror/merge`'s

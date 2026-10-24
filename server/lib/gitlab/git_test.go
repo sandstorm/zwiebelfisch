@@ -16,6 +16,7 @@ import (
 
 	git "github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 
@@ -234,16 +235,27 @@ func TestGitHistory(t *testing.T) {
 	})
 
 	t.Run("compares a commit with its first parent; a root commit adds everything", func(t *testing.T) {
-		changes, err := g.Compare(renamed)
+		changes, err := g.Compare("", renamed)
 		require.NoError(t, err)
 		require.Equal(t, []FileChange{{Path: "/chapters/first.typ", PreviousPath: "/chapters/one.typ", Kind: "renamed"}}, changes)
-		changes, err = g.Compare(edited)
+		changes, err = g.Compare("", edited)
 		require.NoError(t, err)
 		require.Equal(t, []FileChange{{Path: "/img/logo.png", Kind: "deleted"}, {Path: "/main.typ", Kind: "modified"}}, changes)
-		changes, err = g.Compare(initial)
+		changes, err = g.Compare("", initial)
 		require.NoError(t, err)
 		require.Len(t, changes, 3)
 		require.Equal(t, "added", changes[0].Kind)
+	})
+
+	t.Run("compares two commits, either way round", func(t *testing.T) {
+		changes, err := g.Compare(initial, edited)
+		require.NoError(t, err)
+		require.Equal(t, []FileChange{{Path: "/chapters/first.typ", PreviousPath: "/chapters/one.typ", Kind: "renamed"}, {Path: "/img/logo.png", Kind: "deleted"}, {Path: "/main.typ", Kind: "modified"}}, changes)
+		changes, err = g.Compare(edited, initial)
+		require.NoError(t, err)
+		require.Equal(t, []FileChange{{Path: "/chapters/one.typ", PreviousPath: "/chapters/first.typ", Kind: "renamed"}, {Path: "/img/logo.png", Kind: "added"}, {Path: "/main.typ", Kind: "modified"}}, changes)
+		_, err = g.Compare(strings.Repeat("0", 40), edited)
+		require.ErrorIs(t, err, plumbing.ErrObjectNotFound)
 	})
 
 	t.Run("reads a file at a commit", func(t *testing.T) {

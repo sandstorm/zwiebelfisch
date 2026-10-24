@@ -198,5 +198,5 @@ The server holds no GitLab token of its own: everything a GitLab room does, it d
 - *A room of one folder* (`…@<branch>:/<folder>`) holds the folder's files and the pulled-in ones (`meta.pulledIn`), at their repository paths: its base, merges and commits cover exactly these. The widget makes every other folder Readonly (`workspace.registerFileSystemProvider`), marks pulled-in files (a file decoration) and asks for what a compile misses (`gitlab:pull`); the server refuses commits that create, rename or delete outside the folder.
 - *History* comes from the same clone (read lock only), checked as the room's files are (`Authenticate`); a room of one folder answers for its folder and pulled-in files only. Answers that name a commit are cached for good (`immutable`).
   - `GET /api/rooms/<room>/history?path=&cursor=`: the commits that changed `path` (`''` the room, `/dir/` a folder, `/a.typ` a file), newest first, 50 a page; people from the author and the `Co-authored-by:` trailers.
-  - `GET /api/rooms/<room>/compare?sha=`: the files that commit changed against its first parent.
+  - `GET /api/rooms/<room>/compare?sha=&from=`: the files that differ from commit `from` (default: the first parent) to commit `sha`.
   - `GET /api/rooms/<room>/files/<path>?ref=<sha>`: a file at a commit.

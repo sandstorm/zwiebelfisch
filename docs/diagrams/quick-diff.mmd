@@ -1,9 +1,10 @@
 flowchart LR
-  B["meta.base<br/>(texts at the last commit)"] --> Q["GitLabSourceControl<br/>quickDiffProvider"]
-  H["History: a commit chosen"] --> P["historyProvider<br/>provideFileContent(id, path)"]
-  Q -- "provideOriginalText(path)" --> BL["Baseline<br/>(one original per file)"]
-  P --> BL
-  T["changes.toggle<br/>(View menu)"] --> BL
-  BL --> V["Visual editor<br/>parseTypst + prosemirror-changeset<br/>→ decorations"]
-  BL --> S["Source editor<br/>@codemirror/merge unifiedMergeView"]
-  BL --> ST["status bar<br/>Changes since … ✕"]
+  H["History: click, Cmd-click,<br/>right click"] --> C["ShownChanges<br/>one comparison {from, to}"]
+  T["changes.toggle<br/>(View menu)"] --> C
+  Q["quickDiffProvider<br/>(the last commit)"] -- "from" --> C
+  P["historyProvider<br/>provideFileContent(id, path)"] -- "from, to" --> C
+  C -- "to: now" --> L["the live files<br/>(editable)"]
+  C -- "to: a commit" --> R["Snapshots /@id/path<br/>(read-only, FileSystemProvider)"]
+  L --> E["Visual editor: prosemirror-changeset<br/>Source editor: unifiedMergeView"]
+  R --> E
+  C --> ST["status bar, History strip<br/>Changes in … ✕"]

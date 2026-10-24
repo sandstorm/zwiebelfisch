@@ -1,10 +1,11 @@
 // See VisualEditorContributions in visual-editor.ts.
-import { Editor } from '@tiptap/core';
+import { Editor, Extension as TiptapExtension } from '@tiptap/core';
 import type { Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
-import { EditorState, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
+import { EditorState, Plugin, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
+import type { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, type SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, parseTypst, sourceToPos, applyTypstChanges, typstChanges, type TypstMarkSpec } from './typst-conversion/typst-conversion';
 import { applyChanges, insertTypst } from './visual-editor-helpers';
@@ -32,7 +33,7 @@ export class VisualEditor {
   /** The text column below the toolbar (with what floats in it): what scrolls as the document's content. */
   readonly content: HTMLElement;
   private readonly tiptap: Editor;
-  private readonly toolbar: Toolbar;
+  private readonly toolbar: Toolbar | undefined;
   private readonly selectionChanged = new EventEmitter<void>();
   /** After the selection moved or the text changed; `selection()` already returns the new selection. */
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
@@ -44,12 +45,12 @@ export class VisualEditor {
    */
   private revealed: { selection: Selection; range: SourceRange } | null = null;
 
-  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualEditorHost) {
+  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualEditorHost, options: VisualEditorOptions = {}) {
     const contributed = contributions.contributed();
     const views = nodeViewSpecs(contributed.nodes);
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
-    const editor: VisualEditorContext = { document, selection: () => this.selection(), isBox };
+    const editor: VisualEditorContext = { document, path: () => options.path?.() ?? null, selection: () => this.selection(), isBox };
     // the text column: the text and what floats in it (bars, popovers), `position: relative`
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'zwf-visual__body';
@@ -61,7 +62,9 @@ export class VisualEditor {
         highlights,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({ ...editor, tiptap, query })),
         ...contributed.tiptapExtensions.flatMap((extension) => (typeof extension === 'function' ? extension(editor) : extension)),
+        ...(options.readOnly ? [readOnly] : []),
       ],
+      editable: !options.readOnly,
       injectCSS: false,
       editorProps: { attributes: { class: 'zwf-visual', 'data-testid': 'zwf-visual' } },
       onTransaction: ({ transaction, appendedTransactions }) => {
@@ -80,12 +83,15 @@ export class VisualEditor {
         plugins: this.tiptap.state.plugins,
       }),
     );
-    this.toolbar = new Toolbar(parent, this.tiptap, {
-      context: { ...editor, tiptap: this.tiptap },
-      menus: contributions.menus,
-      submenus: contributed.submenus,
-      floatingBars: contributed.floatingBars,
-    });
+    // read-only: nothing to format
+    this.toolbar = options.readOnly
+      ? undefined
+      : new Toolbar(parent, this.tiptap, {
+          context: { ...editor, tiptap: this.tiptap },
+          menus: contributions.menus,
+          submenus: contributed.submenus,
+          floatingBars: contributed.floatingBars,
+        });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -166,7 +172,7 @@ export class VisualEditor {
   dispose(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     this.selectionChanged.dispose();
-    this.toolbar.dispose();
+    this.toolbar?.dispose();
     this.tiptap.destroy();
   }
 
@@ -337,6 +343,20 @@ const NO_MENUS: ToolbarMenus = {
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'zwf-from-document';
+
+/** How one Visual editor shows its document. */
+export interface VisualEditorOptions {
+  /** The file it shows, now, for the contributions (`VisualEditorContext.path`); default: none. */
+  path?(): ProjectPath | null;
+  /** Shows the document without a toolbar and takes no edit (a file as it was at a commit); default: editable. */
+  readOnly?: boolean;
+}
+
+/** Refuses every change of the text but the document's own (a read-only editor's commands and raw boxes included). */
+const readOnly = TiptapExtension.create({
+  name: 'readOnly',
+  addProseMirrorPlugins: () => [new Plugin({ filterTransaction: (tr) => !tr.docChanged || tr.getMeta(FROM_DOCUMENT) === true })],
+});
 
 /** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
 interface Ranked<T> {

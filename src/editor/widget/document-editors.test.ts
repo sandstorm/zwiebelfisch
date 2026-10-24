@@ -33,6 +33,8 @@ function setup() {
   const window = new WindowHost({
     host: area,
     project,
+    // a file outside the project: /main.typ as it was
+    files: { readFile: (at) => (at === '/@old/main.typ' ? 'Old\n' : undefined) },
     commands: new CommandsHost(area),
     onDidChangeTextEditorSelection: selections.event,
     layoutState: { get: () => undefined, update: async () => {} },
@@ -85,6 +87,25 @@ describe('DocumentEditors', () => {
     expect([...area.querySelectorAll('[role=tab]')].map((tab) => tab.textContent)).toEqual(['Visual', 'Source']);
     expect(editors.activeTextEditor?.viewType).toBe(VISUAL_EDITOR);
     expect(visible()[0].querySelector('.zwf-visual p')?.textContent).toBe('Alpha');
+  });
+
+  it('shows a .typ file outside the project read-only in both editors, without a toolbar, and keeps no panel of it once left', () => {
+    const { area, editors, show, visible } = setup();
+    show('/@old/main.typ');
+    expect(editors.activeFile).toBe('/@old/main.typ');
+    expect(visible()[0].querySelector('.zwf-visual')?.getAttribute('contenteditable')).toBe('false');
+    expect(visible()[0].querySelector('.zwf-toolbar')).toBeNull();
+    editors.activeTextEditor!.insertSnippet('X');
+    expect(editors.activeTextEditor!.document.text).toBe('Old\n');
+    show('/@old/main.typ', SOURCE_EDITOR);
+    const view = EditorView.findFromDOM(visible()[0].querySelector<HTMLElement>('[data-testid="zwf-source"]')!)!;
+    expect(view.state.readOnly).toBe(true);
+    editors.activeTextEditor!.insertSnippet('X');
+    expect(view.state.doc.toString()).toBe('Old\n');
+    show('/main.typ');
+    expect([...area.querySelectorAll('.zwf-editor__pane')].filter((pane) => pane.textContent?.includes('Old'))).toEqual([]);
+    show('/@gone/main.typ');
+    expect(editors.activeFile).toBe('/main.typ');
   });
 
   it("makes a document's view the first time it is shown in it, and keeps it while others are shown", () => {

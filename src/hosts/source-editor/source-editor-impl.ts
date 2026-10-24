@@ -1,5 +1,5 @@
 // See SourceEditorContributions in source-editor.ts.
-import { Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension } from '@codemirror/state';
+import { Compartment, EditorSelection, EditorState, StateEffect, StateField, type ChangeSet, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
@@ -60,6 +60,7 @@ export class SourceEditor {
       doc: document.text,
       extensions: [
         contributed,
+        options.readOnly ? [EditorState.readOnly.of(true), EditorState.changeFilter.of((tr) => tr.annotation(fromDocument) !== undefined)] : [],
         highlightField,
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {
