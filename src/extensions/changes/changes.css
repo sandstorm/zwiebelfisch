@@ -114,7 +114,15 @@
   font-weight: 600;
   text-transform: uppercase;
 }
-.zwf-history__entry--compared { background: var(--zwf-selected); box-shadow: inset 3px 0 0 var(--zwf-accent); }
+.zwf-history__entry--compared { position: relative; background: var(--zwf-selected); }
+.zwf-history__entry--compared::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--zwf-accent);
+  content: '';
+  pointer-events: none;
+}
 .zwf-history__row {
   display: grid;
   width: 100%;
