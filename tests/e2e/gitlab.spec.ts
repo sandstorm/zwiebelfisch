@@ -100,7 +100,7 @@ test('"Show changes since last commit" marks a new line in the Source editor and
   await expect(ann.getByTestId('zwf-source').locator('.cm-changedLine')).toHaveCount(0);
 });
 
-test('a click on the status bar entry opens the save dialog',async ({ browser, baseURL }, info) => {
+test('a click on the status bar entry opens the save dialog', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await expect(scmStatus(ann)).toHaveText(/^Saved · /);
   await scmStatus(ann).click();

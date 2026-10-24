@@ -33,7 +33,8 @@ export function changes(): Extension {
       const shown = new Shown(globalState, baseline, changed);
       const history = historyPanel(context, shown);
       const original = (path: ProjectPath | null | undefined) => (shown.value && path ? baseline.original(path) : undefined);
-      const status = statusItem(context, shown);
+      const hasOriginals = () => scm.sourceControls.some((control) => control.quickDiffProvider);
+      const status = statusItem(context, shown, hasOriginals);
       subscriptions.push(
         window.registerStyleSheet(css),
         baseline,
@@ -45,7 +46,7 @@ export function changes(): Extension {
         history,
         status,
         commands.registerCommand(TOGGLE, () => (shown.value ? shown.hide() : shown.show())),
-        window.registerMenuItem('window/view', { command: TOGGLE, group: 'editor', toggled: () => shown.value, when: () => scm.sourceControls.some((control) => control.quickDiffProvider) }),
+        window.registerMenuItem('window/view', { command: TOGGLE, group: 'editor', toggled: () => shown.value, when: hasOriginals }),
         visualEditor.registerTiptapExtension((editor) => changeDecorations({ original: () => original(project.pathOf(editor.document)), onDidChange: changed.event })),
         sourceEditor.registerCodeMirrorExtension({}, (editor) => (editor.editor === 'rawBox' ? [] : inlineChanges({ original: () => original(editor.path()), onDidChange: changed.event }))),
         followSourceControls(scm, {
@@ -108,8 +109,8 @@ class Shown {
   }
 }
 
-/** The status bar entry while the changes are shown: since when; a click hides them. */
-function statusItem({ window, commands }: ExtensionContext, shown: Shown): Disposable & { update(): void } {
+/** The status bar entry while the changes are shown and a source control `hasOriginals()`: since when; a click hides them. */
+function statusItem({ window, commands }: ExtensionContext, shown: Shown, hasOriginals: () => boolean): Disposable & { update(): void } {
   const element = window.ownerDocument.createElement('button');
   element.type = 'button';
   element.className = 'zwf-changes__status';
@@ -121,8 +122,9 @@ function statusItem({ window, commands }: ExtensionContext, shown: Shown): Dispo
     const since = commit ? [commit.displayId ?? commit.id.slice(0, 7), commit.timestamp === undefined ? '' : `(${relativeTime(commit.timestamp, Date.now())})`].filter(Boolean).join(' ') : 'last commit';
     element.textContent = `Changes since ${since} ✕`;
     element.title = `Shown in the editors: what changed since ${commit ? `“${commit.subject}”` : 'the last commit'}. Click to stop showing them.`;
-    if (shown.value && !registered) registered = window.registerStatusBarItem(element, { alignment: 'left', priority: 150 });
-    if (!shown.value && registered) {
+    const visible = shown.value && hasOriginals();
+    if (visible && !registered) registered = window.registerStatusBarItem(element, { alignment: 'left', priority: 150 });
+    if (!visible && registered) {
       registered.dispose();
       registered = undefined;
     }

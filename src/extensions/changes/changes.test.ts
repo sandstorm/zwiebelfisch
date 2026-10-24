@@ -117,8 +117,10 @@ describe('changes', () => {
     expect(parent.querySelector('.zwf-changes__deleted')).toBeNull();
   });
 
-  it('starts as the viewer chose last', async () => {
+  it('starts as the viewer chose last, the status bar entry only once a source control has originals', async () => {
     const { parent, status, register, settle } = setup({ show: true });
+    await settle();
+    expect(status()).toBeNull();
     register();
     await settle();
     expect(parent.querySelector('.zwf-changes__inserted')?.textContent).toBe('slow brown');
