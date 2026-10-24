@@ -11,7 +11,7 @@ const FOLDER = path('/reports/q1');
 
 describe('folderPermissions', () => {
   it('makes every folder Readonly but the room\'s folder and those in it', () => {
-    const { stat } = folderPermissions(FOLDER);
+    const { stat } = folderPermissions(FOLDER, { has: (file) => file === '/template.typ' });
     const readonly = { permissions: FilePermission.Readonly };
     expect([null, '/reports', '/reports/q2', '/reports/q10', '/assets'].map((folder) => stat(folder === null ? null : path(folder)))).toEqual([
       readonly,
@@ -22,6 +22,8 @@ describe('folderPermissions', () => {
     ]);
     expect(stat(FOLDER)).toEqual({});
     expect(stat(path('/reports/q1/img'))).toEqual({});
+    expect(stat(path('/template.typ')), 'a file from outside the folder stays editable').toEqual({});
+    expect(stat(path('/new.typ'))).toEqual(readonly);
   });
 });
 

@@ -49,6 +49,7 @@ export function gitlabRoomFolder(room: string): ProjectPath | null {
  * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it), or what it left out (in a room of one folder); cleared by the next commit or merge, a conflict, or when nothing is left to commit |
  * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
  * | `pulledIn`    | `string[]`: the files from outside the room's folder it holds (`gitlab:pull`) |
+ * | `guestEditable` | `string[]`: the endings (`.typ`, lower case) of the files a guest may create, change, rename and delete; the others are read-only to guests (`guestMayChange`) |
  */
 export const META_MAP = 'meta';
 
@@ -59,6 +60,11 @@ export const META_MAP = 'meta';
  * committed yet).
  */
 export const ASSETS_MAP = 'assets';
+
+/** Whether a guest may change the file `path` in a room whose `guestEditable` (see `META_MAP`) is `endings`: its ending, in any case, is one of them. */
+export function guestMayChange(endings: readonly string[], path: ProjectPath): boolean {
+  return endings.includes(ProjectPath.extension(path).toLowerCase());
+}
 
 /** What the meta map holds (see `META_MAP`). */
 export interface RoomMeta {

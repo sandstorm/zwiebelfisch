@@ -37,22 +37,23 @@ type testServer struct {
 	auth *auth.Auth
 }
 
-// newServer is the server for o, signing people in at fake.
+// newServer is the server for o (with o.Store, else a new store in memory), signing people in at fake.
 func newServer(t *testing.T, fake *fakegitlab.GitLab, o Options) *testServer {
 	t.Helper()
-	st, err := store.Open(store.Memory)
-	require.NoError(t, err)
-	o.Store, o.Log = st, zerolog.Nop()
+	if o.Store == nil {
+		st, err := store.Open(store.Memory)
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, st.Close()) })
+		o.Store = st
+	}
+	o.Log = zerolog.Nop()
 	o.Auth = auth.New(auth.Options{
 		Provider: gitlab.DefaultID, Issuer: fakegitlab.URL, ClientID: fakegitlab.ClientID, ClientSecret: fakegitlab.ClientSecret,
 		Client: fake.Client(), Log: zerolog.Nop(),
 	})
 	s, err := New(o)
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, s.Close(context.Background()))
-		require.NoError(t, st.Close())
-	})
+	t.Cleanup(func() { require.NoError(t, s.Close(context.Background())) })
 	return &testServer{s, o.Auth}
 }
 

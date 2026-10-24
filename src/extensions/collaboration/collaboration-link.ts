@@ -62,11 +62,18 @@ export class CollaborationLink {
       return;
     }
     this.collaboration = collaboration;
-    void collaboration.signedOut.then(() => this.disposed || this.widget.signInRequired?.());
-    void collaboration.refused.then((reason) => this.disposed || (this.widget.tell?.(reason, 'error'), this.widget.onRefused?.(reason)));
-    collaboration.onDidReceiveMessage((payload) => this.widget.onMessage?.(payload));
-    collaboration.onDidChangePresence((presences) => this.widget.onPresence?.(presences));
-    if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
+    this.tellWidget(collaboration, !!shared.guest);
+  }
+
+  /** Tells the widget what `collaboration`, joined (as a guest: `guest`), says and has from now on. */
+  private tellWidget(collaboration: Collaboration, guest: boolean): void {
+    const { widget } = this;
+    void collaboration.signedOut.then(() => this.disposed || widget.signInRequired?.());
+    void collaboration.refused.then((reason) => this.disposed || (widget.tell?.(reason, 'error'), widget.onRefused?.(reason)));
+    collaboration.onDidReceiveMessage((payload) => widget.onMessage?.(payload));
+    collaboration.onDidChangePresence((presences) => widget.onPresence?.(presences));
+    if (collaboration.sourceControl) widget.onSourceControl?.(collaboration.sourceControl);
+    if (guest && collaboration.guestEditable) widget.onGuestEditable?.(collaboration.guestEditable);
   }
 
   /** Asks for the files from outside the room's folder that the compiler misses (see `Collaboration.pull`); before joining, nothing. */
@@ -110,6 +117,8 @@ export interface LinkedWidget {
   focused(): boolean;
   /** Called once connected, in a room backed by a GitLab branch: what commits to it. */
   onSourceControl?(sourceControl: GitLabSourceControl): void;
+  /** Called once connected as a guest, in a room backed by a GitLab branch: the endings of the files a guest may change (`guestMayChange`). */
+  onGuestEditable?(endings: readonly string[]): void;
   /** Tells the user what the room's source control has to say (its outcomes and news). */
   tell?: Tell;
   /** The server lets only signed-in users join, and the user is not (or no longer) signed in. */

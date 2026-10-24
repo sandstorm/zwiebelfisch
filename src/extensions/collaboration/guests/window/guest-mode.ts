@@ -104,7 +104,7 @@ export class SharedView {
     this.badge = doc.createElement('button');
     this.badge.type = 'button';
     this.badge.className = 'zwf-guests__badge zwf-guests__badge--shared';
-    this.badge.title = 'Guests can edit this project; only members save. Click to manage the guest links.';
+    this.badge.title = "Guests can edit this project; only members save. Click to manage this project's guest links.";
     this.badge.onclick = manage;
   }
 

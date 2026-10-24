@@ -49,7 +49,7 @@ export function files(): Extension {
         state: context.workspaceState,
         decorations: (path) => window.getFileDecorations(path),
         icon: (path) => window.getFileIcon(path),
-        readonly: (folder) => workspace.fs.stat(folder).permissions === FilePermission.Readonly,
+        readonly: (path) => workspace.fs.stat(path).permissions === FilePermission.Readonly,
       }, state());
       // shown on every open, which also follows every create / rename / delete
       // listening only while there is a panel: the widget shows its drop hint while anyone listens

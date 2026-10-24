@@ -1,7 +1,7 @@
 flowchart TD
   ext["extension"] -- "workspace.applyEdit" --> check["project.check"]
   check -- "reason" --> refused["refused"]
-  check -- "null" --> folders["a Readonly folder (workspace.fs)?"]
+  check -- "null" --> folders["a Readonly folder or file (workspace.fs)?"]
   folders -- "yes" --> refused
   folders -- "no" --> veto["host's allowFileChange"]
   veto -- "no" --> refused

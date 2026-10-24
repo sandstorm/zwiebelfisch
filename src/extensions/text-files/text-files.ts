@@ -2,6 +2,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
 import type { LanguageContribution } from '../../hosts/languages/languages';
 import type { EditorProvider } from '../../hosts/window/window';
+import { FilePermission } from '../../hosts/extension-host/workspace/workspace';
 import type { ExtensionContext, Extension } from '../../hosts/extension-host/extension-host';
 import css from './text-files.css?inline';
 import { BIBTEX_HELP } from './window/bibtex-help';
@@ -13,7 +14,8 @@ import { textSearch } from './window/text-search';
  * Markdown and Mermaid.
  *
  * - The editor `textFiles.editor` shows them in plain CodeMirror and saves the whole file a moment after the
- *   last edit. Where others edit it too, the last save wins: text files are not merged as they are typed.
+ *   last edit. Where others edit it too, the last save wins: text files are not merged as they are typed. A
+ *   Readonly file (`workspace.fs`) opens read-only.
  * - Their languages are declared (`.bib` is `bibtex`, `.mmd` is `mermaid`, …), with the help sheet "BibTeX".
  * - Search everywhere gets the group "Text": lines in these files and in the Typst files.
  */
@@ -43,6 +45,7 @@ function textFileEditor({ project, window, workspace, languages, sourceEditor }:
       const editor = new TextFileEditor(panel.element, {
         path,
         text: text(content),
+        readOnly: workspace.fs.stat(path).permissions === FilePermission.Readonly,
         extensions: sourceEditor.codeMirrorExtensionsFor({ editor: 'other', languageId: languages.getLanguageId(path) ?? 'plaintext', path: () => path }),
         save: (saved) =>
           void workspace.applyEdit({ kind: 'update', path, content: saved }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),

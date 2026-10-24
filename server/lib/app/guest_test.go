@@ -2,11 +2,13 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/sandstorm/zwiebelfisch/server/lib/fakegitlab"
+	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/guest"
+	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 const sharedRoom = "gitlab:demo/report@main"
@@ -85,6 +89,36 @@ func TestAGuestOpensTheSharedRoomOnly(t *testing.T) {
 
 	require.Equal(t, http.StatusNoContent, get(t, s, jsonRequest("DELETE", roomURL(sharedRoom, "/shares/"+id), ann, "")).StatusCode)
 	require.Equal(t, http.StatusUnauthorized, get(t, s, request("GET", host+"/api/me", jane)).StatusCode, "revoked: the session ended")
+}
+
+// A link's creator who is signed out is asked about with another member's sign-in: removed from the
+// project, they lose their links.
+func TestASignedOutCreatorIsAskedAboutWithAnotherMembersSignIn(t *testing.T) {
+	fake, gl := fakeGitLab()
+	creator := fake.SetAccess("Ann", fakegitlab.Developer) // never signed in here
+	st, err := store.Open(store.Memory)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, st.Close()) })
+	hash := sha256.Sum256([]byte("the-secret"))
+	now := time.Now()
+	require.NoError(t, st.AddShare(store.Share{
+		ID: "share1", TokenHash: hash[:], Room: sharedRoom, Label: "ACME",
+		CreatorProvider: gitlab.DefaultID, CreatorID: strconv.Itoa(creator.ID), CreatorName: "Ann",
+		CreatedAt: now, ExpiresAt: now.Add(24 * time.Hour),
+	}))
+	s := newServer(t, fake, Options{GitLab: gl, Guests: true, Store: st})
+	join := func() int {
+		return get(t, s, jsonRequest("POST", host+"/api/public/guest/join", nil, `{"token":"the-secret","name":"Jane"}`)).StatusCode
+	}
+	bob := signIn(t, fake, s, "Bob")
+	require.Equal(t, http.StatusNoContent, join(), "asked with Bob's sign-in: Ann may still share")
+	require.Equal(t, http.StatusNoContent, get(t, s, request("POST", host+"/api/auth/logout", bob)).StatusCode)
+
+	fake.SetAccess("Ann", fakegitlab.NoAccess)
+	require.Equal(t, http.StatusNoContent, join(), "nobody signed in can ask: the link is kept")
+	bob = signIn(t, fake, s, "Bob")
+	require.Equal(t, http.StatusNotFound, join(), "asked with Bob's sign-in: Ann may no longer share")
+	require.Equal(t, `{"shares":[]}`, text(t, get(t, s, request("GET", roomURL(sharedRoom, "/shares"), bob))), "the link ended")
 }
 
 func TestGuestLinksNeedTheSwitch(t *testing.T) {

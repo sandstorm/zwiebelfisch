@@ -31,7 +31,8 @@ import { Guests } from './guests/guests';
  * - a file from outside it that a compile misses is asked for; it comes in, marked "S" (shared)
  *
  * On a server with guest links, members share the room with guests and guests join by a link (Guests in
- * guests/guests.ts); a guest never saves ("Save to GitLab…" is not theirs).
+ * guests/guests.ts); a guest never saves ("Save to GitLab…" is not theirs), and in a GitLab room changes only the
+ * files the server lets guests change (the others are Readonly to them).
  */
 export function collaboration(options: CollaborationOptions): Extension {
   const server = 'url' in options;
@@ -72,7 +73,7 @@ export function collaboration(options: CollaborationOptions): Extension {
       const folder = 'room' in options ? gitlabRoomFolder(options.room) : null;
       if (folder) {
         subscriptions.push(
-          workspace.registerFileSystemProvider(folderPermissions(folder)),
+          workspace.registerFileSystemProvider(folderPermissions(folder, project)),
           window.registerFileDecorationProvider(sharedDecorations(folder)),
           preview.onDidChangeDiagnostics((diagnostics) => link.pull(missingFiles(diagnostics, folder))),
         );
@@ -96,6 +97,7 @@ function linkedWidget(context: ExtensionContext, presences: Presences, guests: G
     },
     focused: () => window.isEditorFocused(),
     onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
+    onGuestEditable: (endings) => guests?.restrictFiles(endings),
     tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
     onPresence: (all) => presences.set(all),
     signInRequired: () =>

@@ -4,8 +4,9 @@ import { expect, type Browser, type Page } from '@playwright/test';
 import { SERVER_DEMO, fileRow, serve, signIn, test } from './fixtures';
 
 // A member (Ann, signed in at the fake GitLab) shares a fresh branch of demo/report with a guest (Jane, in a browser
-// session of her own, never signed in): the guest joins by the link with her name, sees that she is a guest, edits;
-// only the member saves; revoking the link ends the guest's access.
+// session of her own, never signed in): the guest joins by the link with her name, sees that she is a guest, edits
+// (but creates no file of a type guests may not change); only the member saves; revoking the link ends the guest's
+// access.
 test.use({ baseURL: SERVER_DEMO });
 
 const newRoom = (project: string) => `gitlab:demo/report@e2e-guest-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -75,6 +76,14 @@ test('a guest joins by the link, sees that they are one, edits; only members sav
   await expect(sharedBadge(ann)).toHaveText('Shared · 1 guest');
   await expect(sharedBanner(ann)).toContainText('1 online');
 
+  // a file of a type guests may not change: not created, and Jane is told why
+  await jane.getByTestId('zwf-files').getByRole('button', { name: 'New', exact: true }).click();
+  await jane.getByRole('menu', { name: 'New' }).getByRole('menuitem', { name: 'New file…' }).click();
+  await jane.getByRole('textbox', { name: 'File name' }).fill('notes.md');
+  await jane.getByRole('textbox', { name: 'File name' }).press('Enter');
+  await expect(messages(jane)).toContainText('notes.md cannot be created here: it would be read-only.');
+  await expect(fileRow(jane, 'notes.md')).toHaveCount(0);
+
   // Jane's edit reaches Ann; it is Ann's to save
   await jane.getByRole('tab', { name: 'Source' }).click();
   await jane.getByTestId('zwf-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
@@ -87,7 +96,7 @@ test('a guest joins by the link, sees that they are one, edits; only members sav
 
   // Ann revokes the link: Jane is told, and her banner says her access ended
   await sharedBadge(ann).click();
-  await ann.getByRole('dialog', { name: 'Guest links' }).getByRole('option', { name: /ACME reviewers/ }).click();
+  await ann.getByRole('dialog', { name: "This project's guest links" }).getByRole('option', { name: /ACME reviewers/ }).click();
   await messages(ann).getByRole('button', { name: 'Revoke' }).click();
   await expect(messages(ann)).toContainText('Guest link "ACME reviewers" revoked.');
   await expect(messages(jane)).toContainText('Guest access to this project has ended.');

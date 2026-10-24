@@ -406,6 +406,20 @@ func TestStartSessionWithoutTokenUntilItsEnd(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, status, "ends at its end")
 }
 
+func TestSignedInUsersAreTheProvidersOnes(t *testing.T) {
+	b := newBrowser(t, Options{})
+	b.signIn("Ann", "/")
+	again := &browser{t: t, auth: b.auth, server: b.server, fake: b.fake, cookies: map[string]*http.Cookie{}}
+	again.signIn("Ann", "/")
+	other := &browser{t: t, auth: b.auth, server: b.server, fake: b.fake, cookies: map[string]*http.Cookie{}}
+	other.signIn("Bob", "/")
+	guest := Identity{Provider: "guest", Subject: "share/1", Name: "Jane (guest)"}
+	b.auth.StartSession(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, server+"/api/public/guest/join", nil), guest, time.Now().Add(time.Hour))
+	ann, _ := b.me()
+	bob, _ := other.me()
+	require.ElementsMatch(t, []string{ann.Subject, bob.Subject}, b.auth.SignedInUsers(), "each once, no guest")
+}
+
 func TestEndSessionsEndsTheMatchedOnly(t *testing.T) {
 	b := newBrowser(t, Options{})
 	b.signIn("Ann", "/")

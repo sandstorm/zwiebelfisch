@@ -320,6 +320,23 @@ type profile struct {
 // refused the refresh).
 var ErrNoToken = errors.New("auth: no live sign-in of this user")
 
+// SignedInUsers are the Subjects of the users signed in with the provider now (live sessions; each once, in
+// no order): whom Token may have a token of. Sessions of other providers (StartSession's guests) are left out.
+func (a *Auth) SignedInUsers() []string {
+	now := a.opts.now()
+	seen := map[string]bool{}
+	var subjects []string
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, s := range a.sessions {
+		if s.identity.Provider == a.opts.Provider && now.Before(s.expires) && !seen[s.identity.Subject] {
+			seen[s.identity.Subject] = true
+			subjects = append(subjects, s.identity.Subject)
+		}
+	}
+	return subjects
+}
+
 // Token is an OAuth access token of the signed-in user subject (an Identity's Subject), from any of their
 // live sessions; an expired one is refreshed first (one refresh per session at a time; a rotated refresh
 // token replaces the old one in the session). ErrNoToken when none has a token that works.

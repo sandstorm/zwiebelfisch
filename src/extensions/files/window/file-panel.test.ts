@@ -305,6 +305,15 @@ describe('FilePanel', () => {
     });
   });
 
+  it('keeps a read-only file where it is', async () => {
+    const files = { ...state, paths: [path('/main.typ'), path('/refs.bib')] };
+    const { item, menus, panel, warned } = setup(undefined, files, {}, { readonlyFolders: ['/refs.bib'] });
+    item('refs.bib').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    expect(menus.map(({ context }) => [context!.resource, context!.resourceIsFixed, context!.folderIsReadonly])).toEqual([['/refs.bib', true, false]]);
+    await panel.delete(path('/refs.bib'));
+    expect(warned).toEqual([]);
+  });
+
   describe('read-only folders', () => {
     // a project in /reports/q1 that uses /template.typ: the top level and /reports are read-only
     const project = {

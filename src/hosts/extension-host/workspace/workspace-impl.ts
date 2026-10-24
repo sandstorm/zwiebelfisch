@@ -42,7 +42,7 @@ export class WorkspaceHost implements Workspace {
   }
 
   async applyEdit(change: FileChange): Promise<string | null> {
-    const problem = this.project.check(change) ?? this.#readonlyFolder(change);
+    const problem = this.project.check(change) ?? this.#readonly(change);
     if (problem) return problem;
     const allowed = (await this.options.allowFileChange?.(change)) ?? true;
     if (!allowed) return 'This change is not allowed here.';
@@ -61,17 +61,16 @@ export class WorkspaceHost implements Workspace {
     });
   }
 
-  /** Why `change` may not happen in the folders it creates, deletes or renames a file in (Readonly), or null. */
-  #readonlyFolder(change: FileChange): string | null {
-    if (change.kind === 'update') return null;
+  /** Why `change` may not happen to the files it touches or in their folders (Readonly), or null. */
+  #readonly(change: FileChange): string | null {
     const paths = change.kind === 'rename' ? [change.from, change.path] : [change.path];
-    for (const path of paths) {
-      const folder = folderOf(path);
-      if (this.fs.stat(folder).permissions !== FilePermission.Readonly) continue;
-      const where = folder === null ? 'the top folder' : ProjectPath.displayName(folder);
-      return `Files in ${where} cannot be created, renamed or deleted here.`;
-    }
-    return null;
+    const readonly = (path: ProjectPath | null) => this.fs.stat(path).permissions === FilePermission.Readonly;
+    const folder = change.kind === 'update' ? undefined : paths.map(folderOf).find(readonly);
+    if (folder !== undefined) return `Files in ${folder === null ? 'the top folder' : ProjectPath.displayName(folder)} cannot be created, renamed or deleted here.`;
+    const file = paths.find(readonly);
+    if (!file) return null;
+    const name = ProjectPath.displayName(file);
+    return change.kind === 'create' || file !== paths[0] ? `${name} cannot be created here: it would be read-only.` : `${name} is read-only here.`;
   }
 
   /** Declares settings by full id (`pdfExport.download`); an id declared twice is an error. */

@@ -143,6 +143,18 @@ describe('CollaborationLink', () => {
       await expect(signedIn()).resolves.toBe(false);
     });
 
+    it("tells a guest's widget, not a member's, which files guests may change", async () => {
+      const joined = { signedOut: new Promise(() => {}), refused: new Promise(() => {}), onDidReceiveMessage: () => ({ dispose() {} }), onDidChangePresence: () => ({ dispose() {} }), sourceControl: null, guestEditable: ['.typ'], dispose() {} };
+      for (const [me, told] of [[{ provider: 'guest', id: 's1/x', name: 'Jane (guest)' }, [[['.typ']]]], [{ provider: 'gitlab', id: '2', name: 'Ann' }, []]] as const) {
+        vi.spyOn(Collaboration, 'start').mockResolvedValueOnce(joined as unknown as Collaboration);
+        const widget = { current: () => null, focused: () => false, onGuestEditable: vi.fn() };
+        const link = new CollaborationLink(SERVER, { project: new Project(MAIN, { [MAIN]: 'Hello' }) }, widget, account(me));
+        cleanup.push(() => link.dispose());
+        await link.ready;
+        expect(widget.onGuestEditable.mock.calls, me.provider).toEqual(told);
+      }
+    });
+
     it('the session ends later: asks to sign in', async () => {
       let signOut = () => {};
       const signedOut = new Promise<void>((resolve) => (signOut = resolve));

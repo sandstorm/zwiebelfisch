@@ -77,6 +77,18 @@ describe('WorkspaceHost.fs', () => {
     expect(await workspace.applyEdit({ kind: 'rename', from: path('/project/a.typ'), path: path('/project/sub/b.typ') })).toBeNull();
     expect(project.files()).toEqual({ '/project/main.typ': '', '/project/sub/b.typ': 'a', '/shared/lib.typ': 'edited' });
   });
+
+  it('refuses to change, rename, delete or create a Readonly file', async () => {
+    const project = new Project(path('/main.typ'), { '/main.typ': '', '/a.csv': '', '/refs.bib': '@book{a}' });
+    const workspace = new WorkspaceHost(project);
+    workspace.registerFileSystemProvider(readonly(['/refs.bib', '/data.csv']));
+    expect(await workspace.applyEdit({ kind: 'update', path: path('/refs.bib'), content: '' })).toBe('refs.bib is read-only here.');
+    expect(await workspace.applyEdit({ kind: 'delete', path: path('/refs.bib') })).toBe('refs.bib is read-only here.');
+    expect(await workspace.applyEdit({ kind: 'rename', from: path('/refs.bib'), path: path('/old.bib') })).toBe('refs.bib is read-only here.');
+    expect(await workspace.applyEdit({ kind: 'create', path: path('/data.csv'), content: '' })).toBe('data.csv cannot be created here: it would be read-only.');
+    expect(await workspace.applyEdit({ kind: 'rename', from: path('/a.csv'), path: path('/data.csv') })).toBe('data.csv cannot be created here: it would be read-only.');
+    expect(project.files()).toEqual({ '/main.typ': '', '/a.csv': '', '/refs.bib': '@book{a}' });
+  });
 });
 
 describe('WorkspaceHost settings', () => {

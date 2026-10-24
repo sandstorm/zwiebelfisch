@@ -13,7 +13,9 @@ import { ASSETS_MAP } from '../room-protocol';
  * other one; a delete and an add of the same value in one change is a rename.
  *
  * When the server has committed an upload it replaces the bytes by their
- * sha: that is no change of content, so nothing is loaded again.
+ * sha: that is no change of content, so nothing is loaded again. Only the
+ * local files `shares` picks go into the room (all by default; a guest's
+ * client leaves out those guests may not change).
  */
 export class SharedAssets {
   private readonly assets: Y.Map<AssetValue>;
@@ -25,6 +27,7 @@ export class SharedAssets {
     private readonly project: Project,
     private readonly ydoc: Y.Doc,
     private readonly load: (path: ProjectPath) => Promise<Uint8Array>,
+    private readonly shares: (path: ProjectPath) => boolean = () => true,
   ) {
     this.assets = ydoc.getMap<AssetValue>(ASSETS_MAP);
     for (const [key, value] of this.assets) {
@@ -56,6 +59,7 @@ export class SharedAssets {
   /** A local create / rename / delete of another file, into the map. */
   private push(change: FileChange): void {
     if (change.kind === 'update' || ProjectPath.isTypst(change.path)) return;
+    if (!this.shares(change.path) || (change.kind === 'rename' && !this.shares(change.from))) return;
     this.ydoc.transact(() => {
       if (change.kind === 'create') this.assets.set(change.path, FileContent.bytes(change.content));
       if (change.kind === 'delete') this.assets.delete(change.path);

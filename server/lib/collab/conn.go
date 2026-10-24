@@ -261,6 +261,15 @@ func (p *Peer) noteAwareness(states []map[string]any) {
 // Room is the room's name.
 func (p *Peer) Room() string { return p.room }
 
+// Refuse refuses p's client in its room as Server.Disconnect does, with reason. Call it on the room's
+// goroutine (in a Handler method, or an update listener of the document while it handles p's change);
+// nothing once p left.
+func (p *Peer) Refuse(reason string) {
+	if _, in := p.r.peers[p]; in {
+		p.r.drop(p, reason)
+	}
+}
+
 // SendStateless sends p's client a stateless message (provider's onStateless).
 func (p *Peer) SendStateless(payload string) {
 	p.send(msgStateless, new(encoder).string(payload).buf)

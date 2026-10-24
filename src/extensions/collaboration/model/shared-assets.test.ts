@@ -48,6 +48,19 @@ describe('SharedAssets', () => {
     expect(assets.get(path('/data.csv'))).toEqual(new TextEncoder().encode('x,y'));
   });
 
+  it('shares only the local files `shares` picks; the room still reaches the project', () => {
+    const ydoc = new Y.Doc();
+    const project = new Project(MAIN, { '/data.csv': 'x,y', '/logo.png': LOGO });
+    const assets = ydoc.getMap<string | Uint8Array>(ASSETS_MAP);
+    new SharedAssets(project, ydoc, async () => LOGO, (file) => file.endsWith('.png'));
+    expect([...assets.keys()]).toEqual(['/logo.png']);
+    project.apply({ kind: 'create', path: path('/refs.bib'), content: '@book{a}' });
+    project.apply({ kind: 'rename', from: path('/data.csv'), path: path('/b.png') });
+    expect([...assets.keys()]).toEqual(['/logo.png']);
+    ydoc.transact(() => assets.set(path('/notes.md'), new Uint8Array([1])), 'server');
+    expect(project.content(path('/notes.md'))).toEqual(new Uint8Array([1]));
+  });
+
   it('does not load an upload again once the server committed it (bytes → sha)', async () => {
     const a = client();
     a.project.apply({ kind: 'create', path: path('/up.png'), content: new Uint8Array([7]) });

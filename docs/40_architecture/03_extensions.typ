@@ -408,7 +408,16 @@ activate({ commands, workspace, window, subscriptions }) {
 
 Text edits of an open `.typ` file go to its `TypstDocument` (`change`, with the extension's own origin).
 
-`workspace.registerFileSystemProvider({ stat })`: folders an extension makes read-only. While a provider's `stat(folder)` (null: the top level) says `{ permissions: FilePermission.Readonly }`, `applyEdit` refuses to create, rename or delete a file in it, and the file panel keeps its rows where they are; `workspace.fs.stat(folder)` reads it. The files' content stays editable. The `collaboration` extension makes every folder but a GitLab room's own read-only.
+`workspace.registerFileSystemProvider({ stat })`: folders and files an extension makes read-only. While a provider's `stat(path)` (null: the top level) says `{ permissions: FilePermission.Readonly }`, `applyEdit` refuses:
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Readonly][`applyEdit` refuses],
+  [a folder], [to create, rename or delete a file in it (its files' content stays editable)],
+  [a file], [to change, rename or delete it; for a path not there yet, to create it],
+)
+
+The file panel keeps such rows where they are, and the text editor opens such a file read-only; `workspace.fs.stat(path)` reads it. The `collaboration` extension makes every folder but a GitLab room's own read-only, and, for a guest, every file of a type guests may not change.
 
 == Document links <architecture-extensions-links>
 

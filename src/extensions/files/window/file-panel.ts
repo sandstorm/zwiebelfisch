@@ -186,13 +186,13 @@ export class FilePanel {
     return path === this.state.main || this.state.main.startsWith(`${path}/`);
   }
 
-  /** Whether the row `path` stays where it is: it holds the main file, or the folder it is in (a folder row: itself) is read-only. */
+  /** Whether the row `path` stays where it is: it holds the main file, it is read-only, or the folder it is in is. */
   private fixed(path: ProjectPath): boolean {
-    return this.holdsMain(path) || this.readonly(folderOf(path)) || (this.tree.isFolder(path) && this.readonly(path));
+    return this.holdsMain(path) || this.readonly(folderOf(path)) || this.readonly(path);
   }
 
-  private readonly(folder: Folder): boolean {
-    return this.options.readonly?.(folder) ?? false;
+  private readonly(path: Folder): boolean {
+    return this.options.readonly?.(path) ?? false;
   }
 
   /** The folder a row stands for: itself, or the folder of a file. */
@@ -277,8 +277,11 @@ export interface FilePanelOptions {
   decorations?(path: ProjectPath): readonly FileDecoration[];
   /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
   icon?(path: ProjectPath): string | undefined;
-  /** Whether no file may be created, renamed or deleted in `folder` (null: the top level), at each `render` (default: none is). */
-  readonly?(folder: Folder): boolean;
+  /**
+   * Whether the folder `path` (null: the top level) holds no file that may be created, renamed or deleted, or the file
+   * `path` may not be changed, renamed or deleted, at each `render` (default: none is).
+   */
+  readonly?(path: Folder): boolean;
 }
 
 export interface FilePanelState {

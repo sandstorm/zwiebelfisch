@@ -5,7 +5,8 @@ package gitlab
 //   - save: also the right to push to the branch (branches/<branch>: can_push); a guest never saves
 //
 // A join or a file request may rely on an answer up to a minute old; a save and an auto-save always ask
-// again.
+// again. Whether a signed-out user may still share (a guest link's creator) is asked with the token of
+// another signed-in member of the project.
 
 import (
 	"context"
@@ -69,18 +70,50 @@ func (x *Rooms) Authorize(ctx context.Context, user collab.User, name string) er
 }
 
 // MayEdit is whether user may edit the room name (one of these rooms): true or false as GitLab says (an
-// answer up to a minute old will do), an error when that cannot be told now (they are signed out, GitLab
-// cannot be reached).
+// answer up to a minute old will do), asked with user's own token or, while they are signed out, with that
+// of any signed-in member of the project (Options.SignedIn); an error when that cannot be told now (nobody
+// can ask, GitLab cannot be reached).
 func (x *Rooms) MayEdit(ctx context.Context, user collab.User, name string) (bool, error) {
 	project, branch, _, ok := x.parseRoomName(name)
 	if !ok || user.Provider != x.opts.ID {
 		return false, nil
 	}
 	a, err := x.access(ctx, user, project, branch, true)
+	if errors.Is(err, errSignedOut) {
+		return x.mayEditAskedByMember(ctx, user, project, branch)
+	}
 	if err != nil {
 		return false, err
 	}
 	return a.Edit, nil
+}
+
+// mayEditAskedByMember is whether user may edit project's branch, as GitLab tells the first other signed-in
+// user who is a member of the project (any role) and can ask it with their token; errSignedOut when nobody
+// can.
+func (x *Rooms) mayEditAskedByMember(ctx context.Context, user collab.User, project, branch string) (bool, error) {
+	if x.opts.SignedIn == nil {
+		return false, errSignedOut
+	}
+	for _, id := range x.opts.SignedIn() {
+		if id == user.ID {
+			continue
+		}
+		member := collab.User{Provider: x.opts.ID, ID: id}
+		if own, err := x.access(ctx, member, project, branch, true); err != nil || own.Role == "" {
+			continue
+		}
+		token, err := x.token(ctx, member)
+		if err != nil {
+			continue
+		}
+		a, err := x.opts.access(ctx, token, project, branch, user.ID)
+		if err != nil {
+			continue
+		}
+		return a.Edit, nil
+	}
+	return false, errSignedOut
 }
 
 // errGuestSaves refuses a guest's save.

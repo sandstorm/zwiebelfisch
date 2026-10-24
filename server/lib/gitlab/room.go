@@ -53,6 +53,7 @@ type room struct {
 
 	// on the host's goroutine (Open, Handler methods, update listeners, Do)
 	editors      editors
+	guarded      guarded     // what guests may not change, as kept from every other change (guard)
 	changesTimer func() bool // pending tellChanges; nil: none
 	idleTimer    func() bool
 	stopUpdates  func()
@@ -87,6 +88,9 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 		}
 	}
 	if err := r.writeAutoCommit(doc); err != nil {
+		return err
+	}
+	if err := r.write(doc, func(w *ydoc.Writer) { w.Set(metaMap, metaGuestEditable, plain(guestEditable)) }); err != nil {
 		return err
 	}
 	token, tokenErr := r.x.token(ctx, by)
@@ -126,7 +130,8 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 		}
 	}
 	r.tellChanges(doc)
-	r.stopUpdates = doc.OnUpdate(r.updated)
+	r.guarded = readGuarded(doc)
+	r.stopUpdates = doc.OnUpdate(func(_ []byte, origin any) { r.updated(doc, origin) })
 	return nil
 }
 
@@ -519,8 +524,10 @@ func (r *room) run(op func() message) message {
 	return op()
 }
 
-// updated is a change of the document: an edit, unless the room made it. On the host's goroutine.
-func (r *room) updated(_ []byte, origin any) {
+// updated is a change of the document: an edit, unless the room made it; guard sees each first. On the
+// host's goroutine.
+func (r *room) updated(doc *ydoc.Doc, origin any) {
+	r.guard(doc, origin)
 	if origin == r {
 		return
 	}

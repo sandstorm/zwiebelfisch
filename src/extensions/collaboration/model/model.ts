@@ -8,7 +8,7 @@ import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { gitlabRoomFolder, roomFilePath } from '../room-protocol';
+import { gitlabRoomFolder, guestMayChange, META_MAP, roomFilePath } from '../room-protocol';
 import { collaborationWebSocketUrl, serverHttpBase, SignInRequired } from '../account';
 import type { User } from '../../../core/user/user';
 import { RemoteCursors } from './remote-cursors';
@@ -26,7 +26,8 @@ import { SharedProject } from './shared-project';
  * - the main file (SharedMainFile), except in a GitLab-backed room, where it stays each user's own
  * - the users' places (RemoteCursors)
  * - in a room backed by a GitLab branch, the other files (SharedAssets) and commits to the branch and its history
- *   (GitLabSourceControl, GitLabHistory);
+ *   (GitLabSourceControl, GitLabHistory); a guest's client shares no change of the files guests may not change
+ *   (`guestEditable`);
  *   in a room of one folder of the branch, also its main file and the files from outside it the compiler misses
  *   (RoomFolder)
  *
@@ -49,6 +50,8 @@ export class Collaboration {
   readonly refused: Promise<string>;
   /** Fires with every stateless message from the server (empty without one). */
   readonly onDidReceiveMessage: Event<string>;
+  /** In a room backed by a GitLab branch, the endings of the files a guest may change (`guestMayChange`); else null. */
+  readonly guestEditable: readonly string[] | null = null;
 
   private constructor(
     ydoc: Y.Doc,
@@ -73,7 +76,8 @@ export class Collaboration {
       this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, { historyProvider: server.history(ydoc), saves: !shared.guest });
       // before the files are shared, so the host's files outside the folder are not
       if (server.folder) this.folder = new RoomFolder(server.folder, project, ydoc, statelessChannel(server.provider));
-      this.assets = new SharedAssets(project, ydoc, server.files);
+      this.guestEditable = guestEditableOf(ydoc);
+      this.assets = new SharedAssets(project, ydoc, server.files, guestShares(this.guestEditable, shared.guest));
     }
     this.sharedProject = new SharedProject(project, ydoc);
     // after the files, so the room's main file is there to take
@@ -153,6 +157,17 @@ export interface SharedRoom {
   user?: User;
   /** The local user is a guest: they edit, and never commit (members do). */
   guest?: boolean;
+}
+
+/** The room's `guestEditable` (see `META_MAP`): the endings of the files a guest may change. */
+function guestEditableOf(ydoc: Y.Doc): readonly string[] {
+  const endings = ydoc.getMap(META_MAP).get('guestEditable');
+  return Array.isArray(endings) ? endings.filter((ending) => typeof ending === 'string') : [];
+}
+
+/** Which local files a client shares: a guest's, those of the `endings`; everyone else's, all. */
+function guestShares(endings: readonly string[], guest = false): ((path: ProjectPath) => boolean) | undefined {
+  return guest ? (path) => guestMayChange(endings, path) : undefined;
 }
 
 /** How the server's connection ends and what it sends (without a server: never, nothing). */

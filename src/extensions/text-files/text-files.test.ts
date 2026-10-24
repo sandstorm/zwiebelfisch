@@ -9,6 +9,8 @@ import { Project, type FileChange } from '../../core/project/project';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import type { SourceEditorContributions } from '../../hosts/source-editor/source-editor';
 import type { WindowApi } from '../../hosts/window/window';
+import type { Extension } from '../../hosts/extension-host/extension-host';
+import { FilePermission } from '../../hosts/extension-host/workspace/workspace';
 import { Widget } from '../../editor/widget/widget';
 import { textFiles } from './text-files';
 import { SAVE_DELAY } from './window/text-file-editor';
@@ -105,6 +107,22 @@ describe('text files', () => {
     ]);
     widget.window.showDocument(path('/refs.bib'));
     expect(seen).toContain('other bibtex /refs.bib');
+  });
+
+  it('opens a Readonly file read-only', () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const project = new Project(path('/main.typ'), { '/main.typ': '', '/refs.bib': '@book{a}\n' });
+    const widget = new Widget(host, project);
+    const readonly: Extension = {
+      id: 'readonly',
+      activate: ({ workspace, subscriptions }) =>
+        subscriptions.push(workspace.registerFileSystemProvider({ stat: (file) => (file === '/refs.bib' ? { permissions: FilePermission.Readonly } : {}) })),
+    };
+    widget.activate([textFiles(), readonly]);
+    widget.window.showDocument(path('/refs.bib'));
+    const editor = host.querySelector<HTMLElement>('[data-view-type="textFiles.editor"] [data-testid=zwf-text-file]')!;
+    expect(editor.querySelector('h2')?.textContent).toBe('refs.bib (read-only)');
+    expect(EditorView.findFromDOM(editor.querySelector<HTMLElement>('.cm-editor')!)!.state.readOnly).toBe(true);
   });
 
   it('a refused save is an error message', async () => {

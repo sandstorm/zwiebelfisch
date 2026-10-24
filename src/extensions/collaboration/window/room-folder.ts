@@ -2,14 +2,18 @@
 // misses. See collaboration in ../collaboration.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
+import type { Project } from '../../../core/project/project';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { FilePermission, type FileSystemProvider } from '../../../hosts/extension-host/workspace/workspace';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
 
-/** Readonly: every folder but `folder` and the folders in it (so files are created, renamed and deleted only there). */
-export function folderPermissions(folder: ProjectPath): FileSystemProvider {
+/**
+ * Readonly: every folder but `folder` and the folders in it (so files are created, renamed and deleted only there);
+ * the files of `project` are left as they are (those from outside the folder stay editable).
+ */
+export function folderPermissions(folder: ProjectPath, project: Pick<Project, 'has'>): FileSystemProvider {
   return {
-    stat: (other) => (other !== null && inFolder(other, folder) ? {} : { permissions: FilePermission.Readonly }),
+    stat: (other) => (other !== null && (inFolder(other, folder) || project.has(other)) ? {} : { permissions: FilePermission.Readonly }),
   };
 }
 

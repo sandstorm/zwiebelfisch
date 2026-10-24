@@ -69,9 +69,16 @@ func (d *Doc) unchanged() []byte { return crdt.EncodeStateAsUpdateV1(d.d, d.d.St
 
 // Texts returns the texts in root map m (key → text); values that are not Y.Text are left out.
 func (d *Doc) Texts(m string) map[string]string {
+	return d.TextsOf(m, func(string) bool { return true })
+}
+
+// TextsOf returns the texts in root map m whose key keep picks (the others are not read).
+func (d *Doc) TextsOf(m string, keep func(key string) bool) map[string]string {
 	texts := map[string]string{}
 	for key, t := range d.textsIn(m) {
-		texts[key] = t.ToString()
+		if keep(key) {
+			texts[key] = t.ToString()
+		}
 	}
 	return texts
 }

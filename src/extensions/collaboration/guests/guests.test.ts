@@ -133,12 +133,13 @@ describe('Guests', () => {
     expect(asked[2]).toMatchObject({ title: 'Guest link (shown only now)', value: `${location.origin}/?room=${encodeURIComponent(room)}#zwf-guest=NEWSECRET` });
   });
 
-  it('manages: picking a link revokes it, once confirmed', async () => {
-    const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, [{ id: 's1', label: 'ACME', sharedBy: 'Ann', createdAt: 0, expiresAt: Date.now() + DAY }]);
-    const { account, commands, menu, told } = widget({ pick: [1], warning: 'Revoke' });
+  it("manages this project's links, whoever made them: picking one revokes it, once confirmed", async () => {
+    const { requests } = server({ provider: 'gitlab', id: '1', name: 'Ann' }, [{ id: 's1', label: 'ACME', sharedBy: 'Bob', createdAt: 0, expiresAt: Date.now() + DAY }]);
+    const { account, commands, menu, told, asked } = widget({ pick: [1], warning: 'Revoke' });
     await account.refresh();
     await vi.waitFor(() => expect(menu).toHaveLength(1));
     await commands.get('collaboration.manageGuests')!();
+    expect(asked[0]).toMatchObject({ title: "This project's guest links", placeHolder: 'Pick a link to revoke it (any member may)' });
     expect(requests).toContain('DELETE /api/rooms/gitlab%3Ademo%2Freport%40main/shares/s1');
     expect(told).toEqual(['warning: Revoke the guest link "ACME"? Its guests lose access at once.', 'info: Guest link "ACME" revoked.']);
   });

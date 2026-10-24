@@ -7,6 +7,7 @@ import { DEFAULT_GUEST_DAYS, GUEST_LIFETIMES, GUESTS_CHANGED, type Share } from 
 import css from './guests.css?inline';
 import { guestLink, joinWithLink, takeGuestToken } from './guest-link';
 import { Shares } from './shares';
+import { guestPermissions } from './window/guest-files';
 import { endDate, GuestView, SharedView } from './window/guest-mode';
 
 /**
@@ -14,12 +15,13 @@ import { endDate, GuestView, SharedView } from './window/guest-mode';
  * - a page opened from a guest link (`#zwf-guest=<secret>`) takes the secret out of the URL at once, asks the guest's
  *   name and signs them in as a guest before the room is joined (`beforeConnect`); someone signed in already is told
  *   they need no link
+ * - in a GitLab room, the files a guest may not change are Readonly to them (`restrictFiles`, the server's list)
  * - a guest sees that they are one, all the time: a banner that cannot be closed (who shared, when access ends; red in
  *   the last hour), a "GUEST · 2 d left" badge, a warning-coloured frame; once access ends, the banner says so
  * - a member who may share sees, while the room has links, a banner ("Shared with guests · N online · until …",
  *   "Manage…") and a "Shared · N guests" badge; guests' carets are dashed, their names end in "(guest)"
  * - the commands `collaboration.shareWithGuests` (whom for, how long, then the link: copied, and shown this once) and
- *   `collaboration.manageGuests` (the links; picking one revokes it)
+ *   `collaboration.manageGuests` (this project's links, whoever made them; picking one revokes it)
  *
  * What the server says changed (`guests:changed`, `receive`) is asked for again.
  */
@@ -79,6 +81,12 @@ export class Guests {
     return true;
   }
 
+  /** Makes the files of a type not in `endings` (the room's `guestEditable`) Readonly in the guest's widget. */
+  restrictFiles(endings: readonly string[]): void {
+    const { project, workspace, subscriptions } = this.context;
+    subscriptions.push(workspace.registerFileSystemProvider(guestPermissions(project, endings)));
+  }
+
   /** Asks whom for and how long, makes the link, copies it and shows it this once. */
   async share(): Promise<void> {
     const { window } = this.context;
@@ -134,7 +142,7 @@ export class Guests {
         share,
       })),
     ];
-    const picked = await window.showQuickPick(items, { title: 'Guest links', placeHolder: 'Pick a link to revoke it' });
+    const picked = await window.showQuickPick(items, { title: "This project's guest links", placeHolder: 'Pick a link to revoke it (any member may)' });
     if (!picked) return;
     if (!picked.share) return this.share();
     const { share } = picked;
