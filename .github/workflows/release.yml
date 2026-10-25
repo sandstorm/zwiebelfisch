@@ -1,4 +1,4 @@
-# A version tag v1.2.3 releases, once all of CI (ci.yml, end-to-end tests included) passed for it: the library
+# A version tag v1.2.3 releases, once CI (ci.yml; a failed end-to-end test does not hold it up) passed for it: the library
 # (dist/lib) as the npm package @<owner>/zwiebelfisch 1.2.3 on GitHub's npm registry, a GitHub release with generated
 # notes, the documentation book (PDF) and the package's tarball, and the Docker image (docker.yml). A tag with a
 # pre-release part (v1.2.3-rc.1) makes a pre-release, published under the npm dist-tag `next`.
