@@ -54,7 +54,8 @@ jobs:
             publishConfig.registry=https://npm.pkg.github.com
           npm pkg delete private
           tarball="$(npm pack --pack-destination dist --json | jq -r '.[0].filename')"
-          echo "tarball=dist/$tarball" >>"$GITHUB_OUTPUT"
+          # "./": npm reads a bare dist/x.tgz as the GitHub repository dist/x.tgz
+          echo "tarball=./dist/$tarball" >>"$GITHUB_OUTPUT"
           if [[ "$version" == *-* ]]; then echo "prerelease=true" >>"$GITHUB_OUTPUT"; fi
 
       - name: Publish to GitHub Packages
