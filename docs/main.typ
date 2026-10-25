@@ -32,6 +32,7 @@
   #include "20_features/14_html-preview.typ"
   #include "20_features/15_history.typ"
   #include "20_features/16_guest-access.typ"
+  #include "20_features/17_start-page.typ"
 ]
 
 = Configuration
@@ -41,6 +42,7 @@
   #include "30_configuration/02_embedding.typ"
   #include "30_configuration/03_collaboration-server.typ"
   #include "30_configuration/04_gitlab-integration.typ"
+  #include "30_configuration/05_deployment.typ"
 ]
 
 = Architecture

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Start the app (start page and editor) on http://127.0.0.1:5200/ with Vite, /api proxied to the collaboration server of `mise run server:dev` (run it too)"
+#MISE depends=["build:engine", "build:fonts"]
+# The GitLab application's callback: http://127.0.0.1:5200/api/public/auth/callback.
+set -euo pipefail
+exec pnpm exec vite --config vite.app.config.ts "$@"

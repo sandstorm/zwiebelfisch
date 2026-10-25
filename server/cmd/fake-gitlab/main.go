@@ -107,7 +107,7 @@ func run() error {
 		// the page expects the server on 127.0.0.1 (demo/playground.ts): open the demo there
 		sites = append(sites, app.Site{
 			Name:    "demo (" + dist + ", open http://127.0.0.1:" + strconv.Itoa(port) + "/)",
-			Address: net.JoinHostPort(cfg.Address, strconv.Itoa(port)), Handler: playground.StaticFiles(dist),
+			Address: net.JoinHostPort(cfg.Address, strconv.Itoa(port)), Handler: app.StaticFiles(dist),
 		})
 	}
 	return app.Run(log, server.Close, sites...)

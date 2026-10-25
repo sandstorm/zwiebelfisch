@@ -6,21 +6,11 @@
 
 Zwiebelfisch is a Typst editor for the browser: a Visual editor, a Source editor and a live preview. The Typst compiler runs as WebAssembly in the browser, so *no server is needed* except for collaboration and GitLab.
 
-=== Trying it with Docker <getting-started-docker>
+=== Running it with Docker <getting-started-docker>
 
-```sh
-docker build -t zwiebelfisch-demo .
-docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 zwiebelfisch-demo
-```
+The Docker image is Zwiebelfisch against your GitLab: the start page (@features-start-page), the editor and the collaboration server. How to run and deploy it: @configuration-deployment.
 
-Then open #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`]. You get the demo and the collaboration server with a fake GitLab.
-
-- *Nothing is saved*: rooms live in memory. Ctrl-C stops both.
-- The first build takes a while, as it compiles the Typst compiler to wasm.
-- With mise: `mise run docker:build` and `mise run docker:run`.
-- Only pages at `http://127.0.0.1:5199` and `http://localhost:5199` may use a session. Opened under another address, name it: `-e ZWF_ALLOWED_ORIGINS=https://demo.example.org` (the real server, @configuration-collaboration-server-running, requires it).
-
-To work on the code, run `mise run demo` from a checkout instead (@architecture-development-setup).
+To try the editor without a GitLab, or to work on the code, run `mise run demo` from a checkout (@architecture-development-setup).
 
 === The demo <getting-started-demo>
 

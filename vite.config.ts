@@ -16,7 +16,7 @@ export default defineConfig({
   test: {
     root: '.',
     // the measurements in tests/perf/ have a config of their own (tests/perf/vitest.config.ts)
-    include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],
+    include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'app/**/*.test.ts', 'eslint-rules/**/*.test.js'],
     // layout stubs for the jsdom environment (no-op in node)
     setupFiles: ['tests/jsdom-setup.ts'],
   },

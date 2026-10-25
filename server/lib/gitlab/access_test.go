@@ -36,9 +36,9 @@ func TestAccessFromGitLab(t *testing.T) {
 	require.Equal(t, Access{Role: "Reporter"}, access(reporter, "draft"))
 	require.Equal(t, Access{Role: "Developer", Edit: true, Push: true}, access(developer, "draft"), "unprotected")
 	require.Equal(t, Access{Role: "Developer", Edit: true}, access(developer, "main"), "protected: Maintainers push")
-	require.Equal(t, Access{Role: "Maintainer", Edit: true, Push: true}, access(maintainer, "main"))
+	require.Equal(t, Access{Role: "Maintainer", Edit: true, Push: true, Maintain: true}, access(maintainer, "main"))
 	require.Equal(t, Access{Role: "Developer", Edit: true, Push: true}, access(developer, "release/1.0"), "a wildcard rule naming the user")
-	require.Equal(t, Access{Role: "Maintainer", Edit: true}, access(maintainer, "release/1.0"), "No one by role")
+	require.Equal(t, Access{Role: "Maintainer", Edit: true, Maintain: true}, access(maintainer, "release/1.0"), "No one by role")
 
 	_, err := gitlab.userAccess(context.Background(), "forged", "group/report", "main", strconv.Itoa(developer.ID))
 	require.ErrorContains(t, err, "401")

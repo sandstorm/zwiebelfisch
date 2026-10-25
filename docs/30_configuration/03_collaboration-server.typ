@@ -47,6 +47,7 @@ mise run server:dev    # ws://127.0.0.1:1234, allowing the demo's pages on :5199
   [`ZWF_GUESTS`], [`1`: members may share a room with guests by a link (@configuration-collaboration-server-guests). Default off.],
   [`ZWF_AUTH_…`], [The sign-in, required (@configuration-collaboration-server-sign-in).],
   [`ZWF_LOG_LEVEL`, `ZWF_LOG_FORMAT`], [`debug` … `error` (default `info`); `console` (default) or `json`.],
+  [`ZWF_WEB_DIST`], [A built app (`dist/app`) to serve next to `/api/` on the same port (@configuration-deployment). The Docker image sets it.],
 )
 
 A server without `ZWF_ALLOWED_ORIGINS` (or with an entry that is not an exact origin), without sign-in, or with neither GitLab nor plain rooms does not start, and says which variable is missing. Only `/api/public/…` answers without signing in; behind a reverse proxy, forward every path. `GET /api/public/info` answers `{"plainRooms": true|false, "guests": true|false}`, for clients to offer only what works. One WebSocket opens at most 16 rooms (names of at most 1024 bytes); the server pings it every 15 s and drops it after 45 s without a message from the client.

@@ -11,6 +11,7 @@
 //	ZWF_GUESTS        (default off) 1/true: members may share a room with guests by a link (package guest)
 //	ZWF_LOG_LEVEL     (default info) debug, info, warn, error
 //	ZWF_LOG_FORMAT    (default console) console (for people) or json (for log collectors)
+//	ZWF_WEB_DIST      (default unset) a built app (dist/app) to serve next to /api/, on the same port
 //
 // GitLab rooms (`gitlab:<project id or path>@<branch>`), enabled when the URL is set. Everything is done
 // with the signed-in user's own OAuth token (the sign-in's scopes include read_api and write_repository):
@@ -73,6 +74,9 @@ type Config struct {
 		Level  string `koanf:"level"`
 		Format string `koanf:"format"`
 	} `koanf:"log"`
+	Web struct {
+		Dist string `koanf:"dist"`
+	} `koanf:"web"`
 }
 
 var defaults = map[string]any{
@@ -96,6 +100,7 @@ var envKeys = map[string]string{
 	"ZWF_GUESTS":      "rooms.guests",
 	"ZWF_LOG_LEVEL":   "log.level",
 	"ZWF_LOG_FORMAT":  "log.format",
+	"ZWF_WEB_DIST":    "web.dist",
 
 	"ZWF_AUTH_ISSUER":        "auth.issuer",
 	"ZWF_AUTH_CLIENT_ID":     "auth.client_id",

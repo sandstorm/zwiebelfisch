@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Build the app a deployment serves (vite.app.config.ts → dist/app: the start page and the editor at /edit; what the Docker image serves)"
+#MISE depends=["build:engine", "build:fonts"]
+set -euo pipefail
+exec pnpm exec vite build --config vite.app.config.ts "$@"

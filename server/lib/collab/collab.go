@@ -200,6 +200,29 @@ func (s *Server) Disconnect(match func(*Peer) bool, reason string) {
 	}
 }
 
+// Occupied are the rooms with clients in them now, by name, with their users (each once, in no order).
+func (s *Server) Occupied() map[string][]User {
+	s.mu.Lock()
+	rooms := make([]*room, 0, len(s.rooms))
+	for _, r := range s.rooms {
+		rooms = append(rooms, r)
+	}
+	s.mu.Unlock()
+	occupied := map[string][]User{}
+	for _, r := range rooms {
+		r.call(func() {
+			seen := map[userKey]bool{}
+			for p := range r.peers {
+				if !seen[p.user.key()] {
+					seen[p.user.key()] = true
+					occupied[r.name] = append(occupied[r.name], p.user)
+				}
+			}
+		})
+	}
+	return occupied
+}
+
 // join adds p to its room (loading the room first if nobody is in it) and returns the room.
 func (s *Server) join(p *Peer) (*room, error) {
 	for {

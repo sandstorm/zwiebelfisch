@@ -4,7 +4,9 @@ package fakegitlab
 //
 //	git smart HTTP at /<project>.git/   info/refs, git-upload-pack, git-receive-pack (basic auth oauth2:<token>;
 //	                                    a push also needs Developer and the right to push to the branch)
+//	GET /api/v4/projects?search=                                               the project, if it matches and the user is a Developer
 //	GET /api/v4/projects/<id or url-encoded path>                              the project
+//	GET /api/v4/projects/<…>/repository/branches?search=                       its branches
 //	GET /api/v4/projects/<…>/repository/branches/<branch>                      its head, protected, can_push
 //	                                                                           (auto-created with SetAutoBranches)
 //	GET /api/v4/projects/<…>/members/all/<user id>                             a member's access level (404: none)
@@ -25,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v6/backend"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/storage"
 )
 
@@ -135,6 +138,12 @@ func (g *GitLab) serveAPI(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusUnauthorized, "401 Unauthorized")
 		return
 	}
+	if r.Method == http.MethodGet && r.URL.Path == "/api/v4/projects" {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		g.searchProjects(w, r.URL.Query().Get("search"), user.ID)
+		return
+	}
 	rest, ok := strings.CutPrefix(r.URL.EscapedPath(), "/api/v4/projects/")
 	id, tail, _ := strings.Cut(rest, "/")
 	if project, err := url.PathUnescape(id); !ok || err != nil || (project != g.project && project != projectID) {
@@ -160,6 +169,8 @@ func (g *GitLab) serveAPI(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusNotFound, "404 Not Found")
 	case tail == "":
 		g.projectInfo(w)
+	case len(segments) == 2 && segments[0] == "repository" && segments[1] == "branches":
+		g.branches(w, r.URL.Query().Get("search"))
 	case len(segments) == 3 && segments[0] == "repository" && segments[1] == "branches":
 		g.branch(w, segments[2], user.ID)
 	case len(segments) == 3 && segments[0] == "members" && segments[1] == "all":
@@ -176,6 +187,33 @@ func (g *GitLab) projectInfo(w http.ResponseWriter) {
 		"id": 1, "path_with_namespace": g.project, "name": path.Base(g.project), "default_branch": "main",
 		"web_url": URL + "/" + g.project, "http_url_to_repo": URL + "/" + g.project + ".git",
 	})
+}
+
+// searchProjects lists the project when its path holds search and user is a Developer or more. Called with
+// mu held.
+func (g *GitLab) searchProjects(w http.ResponseWriter, search string, user int) {
+	projects := []map[string]any{}
+	if strings.Contains(g.project, search) && g.level(user) >= Developer {
+		projects = append(projects, map[string]any{
+			"id": 1, "path_with_namespace": g.project, "name_with_namespace": strings.ReplaceAll(g.project, "/", " / "),
+		})
+	}
+	reply(w, http.StatusOK, projects)
+}
+
+// branches lists the branches whose name holds search. Called with mu held.
+func (g *GitLab) branches(w http.ResponseWriter, search string) {
+	branches := []map[string]any{}
+	refs, err := g.repo.Branches()
+	if err == nil {
+		_ = refs.ForEach(func(ref *plumbing.Reference) error {
+			if name := ref.Name().Short(); strings.Contains(name, search) {
+				branches = append(branches, map[string]any{"name": name, "commit": map[string]any{"id": ref.Hash().String()}})
+			}
+			return nil
+		})
+	}
+	reply(w, http.StatusOK, branches)
 }
 
 func (g *GitLab) branch(w http.ResponseWriter, name string, user int) {

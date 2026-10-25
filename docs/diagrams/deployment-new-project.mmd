@@ -1,0 +1,6 @@
+flowchart LR
+  N["New /2026/q3"] --> T{"template"}
+  T -- "/2026/_template" --> C["copied exactly"]
+  T -- "/_templates/bericht" --> C
+  T -- "Empty" --> E["built-in main.typ"] --> C
+  C --> R["room gitlab:p@main:/2026/q3<br/>(unsaved)"] --> S["Save to GitLab / saving by itself"]

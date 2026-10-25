@@ -1,20 +1,13 @@
-# The demo playground as one image: `mise run docker:build`, then `mise run docker:run` (or the docker commands in
-# mise-tasks/docker/). It serves the built demo on :5199 and runs the collaboration server with the in-memory fake
-# GitLab on :1234 (server/cmd/fake-gitlab, plain rooms and guest links on), as `mise run demo` does; nothing is stored. Ctrl-C (SIGINT)
-# or SIGTERM stops both. The server lets only the demo's pages at http://127.0.0.1:5199 and http://localhost:5199 use a session:
-# opened under another address, ZWF_ALLOWED_ORIGINS (required by the real server, server/cmd/zwiebelfisch) must name it. GitHub builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io
-# (.github/workflows/docker.yml).
+# Zwiebelfisch as one image: the collaboration server (server/cmd/zwiebelfisch) with the app, the start page and the
+# editor (dist/app), on one port (1234): `mise run docker:build`, then run it with the GitLab instance's settings
+# (mise run docker:run, docs/30_configuration/05_deployment.typ). /data keeps the database and the git clones. GitHub
+# builds it for linux/amd64 and linux/arm64 and pushes it to ghcr.io (.github/workflows/docker.yml).
 #
 # Stage `build` installs the tools mise.toml pins (so the image builds with the same versions as a checkout) and runs
-# build:demo. Stage `server` cross-compiles the Go server for the target platform (CGO_ENABLED=0: a static binary,
-# SQLite is pure Go). Both run on the building machine's platform: the demo (JS, wasm, fonts) is the same for every
+# build:app. Stage `server` cross-compiles the Go server for the target platform (CGO_ENABLED=0: a static binary,
+# SQLite is pure Go). Both run on the building machine's platform: the app (JS, wasm, fonts) is the same for every
 # platform and Go cross-compiles, so a multi-platform build never runs under emulation. Stage `runtime` is distroless:
-# the binary, the built demo (dist/demo) and the fake repository's files (demo/examples/advanced).
-#
-# The server serves the demo from that folder (ZWF_DEMO_DIST, playground.StaticFiles), not embedded with go:embed:
-# the folder is what build:demo leaves, and an embedding package would make every Go build need a built demo first.
-# Without a checkout the Documentation example saves nothing; the playground bar says so. See
-# docs/10_getting-started/01_getting-started.typ.
+# the binary and the built app, which the server serves from ZWF_WEB_DIST.
 
 FROM --platform=$BUILDPLATFORM debian:bookworm-20261005@sha256:2c037a04925515fdd6ea85ea14a682d0e79931f5e9f5d07b6dbfc6ba12f9e858 AS build
 
@@ -53,7 +46,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store,sharing=locked \
 COPY . .
 RUN --mount=type=cache,id=cargo-registry,target=/cargo/registry \
     --mount=type=cache,id=typst-engine-target,target=/app/crates/typst-engine/target \
-  mise run build:demo
+  mise run build:app \
+  && mkdir -p /data
 
 # the Go version mise.toml pins
 FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66 AS server
@@ -67,18 +61,18 @@ RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
 COPY server server
 RUN --mount=type=cache,id=go-mod,target=/go/pkg/mod \
     --mount=type=cache,id=go-build,target=/root/.cache/go-build \
-  CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags="-s -w" -o /out/fake-gitlab ./server/cmd/fake-gitlab
+  CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags="-s -w" -o /out/zwiebelfisch ./server/cmd/zwiebelfisch
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS runtime
 
-ENV ZWF_ADDRESS=0.0.0.0 ZWF_PLAIN_ROOMS=1 ZWF_GUESTS=1 ZWF_DEMO_DIST=/app/dist/demo
+ENV ZWF_ADDRESS=0.0.0.0 ZWF_WEB_DIST=/app/web ZWF_COLLAB_DB=/data/collab.sqlite ZWF_LOG_FORMAT=json
 WORKDIR /app
-COPY --from=server /out/fake-gitlab /app/fake-gitlab
-COPY --from=build /app/dist/demo dist/demo
-# the fake repository's files, read from the working directory
-COPY demo/examples/advanced demo/examples/advanced
+COPY --from=server /out/zwiebelfisch /app/zwiebelfisch
+COPY --from=build /app/dist/app web
+# the base image's user `nonroot` owns the volume
+COPY --from=build --chown=65532:65532 /data /data
+VOLUME /data
 
-# the base image's user `nonroot`
 USER 65532:65532
-EXPOSE 5199 1234
-ENTRYPOINT ["/app/fake-gitlab"]
+EXPOSE 1234
+ENTRYPOINT ["/app/zwiebelfisch"]

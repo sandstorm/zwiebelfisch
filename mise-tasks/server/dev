@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server (Go) on ws://127.0.0.1:1234: sign-in (ZWF_AUTH_CLIENT_ID, ZWF_AUTH_CLIENT_SECRET) and GitLab rooms (ZWF_GITLAB_URL), e.g. in mise.local.toml; plain rooms only with ZWF_PLAIN_ROOMS=1; the demo's pages (:5199) allowed unless ZWF_ALLOWED_ORIGINS says otherwise; SQLite in server/.data/"
+#MISE description="Start the collaboration server (Go) on ws://127.0.0.1:1234: sign-in (ZWF_AUTH_CLIENT_ID, ZWF_AUTH_CLIENT_SECRET) and GitLab rooms (ZWF_GITLAB_URL), e.g. in mise.local.toml; plain rooms only with ZWF_PLAIN_ROOMS=1; the demo's pages (:5199) and the app (mise run app, :5200) allowed unless ZWF_ALLOWED_ORIGINS says otherwise; SQLite in server/.data/"
 set -euo pipefail
 # env: server/lib/config (docs/30_configuration/03_collaboration-server.typ). Restart it after a change (no watcher).
-ZWF_ALLOWED_ORIGINS="${ZWF_ALLOWED_ORIGINS-http://127.0.0.1:5199,http://localhost:5199}" exec go run ./server/cmd/zwiebelfisch "$@"
+ZWF_ALLOWED_ORIGINS="${ZWF_ALLOWED_ORIGINS-http://127.0.0.1:5199,http://localhost:5199,http://127.0.0.1:5200}" exec go run ./server/cmd/zwiebelfisch "$@"

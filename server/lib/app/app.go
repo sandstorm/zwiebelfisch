@@ -1,6 +1,6 @@
 // Package app puts the collaboration server together on one port, for both commands (zwiebelfisch, and
 // fake-gitlab for the demo): the rooms (package collab), GitLab rooms (package gitlab), the sign-in (package
-// auth) and, when enabled, guest links (package guest).
+// auth), the start page's rooms (package projects) and, when enabled, guest links (package guest).
 //
 // Routes follow one rule: /api/public/ is the only part anyone may call; everything else requires a
 // signed-in user (requireSignIn: 401 otherwise, for a WebSocket before its upgrade). New lists every route. A
@@ -35,6 +35,7 @@ import (
 	"github.com/sandstorm/zwiebelfisch/server/lib/collab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
 	"github.com/sandstorm/zwiebelfisch/server/lib/guest"
+	"github.com/sandstorm/zwiebelfisch/server/lib/projects"
 	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
@@ -60,6 +61,7 @@ type Server struct {
 	rooms    *collab.Server
 	gitlab   *gitlab.Rooms // nil: no GitLab rooms
 	guests   *guest.Guests // nil: no guest links
+	projects *projects.Projects
 	plain    bool
 	public   *routes // for anyone
 	signedIn *routes // for signed-in users only
@@ -91,14 +93,19 @@ func New(o Options) (*Server, error) {
 		Store: o.Store, Authenticate: s.authenticate, AllowedOrigin: o.Auth.AllowedOrigin, Extension: extension,
 		Log: o.Log.With().Str("module", "collab").Logger(),
 	}
-	if o.Guests {
-		collabOptions.PeerChanged = func(room string, user collab.User, joined bool) {
-			if user.IsGuest() {
-				s.guests.PeerChanged(room, user, joined)
-			}
+	collabOptions.PeerChanged = func(room string, user collab.User, joined bool) {
+		switch {
+		case user.IsGuest() && s.guests != nil:
+			s.guests.PeerChanged(room, user, joined)
+		case joined:
+			s.projects.Opened(room, user)
 		}
 	}
 	s.rooms = collab.New(collabOptions)
+	s.projects = projects.New(projects.Options{
+		Store: o.Store, Occupied: s.rooms.Occupied, MayOpen: s.mayShare, MayTeamPin: s.mayTeamPin,
+		Log: o.Log.With().Str("module", "projects").Logger(),
+	})
 	if o.Guests {
 		guests, err := guest.New(guest.Options{
 			Store: o.Store, Sessions: o.Auth, Rooms: s.rooms, MayShare: s.mayShare,
@@ -133,6 +140,18 @@ func New(o Options) (*Server, error) {
 		signedIn.HandleFunc("GET /api/rooms/{room}/files/{path...}", s.gitlab.ServeFile)
 		signedIn.HandleFunc("GET /api/rooms/{room}/history", s.gitlab.ServeHistory)
 		signedIn.HandleFunc("GET /api/rooms/{room}/compare", s.gitlab.ServeCompare)
+	}
+	signedIn.HandleFunc("GET /api/me/rooms", member(s.projects.Rooms))
+	signedIn.HandleFunc("PUT /api/me/rooms/{room}/pin", member(s.projects.Pin))
+	signedIn.HandleFunc("DELETE /api/me/rooms/{room}/pin", member(s.projects.Pin))
+	signedIn.HandleFunc("DELETE /api/me/rooms/{room}", member(s.projects.Forget))
+	signedIn.HandleFunc("PUT /api/rooms/{room}/team-pin", member(s.projects.TeamPin))
+	signedIn.HandleFunc("DELETE /api/rooms/{room}/team-pin", member(s.projects.TeamPin))
+	if s.gitlab != nil {
+		signedIn.HandleFunc("GET /api/gitlab/projects", member(s.gitlab.ServeProjects))
+		signedIn.HandleFunc("GET /api/gitlab/projects/{project}/branches", member(s.gitlab.ServeBranches))
+		signedIn.HandleFunc("GET /api/gitlab/projects/{project}/folders", member(s.gitlab.ServeFolders))
+		signedIn.HandleFunc("POST /api/gitlab/projects/{project}/folders", member(s.gitlab.ServeNewFolder))
 	}
 	if s.guests != nil {
 		signedIn.HandleFunc("POST /api/rooms/{room}/shares", s.guests.Create)
@@ -295,6 +314,28 @@ func (s *Server) mayShare(ctx context.Context, user collab.User, room string) (b
 		return s.gitlab.MayEdit(ctx, user, room)
 	}
 	return s.plain && !strings.Contains(room, ":"), nil
+}
+
+// mayTeamPin is whether user may pin room for everyone who may open it: in a GitLab room a Maintainer of
+// the project, in a plain room anyone signed in; never a guest.
+func (s *Server) mayTeamPin(ctx context.Context, user collab.User, room string) (bool, error) {
+	if s.gitlab != nil && s.gitlab.Handles(room) && !user.IsGuest() {
+		return s.gitlab.MayMaintain(ctx, user, room)
+	}
+	return s.mayShare(ctx, user, room)
+}
+
+// member is h for a signed-in member, with their user; a guest gets 403.
+func member(h func(http.ResponseWriter, *http.Request, collab.User)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		identity, _ := auth.SignedIn(r)
+		user := userOf(identity)
+		if user.IsGuest() {
+			http.Error(w, "Guests open the project of their link only.", http.StatusForbidden)
+			return
+		}
+		h(w, r, user)
+	}
 }
 
 // Close ends the guest links' work, stores the open rooms and ends the GitLab rooms' work (or gives up when

@@ -951,3 +951,19 @@ func TestAClientIDInSomeonesPresenceIsTheirs(t *testing.T) {
 	carol := dial(t, s, "r", "carol")
 	carol.eventually("alice's value", func() bool { return carol.doc.Values("values")["k"] == "alice" })
 }
+
+func TestOccupiedNamesEachUserOnce(t *testing.T) {
+	s := newServer(t, memStore(t), func(o *collab.Options) {
+		o.Authenticate = func(r *http.Request, _ string) (collab.User, error) { return collab.User{ID: session(r)}, nil }
+	})
+	require.Empty(t, s.Occupied())
+	ann := dial(t, s, "report", "ann")
+	dial(t, s, "report", "ann") // a second window
+	dial(t, s, "letter", "bob")
+	ann.edit(func(w *ydoc.Writer) { w.SetText("files", "/main.typ", "Hello") })
+	ann.eventually("synced", func() bool { return len(s.Occupied()) == 2 })
+	occupied := s.Occupied()
+	require.Len(t, occupied["report"], 1)
+	require.Equal(t, "ann", occupied["report"][0].ID)
+	require.Equal(t, "bob", occupied["letter"][0].ID)
+}

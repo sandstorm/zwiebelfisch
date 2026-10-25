@@ -1,0 +1,35 @@
+/* The start page (start.ts). */
+.start { max-width: 52rem; margin: 0 auto; padding: 24px 16px; box-sizing: border-box; }
+.start header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.start h1 { font-size: 20px; margin: 0; }
+.start h2 { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--app-muted); margin: 24px 0 6px; }
+.start button, .start input, .start select { font: inherit; }
+.start button { padding: 4px 10px; border: 1px solid var(--app-border); border-radius: 6px; background: var(--app-panel); color: var(--app-text); cursor: pointer; }
+.start button:hover { background: var(--app-hover); }
+.start button.primary { background: var(--app-link); border-color: var(--app-link); color: #fff; }
+.start input[type="text"], .start input[type="search"], .start select { padding: 6px 10px; border: 1px solid var(--app-border); border-radius: 6px; background: var(--app-bg); color: var(--app-text); }
+.start .search { position: relative; }
+.start .search input { width: 100%; box-sizing: border-box; font-size: 15px; padding: 10px 12px; }
+.start .suggestions { position: absolute; left: 0; right: 0; top: 100%; z-index: 1; margin: 2px 0 0; padding: 4px 0; list-style: none; background: var(--app-bg); border: 1px solid var(--app-border); border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / .15); max-height: 22rem; overflow: auto; }
+.start .suggestions li { padding: 6px 12px; cursor: pointer; display: flex; gap: 12px; }
+.start .suggestions li[aria-selected="true"], .start .suggestions li:hover { background: var(--app-hover); }
+.start .rooms { list-style: none; margin: 0; padding: 0; border: 1px solid var(--app-border); border-radius: 6px; }
+.start .rooms:empty { display: none; }
+.start .rooms li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-top: 1px solid var(--app-border); }
+.start .rooms li:first-child { border-top: none; }
+.start .rooms li:hover { background: var(--app-hover); }
+.start .rooms a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; color: var(--app-text); }
+.start .rooms .where { color: var(--app-muted); }
+.start .meta { color: var(--app-muted); font-size: 13px; white-space: nowrap; }
+.start .rooms button { border: none; background: none; padding: 2px 6px; color: var(--app-muted); }
+.start .rooms button[aria-pressed="true"] { color: var(--app-link); }
+.start .empty { color: var(--app-muted); font-size: 14px; }
+.start .error { color: var(--app-error); }
+.start .live { color: var(--app-ok); }
+.start dialog { border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-bg); color: var(--app-text); padding: 16px 20px; width: min(32rem, calc(100vw - 32px)); box-sizing: border-box; }
+.start dialog::backdrop { background: rgb(0 0 0 / .3); }
+.start dialog h3 { margin: 0 0 12px; font-size: 16px; }
+.start dialog .row { display: grid; grid-template-columns: 6rem 1fr; gap: 8px; align-items: start; margin: 10px 0; }
+.start dialog .choices { display: flex; flex-direction: column; gap: 4px; max-height: 14rem; overflow: auto; }
+.start dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.start .signin { text-align: center; margin-top: 20vh; }

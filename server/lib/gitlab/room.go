@@ -124,6 +124,7 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 				w.Set(assetsMap, path, sha)
 			}
 			writeBase(w, doc, snapshot)
+			r.seed(w, snapshot)
 		})
 		if err != nil {
 			return err
@@ -133,6 +134,22 @@ func (r *room) open(ctx context.Context, doc *ydoc.Doc, by collab.User) error {
 	r.guarded = readGuarded(doc)
 	r.stopUpdates = doc.OnUpdate(func(_ []byte, origin any) { r.updated(doc, origin) })
 	return nil
+}
+
+// seed writes the files a new folder was made with (ServeNewFolder) into a room loaded for the first time,
+// as changes of the room's own; nothing when the folder has files of the branch by now.
+func (r *room) seed(w *ydoc.Writer, snapshot base) {
+	files := r.x.seeds.take(r.name)
+	if files == nil || len(snapshot.Texts) > 0 || len(snapshot.Assets) > 0 {
+		return
+	}
+	for path, content := range files {
+		if strings.HasSuffix(path, ".typ") {
+			w.SetText(filesMap, path, decodeText(content))
+		} else {
+			w.Set(assetsMap, path, content)
+		}
+	}
 }
 
 // Stateless handles a client's message:

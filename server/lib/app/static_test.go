@@ -1,4 +1,4 @@
-package playground_test
+package app_test
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/sandstorm/zwiebelfisch/server/lib/playground"
+	"github.com/sandstorm/zwiebelfisch/server/lib/app"
 )
 
 // StaticFiles on a folder like dist/demo, in-process (no port).
@@ -22,11 +22,12 @@ func demo(t *testing.T) http.Handler {
 		require.NoError(t, os.WriteFile(filepath.Join(parent, path), []byte(content), 0o644))
 	}
 	write("demo/index.html", "<!doctype html><title>demo</title>")
+	write("demo/edit.html", "<!doctype html><title>edit</title>")
 	write("demo/assets/engine-abc123.wasm", "\x00asm")
 	write("demo/assets/a b.js", "export {};")
 	write("secret.txt", "not served")
 	require.NoError(t, os.Symlink(filepath.Join(parent, "secret.txt"), filepath.Join(root, "link.txt")))
-	return playground.StaticFiles(root)
+	return app.StaticFiles(root)
 }
 
 func get(h http.Handler, method, target string) *httptest.ResponseRecorder {
@@ -41,6 +42,19 @@ func TestStaticIndex(t *testing.T) {
 	require.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))
 	require.Equal(t, "no-cache", rec.Header().Get("Cache-Control"))
 	require.Equal(t, "<!doctype html><title>demo</title>", rec.Body.String())
+}
+
+func TestStaticPageWithoutExtension(t *testing.T) {
+	rec := get(demo(t), "GET", "/edit?room=gitlab:group/p@main")
+	require.Equal(t, 200, rec.Code)
+	require.Equal(t, "<!doctype html><title>edit</title>", rec.Body.String())
+}
+
+func TestWithStaticFiles(t *testing.T) {
+	api := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("api " + r.URL.Path)) })
+	h := app.WithStaticFiles(api, filepath.Join(t.TempDir(), "missing"))
+	require.Equal(t, "api /api/me", get(h, "GET", "/api/me").Body.String())
+	require.Equal(t, 404, get(h, "GET", "/").Code)
 }
 
 func TestStaticAssetsCachedForGood(t *testing.T) {

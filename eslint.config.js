@@ -120,7 +120,7 @@ export default tseslint.config(
     // Files read general to specific (docs/40_architecture/10_conventions.typ): the main element first, helpers below
     // their users. Only what is needed while the module loads (a constant spread into an export, a class instantiated at
     // the top level) must come first; uses inside functions, and types, may refer to what follows.
-    files: ['src/**/*.ts', 'demo/**/*.ts'],
+    files: ['src/**/*.ts', 'demo/**/*.ts', 'app/**/*.ts'],
     plugins: { '@typescript-eslint': tseslint.plugin },
     rules: {
       '@typescript-eslint/no-use-before-define': [

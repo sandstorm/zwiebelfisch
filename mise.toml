@@ -6,8 +6,8 @@ typst = "0.15.1"
 rust = { version = "1.99.0", targets = "wasm32-unknown-unknown" }
 # must match the wasm-bindgen crate version pinned in crates/typst-engine/Cargo.toml
 "github:wasm-bindgen/wasm-bindgen" = "0.2.129"
-# wasm-opt for the engine build
-"aqua:WebAssembly/binaryen" = "133"
+# wasm-opt for the engine build (from GitHub: aqua has no linux/arm64 build, which Docker on Apple silicon needs)
+"github:WebAssembly/binaryen" = { version = "133", version_prefix = "version_" }
 # lint the GitHub workflows (actionlint runs shellcheck on their scripts) and the Dockerfile: mise run check:ci
 actionlint = "1.7.12"
 hadolint = "2.15.1"

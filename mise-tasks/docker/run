@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-#MISE description="Run the zwiebelfisch-demo image (docker:build): the demo on http://127.0.0.1:5199/, the server on ws://127.0.0.1:1234; like `mise run demo preview`; Ctrl-C stops both"
-# Reachable from this machine only (127.0.0.1): the playground server has no authentication.
-# The ports are fixed: the server allows the demo's pages at http://127.0.0.1:5199 and http://localhost:5199 only
-# (another address: -e ZWF_ALLOWED_ORIGINS=<origin>). Arguments go to docker run.
+#MISE description="Run the zwiebelfisch image (docker:build) on http://localhost:1234/ against ZWF_GITLAB_URL, with ZWF_AUTH_CLIENT_ID and ZWF_AUTH_CLIENT_SECRET (e.g. in mise.local.toml); arguments go to docker run"
+# The GitLab application's callback: http://localhost:1234/api/public/auth/callback. The database and the git
+# clones stay in the volume zwiebelfisch-data.
 set -euo pipefail
-exec docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 "$@" zwiebelfisch-demo
+: "${ZWF_GITLAB_URL:?set ZWF_GITLAB_URL, e.g. https://gitlab.example.org}"
+: "${ZWF_AUTH_CLIENT_ID:?set ZWF_AUTH_CLIENT_ID (an OAuth application on the GitLab instance)}"
+: "${ZWF_AUTH_CLIENT_SECRET:?set ZWF_AUTH_CLIENT_SECRET}"
+exec docker run --rm -p 127.0.0.1:1234:1234 -v zwiebelfisch-data:/data \
+  -e ZWF_ALLOWED_ORIGINS="${ZWF_ALLOWED_ORIGINS:-http://localhost:1234}" -e ZWF_LOG_FORMAT=console \
+  -e ZWF_GITLAB_URL -e ZWF_AUTH_CLIENT_ID -e ZWF_AUTH_CLIENT_SECRET \
+  ${ZWF_GITLAB_WEBHOOK_SECRET:+-e ZWF_GITLAB_WEBHOOK_SECRET} ${ZWF_GUESTS:+-e ZWF_GUESTS} \
+  "$@" zwiebelfisch

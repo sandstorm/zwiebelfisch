@@ -4,6 +4,7 @@
 // without ZWF_ALLOWED_ORIGINS, or with an invalid one:
 //   - the Hocuspocus protocol (a WebSocket at /api/collaboration)
 //   - the HTTP endpoints of package app
+//   - with ZWF_WEB_DIST, the built app (dist/app: the start page, the editor at /edit) on every other path
 //
 // On SIGINT/SIGTERM it stores every open room before exiting.
 package main
@@ -12,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -64,9 +66,13 @@ func run() error {
 		return err
 	}
 	log.Info().Strs("allowedOrigins", cfg.AllowedOrigins).Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).
-		Str("gitlab", cfg.GitLab.URL).Msg("collaboration server")
+		Str("gitlab", cfg.GitLab.URL).Str("web", cfg.Web.Dist).Msg("collaboration server")
+	var handler http.Handler = server
+	if cfg.Web.Dist != "" {
+		handler = app.WithStaticFiles(server, cfg.Web.Dist)
+	}
 	return app.Run(log, server.Close, app.Site{
-		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: server,
+		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler,
 	})
 }
 

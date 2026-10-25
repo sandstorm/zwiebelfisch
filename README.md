@@ -44,17 +44,21 @@ This project is both an *authoring environment* and an *embeddable WYSIWYG edito
 - Support for **collaborative real-time editing**.
 - **GitLab** integration: edit any Typst project from GitLab, and write back changes.
 
-## Try it with Docker
+## Run it with Docker
+
+The image is Zwiebelfisch against your GitLab: the start page, the editor and the collaboration server on one port.
+Register an OAuth application on the GitLab instance (scopes `openid profile email read_api write_repository`,
+callback `http://localhost:1234/api/public/auth/callback`), then:
 
 ```sh
-docker build -t zwiebelfisch-demo .
-docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 zwiebelfisch-demo
+docker run --rm -p 127.0.0.1:1234:1234 -v zwiebelfisch-data:/data \
+  -e ZWF_ALLOWED_ORIGINS=http://localhost:1234 -e ZWF_GITLAB_URL=https://gitlab.example.org \
+  -e ZWF_AUTH_CLIENT_ID=… -e ZWF_AUTH_CLIENT_SECRET=… \
+  ghcr.io/sandstorm/zwiebelfisch:main
 ```
 
-Open http://127.0.0.1:5199/: the built demo plus a collaboration server with a fake GitLab. Nothing is saved.
-Ctrl-C stops it. (`mise run docker:build` and `mise run docker:run` do the same.)
-
-Released images: `docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 ghcr.io/<owner>/<repo>:<version>` (`:main` follows the main branch).
+Open http://localhost:1234/. `mise run docker:build` builds the image from a checkout, `mise run docker:run` runs it
+with the variables from your environment. Deploying it: `docs/30_configuration/05_deployment.typ`.
 
 ## Quick start
 

@@ -1,4 +1,4 @@
-# The Docker image (Dockerfile: the built demo served by the collaboration server) for linux/amd64 and linux/arm64,
+# The Docker image (Dockerfile: the collaboration server with the app, start page and editor) for linux/amd64 and linux/arm64,
 # pushed to GitHub's container registry as ghcr.io/<owner>/<repo>: on main (tags `main`, `sha-<short sha>`) and, called
 # by release.yml once CI passed, for a version tag v1.2.3 (tags `1.2.3`, `1.2`, `latest`, `sha-…`). A pull request only
 # builds it.
@@ -50,11 +50,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
           labels: |
-            org.opencontainers.image.title=Zwiebelfisch demo
-            org.opencontainers.image.description=The Zwiebelfisch demo, served by its collaboration server with an in-memory fake GitLab
+            org.opencontainers.image.title=Zwiebelfisch
+            org.opencontainers.image.description=Zwiebelfisch: Typst documents in GitLab projects, edited together in the browser
           annotations: |
-            org.opencontainers.image.title=Zwiebelfisch demo
-            org.opencontainers.image.description=The Zwiebelfisch demo, served by its collaboration server with an in-memory fake GitLab
+            org.opencontainers.image.title=Zwiebelfisch
+            org.opencontainers.image.description=Zwiebelfisch: Typst documents in GitLab projects, edited together in the browser
 
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

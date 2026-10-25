@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Build the Docker image zwiebelfisch-demo (Dockerfile): the built demo and the playground server (Go) with a fake GitLab; arguments go to docker build"
-# Needs only Docker: the image installs its tools and builds the demo itself.
+#MISE description="Build the Docker image zwiebelfisch (Dockerfile): the collaboration server with the app (start page and editor); arguments go to docker build"
+# Needs only Docker: the image installs its tools and builds the app itself.
 set -euo pipefail
-exec docker build -t zwiebelfisch-demo "$@" .
+exec docker build -t zwiebelfisch "$@" .

@@ -28,6 +28,8 @@ type Access struct {
 	Edit bool
 	// Push: GitLab lets the user push to the branch (protected branches included): save.
 	Push bool
+	// Maintain: the Maintainer role or more: pin the project's rooms for the team.
+	Maintain bool
 }
 
 // accessTTL is how long a join or a file request may rely on an earlier answer.
@@ -216,7 +218,7 @@ func (a api) userAccess(ctx context.Context, token, project, branch, user string
 		}
 		return Access{}, err
 	}
-	access := Access{Role: roleName(member.Level), Edit: member.Level >= developer}
+	access := Access{Role: roleName(member.Level), Edit: member.Level >= developer, Maintain: member.Level >= maintainer}
 	if !access.Edit {
 		return access, nil
 	}
@@ -230,7 +232,10 @@ func (a api) userAccess(ctx context.Context, token, project, branch, user string
 	return access, nil
 }
 
-const developer = 30
+const (
+	developer  = 30
+	maintainer = 40
+)
 
 func roleName(level int) string {
 	switch {

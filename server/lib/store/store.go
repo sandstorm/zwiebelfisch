@@ -1,6 +1,8 @@
 // Package store keeps the server's state in SQLite:
 //   - rooms: one row per room with the whole Yjs state, written over on every store
 //   - shares: the guest links of rooms (package guest), by the SHA-256 hash of their secret (never the secret)
+//   - user_rooms, team_pins: the rooms each user opened or pinned, and those pinned for a team (package
+//     projects)
 package store
 
 import (
@@ -38,6 +40,9 @@ func Open(path string) (*Store, error) {
 		`CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, token_hash BLOB NOT NULL UNIQUE, room TEXT NOT NULL,
 			label TEXT NOT NULL, creator_provider TEXT NOT NULL, creator_id TEXT NOT NULL, creator_name TEXT NOT NULL,
 			created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`,
+		`CREATE TABLE IF NOT EXISTS user_rooms (user TEXT NOT NULL, room TEXT NOT NULL, last_opened INTEGER,
+			pinned INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user, room))`,
+		`CREATE TABLE IF NOT EXISTS team_pins (room TEXT PRIMARY KEY, by_name TEXT NOT NULL, at INTEGER NOT NULL)`,
 	} {
 		if _, err := db.Exec(table); err != nil {
 			_ = db.Close()
@@ -120,6 +125,124 @@ func (s *Store) DeleteShare(id string) error {
 		return fmt.Errorf("store: delete share %s: %w", id, err)
 	}
 	return nil
+}
+
+// UserRoom is a room a user opened or pinned. LastOpened is zero for one they pinned but did not open (or
+// took off their recent list).
+type UserRoom struct {
+	Room       string
+	LastOpened time.Time
+	Pinned     bool
+}
+
+// OpenedRoom records that user (a key such as "gitlab:42") opened room at, and forgets their least recently
+// opened rooms beyond keep that are not pinned.
+func (s *Store) OpenedRoom(user, room string, at time.Time, keep int) error {
+	_, err := s.db.Exec(`INSERT INTO user_rooms (user, room, last_opened) VALUES (?, ?, ?)
+		ON CONFLICT(user, room) DO UPDATE SET last_opened = excluded.last_opened`, user, room, at.UnixMilli())
+	if err == nil {
+		_, err = s.db.Exec(`DELETE FROM user_rooms WHERE user = ? AND pinned = 0 AND room NOT IN
+			(SELECT room FROM user_rooms WHERE user = ? AND pinned = 0 ORDER BY last_opened DESC LIMIT ?)`, user, user, keep)
+	}
+	if err != nil {
+		return fmt.Errorf("store: opened room %q: %w", room, err)
+	}
+	return nil
+}
+
+// PinRoom pins room for user, or unpins it (a room they never opened is then forgotten).
+func (s *Store) PinRoom(user, room string, pinned bool) error {
+	_, err := s.db.Exec(`INSERT INTO user_rooms (user, room, pinned) VALUES (?, ?, ?)
+		ON CONFLICT(user, room) DO UPDATE SET pinned = excluded.pinned`, user, room, pinned)
+	if err == nil && !pinned {
+		_, err = s.db.Exec(`DELETE FROM user_rooms WHERE user = ? AND room = ? AND last_opened IS NULL`, user, room)
+	}
+	if err != nil {
+		return fmt.Errorf("store: pin room %q: %w", room, err)
+	}
+	return nil
+}
+
+// ForgetRoom takes room off user's recent rooms (it stays pinned if it is).
+func (s *Store) ForgetRoom(user, room string) error {
+	_, err := s.db.Exec(`DELETE FROM user_rooms WHERE user = ? AND room = ? AND pinned = 0`, user, room)
+	if err == nil {
+		_, err = s.db.Exec(`UPDATE user_rooms SET last_opened = NULL WHERE user = ? AND room = ?`, user, room)
+	}
+	if err != nil {
+		return fmt.Errorf("store: forget room %q: %w", room, err)
+	}
+	return nil
+}
+
+// UserRooms are user's rooms, the most recently opened first.
+func (s *Store) UserRooms(user string) ([]UserRoom, error) {
+	rows, err := s.db.Query(`SELECT room, last_opened, pinned FROM user_rooms WHERE user = ?
+		ORDER BY last_opened IS NULL, last_opened DESC, room`, user)
+	if err != nil {
+		return nil, fmt.Errorf("store: user rooms: %w", err)
+	}
+	defer rows.Close()
+	var rooms []UserRoom
+	for rows.Next() {
+		var r UserRoom
+		var opened sql.NullInt64
+		if err := rows.Scan(&r.Room, &opened, &r.Pinned); err != nil {
+			return nil, fmt.Errorf("store: user rooms: %w", err)
+		}
+		if opened.Valid {
+			r.LastOpened = time.UnixMilli(opened.Int64)
+		}
+		rooms = append(rooms, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: user rooms: %w", err)
+	}
+	return rooms, nil
+}
+
+// TeamPin is a room pinned for everyone who may open it, by whom (their name).
+type TeamPin struct {
+	Room, By string
+	At       time.Time
+}
+
+// SetTeamPin pins room for the team as by (a name), or unpins it.
+func (s *Store) SetTeamPin(room, by string, at time.Time, pinned bool) error {
+	var err error
+	if pinned {
+		_, err = s.db.Exec(`INSERT INTO team_pins (room, by_name, at) VALUES (?, ?, ?)
+			ON CONFLICT(room) DO UPDATE SET by_name = excluded.by_name, at = excluded.at`, room, by, at.UnixMilli())
+	} else {
+		_, err = s.db.Exec(`DELETE FROM team_pins WHERE room = ?`, room)
+	}
+	if err != nil {
+		return fmt.Errorf("store: team pin %q: %w", room, err)
+	}
+	return nil
+}
+
+// TeamPins are all rooms pinned for a team, the latest first.
+func (s *Store) TeamPins() ([]TeamPin, error) {
+	rows, err := s.db.Query(`SELECT room, by_name, at FROM team_pins ORDER BY at DESC, room`)
+	if err != nil {
+		return nil, fmt.Errorf("store: team pins: %w", err)
+	}
+	defer rows.Close()
+	var pins []TeamPin
+	for rows.Next() {
+		var p TeamPin
+		var at int64
+		if err := rows.Scan(&p.Room, &p.By, &at); err != nil {
+			return nil, fmt.Errorf("store: team pins: %w", err)
+		}
+		p.At = time.UnixMilli(at)
+		pins = append(pins, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("store: team pins: %w", err)
+	}
+	return pins, nil
 }
 
 // Close closes the file.

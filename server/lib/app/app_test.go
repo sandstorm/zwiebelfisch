@@ -274,6 +274,10 @@ func TestOnlyPublicRoutesAnswerWithoutASession(t *testing.T) {
 	require.ElementsMatch(t, []string{
 		"GET /api/collaboration", "GET /api/me", "POST /api/auth/logout", "GET /api/rooms/{room}/files/{path...}",
 		"GET /api/rooms/{room}/history", "GET /api/rooms/{room}/compare",
+		"GET /api/me/rooms", "PUT /api/me/rooms/{room}/pin", "DELETE /api/me/rooms/{room}/pin", "DELETE /api/me/rooms/{room}",
+		"PUT /api/rooms/{room}/team-pin", "DELETE /api/rooms/{room}/team-pin",
+		"GET /api/gitlab/projects", "GET /api/gitlab/projects/{project}/branches",
+		"GET /api/gitlab/projects/{project}/folders", "POST /api/gitlab/projects/{project}/folders",
 		"POST /api/rooms/{room}/shares", "GET /api/rooms/{room}/shares", "DELETE /api/rooms/{room}/shares/{id}",
 	}, s.signedIn.patterns)
 	for _, pattern := range append(s.signedIn.patterns, "GET /", "GET /unknown", "GET /api/unknown") {

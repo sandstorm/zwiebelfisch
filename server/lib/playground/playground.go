@@ -6,8 +6,7 @@
 //   - the demo's playground bar simulate a colleague's push or a GitLab outage
 //   - the tests switch a room's auto-commit
 //
-// It also reads the demo's repository from disk (ReadProjectFiles) and serves the built demo without Vite
-// (StaticFiles).
+// It also reads the demo's repository from disk (ReadProjectFiles).
 package playground
 
 import (

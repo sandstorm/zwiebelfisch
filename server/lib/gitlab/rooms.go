@@ -88,6 +88,7 @@ type Rooms struct {
 	autoCommit  time.Duration
 	leaveDelay  time.Duration
 	accessCache accessCache
+	seeds       seeds // new folders' files, until their room opens (browse.go)
 	clock       clock
 	log         zerolog.Logger
 	ctx         context.Context // ends with Close: repository calls and waits

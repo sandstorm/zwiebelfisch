@@ -1,0 +1,15 @@
+/* The app's pages (start page, editor): light or dark as the OS; the widget follows the page's color-scheme. */
+:root {
+  color-scheme: light dark;
+  --app-bg: light-dark(#fff, #0d1117);
+  --app-panel: light-dark(#f6f8fa, #161b22);
+  --app-border: light-dark(#d0d7de, #30363d);
+  --app-text: light-dark(#24292f, #e6edf3);
+  --app-muted: light-dark(#57606a, #9198a1);
+  --app-link: light-dark(#0969da, #4493f8);
+  --app-hover: light-dark(#eaeef2, #262c36);
+  --app-ok: light-dark(#1a7f37, #3fb950);
+  --app-error: light-dark(#cf222e, #f85149);
+}
+html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; background: var(--app-bg); color: var(--app-text); }
+a { color: var(--app-link); }

@@ -16,7 +16,7 @@ mise run install        # JS dependencies and Playwright browsers
 mise run demo           # builds the engine and fonts, then starts the demo
 ```
 
-The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collaboration server with a fake GitLab on `ws://127.0.0.1:1234`; Ctrl-C stops both. Unlike the Docker image, it saves edits of the Documentation example to `docs/` (@architecture-development-writing-docs).
+The demo (@getting-started-demo) runs on `http://127.0.0.1:5199/`, the collaboration server with a fake GitLab on `ws://127.0.0.1:1234`; Ctrl-C stops both. It saves edits of the Documentation example to `docs/` (@architecture-development-writing-docs).
 
 == Tasks <architecture-development-tasks>
 
@@ -65,7 +65,7 @@ GitHub runs the same mise tasks as a checkout (`.github/workflows/`, tools throu
 
 A release is a version tag (`git tag v1.2.3 && git push origin v1.2.3`); it publishes only after all of CI passed:
 
-- *Image*: `ghcr.io/<owner>/<repo>`, linux/amd64 and linux/arm64. For now it is the playground image (the Go server with the fake GitLab, distroless).
+- *Image*: `ghcr.io/<owner>/<repo>`, linux/amd64 and linux/arm64: the server with the app (@configuration-deployment), distroless.
 - *npm package*: `@<owner>/zwiebelfisch@1.2.3` (`dist/lib`) on GitHub's npm registry. `package.json` stays `private` and unscoped; the release workflow sets name, version and registry in its own checkout.
 - *Release*: generated notes, the book as PDF and the package's tarball.
 
@@ -73,10 +73,9 @@ A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag 
 
 == Open work <architecture-development-open-work>
 
-- *Rename outside the repository* (`docs/2026_10_13_rename-zwiebelfisch.md`): the remote `git@github.com:sandstorm/zwiebelfisch.git`, the GitHub settings of @architecture-development-release, the local folder `typst-experiment` → `zwiebelfisch` (with Claude's memory folder), a user-set `TYPST_*` variable of ours (`.env`, `mise.local.toml`) as `ZWF_*`.
 - *Verification*: run every Playwright spec in all three browsers (`test:e2e-all`); many have never run in a browser. Try a real GitLab. Check by eye: IronCalc's dark palette, the diagrams.net embed parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and its export reply.
 - *Simplify* (snapshot: `docs/2026_10_13_feature-costs.md`; re-measure with `mise run quality:report 100000`, summed per `src/<layer>/<name>/`): page-margin rewriting in `comments`; own tests for `hosts/visual-editor/typst-conversion`; thin tests for `figures`, `markup`, `preview-sync`, `outline`; contribution points with one user (`registerPdfExportOption`, `registerEditorHeaderFooter`); `diagrams` and `spreadsheets` as extensions a host adds, like collaboration.
-- *Sign-in*: the user's tokens (in memory, refreshed when they expire) do all GitLab work (@architecture-data-model-gitlab); the project chooser (`read_api`) is still to come. A sign-out ends that session's open connections (its rooms refuse them); an expired member session does not yet. Not tried yet: a push to a real GitLab with go-git (v6 is a pre-release; the read half was tried on gitlab.com). Cross-site embedding needs a short-lived ticket instead of the cookie (`POST /api/rooms/<room>/ticket`, @architecture-data-model-collaboration). Not run yet: the e2e sign-in and `TestServerBinary` with a real issuer (they need ports); a real GitLab as the provider.
+- *Sign-in*: the user's tokens (in memory, refreshed when they expire) do all GitLab work (@architecture-data-model-gitlab); the project chooser (`read_api`) is the start page (*Deployment*). A sign-out ends that session's open connections (its rooms refuse them); an expired member session does not yet. Not tried yet: a push to a real GitLab with go-git (v6 is a pre-release; the read half was tried on gitlab.com). Cross-site embedding needs a short-lived ticket instead of the cookie (`POST /api/rooms/<room>/ticket`, @architecture-data-model-collaboration). Not run yet: the e2e sign-in and `TestServerBinary` with a real issuer (they need ports); a real GitLab as the provider.
 - *GitLab rooms*: highlight conflict ranges in the editors (the data is sent); report an asset changed on both sides (the room's wins today); don't commit an empty main file when the repository lacks it. Rooms of one folder: an e2e spec (`gitlab.spec.ts` against `gitlab:demo/report@<branch>:/letters/welcome`); a way to undo a creation, rename or deletion outside the folder written into the room directly (every save is refused until then); a "GitLab (fake)" entry in the playground bar for the folder room.
 - *Guest access* (@features-guest-access): view-only guests (a host read-only mechanism and a read-only scope on the server); the awareness name is the client's, so a guest can show another name to others' carets (the server's share list is what counts); behind a reverse proxy the join limit counts the proxy's address (`X-Forwarded-For` from a trusted proxy); a GitLab room that was never loaded cannot be opened by a guest first (it loads with the opener's token). Not run yet: `guest.spec.ts`.
 - *Collaboration*: tell the user when the server is unreachable (it stays at "Connecting to the room…"); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
@@ -90,7 +89,8 @@ A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag 
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
 - *Diagnostics*: Typst only; other file kinds would get VS Code's `languages.createDiagnosticCollection`.
-- *Server* (`docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: a server image (`zwiebelfisch`; today's is the playground); read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned).
+- *Start page* (@features-start-page): not tried against a real GitLab yet; no e2e spec for `app/` (a spec against the fake GitLab, which answers the project search and branch list); a branch name holding `/` in a pasted GitLab URL is read as branch plus folder; the Open dialog lists at most 100 branches and 20 projects.
+- *Server* (`docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned).
 
 == The docs <architecture-development-docs>
 
