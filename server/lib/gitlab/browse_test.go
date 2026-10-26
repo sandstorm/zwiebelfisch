@@ -37,7 +37,7 @@ func TestProjectFolders(t *testing.T) {
 			{Name: "report", Path: "/_templates/report", Scope: "/"},
 		},
 	}, projectFolders(entries))
-	require.Equal(t, Folders{Folders: nil, Templates: []Template{}}, projectFolders(nil))
+	require.Equal(t, Folders{Folders: []string{}, Templates: []Template{}}, projectFolders(nil))
 }
 
 func TestBrowseAgainstTheFakeGitLab(t *testing.T) {

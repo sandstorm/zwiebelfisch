@@ -166,7 +166,7 @@ func projectFolders(entries []TreeEntry) Folders {
 			folders["/"+strings.Join(dirs, "/")] = true
 		}
 	}
-	f := Folders{Folders: slices.Sorted(maps.Keys(folders)), Templates: []Template{}}
+	f := Folders{Folders: append([]string{}, slices.Sorted(maps.Keys(folders))...), Templates: []Template{}}
 	for _, p := range slices.Sorted(maps.Keys(templates)) {
 		f.Templates = append(f.Templates, templates[p])
 	}
