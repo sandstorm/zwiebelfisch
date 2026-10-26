@@ -30,8 +30,12 @@ export class WorkspaceHost implements Workspace {
   readonly onDidChangeConfiguration = this.#changed.event;
   readonly #fileSystems: FileSystemProvider[] = [];
   readonly fs: FileSystem = {
-    stat: (folder): FileStat =>
-      this.#fileSystems.some((provider) => provider.stat(folder).permissions === FilePermission.Readonly) ? { permissions: FilePermission.Readonly } : {},
+    stat: (path): FileStat => {
+      const stats = this.#fileSystems.map((provider) => provider.stat(path));
+      const readonly = stats.some((stat) => stat.permissions === FilePermission.Readonly);
+      const warning = stats.find((stat) => stat.warning)?.warning;
+      return { ...(readonly && { permissions: FilePermission.Readonly }), ...(warning && { warning }) };
+    },
     readFile: (path) => {
       const content = this.project.content(path);
       if (content !== undefined) return content;

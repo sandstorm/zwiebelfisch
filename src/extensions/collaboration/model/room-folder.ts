@@ -13,6 +13,7 @@ import type { StatelessChannel } from './gitlab-source-control';
  *   so none of them is shared
  * - `pull` asks the server for a file from outside the folder (`gitlab:pull`), once per path and base commit; it then
  *   comes into the room as any of its files
+ * - `onBranch` tells the files from outside the folder that the branch has (the room's base holds them)
  */
 export class RoomFolder {
   readonly #meta: Y.Map<unknown>;
@@ -47,6 +48,12 @@ export class RoomFolder {
     this.#asked.add(path);
     const request: ClientMessage = { type: 'gitlab:pull', path };
     this.channel.send(JSON.stringify(request));
+  }
+
+  /** Whether the branch has the file `path` from outside the folder at the room's base (`meta.base`, `meta.baseAssets`). */
+  onBranch(path: ProjectPath): boolean {
+    const held = (key: string) => Object.hasOwn((this.#meta.get(key) as Record<string, unknown> | undefined) ?? {}, path);
+    return !this.#inFolder(path) && (held('base') || held('baseAssets'));
   }
 
   /** Whether `path` is in the room's folder. */

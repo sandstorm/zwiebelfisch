@@ -145,8 +145,7 @@ export class FilePanel {
     const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
     const shown = ProjectPath.displayName(path);
     const what = files.length === 1 && files[0] === path ? shown : `${shown} and the ${files.length} files in it`;
-    const confirmed = await this.options.prompts.showWarningMessage(`Delete ${what}? This cannot be undone.`, { modal: true }, 'Delete');
-    if (confirmed !== 'Delete') return;
+    if (!(await this.confirm(path, `Delete ${what}? This cannot be undone.`, 'Delete', true))) return;
     this.emptyFolders.delete(path);
     this.render(this.state);
     await this.request(files.map((file) => ({ kind: 'delete', path: file })), this.state.main);
@@ -191,6 +190,17 @@ export class FilePanel {
     return this.holdsMain(path) || this.readonly(folderOf(path)) || this.readonly(path);
   }
 
+  /**
+   * Whether the user confirms `question` (with `button`) for the row `path`, after the warnings of its files
+   * (`options.warning`, each once); without warnings asked only if `always`.
+   */
+  private async confirm(path: ProjectPath, question: string, button: string, always = false): Promise<boolean> {
+    const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
+    const warnings = [...new Set(files.flatMap((file) => this.options.warning?.(file) ?? []))];
+    if (warnings.length === 0 && !always) return true;
+    return (await this.options.prompts.showWarningMessage([...warnings, question].join(' '), { modal: true }, button)) === button;
+  }
+
   private readonly(path: Folder): boolean {
     return this.options.readonly?.(path) ?? false;
   }
@@ -221,10 +231,11 @@ export class FilePanel {
     if (error) void this.options.prompts.showErrorMessage(error);
   }
 
-  /** Moves a file, or a folder with its files, to `target`; opens the moved file. */
+  /** Moves a file, or a folder with its files, to `target` (once the user confirms the warnings, if any); opens the moved file. */
   private async relocate(source: ProjectPath, target: ProjectPath): Promise<string | null> {
     if (this.holdsMain(source)) return 'The main file stays where it is.';
     if (this.fixed(source)) return `${ProjectPath.displayName(source)} stays where it is.`;
+    if (!(await this.confirm(source, `Move ${ProjectPath.displayName(source)} to ${ProjectPath.displayName(target)}?`, 'Move'))) return null;
     const renames = relocate(this.state.paths, source, target);
     if (this.emptyFolders.delete(source)) this.emptyFolders.add(target);
     const open = renames.find((r) => r.from === this.state.active)?.path ?? (renames.length === 1 ? renames[0].path : this.state.active);
@@ -282,6 +293,8 @@ export interface FilePanelOptions {
    * `path` may not be changed, renamed or deleted, at each `render` (default: none is).
    */
   readonly?(path: Folder): boolean;
+  /** Why to think twice before the file `path` is renamed, moved or deleted (asked first; default: none). */
+  warning?(path: ProjectPath): string | undefined;
 }
 
 export interface FilePanelState {

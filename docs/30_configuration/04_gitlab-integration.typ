@@ -46,7 +46,6 @@ The room `gitlab:<project>@<branch>:/<folder>` holds one folder of the branch, e
 - *Pulling in:* when a compile misses a file outside the folder (an import, an image), the widget asks the server for it (`gitlab:pull`). The server adds it if the branch has it at the room's base, else answers that it is not in the repository (asked once per file and base commit). Package imports (`@preview/…`) are not repository files.
 - *Caps:* at most 200 pulled-in files per room, each at most 32 MiB.
 - *Pulled-in files* are kept in the room (`meta.pulledIn`), so they are there at once on the next load. They are saved, merged and conflict like the folder's files; other upstream changes outside the folder leave the room alone (its base commit moves on).
-- *Only the folder changes shape:* files are created, renamed, moved and deleted in the folder only. Pulled-in files are edited, never renamed or deleted; one deleted upstream can be created again. A save leaves out what would do otherwise (also when a client writes the room directly), commits the rest and shows "Not saved: /x (outside the project folder …)" in the title bar's save status; the left-out changes stay in the room until they are undone (e.g. the new file deleted).
 - *The main file* is the folder's `main.typ`, else its first `.typ` file (unless the host fixes `mainFile`). The host's own files outside the folder are not added to the room.
 
 #figure(

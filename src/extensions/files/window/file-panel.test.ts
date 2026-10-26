@@ -19,7 +19,7 @@ function setup(
   onChange: (change: FileChange) => Promise<string | null> = async () => null,
   initial = state,
   decorations: Record<string, FileDecoration[]> = {},
-  { hasNewEntries = true, readonlyFolders = [] }: { hasNewEntries?: boolean; readonlyFolders?: (string | null)[] } = {},
+  { hasNewEntries = true, readonlyFolders = [], warnings = {} }: { hasNewEntries?: boolean; readonlyFolders?: (string | null)[]; warnings?: Record<string, string> } = {},
 ) {
   const parent = document.createElement('div');
   document.body.append(parent);
@@ -55,6 +55,7 @@ function setup(
       decorations: (file) => decorations[file] ?? [],
       icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
       readonly: (folder) => readonlyFolders.includes(folder),
+      warning: (file) => warnings[file],
     },
     initial,
   );
@@ -374,6 +375,24 @@ describe('FilePanel', () => {
       expect(validate('drafts')).toBe('New folders go into the project folder.');
       expect(validate('reports/q1/drafts')).toBeNull();
     });
+  });
+
+  it("asks first, with the files' warnings, before renaming, moving or deleting them", async () => {
+    const files = { ...state, paths: [path('/main.typ'), path('/shared/lib.typ'), path('/shared/new.typ')] };
+    const { panel, change, answers, warned } = setup(undefined, files, {}, { warnings: { '/shared/lib.typ': 'Shared.' } });
+    answers.push('shared/other', undefined);
+    await panel.rename(path('/shared/lib.typ'));
+    expect(warned).toEqual(['Shared. Move shared/lib.typ to shared/other.typ? (modal)']);
+    expect(change).not.toHaveBeenCalled();
+
+    answers.push('Delete');
+    await panel.delete(path('/shared'));
+    expect(warned[1]).toBe('Shared. Delete shared and the 2 files in it? This cannot be undone. (modal)');
+    expect(change).toHaveBeenCalledTimes(2);
+
+    answers.push('Delete');
+    await panel.delete(path('/main.typ'));
+    expect(warned).toHaveLength(2);
   });
 
   describe('drag and drop in the tree', () => {

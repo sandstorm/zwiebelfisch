@@ -139,6 +139,11 @@ export class Collaboration {
     for (const path of paths) this.folder?.pull(path);
   }
 
+  /** Whether the branch has the file `path` from outside the room's folder, at the room's base (in a room of one folder; else false). */
+  onBranch(path: ProjectPath): boolean {
+    return this.folder?.onBranch(path) ?? false;
+  }
+
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
   setCursor(path: ProjectPath | null, range?: SourceRange): void {
     this.cursors?.setLocal(path, range);

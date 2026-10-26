@@ -12,7 +12,7 @@ import { boxPresence } from './visual-editor/box-carets';
 import { AccountStatus } from './window/account';
 import { ParticipantsView, roomTitle } from './window/title-bar';
 import { leaveWarning, presenceDecorations } from './window/window';
-import { folderPermissions, missingFiles, sharedDecorations } from './window/room-folder';
+import { missingFiles, sharedDecorations, sharedWarnings } from './window/room-folder';
 import { gitlabRoom } from './room-protocol';
 import { Guests } from './guests/guests';
 
@@ -30,7 +30,8 @@ import { Guests } from './guests/guests';
  * once the session ended, a card over the whole widget says so and offers signing in. A GitLab room's project, branch
  * and folder are at the left of the title bar. A room backed by a GitLab branch is a source control, and the browser
  * warns before leaving changes nobody commits. In a room of one folder of the branch (`gitlab:<project>@<branch>:/<folder>`):
- * - files are created, renamed and deleted only in that folder (every other folder is Readonly)
+ * - files are created, renamed and deleted anywhere; outside that folder, the user is asked first before a file the
+ *   branch has is renamed, moved or deleted (other projects may use it)
  * - a file from outside it that a compile misses is asked for; it comes in, marked "S" (shared)
  *
  * On a server with guest links, members share the room with guests and guests join by a link (Guests in
@@ -80,7 +81,7 @@ export function collaboration(options: CollaborationOptions): Extension {
       const folder = room?.folder;
       if (folder) {
         subscriptions.push(
-          workspace.registerFileSystemProvider(folderPermissions(folder, project)),
+          workspace.registerFileSystemProvider(sharedWarnings(folder, (path) => link.onBranch(path))),
           window.registerFileDecorationProvider(sharedDecorations(folder)),
           preview.onDidChangeDiagnostics((diagnostics) => link.pull(missingFiles(diagnostics, folder))),
         );

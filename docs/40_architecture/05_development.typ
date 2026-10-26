@@ -60,7 +60,7 @@ mise run server:test   # when server/ or extensions/collaboration/room-protocol.
 
 GitHub runs the same mise tasks as a checkout (`.github/workflows/`, tools through `jdx/mise-action`). Every push and pull request runs `ci.yml`; a push to `main` also publishes the site (`pages.yml`) and the image `:main` (`docker.yml`).
 
-- *CI*: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a job of its own (its `test-results/` kept on failure; a failure there fails neither CI nor a release, for now). A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
+- *CI*: `typecheck`, `quality`, `test:unit`, `server:test`, `check:examples`, the docs, and `test:e2e chromium` in a workflow of its own (`e2e.yml`; its `test-results/` kept on failure; a failure there fails neither CI nor a release, for now). A release runs it alongside, without waiting for it. A pull request builds the Docker image without pushing it. `mise run check:ci` lints the workflows and the `Dockerfile`.
 - *The site* `https://<owner>.github.io/<repo>/`: the HTML docs, the PDF and the demo under `demo/` ("Try it" in each page's header). That demo is the static site (`build:demo -- --mode static`): the Documentation example, editable but nothing saved (a banner and ⌘S say so); Collaborate and GitLab show as unavailable.
 
 A release is a version tag (`git tag v1.2.3 && git push origin v1.2.3`); it publishes only after all of CI passed:

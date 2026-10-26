@@ -1,6 +1,6 @@
-# The checks a developer runs before a commit (the same mise tasks), plus the end-to-end tests (Chromium) as a job of
-# their own. Runs on every push and pull request, and for a version tag when release.yml calls it before publishing.
-# A failed end-to-end test is reported but fails neither CI nor a release (for now: some specs are still flaky).
+# The checks a developer runs before a commit (the same mise tasks), plus the end-to-end tests (e2e.yml). Runs on every
+# push and pull request, and for a version tag when release.yml calls it before publishing (with e2e: false: the
+# release runs them alongside instead). A failed end-to-end test fails nothing (for now: some specs are still flaky).
 name: CI
 
 on:
@@ -8,6 +8,11 @@ on:
     branches: ["**"]
   pull_request:
   workflow_call:
+    inputs:
+      e2e:
+        description: Run the end-to-end tests too
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -51,20 +56,8 @@ jobs:
       - run: mise run docs:pdf
       - run: mise run docs:html
 
+  # its own workflow, so a release can run it without waiting for it (release.yml)
   e2e:
     needs: engine
-    continue-on-error: true
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      # Chromium only, with the system libraries it needs (mise run install takes all three browsers, without them)
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: mise run test:e2e chromium
-      - if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: e2e-test-results
-          path: test-results/
-          retention-days: 14
+    if: inputs.e2e != false
+    uses: ./.github/workflows/e2e.yml

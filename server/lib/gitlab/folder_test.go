@@ -36,7 +36,7 @@ func folderFiles() map[string]any {
 }
 
 // outsideWhy ends the notice of what a save left out.
-const outsideWhy = " (outside the project folder /reports/q1, where files are only edited, never created, renamed or deleted)"
+const outsideWhy = " (outside the project folder /reports/q1, the branch has a file there that the project has not loaded)"
 
 func setupFolder(t *testing.T) *env {
 	return setup(t, setupOptions{files: folderFiles(), room: folderRoom})
@@ -155,30 +155,20 @@ func TestFolderRooms(t *testing.T) {
 		require.Equal(t, "readme", files["/README.md"])
 	})
 
-	t.Run("commits no creation, rename or deletion outside the folder, even when a client writes the document directly", func(t *testing.T) {
+	t.Run("commits no file put outside the folder over one of the branch the room does not hold, even when a client writes the document directly", func(t *testing.T) {
 		for name, change := range map[string]func(w *ydoc.Writer, doc *ydoc.Doc){
-			"a new file outside": func(w *ydoc.Writer, _ *ydoc.Doc) { w.SetText(filesMap, "/new.typ", "x") },
-			"a new asset outside": func(w *ydoc.Writer, _ *ydoc.Doc) {
-				w.Set(assetsMap, "/reports/q2/upload.png", []byte{1})
+			"a file of the branch created": func(w *ydoc.Writer, _ *ydoc.Doc) { w.SetText(filesMap, "/reports/q2/main.typ", "x") },
+			"an asset of the branch created": func(w *ydoc.Writer, _ *ydoc.Doc) {
+				w.Set(assetsMap, "/README.md", []byte{1})
 			},
-			"a pulled-in file deleted": func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/template.typ") },
-			"a pulled-in file moved into the folder": func(w *ydoc.Writer, _ *ydoc.Doc) {
-				w.Delete(filesMap, "/template.typ")
-				w.SetText(filesMap, "/reports/q1/template.typ", templateText)
-			},
-			"a pulled-in asset moved": func(w *ydoc.Writer, doc *ydoc.Doc) {
-				w.Set(assetsMap, "/reports/q1/logo.png", doc.Values(assetsMap)["/logo.png"])
-				w.Delete(assetsMap, "/logo.png")
-			},
-			"a folder file moved out": func(w *ydoc.Writer, _ *ydoc.Doc) {
+			"a folder file moved out over one of the branch": func(w *ydoc.Writer, _ *ydoc.Doc) {
 				w.Delete(assetsMap, "/reports/q1/img/chart.png")
-				w.Set(assetsMap, "/chart.png", blobSha(logo))
+				w.Set(assetsMap, "/logo.png", blobSha(logo))
 			},
 		} {
 			t.Run(name, func(t *testing.T) {
 				e := setupFolder(t)
 				require.Nil(t, e.room.pullIn("/template.typ"))
-				require.Nil(t, e.room.pullIn("/logo.png"))
 				before := e.repo.head("main").sha
 				e.editAs(ann, change)
 				got := e.save("")
@@ -206,22 +196,69 @@ func TestFolderRooms(t *testing.T) {
 		require.Equal(t, "#let report(body) = [#body]\n\n#let note = [Note]\n", files["/template.typ"])
 	})
 
+	t.Run("creates new files outside the folder, which are pulled-in files from then on", func(t *testing.T) {
+		e := setupFolder(t)
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) {
+			w.SetText(filesMap, "/new.typ", "x")
+			w.Set(assetsMap, "/reports/q2/upload.png", []byte{1})
+			w.Delete(assetsMap, "/reports/q1/img/chart.png")
+			w.Set(assetsMap, "/chart.png", blobSha(logo))
+		})
+		require.Equal(t, msgSaved, e.save("").Type)
+		require.Equal(t, "x", e.repo.texts()["/new.typ"])
+		require.Equal(t, []byte{1}, e.repo.head("main").files["/reports/q2/upload.png"])
+		require.Equal(t, logo, e.repo.head("main").files["/chart.png"])
+		require.NotContains(t, e.repo.head("main").files, "/reports/q1/img/chart.png")
+		require.Equal(t, []string{"/chart.png", "/new.typ", "/reports/q2/upload.png"}, e.pulledIn())
+		require.Nil(t, e.commitFailure())
+
+		e.repo.push("main", map[string]any{"/new.typ": "x, pushed"})
+		_, err := e.room.pull(context.Background(), "token-1")
+		require.NoError(t, err)
+		require.Equal(t, "x, pushed", e.text("/new.typ"), "merged as any pulled-in file")
+
+	})
+
+	t.Run("renames and deletes pulled-in files; the room holds them where they went", func(t *testing.T) {
+		e := setupFolder(t)
+		require.Nil(t, e.room.pullIn("/template.typ"))
+		require.Nil(t, e.room.pullIn("/logo.png"))
+		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) {
+			w.Delete(filesMap, "/template.typ")
+			w.SetText(filesMap, "/shared/template.typ", templateText)
+			w.Set(assetsMap, "/reports/q1/logo.png", doc.Values(assetsMap)["/logo.png"])
+			w.Delete(assetsMap, "/logo.png")
+		})
+		require.Equal(t, msgSaved, e.save("").Type)
+		files := e.repo.head("main").files
+		require.NotContains(t, files, "/template.typ")
+		require.NotContains(t, files, "/logo.png")
+		require.Equal(t, []byte(templateText), files["/shared/template.typ"])
+		require.Equal(t, []byte{7}, files["/reports/q1/logo.png"])
+		require.Equal(t, []string{"/shared/template.typ"}, e.pulledIn())
+
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/shared/template.typ") })
+		require.Equal(t, msgSaved, e.save("").Type)
+		require.NotContains(t, e.repo.head("main").files, "/shared/template.typ")
+		require.Empty(t, e.pulledIn())
+	})
+
 	t.Run("commits the rest of a save and tells what it left out; deleting the left-out file in the room undoes it", func(t *testing.T) {
 		e := setupFolder(t)
 		e.editAs(ann, func(w *ydoc.Writer, doc *ydoc.Doc) {
-			w.SetText(filesMap, "/new.typ", "x")
+			w.SetText(filesMap, "/reports/q2/main.typ", "x")
 			replace(t, w, doc, q1Main, "= Q1", "= First quarter")
 		})
 		got := e.save("")
 		require.Equal(t, msgSaved, got.Type)
 		files := e.repo.texts()
 		require.Equal(t, `#import "/template.typ": report`+"\n= First quarter\n", files[q1Main])
-		require.NotContains(t, files, "/new.typ")
-		require.Equal(t, "Not saved: /new.typ"+outsideWhy, e.commitFailure().Message, "shown to everyone")
+		require.Equal(t, "= Q2\n", files["/reports/q2/main.typ"])
+		require.Equal(t, "Not saved: /reports/q2/main.typ"+outsideWhy, e.commitFailure().Message, "shown to everyone")
 		e.clock.Advance(changesDelay)
-		require.Equal(t, []changedFile{{"/new.typ", "added"}}, e.changes().Files, "the left-out file stays a change of the room")
+		require.Equal(t, []changedFile{{"/reports/q2/main.typ", "added"}}, e.changes().Files, "the left-out file stays a change of the room")
 
-		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/new.typ") })
+		e.editAs(ann, func(w *ydoc.Writer, _ *ydoc.Doc) { w.Delete(filesMap, "/reports/q2/main.typ") })
 		e.clock.Advance(changesDelay)
 		require.Nil(t, e.changes())
 		require.Nil(t, e.commitFailure(), "nothing is left out any more")

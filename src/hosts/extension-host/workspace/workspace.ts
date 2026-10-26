@@ -27,7 +27,7 @@ export interface Workspace {
   /**
    * Registers a provider of file and folder permissions and of files of its own (VS Code's
    * `workspace.registerFileSystemProvider`, for `stat` and `readFile`): a file or folder is Readonly while any
-   * registered provider says so.
+   * registered provider says so; its warning is the first one a provider gives.
    */
   registerFileSystemProvider(provider: FileSystemProvider): Disposable;
   /** The settings under `section` (`getConfiguration('pdfExport').get('download')`), or all by full id. */
@@ -49,9 +49,11 @@ export const FilePermission = { Readonly: 1 } as const;
 
 export type FilePermission = (typeof FilePermission)[keyof typeof FilePermission];
 
-/** What is known of a file or folder (VS Code's FileStat, its permissions only). */
+/** What is known of a file or folder (VS Code's FileStat, its permissions only), and what to tell before it moves. */
 export interface FileStat {
   readonly permissions?: FilePermission;
+  /** Why to think twice before the file is renamed, moved or deleted, in words for people (the user is asked first). */
+  readonly warning?: string;
 }
 
 /** The project's files and folders (VS Code's FileSystem, `stat` and `readFile`). */

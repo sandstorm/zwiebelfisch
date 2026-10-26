@@ -1,0 +1,28 @@
+# The end-to-end tests (Chromium), called by ci.yml on every push and pull request and by release.yml alongside the
+# publishing jobs. A failure keeps test-results/ for 14 days and fails neither CI nor a release (for now: some specs are
+# still flaky).
+name: E2E
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      # Chromium only, with the system libraries it needs (mise run install takes all three browsers, without them)
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: mise run test:e2e chromium
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-test-results
+          path: test-results/
+          retention-days: 14

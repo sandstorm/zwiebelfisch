@@ -3,27 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
-import { FilePermission } from '../../../hosts/extension-host/workspace/workspace';
-import { folderPermissions, missingFiles, sharedDecorations } from './room-folder';
+import { missingFiles, sharedDecorations, sharedWarnings } from './room-folder';
 
 const path = ProjectPath.of;
 const FOLDER = path('/reports/q1');
 
-describe('folderPermissions', () => {
-  it('makes every folder Readonly but the room\'s folder and those in it', () => {
-    const { stat } = folderPermissions(FOLDER, { has: (file) => file === '/template.typ' });
-    const readonly = { permissions: FilePermission.Readonly };
-    expect([null, '/reports', '/reports/q2', '/reports/q10', '/assets'].map((folder) => stat(folder === null ? null : path(folder)))).toEqual([
-      readonly,
-      readonly,
-      readonly,
-      readonly,
-      readonly,
-    ]);
-    expect(stat(FOLDER)).toEqual({});
-    expect(stat(path('/reports/q1/img'))).toEqual({});
-    expect(stat(path('/template.typ')), 'a file from outside the folder stays editable').toEqual({});
-    expect(stat(path('/new.typ'))).toEqual(readonly);
+describe('sharedWarnings', () => {
+  it('warns about the files outside the folder that the branch has; nothing is read-only', () => {
+    const onBranch = (file: ProjectPath) => ['/template.typ', '/reports/q1/main.typ'].includes(file);
+    const { stat } = sharedWarnings(FOLDER, onBranch);
+    expect(stat(path('/template.typ'))).toEqual({ warning: "template.typ is outside this project's folder: other projects may use it." });
+    expect(stat(path('/new.typ')), "the room's own new file").toEqual({});
+    expect(stat(path('/reports/q1/main.typ'))).toEqual({});
+    expect([null, '/reports', '/reports/q2', FOLDER].map((folder) => stat(folder === null ? null : path(folder)))).toEqual([{}, {}, {}, {}]);
   });
 });
 

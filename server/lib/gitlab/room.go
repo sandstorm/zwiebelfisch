@@ -25,9 +25,9 @@ import (
 //
 // The room holds the files of its folder (dir; the whole repository without one) and the files from outside
 // it that a client asked for (pullIn, kept in meta.pulledIn): nothing else of the repository reaches the
-// document, and upstream changes to other files leave it alone. A commit never creates, renames or deletes
-// a file outside the folder, but for creating a pulled-in file again: it leaves such changes out, commits
-// the rest, and they stay changes of the room.
+// document, and upstream changes to other files leave it alone. Outside the folder a commit creates a file
+// (a pulled-in one from then on) only where the branch has none the room does not hold: it leaves such
+// changes out, commits the rest, and they stay changes of the room.
 //
 // Everyone in the room sees in the document:
 //   - what is not committed yet and by whom (changes)
@@ -285,9 +285,9 @@ func (r *room) inFolder(path string) bool {
 }
 
 // committable is what of files a commit takes from the room at b, its actions, and what it leaves out ("":
-// nothing): files with every creation, rename and deletion outside the room's folder undone (as at b), but
-// for the creation of a pulled-in file.
-func (r *room) committable(b *base, files roomFiles, pulled []string) (kept roomFiles, actions []Action, notSaved string) {
+// nothing): files with every file put outside the room's folder over one the branch has at b (onBranch)
+// undone.
+func (r *room) committable(b *base, files roomFiles, onBranch func(path string) bool) (kept roomFiles, actions []Action, notSaved string) {
 	kept = roomFiles{texts: map[string]string{}, assets: map[string]any{}}
 	maps.Copy(kept.texts, files.texts)
 	maps.Copy(kept.assets, files.assets)
@@ -296,7 +296,7 @@ func (r *room) committable(b *base, files roomFiles, pulled []string) (kept room
 		actions = commitActions(b, kept)
 		undone := false
 		for _, a := range actions {
-			if !r.outside(a, pulled) {
+			if !r.outside(a, onBranch) {
 				continue
 			}
 			for _, p := range []string{a.Path, a.PreviousPath} {
@@ -315,18 +315,46 @@ func (r *room) committable(b *base, files roomFiles, pulled []string) (kept room
 		}
 	}
 	if len(left) > 0 {
-		notSaved = fmt.Sprintf("Not saved: %s (outside the project folder %s, where files are only edited, never created, renamed or deleted)", strings.Join(slices.Sorted(slices.Values(left)), ", "), r.dir)
+		notSaved = fmt.Sprintf("Not saved: %s (outside the project folder %s, the branch has a file there that the project has not loaded)", strings.Join(slices.Sorted(slices.Values(left)), ", "), r.dir)
 	}
 	return kept, actions, notSaved
 }
 
-// outside is whether a creates, renames or deletes a file outside the room's folder, other than creating a
-// pulled-in file.
-func (r *room) outside(a Action, pulled []string) bool {
-	if a.Kind == ActionUpdate || (a.Kind == ActionCreate && slices.Contains(pulled, a.Path)) {
-		return false
+// outside is whether a puts a file outside the room's folder over one the branch has (onBranch): one the
+// room does not hold, as it would hold it already.
+func (r *room) outside(a Action, onBranch func(path string) bool) bool {
+	return (a.Kind == ActionCreate || a.Kind == ActionMove) && !r.inFolder(a.Path) && onBranch(a.Path)
+}
+
+// pulledAfter is pulled once actions are committed: without the files they delete or move away outside the
+// room's folder, with those they put there.
+func (r *room) pulledAfter(pulled []string, actions []Action) []string {
+	after := slices.Clone(pulled)
+	for _, a := range actions {
+		gone := a.PreviousPath
+		if a.Kind == ActionDelete {
+			gone = a.Path
+		}
+		after = slices.DeleteFunc(after, func(p string) bool { return p == gone })
+		if (a.Kind == ActionCreate || a.Kind == ActionMove) && !r.inFolder(a.Path) && !slices.Contains(after, a.Path) {
+			after = append(after, a.Path)
+		}
 	}
-	return !r.inFolder(a.Path) || (a.PreviousPath != "" && !r.inFolder(a.PreviousPath))
+	slices.Sort(after)
+	return after
+}
+
+// onBranch is whether the repository has a file at path at sha (fetched before).
+func (r *room) onBranch(sha string) (func(path string) bool, error) {
+	entries, err := r.repo.Tree(sha)
+	if err != nil {
+		return nil, err
+	}
+	paths := map[string]bool{}
+	for _, e := range entries {
+		paths[e.Path] = true
+	}
+	return func(path string) bool { return paths[path] }, nil
 }
 
 // undo makes path in files as it is at b.
@@ -663,14 +691,13 @@ func (r *room) commitAttempts(ctx context.Context, compose compose) (message, er
 func (r *room) commit(ctx context.Context, compose compose) (result message, done bool, err error) {
 	var b *base
 	var files roomFiles
-	var pulled []string
 	var edits editors
 	changed := false
 	gone := !r.host.Do(func(doc *ydoc.Doc) {
 		if b = readMeta(doc); b == nil {
 			return
 		}
-		files, pulled = readFiles(doc), readPulledIn(doc)
+		files = readFiles(doc)
 		if changed = len(commitActions(b, files)) > 0; changed {
 			edits = r.editors.take() // the edits in files; edits made while the commit runs stay for the next one
 		}
@@ -681,7 +708,12 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 	if !changed {
 		return message{Type: msgUnchanged}, true, nil
 	}
-	files, actions, notSaved := r.committable(b, files, pulled)
+	onBranch, err := r.onBranch(b.Sha)
+	if err != nil {
+		r.host.Do(func(*ydoc.Doc) { r.editors.restore(edits) })
+		return message{}, true, err
+	}
+	files, actions, notSaved := r.committable(b, files, onBranch)
 	var paths []string
 	for _, f := range changedFiles(actions) {
 		paths = append(paths, f.Path)
@@ -697,7 +729,7 @@ func (r *room) commit(ctx context.Context, compose compose) (result message, don
 			Author: Signature{Name: by.author.Name, Email: by.author.Email},
 		})
 		if err == nil {
-			r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, sha, notSaved) })
+			r.host.Do(func(doc *ydoc.Doc) { r.committed(doc, b, files, actions, sha, notSaved) })
 			return message{Type: msgSaved, Sha: sha, Author: by.author.Name}, true, nil
 		}
 		if !errors.Is(err, ErrConflict) {
@@ -801,9 +833,10 @@ func mergeAssets(w *ydoc.Writer, base map[string]string, current map[string]any,
 	}
 }
 
-// committed: files were committed as sha. They are the new base; uploads become repository files; what
-// the commit left out (notSaved, "": nothing) is the room's commitFailure.
-func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha, notSaved string) {
+// committed: files were committed as sha, by actions. They are the new base; uploads become repository
+// files; the pulled-in files follow the actions outside the folder (pulledAfter); what the commit left out
+// (notSaved, "": nothing) is the room's commitFailure.
+func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, actions []Action, sha, notSaved string) {
 	known := map[string]bool{}
 	for _, s := range b.Assets {
 		known[s] = true
@@ -825,6 +858,10 @@ func (r *room) committed(doc *ydoc.Doc, b *base, files roomFiles, sha, notSaved 
 			}
 		}
 		writeBase(w, doc, base{Sha: sha, Texts: files.texts, Assets: assets})
+		pulled := readPulledIn(doc)
+		if after := r.pulledAfter(pulled, actions); !slices.Equal(after, pulled) {
+			w.Set(metaMap, metaPulledIn, plain(after))
+		}
 		if notSaved != "" {
 			w.Set(metaMap, metaFailure, plain(commitFailure{Message: notSaved, At: r.x.clock.Now().UnixMilli()}))
 		}

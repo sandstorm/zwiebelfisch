@@ -86,6 +86,19 @@ describe('WorkspaceHost.fs', () => {
     expect(project.files()).toEqual({ '/project/main.typ': '', '/project/sub/b.typ': 'a', '/shared/lib.typ': 'edited' });
   });
 
+  it("gives a file the first provider's warning, next to its permissions; a warning refuses nothing", async () => {
+    const project = new Project(path('/main.typ'), { '/main.typ': '', '/lib.typ': 'lib' });
+    const workspace = new WorkspaceHost(project);
+    workspace.registerFileSystemProvider({ stat: (at) => (at === '/lib.typ' ? { warning: 'Shared.' } : {}) });
+    workspace.registerFileSystemProvider({ stat: (at) => (at === '/lib.typ' ? { permissions: FilePermission.Readonly, warning: 'Other.' } : {}) });
+    expect(workspace.fs.stat(path('/lib.typ'))).toEqual({ permissions: FilePermission.Readonly, warning: 'Shared.' });
+    expect(workspace.fs.stat(path('/main.typ'))).toEqual({});
+
+    const warned = new WorkspaceHost(project);
+    warned.registerFileSystemProvider({ stat: () => ({ warning: 'Shared.' }) });
+    expect(await warned.applyEdit({ kind: 'delete', path: path('/lib.typ') })).toBeNull();
+  });
+
   it('refuses to change, rename, delete or create a Readonly file', async () => {
     const project = new Project(path('/main.typ'), { '/main.typ': '', '/a.csv': '', '/refs.bib': '@book{a}' });
     const workspace = new WorkspaceHost(project);

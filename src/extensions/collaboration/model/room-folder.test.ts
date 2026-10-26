@@ -32,6 +32,14 @@ function join(ydoc: Y.Doc, options: { mainLocked?: boolean; main?: string; files
 }
 
 describe('RoomFolder', () => {
+  it('tells the files from outside the folder that the branch has: those of the base', () => {
+    const ydoc = room({ '/reports/q1/main.typ': '= Q1', '/template.typ': 'T', '/new.typ': '' });
+    ydoc.getMap(META_MAP).set('base', { '/reports/q1/main.typ': '= Q1', '/template.typ': 'T' });
+    ydoc.getMap(META_MAP).set('baseAssets', { '/logo.png': 'sha' });
+    const { folder } = join(ydoc);
+    expect(['/template.typ', '/logo.png', '/new.typ', '/reports/q1/main.typ'].map((file) => folder.onBranch(path(file)))).toEqual([true, true, false, false]);
+  });
+
   it("makes the folder's main.typ the main file, and drops the empty one outside it", () => {
     const ydoc = room({ '/reports/q1/a.typ': 'A', '/reports/q1/main.typ': '= Q1' });
     const { project } = join(ydoc);

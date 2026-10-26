@@ -1,19 +1,15 @@
-// A GitLab room of one folder in the window: its read-only surroundings, its shared files, the files the compiler
-// misses. See collaboration in ../collaboration.ts.
+// A GitLab room of one folder in the window: its shared files, the files the compiler misses. See collaboration
+// in ../collaboration.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Project } from '../../../core/project/project';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
-import { FilePermission, type FileSystemProvider } from '../../../hosts/extension-host/workspace/workspace';
+import type { FileSystemProvider } from '../../../hosts/extension-host/workspace/workspace';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
 
-/**
- * Readonly: every folder but `folder` and the folders in it (so files are created, renamed and deleted only there);
- * the files of `project` are left as they are (those from outside the folder stay editable).
- */
-export function folderPermissions(folder: ProjectPath, project: Pick<Project, 'has'>): FileSystemProvider {
+/** A warning on every file outside `folder` that the branch has (`onBranch`): other projects may use it. */
+export function sharedWarnings(folder: ProjectPath, onBranch: (path: ProjectPath) => boolean): FileSystemProvider {
   return {
-    stat: (other) => (other !== null && (inFolder(other, folder) || project.has(other)) ? {} : { permissions: FilePermission.Readonly }),
+    stat: (other) => (other !== null && !inFolder(other, folder) && onBranch(other) ? { warning: `${ProjectPath.displayName(other)} is outside this project's folder: other projects may use it.` } : {}),
   };
 }
 

@@ -89,6 +89,11 @@ export class CollaborationLink {
     if (paths.length > 0) this.collaboration?.pull(paths);
   }
 
+  /** Whether the branch has the file `path` from outside the room's folder (see `Collaboration.onBranch`); before joining, false. */
+  onBranch(path: ProjectPath): boolean {
+    return this.collaboration?.onBranch(path) ?? false;
+  }
+
   /** Whether leaving now would leave changes behind that nobody commits (see `Collaboration.leavesChangesUncommitted`). */
   leavesChangesUncommitted(): boolean {
     return this.collaboration?.leavesChangesUncommitted ?? false;
