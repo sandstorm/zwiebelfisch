@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build the app the zwiebelfisch binary embeds (vite.app.config.ts → server/lib/webapp/dist/app: the start page, the editor at /edit, the local editor at /local)"
 #MISE depends=["build:engine", "build:fonts"]
+#MISE sources=["app/**/*", "src/**/*", "vite.app.config.ts", "package.json", "pnpm-lock.yaml"]
+#MISE outputs=["server/lib/webapp/dist/app/index.html"]
 set -euo pipefail
 exec pnpm exec vite build --config vite.app.config.ts "$@"

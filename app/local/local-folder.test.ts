@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../src';
-import { diskChange, Writes } from './local-folder';
+import { diskChange, missingFiles, Writes } from './local-folder';
 
 const main = ProjectPath.of('/main.typ');
 const chapter = ProjectPath.of('/chapter.typ');
@@ -72,5 +72,17 @@ describe('diskChange', () => {
     const to = ProjectPath.of('/two.typ');
     expect(diskChange({ kind: 'rename', path: '/two.typ', from: '/chapter.typ' }, to, false, main)).toEqual({ kind: 'rename', from: chapter, path: to });
     expect(diskChange({ kind: 'rename', path: '/two.typ', from: '/chapter.typ' }, to, true, main)).toBeNull();
+  });
+});
+
+describe('missingFiles', () => {
+  it('reads the paths of the files a compile did not find', () => {
+    expect(
+      missingFiles([
+        { message: 'file not found (searched at server/main.go)' },
+        { message: 'unknown variable: x' },
+        { message: 'file not found (searched at ../outside.typ)' },
+      ]),
+    ).toEqual(['/server/main.go']);
   });
 });

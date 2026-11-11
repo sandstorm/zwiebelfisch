@@ -3,7 +3,9 @@ package local
 import (
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"strings"
 )
@@ -12,6 +14,7 @@ import (
 // token (Authorization: Bearer <token>); others get 401:
 //
 //	GET    /api/local/project         {name, main, files: {path: base64}}
+//	GET    /api/local/files/{path...} any other file (Folder.Pull), listed from then on; 404: none (yet)
 //	PUT    /api/local/files/{path...} writes the body to the file
 //	DELETE /api/local/files/{path...}
 //	POST   /api/local/rename          {from, to}
@@ -22,6 +25,19 @@ func Handler(folder *Folder, token string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/local/project", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, map[string]any{"name": folder.Name(), "main": folder.Main(), "files": folder.Files()})
+	})
+	mux.HandleFunc("GET /api/local/files/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		content, err := folder.Pull("/" + r.PathValue("path"))
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			http.Error(w, "Not found", http.StatusNotFound)
+		case err != nil:
+			answer(w, err)
+		default:
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Cache-Control", "no-store")
+			_, _ = w.Write(content)
+		}
 	})
 	mux.HandleFunc("PUT /api/local/files/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		content, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxFileSize+1))

@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Build the binaries (zwiebelfisch with the app embedded, fake-gitlab) into .cache/bin/ for this machine; put .cache/bin/zwiebelfisch on your PATH to run `zwiebelfisch [path]` anywhere"
-#MISE depends=["build:app"]
-set -euo pipefail
-exec go build -o .cache/bin/ ./server/cmd/zwiebelfisch ./server/cmd/fake-gitlab

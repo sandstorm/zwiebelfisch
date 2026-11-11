@@ -3,6 +3,8 @@
 //
 // Every file under the folder is read and written there only (an os.Root: no "..", no symlinks out of it).
 // Names starting with "." are neither listed nor written (.git, editors' swap files, Write's temporary files).
+// Listed are the files a Typst project uses (ProjectFile) that no .gitignore leaves out, and every file the page
+// wrote or asked for (Pull); any other file comes when asked for.
 package local
 
 import (
@@ -17,13 +19,27 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-git/go-git/v6/plumbing/format/gitignore"
 )
 
-// Limits of a folder: Open refuses one with more files; a bigger file is left out (and cannot be written).
+// Limits of a folder: Open refuses one listing more files; a bigger file is left out (and cannot be written).
 const (
-	MaxFiles    = 2000
+	MaxFiles    = 5000
 	MaxFileSize = 50 << 20
 )
+
+// projectExtensions are the endings of the files a Typst project uses: sources, data, bibliographies,
+// diagrams, images, fonts.
+var projectExtensions = map[string]bool{
+	".typ": true, ".bib": true, ".csv": true, ".tsv": true, ".json": true, ".yaml": true, ".yml": true,
+	".toml": true, ".xml": true, ".cbor": true, ".txt": true, ".md": true, ".mmd": true, ".drawio": true,
+	".ic": true, ".svg": true, ".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true,
+	".avif": true, ".pdf": true, ".otf": true, ".ttf": true, ".ttc": true, ".woff": true, ".woff2": true,
+}
+
+// ProjectFile is whether a file at path is one a Typst project uses, by its ending (case ignored).
+func ProjectFile(p string) bool { return projectExtensions[strings.ToLower(path.Ext(p))] }
 
 // Change is one change of a file, as watchers get it: kind "create", "update", "delete" or "rename" (From is
 // the old path). Content is set for create and update.
@@ -44,6 +60,7 @@ type Folder struct {
 
 	mu       sync.Mutex
 	files    map[string]file
+	kept     map[string]bool // listed whatever their ending or .gitignore says: written or pulled by the page
 	watchers map[*watcher]struct{}
 	closed   chan struct{}
 	close    sync.Once
@@ -75,7 +92,7 @@ func Open(target string) (*Folder, error) {
 	if err != nil {
 		return nil, err
 	}
-	f := &Folder{root: root, name: filepath.Base(dir), files: map[string]file{}, watchers: map[*watcher]struct{}{}, closed: make(chan struct{})}
+	f := &Folder{root: root, name: filepath.Base(dir), files: map[string]file{}, kept: map[string]bool{}, watchers: map[*watcher]struct{}{}, closed: make(chan struct{})}
 	if err := f.Poll(); err != nil {
 		_ = root.Close()
 		return nil, err
@@ -191,6 +208,7 @@ func (f *Folder) Write(p string, content []byte, by string) error {
 		return err
 	}
 	f.files[p] = file{size: info.Size(), modTime: info.ModTime(), content: content}
+	f.kept[p] = true
 	kind := "update"
 	if !exists {
 		kind = "create"
@@ -242,8 +260,38 @@ func (f *Folder) Rename(from, to, by string) error {
 		delete(f.files, from)
 		f.files[to] = known
 	}
+	delete(f.kept, from)
+	f.kept[to] = true
 	f.tell(Change{Kind: "rename", Path: to, From: from, By: by})
 	return nil
+}
+
+// Pull is the content of the file at path, listed from now on (when it appears, if it does not exist yet:
+// fs.ErrNotExist).
+func (f *Folder) Pull(p string) ([]byte, error) {
+	rel, err := relative(p)
+	if err != nil {
+		return nil, err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.kept[p] = true
+	if known, ok := f.files[p]; ok {
+		return known.content, nil
+	}
+	info, err := f.root.Stat(rel)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Size() > MaxFileSize {
+		return nil, fmt.Errorf("%s is no file of at most %d MiB", p, MaxFileSize>>20)
+	}
+	content, err := f.root.ReadFile(rel)
+	if err != nil {
+		return nil, err
+	}
+	f.files[p] = file{size: info.Size(), modTime: info.ModTime(), content: content}
+	return content, nil
 }
 
 // Poll reads what changed on disk since the last Poll or Write (by modification time and size; a file whose
@@ -286,9 +334,11 @@ func (f *Folder) Poll() error {
 	return nil
 }
 
-// scan lists the regular files of the folder (by path) that are not hidden and not too big.
+// scan lists the files to list (by path): those of a project's endings outside every .gitignore, and the
+// kept ones; none hidden or too big.
 func (f *Folder) scan() (map[string]fs.FileInfo, error) {
 	found := map[string]fs.FileInfo{}
+	var ignored []gitignore.Pattern
 	err := fs.WalkDir(f.root.FS(), ".", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			if name == "." {
@@ -296,26 +346,56 @@ func (f *Folder) scan() (map[string]fs.FileInfo, error) {
 			}
 			return nil // unreadable: left out
 		}
-		if name != "." && strings.HasPrefix(entry.Name(), ".") {
+		if name == "." {
+			ignored = append(ignored, f.ignoreFile(nil)...)
+			return nil
+		}
+		segments := strings.Split(name, "/")
+		if strings.HasPrefix(entry.Name(), ".") || gitignore.NewMatcher(ignored).Match(segments, entry.IsDir()) {
 			if entry.IsDir() {
 				return fs.SkipDir
 			}
 			return nil
 		}
-		if !entry.Type().IsRegular() {
+		if entry.IsDir() {
+			ignored = append(ignored, f.ignoreFile(segments)...)
 			return nil
 		}
-		info, err := entry.Info()
-		if err != nil || info.Size() > MaxFileSize {
+		if !entry.Type().IsRegular() || !(ProjectFile(name) || f.kept["/"+name]) {
 			return nil
 		}
-		if len(found) == MaxFiles {
-			return fmt.Errorf("%s has more than %d files: open the folder of one project", f.root.Name(), MaxFiles)
+		if info, err := entry.Info(); err == nil && info.Size() <= MaxFileSize {
+			found["/"+name] = info
 		}
-		found["/"+name] = info
+		if len(found) > MaxFiles {
+			return fmt.Errorf("%s has more than %d files a Typst project uses (outside .gitignore): open the folder of one project", f.root.Name(), MaxFiles)
+		}
 		return nil
 	})
+	for p := range f.kept { // in ignored folders too
+		if _, ok := found[p]; !ok {
+			if info, err := f.root.Lstat(filepath.FromSlash(strings.TrimPrefix(p, "/"))); err == nil && info.Mode().IsRegular() && info.Size() <= MaxFileSize {
+				found[p] = info
+			}
+		}
+	}
 	return found, err
+}
+
+// ignoreFile is the patterns of the .gitignore in the folder dir (path segments; nil: the top), if it has one.
+func (f *Folder) ignoreFile(dir []string) []gitignore.Pattern {
+	content, err := f.root.ReadFile(filepath.Join(append(slices.Clone(dir), ".gitignore")...))
+	if err != nil {
+		return nil
+	}
+	var patterns []gitignore.Pattern
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if strings.TrimSpace(line) != "" && !strings.HasPrefix(line, "#") {
+			patterns = append(patterns, gitignore.ParsePattern(line, dir))
+		}
+	}
+	return patterns
 }
 
 // relative is path ("/chapters/a.typ") relative to the folder, or an error for one that is not a project's

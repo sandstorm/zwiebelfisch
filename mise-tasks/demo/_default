@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #MISE description="Playground: the demo (Vite, :5199) and the collaboration server with an in-memory fake GitLab (:1234); `demo preview` serves the last build (build:demo) instead; Ctrl-C stops both"
-#MISE depends=["build:engine", "build:fonts", "server:build"]
+#MISE depends=["build"]
 # Everything local: no real GitLab, no secrets, nothing stored. Arguments go to Vite.
 set -euo pipefail
 
 # plain rooms on: the Collaborate mode; guest links on: "Share with guests…"
-ZWF_PLAIN_ROOMS=1 ZWF_GUESTS=1 .cache/bin/fake-gitlab &
+ZWF_PLAIN_ROOMS=1 ZWF_GUESTS=1 dist/bin/fake-gitlab &
 server=$!
 # stop the server however this script ends (Ctrl-C, Vite exiting, an error)
 trap 'kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT

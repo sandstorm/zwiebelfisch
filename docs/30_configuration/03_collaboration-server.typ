@@ -34,7 +34,7 @@ The collaboration code loads on demand. `onDidChangeFiles` and `change` also fir
 
 ```sh
 mise run server:dev    # ws://127.0.0.1:1234, allowing the demo's pages on :5199
-zwiebelfisch serve     # the built binary (mise run server:build)
+zwiebelfisch serve     # the built binary (mise run build → dist/bin/)
 ```
 
 #table(

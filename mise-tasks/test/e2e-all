@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Run every end-to-end suite: all browsers, collaboration, GitLab, docs editing; goes on after a failure, then lists the failed suites"
-#MISE depends=["build", "build:packages", "server:build"]
+#MISE depends=["build", "build:packages"]
 #USAGE arg "[browser]" help="Only this browser, in every suite (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }

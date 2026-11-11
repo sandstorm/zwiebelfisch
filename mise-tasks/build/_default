@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-#MISE description="Build engine, typecheck, the demo app (dist/demo) and the library (dist/lib, which examples/plain-html loads)"
-#MISE depends=["typecheck", "build:demo", "build:lib"]
+#MISE description="Build engine, typecheck, the demo app (dist/demo), the library (dist/lib, which examples/plain-html loads) and the binaries (dist/bin: zwiebelfisch with the app embedded, fake-gitlab)"
+#MISE depends=["typecheck", "build:demo", "build:lib", "build:app"]
+set -euo pipefail
+# after build:app: the zwiebelfisch binary embeds it
+exec go build -o dist/bin/ ./server/cmd/zwiebelfisch ./server/cmd/fake-gitlab

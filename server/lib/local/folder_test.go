@@ -2,8 +2,10 @@ package local_test
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -82,7 +84,7 @@ func TestOpenRefusesTooManyFiles(t *testing.T) {
 		write(t, filepath.Join(dir, "data", fmt.Sprintf("%d.csv", i)), "")
 	}
 	_, err := local.Open(dir)
-	require.ErrorContains(t, err, "more than 2000 files")
+	require.ErrorContains(t, err, "more than 5000 files")
 }
 
 func TestWriteDeleteRename(t *testing.T) {
@@ -164,4 +166,44 @@ func TestWriteThroughASymlinkOutIsRefused(t *testing.T) {
 	secret, err := os.ReadFile(filepath.Join(filepath.Dir(dir), "secret.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "not listed", string(secret))
+}
+
+// A repository: .gitignore'd folders and files (at any level, negations too) and endings Typst does not use are
+// not listed; Pull brings any file, from then on listed; a file the page writes stays listed.
+func TestRepositoryFolder(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".gitignore"), "# build output\nnode_modules/\n/dist\n*.log\n")
+	write(t, filepath.Join(dir, "main.typ"), "#raw(read(\"server/main.go\"))")
+	write(t, filepath.Join(dir, "server", "main.go"), "package main")
+	write(t, filepath.Join(dir, "node_modules", "x", "package.json"), "{}")
+	write(t, filepath.Join(dir, "dist", "out.pdf"), "%PDF")
+	write(t, filepath.Join(dir, "docs", "build.log"), "log")
+	write(t, filepath.Join(dir, "docs", ".gitignore"), "generated/\n!keep.log\n")
+	write(t, filepath.Join(dir, "docs", "keep.log"), "kept")
+	write(t, filepath.Join(dir, "docs", "generated", "a.svg"), "<svg/>")
+	write(t, filepath.Join(dir, "docs", "data.csv"), "a,b")
+	f, err := local.Open(dir)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+	require.Equal(t, []string{"/docs/data.csv", "/main.typ"}, slices.Sorted(maps.Keys(f.Files())), "keep.log is no file Typst uses")
+
+	changes := watch(f)
+	content, err := f.Pull("/server/main.go")
+	require.NoError(t, err)
+	require.Equal(t, "package main", string(content))
+	_, err = f.Pull("/server/later.go")
+	require.ErrorIs(t, err, os.ErrNotExist)
+	require.NoError(t, f.Write("/notes.go", []byte("package notes"), "tab"))
+	require.NoError(t, f.Poll())
+	require.Contains(t, f.Files(), "/server/main.go")
+	require.Contains(t, f.Files(), "/notes.go", "written, so listed")
+
+	write(t, filepath.Join(dir, "server", "main.go"), "package main // changed")
+	write(t, filepath.Join(dir, "server", "later.go"), "package later")
+	require.NoError(t, f.Poll())
+	require.Equal(t, []local.Change{
+		{Kind: "create", Path: "/notes.go", Content: []byte("package notes"), By: "tab"},
+		{Kind: "create", Path: "/server/later.go", Content: []byte("package later")},
+		{Kind: "update", Path: "/server/main.go", Content: []byte("package main // changed")},
+	}, *changes)
 }

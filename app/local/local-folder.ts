@@ -28,7 +28,7 @@ interface DiskChange {
  * The local server's folder, for one page.
  * - `load`: the files to create the editor with
  * - `extension`: writes the project's changes (Writes) and applies the disk's, except to a file with edits not
- *   written yet: those win
+ *   written yet: those win; a file a compile misses (`read("main.go")`, one the server does not list) is asked for
  */
 export class LocalFolder {
   private readonly client = crypto.randomUUID();
@@ -46,7 +46,7 @@ export class LocalFolder {
   extension(): Extension {
     return {
       id: 'app.localFolder',
-      activate: ({ project, window, subscriptions }) => {
+      activate: ({ project, window, preview, subscriptions }) => {
         const writes = new Writes(this.fetch.bind(this), (problem) => void window.showErrorMessage(problem));
         let fromDisk = false;
         const apply = (change: DiskChange) => {
@@ -65,12 +65,24 @@ export class LocalFolder {
             fromDisk = false;
           }
         };
+        const asked = new Set<ProjectPath>();
+        const pull = (path: ProjectPath) => {
+          asked.add(path);
+          // a 404: not there yet; the server tells when it appears
+          void this.fetch(filesUrl(path)).then(
+            async (response) => apply({ kind: 'create', path, content: base64Of(new Uint8Array(await response.arrayBuffer())) }),
+            () => undefined,
+          );
+        };
         const view = window.ownerDocument.defaultView;
         const warnBeforeLeaving = (event: BeforeUnloadEvent) => writes.pending() && event.preventDefault();
         view?.addEventListener('beforeunload', warnBeforeLeaving);
         const changes = new AbortController();
         subscriptions.push(
           project.onDidChangeFile((change) => fromDisk || writes.save(change)),
+          preview.onDidChangeDiagnostics((diagnostics) => {
+            for (const path of missingFiles(diagnostics)) if (!asked.has(path) && !project.has(path)) pull(path);
+          }),
           { dispose: () => view?.removeEventListener('beforeunload', warnBeforeLeaving) },
           { dispose: () => changes.abort() },
         );
@@ -181,6 +193,17 @@ async function* lines(body: ReadableStream<BufferSource>): AsyncGenerator<string
   }
 }
 
+/** The files a compile error says are not there (`file not found (searched at chapters/data.csv)`). */
+export function missingFiles(diagnostics: readonly { readonly message: string }[]): ProjectPath[] {
+  return diagnostics.flatMap(({ message }) => {
+    const searched = NOT_FOUND.exec(message)?.[1];
+    const path = searched === undefined ? null : ProjectPath.parse(`/${searched}`);
+    return path ? [path] : [];
+  });
+}
+
+const NOT_FOUND = /^file not found \(searched at (.+)\)$/;
+
 function filesUrl(path: ProjectPath): string {
   return `/api/local/files${path.split('/').map(encodeURIComponent).join('/')}`;
 }
@@ -190,6 +213,12 @@ function decode(path: string, base64: string): FileContent {
   const binary = atob(base64);
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return path.endsWith('.typ') ? new TextDecoder().decode(bytes) : bytes;
+}
+
+function base64Of(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
 }
 
 function bytesOf(content: FileContent): Uint8Array<ArrayBuffer> {

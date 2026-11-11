@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Run the GitLab room Playwright spec against the collaboration server with a fake GitLab (sign-in included; the demo build on :5199), which Playwright starts"
-#MISE depends=["build", "server:build"]
+#MISE depends=["build"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }

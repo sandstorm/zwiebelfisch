@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Typecheck all TypeScript sources (widget, demo, tests, the Go tests' Node scripts in server/testdata); needs the engine bindings and the font index"
 #MISE depends=["build:engine", "build:fonts"]
+#MISE sources=["src/**/*", "demo/**/*", "app/**/*", "tests/**/*.ts", "server/testdata/**/*.ts", "tsconfig.json", "package.json", "pnpm-lock.yaml"]
+#MISE outputs={ auto = true }
 set -euo pipefail
 exec pnpm exec tsc --noEmit

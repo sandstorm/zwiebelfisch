@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="Build the demo app as in production (vite build → dist/demo; what `demo preview`, the e2e tests and the Docker image serve)"
 #MISE depends=["build:engine", "build:fonts"]
+#MISE sources=["demo/**/*", "src/**/*", "docs/**/*", "vite.config.ts", "package.json", "pnpm-lock.yaml"]
+#MISE outputs=["dist/demo/index.html"]
 # `-- --base ./ --mode static` builds the static site GitHub Pages publishes.
 set -euo pipefail
 exec pnpm exec vite build "$@"

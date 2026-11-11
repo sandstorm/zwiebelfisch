@@ -5,7 +5,7 @@ import { serverSuite } from './playwright.config';
 
 export default serverSuite('collab', {
   webServer: {
-    command: '.cache/bin/fake-gitlab',
+    command: 'dist/bin/fake-gitlab',
     env: { ZWF_PLAIN_ROOMS: '1', ZWF_DEMO_DIST: 'dist/demo' },
     port: 1234,
   },
