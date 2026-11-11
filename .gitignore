@@ -19,3 +19,5 @@ server/.data/
 .env
 mise.local.toml
 .vitest/json/output.json
+# the built app (mise run build:app), embedded into the zwiebelfisch binary (server/lib/webapp)
+server/lib/webapp/dist/app/

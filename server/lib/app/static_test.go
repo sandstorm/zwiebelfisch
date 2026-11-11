@@ -6,13 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/sandstorm/zwiebelfisch/server/lib/app"
 )
 
-// StaticFiles on a folder like dist/demo, in-process (no port).
+// StaticFiles on a folder like dist/demo (an os.Root, as fake-gitlab serves it), in-process (no port).
 
 func demo(t *testing.T) http.Handler {
 	parent := t.TempDir()
@@ -27,7 +28,10 @@ func demo(t *testing.T) http.Handler {
 	write("demo/assets/a b.js", "export {};")
 	write("secret.txt", "not served")
 	require.NoError(t, os.Symlink(filepath.Join(parent, "secret.txt"), filepath.Join(root, "link.txt")))
-	return app.StaticFiles(root)
+	files, err := os.OpenRoot(root)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = files.Close() })
+	return app.StaticFiles(files.FS())
 }
 
 func get(h http.Handler, method, target string) *httptest.ResponseRecorder {
@@ -52,7 +56,7 @@ func TestStaticPageWithoutExtension(t *testing.T) {
 
 func TestWithStaticFiles(t *testing.T) {
 	api := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("api " + r.URL.Path)) })
-	h := app.WithStaticFiles(api, filepath.Join(t.TempDir(), "missing"))
+	h := app.WithStaticFiles(api, fstest.MapFS{})
 	require.Equal(t, "api /api/me", get(h, "GET", "/api/me").Body.String())
 	require.Equal(t, 404, get(h, "GET", "/").Code)
 }

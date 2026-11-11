@@ -1,16 +1,16 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 
-// The app a deployment serves (docs/30_configuration/05_deployment.typ): the start page (index.html) and the editor
-// (edit.html) → dist/app, served by the server from ZWF_WEB_DIST next to /api/. Two entries, so the start page loads
-// no editor; the widget's npm build (vite.lib.config.ts) has none of it.
+// The app the zwiebelfisch binary embeds (server/lib/webapp): the start page (index.html), the editor (edit.html) and
+// the local editor (local.html) → server/lib/webapp/dist/app. An entry each, so the start page loads no editor; the
+// widget's npm build (vite.lib.config.ts) has none of it.
 // `mise run app`: the dev server on :5200, /api proxied to `mise run server:dev`, so the session is this origin's.
 export default defineConfig({
   root: 'app',
   build: {
-    outDir: '../dist/app',
+    outDir: '../server/lib/webapp/dist/app',
     emptyOutDir: true,
-    rolldownOptions: { input: { index: page('index.html'), edit: page('edit.html') } },
+    rolldownOptions: { input: { index: page('index.html'), edit: page('edit.html'), local: page('local.html') } },
   },
   server: {
     host: '127.0.0.1',
@@ -27,13 +27,14 @@ function page(name: string): string {
   return fileURLToPath(new URL(`app/${name}`, import.meta.url));
 }
 
-/** /edit is edit.html in the dev server too, as the server serves dist/app (app.StaticFiles). */
+/** /edit is edit.html (and /local local.html) in the dev server too, as the server serves the app (app.StaticFiles). */
 function pagesWithoutExtension(): Plugin {
   return {
     name: 'pages-without-extension',
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
-        if (req.url === '/edit' || req.url?.startsWith('/edit?')) req.url = req.url.replace('/edit', '/edit.html');
+        const page = req.url?.match(/^\/(edit|local)(?=$|[?#])/)?.[1];
+        if (page) req.url = req.url!.replace(`/${page}`, `/${page}.html`);
         next();
       });
     },

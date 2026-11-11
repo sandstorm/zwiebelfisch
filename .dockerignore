@@ -1,8 +1,7 @@
-# What the image must never contain (Dockerfile): dependencies, build output but the app (dist/app), caches, local secrets.
+# What the image must never contain (Dockerfile): dependencies, build output (the app is embedded from server/lib/webapp/dist), caches, local secrets.
 **/node_modules
 **/target
-dist/*
-!dist/app
+dist
 .cache
 .claude
 .git

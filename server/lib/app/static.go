@@ -1,32 +1,33 @@
 package app
 
 import (
+	"io"
+	"io/fs"
 	"net/http"
-	"os"
 	"path"
 	"strings"
 )
 
-// StaticFiles serves a Vite build (dist/app, dist/demo) as it is, without Vite. Used by:
+// StaticFiles serves a Vite build (the embedded app, dist/demo) as it is, without Vite. Used by:
 //   - zwiebelfisch, for the app next to the API (WithStaticFiles)
 //   - fake-gitlab, for the demo on a port of its own
 //
 // GET and HEAD (ranges too); / is index.html, a path without an extension its .html page (/edit is
-// edit.html); anything else (folders, paths outside dir, symlinks out of it) is 404. Vite's content-hashed
-// files under assets/ are cached for good, everything else is revalidated.
-func StaticFiles(dir string) http.Handler { return staticFiles(dir) }
+// edit.html); anything else (folders, paths files refuses) is 404. Vite's content-hashed files under
+// assets/ are cached for good, everything else is revalidated.
+func StaticFiles(files fs.FS) http.Handler { return staticFiles{files} }
 
-// WithStaticFiles is api on /api/ and the files under dir (StaticFiles) everywhere else, on one origin.
-func WithStaticFiles(api http.Handler, dir string) http.Handler {
+// WithStaticFiles is api on /api/ and files (StaticFiles) everywhere else, on one origin.
+func WithStaticFiles(api http.Handler, files fs.FS) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api)
-	mux.Handle("/", StaticFiles(dir))
+	mux.Handle("/", StaticFiles(files))
 	return mux
 }
 
-type staticFiles string
+type staticFiles struct{ files fs.FS }
 
-func (dir staticFiles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s staticFiles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -37,8 +38,7 @@ func (dir staticFiles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if path.Ext(name) == "" {
 		name += ".html"
 	}
-	// os.OpenInRoot refuses whatever leaves dir (.., absolute paths, symlinks out)
-	f, err := os.OpenInRoot(string(dir), name)
+	f, err := s.files.Open(name)
 	if err != nil {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
@@ -59,7 +59,12 @@ func (dir staticFiles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Cache-Control", "no-cache")
 	}
-	http.ServeContent(w, r, name, info.ModTime(), f)
+	content, ok := f.(io.ReadSeeker)
+	if !ok {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	http.ServeContent(w, r, name, info.ModTime(), content)
 }
 
 // staticTypes of what a Vite build contains (WebAssembly must be application/wasm to stream).

@@ -104,10 +104,15 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("DEMO_PORT: %w", err)
 		}
+		files, err := os.OpenRoot(dist)
+		if err != nil {
+			return fmt.Errorf("ZWF_DEMO_DIST: %w", err)
+		}
+		defer files.Close()
 		// the page expects the server on 127.0.0.1 (demo/playground.ts): open the demo there
 		sites = append(sites, app.Site{
 			Name:    "demo (" + dist + ", open http://127.0.0.1:" + strconv.Itoa(port) + "/)",
-			Address: net.JoinHostPort(cfg.Address, strconv.Itoa(port)), Handler: app.StaticFiles(dist),
+			Address: net.JoinHostPort(cfg.Address, strconv.Itoa(port)), Handler: app.StaticFiles(files.FS()),
 		})
 	}
 	return app.Run(log, server.Close, sites...)

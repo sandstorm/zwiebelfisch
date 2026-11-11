@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # the app the image copies (dist/app), with the engine from the cache CI fills
+      # the app the binary embeds (server/lib/webapp/dist/app), with the engine from the cache CI fills
       - uses: ./.github/actions/setup
       - run: mise run build:app
       # no emulation (QEMU) needed: the server stage runs on the runner's own platform (Go cross-compiles), and the

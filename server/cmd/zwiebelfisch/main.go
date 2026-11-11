@@ -1,117 +1,55 @@
-// Command zwiebelfisch is the collaboration server (`mise run server:dev`).
+// Command zwiebelfisch is the editor for a folder on this machine, and the collaboration server.
 //
-// It reads its settings from the environment (package config) and serves on ADDRESS:PORT; it does not start
-// without ZWF_ALLOWED_ORIGINS, or with an invalid one:
+//	zwiebelfisch [file or folder]   the local editor (package local) in the browser; "." without one
+//	zwiebelfisch serve              the collaboration server (`mise run server:dev`)
+//
+// The local editor writes every change straight to the folder's files and shows changes made on disk; it serves
+// on a free port of 127.0.0.1 until Ctrl-C. The collaboration server reads its settings from the environment
+// (package config) and serves on ADDRESS:PORT; it does not start without ZWF_ALLOWED_ORIGINS, or with an
+// invalid one:
 //   - the Hocuspocus protocol (a WebSocket at /api/collaboration)
 //   - the HTTP endpoints of package app
-//   - with ZWF_WEB_DIST, the built app (dist/app: the start page, the editor at /edit) on every other path
+//   - the built app (package webapp: the start page, the editor at /edit) on every other path
 //
 // On SIGINT/SIGTERM it stores every open room before exiting.
 package main
 
 import (
-	"errors"
+	"flag"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-
-	"github.com/rs/zerolog"
-
-	"github.com/sandstorm/zwiebelfisch/server/lib/app"
-	"github.com/sandstorm/zwiebelfisch/server/lib/auth"
-	"github.com/sandstorm/zwiebelfisch/server/lib/config"
-	"github.com/sandstorm/zwiebelfisch/server/lib/gitlab"
-	"github.com/sandstorm/zwiebelfisch/server/lib/logging"
-	"github.com/sandstorm/zwiebelfisch/server/lib/store"
 )
 
 func main() {
-	if err := run(); err != nil {
+	flags := flag.NewFlagSet("zwiebelfisch", flag.ExitOnError)
+	noBrowser := flags.Bool("no-browser", false, "print the address only, open no browser")
+	flags.Usage = func() {
+		fmt.Fprint(flags.Output(), usage)
+		flags.PrintDefaults()
+	}
+	_ = flags.Parse(os.Args[1:])
+	var err error
+	switch args := flags.Args(); {
+	case len(args) == 1 && args[0] == "serve":
+		err = serve()
+	case len(args) > 1:
+		flags.Usage()
+		os.Exit(2)
+	default:
+		target := "."
+		if len(args) == 1 {
+			target = args[0]
+		}
+		err = edit(target, !*noBrowser)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "zwiebelfisch:", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg, err := config.Load(os.Environ())
-	if err != nil {
-		return err
-	}
-	log, err := logging.New(os.Stderr, cfg.Log.Format, cfg.Log.Level)
-	if err != nil {
-		return err
-	}
-	gitlabRooms, err := gitlabOptions(cfg)
-	if err != nil {
-		return err
-	}
-	signIn, err := signInWith(cfg, log)
-	if err != nil {
-		return err
-	}
-	st, err := store.Open(cfg.Collab.DB)
-	if err != nil {
-		return err
-	}
-	defer st.Close()
-	server, err := app.New(app.Options{
-		Store: st, Auth: signIn, PlainRooms: cfg.Rooms.Plain, Guests: cfg.Rooms.Guests,
-		GitLab: gitlabRooms, Log: log,
-	})
-	if err != nil {
-		return err
-	}
-	log.Info().Strs("allowedOrigins", cfg.AllowedOrigins).Str("db", cfg.Collab.DB).Str("issuer", cfg.Auth.Issuer).Bool("plainRooms", cfg.Rooms.Plain).Bool("guests", cfg.Rooms.Guests).
-		Str("gitlab", cfg.GitLab.URL).Str("web", cfg.Web.Dist).Msg("collaboration server")
-	var handler http.Handler = server
-	if cfg.Web.Dist != "" {
-		handler = app.WithStaticFiles(server, cfg.Web.Dist)
-	}
-	return app.Run(log, server.Close, app.Site{
-		Name: "collaboration server", Address: net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)), Handler: handler,
-	})
-}
+const usage = `Usage:
+  zwiebelfisch [file or folder]   edit a folder's Typst project in the browser ("." without one)
+  zwiebelfisch serve              run the collaboration server (configured by ZWF_* variables)
 
-// signInWith is the sign-in cfg configures. With the GitLab instance as the issuer (the default), a user's
-// subject is their GitLab user id: identities are GitLab's, which GitLab rooms check. Another issuer's
-// identities are its own ("oidc"), which GitLab rooms refuse.
-func signInWith(cfg config.Config, log zerolog.Logger) (*auth.Auth, error) {
-	a := cfg.Auth
-	if a.Issuer == "" || a.ClientID == "" || a.ClientSecret == "" {
-		return nil, errors.New("sign-in is not configured: set ZWF_AUTH_CLIENT_ID and ZWF_AUTH_CLIENT_SECRET (an OAuth application on the GitLab instance; another provider with ZWF_AUTH_ISSUER)")
-	}
-	o := auth.Options{
-		Provider: "oidc", Issuer: a.Issuer, ClientID: a.ClientID, ClientSecret: a.ClientSecret, RedirectURL: a.RedirectURL,
-		AllowedOrigins: cfg.AllowedOrigins, Log: log.With().Str("module", "auth").Logger(),
-	}
-	if cfg.GitLab.URL != "" && strings.TrimSuffix(a.Issuer, "/") == strings.TrimSuffix(cfg.GitLab.URL, "/") {
-		o.Provider = gitlab.DefaultID
-		// read_api: who may edit and push; write_repository: fetch and push (git over HTTP)
-		o.Scopes = []string{"openid", "profile", "email", "read_api", "write_repository"}
-	}
-	return auth.New(o), nil
-}
-
-// gitlabOptions are the GitLab rooms cfg configures (nil: none, without URL). The git clones go next to the
-// database (in memory with it).
-func gitlabOptions(cfg config.Config) (*gitlab.Options, error) {
-	if cfg.GitLab.URL == "" {
-		return nil, nil
-	}
-	autoCommit, err := gitlab.ParseAutoCommit(cfg.GitLab.AutoCommit)
-	if err != nil {
-		return nil, err
-	}
-	dir := ""
-	if cfg.Collab.DB != store.Memory {
-		dir = filepath.Join(filepath.Dir(cfg.Collab.DB), "repositories")
-	}
-	return &gitlab.Options{
-		URL: cfg.GitLab.URL, Dir: dir, WebhookSecret: cfg.GitLab.WebhookSecret,
-		AuthorEmail: cfg.GitLab.AuthorEmail, AutoCommit: autoCommit,
-	}, nil
-}
+`

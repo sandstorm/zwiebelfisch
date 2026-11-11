@@ -33,6 +33,7 @@
   #include "20_features/15_history.typ"
   #include "20_features/16_guest-access.typ"
   #include "20_features/17_start-page.typ"
+  #include "20_features/18_local-folders.typ"
 ]
 
 = Configuration

@@ -351,11 +351,15 @@ func (s *Server) Close(ctx context.Context) error {
 	return err
 }
 
-// Site is a handler to serve on an address ("host:port"); Name says what it is in the log.
+// Site is a handler to serve on an address ("host:port"), or on a Listener opened already; Name says what it
+// is in the log. OnShutdown, if set, is called when the shutdown begins: it ends the responses that would
+// never end by themselves (streams), which the shutdown waits for.
 type Site struct {
-	Name    string
-	Address string
-	Handler http.Handler
+	Name       string
+	Address    string
+	Listener   net.Listener
+	Handler    http.Handler
+	OnShutdown func()
 }
 
 // Run serves the sites until SIGINT or SIGTERM (or until one fails), then shuts them down and calls
@@ -366,11 +370,17 @@ func Run(log zerolog.Logger, done func(context.Context) error, sites ...Site) er
 	servers := make([]*http.Server, 0, len(sites))
 	served := make(chan error, len(sites))
 	for _, site := range sites {
-		listener, err := net.Listen("tcp", site.Address)
+		listener, err := site.Listener, error(nil)
+		if listener == nil {
+			listener, err = net.Listen("tcp", site.Address)
+		}
 		if err != nil {
 			return errors.Join(err, shutdown(servers), done(context.Background()))
 		}
 		server := newHTTPServer(site.Handler)
+		if site.OnShutdown != nil {
+			server.RegisterOnShutdown(site.OnShutdown)
+		}
 		servers = append(servers, server)
 		go func() { served <- server.Serve(listener) }()
 		log.Info().Msgf("%s on %s", site.Name, listener.Addr())
@@ -380,7 +390,7 @@ func Run(log zerolog.Logger, done func(context.Context) error, sites ...Site) er
 	select {
 	case failed = <-served:
 	case <-stop.Done():
-		log.Info().Msg("shutting down: storing open rooms")
+		log.Info().Msg("shutting down")
 	}
 	ctx, end := context.WithTimeout(context.Background(), 10*time.Second)
 	defer end()

@@ -30,7 +30,7 @@ docker run -p 1234:1234 -v zwf-data:/data \
   [`/api/…`], [The server (@configuration-collaboration-server-running).],
 )
 
-The server serves the built app (`dist/app`, `mise run build:app`) from `ZWF_WEB_DIST`; the image sets it. The app is its own build (`vite.app.config.ts`): the widget's npm package (`dist/lib`) has none of it, and the start page loads no editor.
+The binary has the app built in (`mise run build:app` before building it; package `server/lib/webapp`) and serves it next to `/api/`; one built without it serves the API only, and says so in its log. The app is its own build (`vite.app.config.ts`): the widget's npm package (`dist/lib`) has none of it, and the start page loads no editor.
 
 To work on it: `mise run server:dev` and `mise run app` (Vite on `http://127.0.0.1:5200/`, `/api` passed on to the server, so the session is the page's own). The GitLab application's callback is then `http://127.0.0.1:5200/api/public/auth/callback`.
 

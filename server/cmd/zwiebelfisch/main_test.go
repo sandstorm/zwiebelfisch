@@ -82,7 +82,7 @@ func TestServerBinaryRefusesToStart(t *testing.T) {
 		{[]string{"ZWF_PLAIN_ROOMS=1", origins}, "sign-in is not configured"},
 		{append([]string{origins}, signIn...), "no rooms to serve"},
 	} {
-		cmd := exec.Command(binary)
+		cmd := exec.Command(binary, "serve")
 		cmd.Env = append([]string{"PORT=1", "ZWF_COLLAB_DB=:memory:"}, bare.env...)
 		out, err := cmd.CombinedOutput()
 		require.Error(t, err, bare.env)
@@ -121,7 +121,7 @@ func session(t *testing.T, server, name string) string {
 
 // start runs the server and waits until it accepts connections; stop sends SIGTERM and waits for the exit.
 func start(t *testing.T, binary string, env []string, port int) (stop func()) {
-	cmd := exec.Command(binary)
+	cmd := exec.Command(binary, "serve")
 	cmd.Env = env
 	var logs strings.Builder
 	cmd.Stderr = &logs

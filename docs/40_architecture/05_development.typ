@@ -88,6 +88,7 @@ A tag with a pre-release part (`v1.2.3-rc.1`) makes a pre-release, npm dist-tag 
 - *Find in files*: should the Source editor stop recording other origins' changes in its undo (its ⌘Z also takes back a replace)? Panel keys ⌥⌘C / ⌥⌘W / ⌥⌘R, F4; `filesToInclude`; the scope is not remembered; the quick-open tooltip doesn't name ⌘P.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules; templates from Typst Universe.
 - *Text diagrams*: Mermaid only. D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with `@terrastruct/d2` writing `name.d2.gen.svg`.
+- *Local folders* (@features-local-folders): file events (fsnotify) instead of reading the folder every second.
 - *Diagnostics*: Typst only; other file kinds would get VS Code's `languages.createDiagnosticCollection`.
 - *Start page* (@features-start-page): not tried against a real GitLab yet; no e2e spec for `app/` (a spec against the fake GitLab, which answers the project search and branch list); a branch name holding `/` in a pasted GitLab URL is read as branch plus folder; the Open dialog lists at most 100 branches and 20 projects.
 - *Server* (`docs/2026_10_13_go-server.md`): run what needs a port where one can be bound, never run against the Go server yet: `TestServerBinary`, `TestPlaygroundBinary`, `test:e2e-collab`, `test:e2e-gitlab`, the Docker image. Then: read the config YAML file (env only today); expire stale presence (Hocuspocus drops it after 30 s); a file watcher for `server:dev` (watchexec, pinned).
